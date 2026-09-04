@@ -10,6 +10,7 @@ import {
   Heart,
   Car,
   Wind,
+  FileText,
   ChevronLeft,
   ChevronRight,
   type LucideIcon,
@@ -23,15 +24,16 @@ interface ServiceItem {
 }
 
 const servicesList: ServiceItem[] = [
-  { id: "1", name: "AIR TICKET", slug: "/service", icon: Plane },
-  { id: "2", name: "TOURS", slug: "/packages", icon: Map },
-  { id: "3", name: "ADVENTURE ACTIVITIES", slug: "/service", icon: Activity },
-  { id: "4", name: "TREKKING", slug: "/packages", icon: Mountain },
-  { id: "5", name: "HOTEL BOOKING", slug: "/service", icon: Bed },
-  { id: "6", name: "VISA SERVICES", slug: "/service", icon: Shield },
-  { id: "7", name: "TRAVEL INSURANCE", slug: "/service", icon: Heart },
-  { id: "8", name: "VEHICLE RENTAL", slug: "/service", icon: Car },
-  { id: "9", name: "HELI SERVICES", slug: "/service", icon: Wind },
+  { id: "1", name: "AIR TICKET", slug: "/service/air-ticket", icon: Plane },
+  { id: "2", name: "TOURS", slug: "/service/tours", icon: Map },
+  { id: "3", name: "ADVENTURE ACTIVITIES", slug: "/service/activities", icon: Activity },
+  { id: "4", name: "TREKKING", slug: "/service/trekking", icon: Mountain },
+  { id: "5", name: "HOTEL BOOKING", slug: "/service/hotel-booking", icon: Bed },
+  { id: "6", name: "VISA SERVICES", slug: "/service/visa-services", icon: Shield },
+  { id: "7", name: "TRAVEL INSURANCE", slug: "/service/travel-insurance", icon: Heart },
+  { id: "8", name: "VEHICLE RENTAL", slug: "/service/vehicle-rental", icon: Car },
+  { id: "9", name: "HELI SERVICES", slug: "/service/heli-services", icon: Wind },
+  { id: "10", name: "ONLINE SHRAM", slug: "/work-permit", icon: FileText },
 ];
 
 const ServicesStrip: React.FC = () => {

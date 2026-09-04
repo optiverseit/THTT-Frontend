@@ -42,7 +42,10 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
     if (onOpenInquiry) {
       onOpenInquiry();
     } else {
-      navigate("/contact");
+      const msg = encodeURIComponent(
+        "Hello Trip Himalaya! I would like to get a free quote for travel/trekking packages."
+      );
+      window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
     }
   };
 

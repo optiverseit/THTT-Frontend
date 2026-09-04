@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plane, Map, Activity, Mountain, Bed, Shield, Heart, Car, Wind, FileText,
   ChevronLeft, ChevronRight,
@@ -7,6 +8,7 @@ import {
 import { services } from "../../assets/data/mockData";
 
 const PremiumTravel: React.FC = () => {
+  const navigate = useNavigate();
   const iconMap: Record<string, LucideIcon> = {
     Plane, Map, Activity, Mountain, Bed, Shield, Heart, Car, Wind, FileText,
   };
@@ -64,7 +66,8 @@ const PremiumTravel: React.FC = () => {
             return (
               <div
                 key={service.id}
-                className="relative rounded-2xl overflow-hidden flex-shrink-0 group cursor-pointer"
+                onClick={() => navigate(`/service/${service.slug}`)}
+                className="relative rounded-2xl overflow-hidden flex-shrink-0 group cursor-pointer hover:shadow-lg transition-shadow"
                 style={{ width: "clamp(150px, 30vw, 200px)", height: "clamp(200px, 30vw, 280px)" }}
               >
                 <img

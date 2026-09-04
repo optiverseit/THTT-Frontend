@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
 import ServicesPage from "./pages/Services";
+import ServiceDetail from "./pages/ServiceDetail";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 
@@ -25,7 +26,6 @@ import LoginOtp from "./components/login/LoginOtp";
 import LoginDetails from "./components/login/LoginDetails";
 import LoginForgotPass from "./components/login/LoginForgotPass";
 import WorkPermit from "./pages/WorkPermit";
-import WorkPermitOverview from "./components/work-permit/WorkPermitOverview";
 import WorkPermitDetails from "./components/work-permit/permit-details/WorkPermitDetails";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GlobalCurrencyProvider } from "./context/CurrencyContext";
@@ -60,6 +60,7 @@ const MainLayout = () => {
 
         <Route path="/about" element={<About />} />
         <Route path="/service" element={<ServicesPage/>} />
+        <Route path="/service/:slug" element={<ServiceDetail />} />
         <Route path="/blog" element={<Blog/>}/>
         <Route path="/blog/:slug" element={<BlogDetail />} />
         <Route path="/travel-guide" element={<TravelGuide />} />
@@ -79,9 +80,7 @@ const MainLayout = () => {
         <Route path="/watch/:videoId" element={<VideoDetails />} />
 
         {/* work permit */}
-        <Route path="/work-permit" element={<WorkPermit />}>
-          <Route index path="" element={<WorkPermitOverview />} />
-        </Route>
+        <Route path="/work-permit" element={<WorkPermit />} />
         <Route path="/permit-details/:id" element={<WorkPermitDetails />} />
       </Routes>
 

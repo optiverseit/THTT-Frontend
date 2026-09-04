@@ -197,7 +197,9 @@ const About: React.FC = () => {
             <h2 className="text-3xl sm:text-4xl font-black text-[#2D1347] mb-4 tracking-tight">Visit Our Office</h2>
             <p className="text-slate-500 font-medium mb-10 text-base">Located in the heart of Kathmandu.</p>
             <a
-              href="#/contact"
+              href="https://maps.google.com/?q=Kantipath,Kathmandu,Nepal"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-3 bg-[#5D2A8E] text-white px-8 sm:px-12 py-4 sm:py-5 rounded-full font-black tracking-widest hover:bg-[#D92671] transition-all shadow-xl active:scale-95"
             >
               <MapPin size={20} />
@@ -228,9 +230,14 @@ const About: React.FC = () => {
             >
               CALL US NOW
             </a>
-            <button className="bg-white text-[#D92671] px-8 sm:px-10 py-4 rounded-full font-black tracking-wider hover:bg-slate-50 transition-all shadow-2xl text-sm sm:text-base">
+            <a
+              href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20would%20like%20to%20get%20a%20free%20quote."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white text-[#D92671] px-8 sm:px-10 py-4 rounded-full font-black tracking-wider hover:bg-slate-50 transition-all shadow-2xl text-sm sm:text-base text-center"
+            >
               GET FREE QUOTE
-            </button>
+            </a>
           </div>
         </div>
       </section>

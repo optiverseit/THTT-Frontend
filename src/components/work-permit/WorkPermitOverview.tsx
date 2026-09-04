@@ -74,14 +74,22 @@ const WorkPermitOverview = () => {
           </div>
 
           <div className="mt-8 flex justify-between w-2/3">
-            <button className="rounded-full px-6 py-3 text-xs text-white tracking-wide gap-2 flex items-center bg-green-500">
+            <a
+              href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20need%20help%20with%20a%20Work%20Permit."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full px-6 py-3 text-xs text-white tracking-wide gap-2 flex items-center bg-green-500 hover:bg-green-600 transition-colors cursor-pointer"
+            >
               <MessageCircle size={14} />
               WHATSAPP INQUIRY
-            </button>
-            <button className="rounded-full px-6 py-3 text-xs text-white tracking-wide gap-2 flex items-center bg-purple-950">
+            </a>
+            <a
+              href="tel:+9779800000000"
+              className="rounded-full px-6 py-3 text-xs text-white tracking-wide gap-2 flex items-center bg-purple-950 hover:bg-purple-900 transition-colors cursor-pointer"
+            >
               <Phone size={14} />
               TALK TO EXPERT
-            </button>
+            </a>
           </div>
         </div>
         {/* right */}

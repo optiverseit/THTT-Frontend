@@ -1,26 +1,36 @@
-import { useState } from "react";
 import BannerSection from "./../components/reuseable/BannerSection";
 import { FileText, Globe, Shield, Clock, Zap, Heart } from "lucide-react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import PermitServices from "../components/work-permit/PermitServices";
 import HeroSection from "../components/reuseable/HeroSection";
 import Testimonials from "../components/reuseable/Testimonials";
 import { workPermitTestimonials } from "../assets/data/mockData";
 import WorkPermitProcess from "../components/work-permit/WorkPermitProcess";
 import WorkPermitFaq from "../components/work-permit/WorkPermitFaq";
+import WorkPermitOverview from "../components/work-permit/WorkPermitOverview";
 import PreFooter from "../components/reuseable/PreFooter";
 
 const WorkPermit = () => {
-  const [activeIndex, setActiveIndex] = useState<number>(0);
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("overview");
 
-  const outletItems = [
-    { name: "OVERVIEW", path: "" },
-    { name: "SERVICES", path: "services" },
-    { name: "TESTIMONIES", path: "testimonies" },
-    { name: "PROCESS", path: "process" },
-    { name: "FAQS", path: "faqs" },
+  const tabs = [
+    { name: "OVERVIEW", id: "section-overview" },
+    { name: "SERVICES", id: "section-services" },
+    { name: "WHY US", id: "section-whyus" },
+    { name: "TESTIMONIES", id: "section-testimonies" },
+    { name: "PROCESS", id: "section-process" },
+    { name: "FAQS", id: "section-faqs" },
   ];
+
+  const scrollToSection = (id: string, tabName: string) => {
+    setActiveTab(tabName);
+    const el = document.getElementById(id);
+    if (el) {
+      const offset = 120; // account for sticky header
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: "smooth" });
+    }
+  };
 
   return (
     <>
@@ -74,53 +84,68 @@ const WorkPermit = () => {
             </div>
           </div>
 
-          {/* Outlet Sub-navigation */}
+          {/* Sub-navigation Tabs — scroll to section */}
           <div className="mt-8 flex justify-center items-center px-4 overflow-x-auto">
             <div className="flex gap-4 sm:gap-8 border-b border-gray-200 pb-2">
-              {outletItems.map((item, index) => (
+              {tabs.map((tab) => (
                 <button
-                  key={index}
-                  onClick={() => {
-                    navigate(item.path);
-                    setActiveIndex(index);
-                  }}
+                  key={tab.id}
+                  onClick={() => scrollToSection(tab.id, tab.name)}
                   className={`py-1 font-bold tracking-widest text-xs transition-colors whitespace-nowrap ${
-                    activeIndex === index
+                    activeTab === tab.name
                       ? "border-b-2 border-pink-600 text-pink-600 -mb-[9px]"
                       : "text-purple-950 hover:text-pink-500"
                   }`}
                 >
-                  {item.name}
+                  {tab.name}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mt-8">
-          <Outlet />
+        {/* OVERVIEW Section */}
+        <div id="section-overview" className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mt-8">
+          <WorkPermitOverview />
         </div>
       </div>
 
-      <PermitServices />
+      {/* SERVICES Section */}
+      <div id="section-services">
+        <PermitServices />
+      </div>
 
-      <HeroSection
-        title="WHY CHOOSE US"
-        subject="Why Choose Trip Himalaya?"
-        description="Reliable support, transparent process, and a team that takes responsibility from start to finish."
-        backgroundImage="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
-        services={[
-          { name: "EXPERIENCED PROCESSING TEAM", icon: Shield },
-          { name: "TRANSPARENT PRICING SYSTEM", icon: Zap },
-          { name: "FAST & TIMELY RESPONSE", icon: Clock },
-          { name: "GOVERNMENT COMPLIANT PROCESS", icon: FileText },
-          { name: "TRUSTED BY HUNDREDS OF CLIENTS", icon: Heart },
-        ]}
-      />
+      {/* WHY US Section */}
+      <div id="section-whyus">
+        <HeroSection
+          title="WHY CHOOSE US"
+          subject="Why Choose Trip Himalaya?"
+          description="Reliable support, transparent process, and a team that takes responsibility from start to finish."
+          backgroundImage="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
+          services={[
+            { name: "EXPERIENCED PROCESSING TEAM", icon: Shield },
+            { name: "TRANSPARENT PRICING SYSTEM", icon: Zap },
+            { name: "FAST & TIMELY RESPONSE", icon: Clock },
+            { name: "GOVERNMENT COMPLIANT PROCESS", icon: FileText },
+            { name: "TRUSTED BY HUNDREDS OF CLIENTS", icon: Heart },
+          ]}
+        />
+      </div>
 
-      <Testimonials workTest={workPermitTestimonials} />
-      <WorkPermitProcess />
-      <WorkPermitFaq />
+      {/* TESTIMONIES Section */}
+      <div id="section-testimonies">
+        <Testimonials workTest={workPermitTestimonials} />
+      </div>
+
+      {/* PROCESS Section */}
+      <div id="section-process">
+        <WorkPermitProcess />
+      </div>
+
+      {/* FAQS Section */}
+      <div id="section-faqs">
+        <WorkPermitFaq />
+      </div>
 
       <PreFooter
         title="Ready to Apply for Work Permit?"

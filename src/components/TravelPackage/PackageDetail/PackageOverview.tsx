@@ -1,7 +1,7 @@
 import React from "react";
 import { useOutletContext } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
-import { CheckCircle2, Clock, MapPin, Star } from "lucide-react";
+import { CheckCircle2, Clock, MapPin } from "lucide-react";
 import PackageTimeline from "./PackageTimeline";
 import IncludesExclude from "./IncludesExclude";
 import PackagePricing from "./PackagePricing";
@@ -57,7 +57,7 @@ const PackageOverview: React.FC = () => {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {pkg.highlights?.map((item, idx) => (
+              {pkg.highlights?.map((item: string, idx: number) => (
                 <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm font-semibold text-gray-700">
                   <span className="w-2 h-2 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
                   <span>{item}</span>

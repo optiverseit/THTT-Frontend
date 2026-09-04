@@ -62,7 +62,7 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="w-full bg-[#080C16] text-white pt-16 pb-8 px-4 sm:px-6 lg:px-12 relative z-20 border-t border-white/5 font-sans">
+    <footer className="w-full bg-[#080C16] text-white pt-16 pb-8 px-4 sm:px-6 lg:px-12 relative z-20 border-t border-white/5" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
       <div className="max-w-7xl mx-auto">
         
         {/* ── TOP SECTION: 4 COLUMNS ── */}
@@ -76,30 +76,40 @@ const Footer: React.FC = () => {
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
-            <ul className="space-y-3.5 text-xs font-bold text-gray-300 tracking-wider">
+            <ul className="space-y-3 text-xs font-bold text-gray-300 tracking-wider">
               <li>
-                <Link to="/" className="hover:text-[#E11D48] transition-colors">
+                <Link to="/" className="hover:text-[#E11D48] transition-colors block py-0.5">
                   HOME
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="hover:text-[#E11D48] transition-colors">
+                <Link to="/about" className="hover:text-[#E11D48] transition-colors block py-0.5">
                   ABOUT THTT
                 </Link>
               </li>
               <li>
-                <Link to="/packages" className="hover:text-[#E11D48] transition-colors">
-                  TOUR PACKAGES
+                <Link to="/packages" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  TOUR &amp; TREK PACKAGES
                 </Link>
               </li>
               <li>
-                <Link to="/gallery" className="hover:text-[#E11D48] transition-colors">
+                <Link to="/work-permit" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  WORK PERMIT (श्रम)
+                </Link>
+              </li>
+              <li>
+                <Link to="/gallery" className="hover:text-[#E11D48] transition-colors block py-0.5">
                   PHOTO GALLERY
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="hover:text-[#E11D48] transition-colors">
-                  CONTACT US
+                <Link to="/travel-guide" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  TRAVEL GUIDE
+                </Link>
+              </li>
+              <li>
+                <Link to="/blog" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  BLOG &amp; ARTICLES
                 </Link>
               </li>
             </ul>
@@ -113,30 +123,40 @@ const Footer: React.FC = () => {
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
-            <ul className="space-y-3.5 text-xs font-bold text-gray-300 tracking-wider">
+            <ul className="space-y-3 text-xs font-bold text-gray-300 tracking-wider">
               <li>
-                <Link to="/service" className="hover:text-[#E11D48] transition-colors">
-                  AIR TICKET
+                <Link to="/service/air-ticket" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  AIR TICKET BOOKING
                 </Link>
               </li>
               <li>
-                <Link to="/packages" className="hover:text-[#E11D48] transition-colors">
-                  TOURS
+                <Link to="/service/tours" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  HOLIDAY TOURS
                 </Link>
               </li>
               <li>
-                <Link to="/service" className="hover:text-[#E11D48] transition-colors">
+                <Link to="/service/trekking" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  HIMALAYAN TREKKING
+                </Link>
+              </li>
+              <li>
+                <Link to="/service/activities" className="hover:text-[#E11D48] transition-colors block py-0.5">
                   ADVENTURE ACTIVITIES
                 </Link>
               </li>
               <li>
-                <Link to="/packages" className="hover:text-[#E11D48] transition-colors">
-                  TREKKING
+                <Link to="/service/hotel-booking" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  HOTEL &amp; RESORT BOOKING
                 </Link>
               </li>
               <li>
-                <Link to="/service" className="hover:text-[#E11D48] transition-colors">
-                  HOTEL BOOKING
+                <Link to="/service/visa-services" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  VISA ASSISTANCE
+                </Link>
+              </li>
+              <li>
+                <Link to="/service/travel-insurance" className="hover:text-[#E11D48] transition-colors block py-0.5">
+                  TRAVEL INSURANCE
                 </Link>
               </li>
             </ul>
@@ -150,15 +170,20 @@ const Footer: React.FC = () => {
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
-            <ul className="space-y-4 text-xs font-semibold text-gray-300">
+            <ul className="space-y-4 text-xs font-bold text-gray-300 tracking-wider">
               <li className="flex items-start gap-3">
                 <MapPin size={16} className="text-[#E11D48] flex-shrink-0 mt-0.5" />
-                <span className="leading-snug">
-                  Kantipath, Kathmandu, Nepal
-                  <span className="block text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
+                <a
+                  href="https://maps.google.com/?q=Kantipath,Kathmandu,Nepal"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors leading-snug"
+                >
+                  KANTIPATH, KATHMANDU, NEPAL
+                  <span className="block text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">
                     (NEAR NTB OFFICE)
                   </span>
-                </span>
+                </a>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={15} className="text-[#E11D48] flex-shrink-0" />
@@ -178,12 +203,12 @@ const Footer: React.FC = () => {
               <li className="flex items-center gap-3">
                 <MessageCircle size={15} className="text-[#E11D48] flex-shrink-0" />
                 <a
-                  href="https://wa.me/9779800000000"
+                  href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20would%20like%20to%20inquire%20about%20your%20services."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors text-emerald-400"
                 >
-                  WhatsApp: +977 9800000000
+                  WHATSAPP: +977 9800000003
                 </a>
               </li>
             </ul>

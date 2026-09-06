@@ -150,8 +150,8 @@ const WorkPermit = () => {
       <PreFooter
         title="Ready to Apply for Work Permit?"
         description="Search permits or talk to our team for guidance."
-        btn1="SEARCH PERMIT"
-        btn2="WHATSAPP INQUIRY"
+        btn1="Search Permit"
+        btn2="WhatsApp Inquiry"
       />
     </>
   );

@@ -173,8 +173,8 @@ const Packages: React.FC = () => {
       <PreFooter
         title="Find Your Perfect Himalayan Adventure"
         description="Speak with our travel specialists to create your dream custom itinerary."
-        btn1="CALL US NOW"
-        btn2="REQUEST CUSTOM QUOTE"
+        btn1="Call Us Now"
+        btn2="Request Custom Quote"
       />
     </div>
   );

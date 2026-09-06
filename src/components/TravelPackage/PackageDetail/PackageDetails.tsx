@@ -1,13 +1,46 @@
 import React from "react";
 import PackageImageGrid from "./PackageImageGrid";
-import { Outlet, useParams } from "react-router-dom";
+import { Outlet, useParams, Link } from "react-router-dom";
 import { packages } from "../../../assets/data/mockData";
 import PreFooter from "../../reuseable/PreFooter";
+import { Compass } from "lucide-react";
 
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
 
-  const pkg = packages.find((p) => p.id === packageId) || packages[0];
+  const pkg = packages.find(
+    (p) =>
+      p.id.toLowerCase() === packageId?.toLowerCase() ||
+      p.slug.toLowerCase() === packageId?.toLowerCase()
+  );
+
+  if (!pkg) {
+    return (
+      <div className="min-h-[65vh] flex flex-col items-center justify-center py-24 px-4 bg-gray-50 text-center font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-pink-50 text-[#E91E63] flex items-center justify-center mb-6 shadow-sm border border-pink-100 ring-8 ring-pink-50/50">
+          <Compass size={40} />
+        </div>
+        <h2 className="text-3xl font-black text-[#2D1347]">Package Not Found</h2>
+        <p className="text-gray-500 text-sm mt-2 max-w-md">
+          We couldn't find the requested travel or trekking package. It may have been updated or the link may be incorrect.
+        </p>
+        <div className="flex gap-3 mt-8">
+          <Link
+            to="/packages"
+            className="px-6 py-3 bg-[#E91E63] hover:bg-pink-600 text-white rounded-full font-bold text-xs uppercase tracking-wider shadow-md transition-all"
+          >
+            Explore All Packages
+          </Link>
+          <Link
+            to="/"
+            className="px-6 py-3 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-full font-bold text-xs uppercase tracking-wider transition-all"
+          >
+            Return Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Default image fallbacks for any package without complete gallery
   const defaultGallery = [
@@ -149,8 +182,8 @@ const PackageDetails: React.FC = () => {
       <PreFooter
         title="Ready to Experience This Adventure?"
         description="Connect with our Himalayan travel specialists for tailored dates, group discounts, and custom arrangements."
-        btn1="CALL US NOW"
-        btn2="REQUEST CUSTOM QUOTE"
+        btn1="Call Us Now"
+        btn2="Request Custom Quote"
       />
     </div>
   );

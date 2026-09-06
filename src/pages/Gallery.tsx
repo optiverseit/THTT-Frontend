@@ -336,8 +336,8 @@ const Gallery: React.FC = () => {
       <PreFooter
         title="Ready to Capture Your Own Story?"
         description="Book customized Himalayan treks, cultural tours, and adventures with Trip Himalaya."
-        btn1="CALL US NOW"
-        btn2="GET A FREE QUOTE"
+        btn1="Call Us Now"
+        btn2="Get a Free Quote"
       />
     </div>
   );

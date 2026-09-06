@@ -55,6 +55,75 @@ export interface Package {
   testimonies?: Testimony[];
 }
 
+export interface DynamicFaqItem {
+  id: string;
+  targetType: "package" | "service" | "work-permit" | "general";
+  targetId: string;
+  question: string;
+  answer: string;
+  category?: string;
+  createdAt?: string;
+}
+
+export interface Hotel {
+  id: string;
+  name: string;
+  slug: string;
+  category: "luxury" | "boutique" | "resort" | "budget";
+  tierLabel: string;
+  city: string;
+  location: string;
+  rating: number;
+  reviewsCount: number;
+  priceUSD: number;
+  image: string;
+  gallery?: string[];
+  amenities: string[];
+  features: string[];
+  description?: string;
+  isFeatured?: boolean;
+}
+
+export interface Vehicle {
+  id: string;
+  name: string;
+  slug: string;
+  category: "suv" | "sedan" | "van" | "bus";
+  categoryLabel: string;
+  seats: string;
+  luggage: string;
+  pricePerDayUSD: number;
+  image: string;
+  gallery?: string[];
+  bestFor: string;
+  transmission?: string;
+  fuelType?: string;
+  amenities: string[];
+  features: string[];
+  description?: string;
+  isFeatured?: boolean;
+}
+
+export interface HeliTour {
+  id: string;
+  name: string;
+  slug: string;
+  category: "everest" | "annapurna" | "langtang" | "pilgrimage" | "rescue";
+  categoryLabel: string;
+  duration: string;
+  maxAltitude: string;
+  landingSpot: string;
+  sharedPriceUSD: number;
+  charterPriceUSD: number;
+  image: string;
+  gallery?: string[];
+  departureFrom: string;
+  highlights: string[];
+  inclusions: string[];
+  description?: string;
+  isFeatured?: boolean;
+}
+
 export interface Testimonial {
   id: string;
   name: string;

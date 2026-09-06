@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { videoPosts } from "../../assets/data/mockData";
 import YouTubePlayer from "./YouTubePlayer";
 import {
@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Twitter,
   Youtube,
+  Video as VideoIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,10 +25,29 @@ interface ShareMenu {
 const VideoDetails: React.FC = () => {
   const { videoId } = useParams();
 
-  const video = videoPosts.find((v) => v.id === videoId);
+  const video = videoPosts.find(
+    (v) => v.id.toLowerCase() === videoId?.toLowerCase()
+  );
 
   if (!video) {
-    return <div>Video not found</div>;
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center py-20 px-4 bg-gray-900 text-center font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-pink-500/10 text-pink-500 flex items-center justify-center mb-5 shadow-xs border border-pink-500/20 ring-8 ring-pink-500/10">
+          <VideoIcon size={38} />
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-black text-white">Video Vlog Not Found</h2>
+        <p className="text-gray-400 text-xs sm:text-sm mt-2 max-w-md leading-relaxed">
+          The video vlog you are looking for does not exist or has been removed from our playlist.
+        </p>
+        <Link
+          to="/vlogs"
+          className="mt-6 flex items-center gap-2 px-6 py-3 bg-[#E91E63] hover:bg-pink-600 text-white rounded-full font-bold text-xs uppercase tracking-wider shadow-md transition-all"
+        >
+          <ChevronLeft size={16} />
+          <span>Back to All Vlogs</span>
+        </Link>
+      </div>
+    );
   }
 
   function getInitials(fullName: string) {
@@ -52,10 +72,13 @@ const VideoDetails: React.FC = () => {
     <div className="space-y-4 w-full ">
       <div className="bg-gray-900 flex justify-center">
         <div className="mt-8 mb-16">
-          <div className="tracking-widest text-xs font-bold rounded-full backdrop-blur-xl text-white bg-gray-900/60 border border-gray-700 w-fit flex gap-2 items-center py-2 px-4">
+          <Link
+            to="/vlogs"
+            className="tracking-widest text-xs font-bold rounded-full backdrop-blur-xl text-white bg-gray-900/60 hover:bg-gray-800/80 border border-gray-700 w-fit flex gap-2 items-center py-2 px-4 transition-colors cursor-pointer"
+          >
             <ChevronLeft size={18} />
             <p>BACK TO VLOGS</p>
-          </div>
+          </Link>
           <YouTubePlayer videoUrl={video.videoUrl} />
           {/* details */}
           <div className="mt-6">

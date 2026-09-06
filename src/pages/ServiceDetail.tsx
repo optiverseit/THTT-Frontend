@@ -9,13 +9,20 @@ import {
   Image as ImageIcon,
   MapPin,
   Repeat,
-  ChevronDown,
-  HelpCircle,
   Shield,
   Plane,
+  Compass,
 } from "lucide-react";
 import SubHero from "../components/reuseable/HeroImage/HeroImg";
 import PreFooter from "../components/reuseable/PreFooter";
+import ToursDetailContent from "../components/Service/ToursDetailContent";
+import ActivitiesDetailContent from "../components/Service/ActivitiesDetailContent";
+import TrekkingDetailContent from "../components/Service/TrekkingDetailContent";
+import HotelBookingDetailContent from "../components/Service/HotelBookingDetailContent";
+import TravelInsuranceDetailContent from "../components/Service/TravelInsuranceDetailContent";
+import VehicleRentalDetailContent from "../components/Service/VehicleRentalDetailContent";
+import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
+import DynamicFaqSection from "../components/reuseable/DynamicFaqSection";
 
 const ServiceDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -39,22 +46,42 @@ const ServiceDetail: React.FC = () => {
   );
 
   const [tripType, setTripType] = useState<"one-way" | "two-way">("two-way");
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [passengerCount, setPassengerCount] = useState("1 Passenger");
   const [originCity, setOriginCity] = useState("Kathmandu");
   const [destinationCity, setDestinationCity] = useState("Pokhara");
 
   if (!service) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center py-20 px-4 bg-gray-50 text-center">
-        <h2 className="text-3xl font-black text-[#2D1347]">Service Not Found</h2>
-        <p className="text-gray-500 mt-2">The requested travel service does not exist or has been moved.</p>
-        <Link
-          to="/service"
-          className="mt-6 px-6 py-3 bg-[#E91E63] text-white rounded-full font-bold shadow-md hover:bg-pink-600 transition-colors inline-block"
-        >
-          View All Services
-        </Link>
+      <div className="min-h-[70vh] bg-gradient-to-b from-purple-50/40 to-white flex items-center justify-center px-4 py-20 font-sans">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 text-center animate-in fade-in zoom-in duration-300">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-pink-50 flex items-center justify-center text-[#E91E63] shadow-inner">
+            <Compass size={40} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#E91E63] block mb-2">
+            Service Not Found
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-[#2D1347] mb-3 tracking-tight">
+            Unknown Service
+          </h2>
+          <p className="text-sm text-gray-500 mb-8 leading-relaxed font-medium">
+            The travel service you requested could not be located. It might have been updated, renamed, or temporarily unavailable.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-6 py-3 rounded-full border border-gray-200 text-xs font-bold text-[#2D1347] hover:bg-gray-50 transition-colors uppercase tracking-wider cursor-pointer"
+            >
+              Go Back
+            </button>
+            <Link
+              to="/service"
+              className="px-6 py-3 rounded-full bg-[#E91E63] hover:bg-pink-600 text-white text-xs font-bold shadow-md shadow-pink-200 transition-all uppercase tracking-wider inline-flex items-center justify-center gap-2"
+            >
+              <span>Explore Services</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -64,7 +91,14 @@ const ServiceDetail: React.FC = () => {
     service.name.toLowerCase().includes("air") ||
     service.name.toLowerCase().includes("flight");
 
-  const isToursOrTreks = service.slug === "tours" || service.slug === "trekking" || service.slug === "activities";
+  const isTours = service.slug === "tours";
+  const isActivities = service.slug === "activities";
+  const isTrekking = service.slug === "trekking";
+  const isHotelBooking = service.slug === "hotel-booking";
+  const isTravelInsurance = service.slug === "travel-insurance";
+  const isVehicleRental = service.slug === "vehicle-rental";
+  const isHeliServices = service.slug === "heli-services";
+  const isToursOrTreks = isTours || isTrekking || isActivities;
 
   const faqs = isAirTicket
     ? [
@@ -114,7 +148,7 @@ const ServiceDetail: React.FC = () => {
 
   const handleWhatsApp = () => {
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am interested in your "${service.name}" service. Please share details and pricing.`
+      `Hello Trip Himalaya! I am interested in your "${service.name}" service. Please share details, itineraries, and available dates.`
     );
     window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
   };
@@ -137,11 +171,22 @@ const ServiceDetail: React.FC = () => {
         "https://images.unsplash.com/photo-1502444330042-d1a1ddf9bb5b?auto=format&fit=crop&q=80&w=800",
       ];
 
+  const getServiceBadge = () => {
+    if (isTours) return "CURATED EXPERIENCES";
+    if (isActivities) return "HIGH ADRENALINE";
+    if (isTrekking) return "EPIC TRAILS";
+    if (isHotelBooking) return "VERIFIED STAYS";
+    if (isTravelInsurance) return "ALTITUDE RESCUE";
+    if (isVehicleRental) return "CHAUFFEUR FLEET";
+    if (isHeliServices) return "HIMALAYAN HELI TOURS";
+    return "PREMIUM SERVICE";
+  };
+
   return (
     <div className="w-full bg-[#FBFBFE] font-sans">
       {/* ── 1. HERO SECTION ── */}
       <SubHero
-        badge="PREMIUM SERVICE"
+        badge={getServiceBadge()}
         title={service.name}
         description={service.shortDesc}
         backgroundImage={service.heroImage}
@@ -260,171 +305,150 @@ const ServiceDetail: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-14">
           
-          {/* Left Column: Details, Features, Gallery, Steps, FAQ */}
+          {/* Left Column: Dedicated Components for Tours, Activities, Trekking, Hotels, Insurance, Vehicles, or Generic */}
           <div className="lg:col-span-2 space-y-12">
-            
-            {/* Overview */}
-            <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-              <span className="text-[#E91E63] font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
-                SERVICE OVERVIEW
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-4">
-                Professional &amp; Certified Management
-              </h2>
-              <p className="text-gray-600 text-base sm:text-lg leading-relaxed font-medium">
-                {service.description || service.shortDesc}
-              </p>
+            {isTours ? (
+              <ToursDetailContent />
+            ) : isActivities ? (
+              <ActivitiesDetailContent />
+            ) : isTrekking ? (
+              <TrekkingDetailContent />
+            ) : isHotelBooking ? (
+              <HotelBookingDetailContent />
+            ) : isTravelInsurance ? (
+              <TravelInsuranceDetailContent />
+            ) : isVehicleRental ? (
+              <VehicleRentalDetailContent />
+            ) : isHeliServices ? (
+              <HeliServicesDetailContent />
+            ) : (
+              <>
+                {/* Overview */}
+                <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
+                  <span className="text-[#E91E63] font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
+                    SERVICE OVERVIEW
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-4">
+                    Professional &amp; Certified Management
+                  </h2>
+                  <p className="text-gray-600 text-base sm:text-lg leading-relaxed font-medium">
+                    {service.description || service.shortDesc}
+                  </p>
 
-              {/* Action Banner for Tours / Treks */}
-              {isToursOrTreks && (
-                <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-pink-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-[#2D1347] text-base">Looking for all packages?</h3>
-                    <p className="text-xs text-gray-600 mt-0.5">Explore our complete catalog of curated tours, treks, and adventures.</p>
-                  </div>
-                  <button
-                    onClick={() => navigate("/packages")}
-                    className="px-6 py-3 bg-[#E91E63] hover:bg-pink-600 text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>View All Packages</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Sub-services / Key Features */}
-            {service.subServices && service.subServices.length > 0 && (
-              <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-                <span className="text-[#E91E63] font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
-                  WHAT WE OFFER
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight mb-6">
-                  Key Service Options
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {service.subServices.map((sub, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3.5 p-4 rounded-2xl bg-gray-50/80 hover:bg-pink-50/40 border border-gray-100 transition-all group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-white shadow-xs text-[#E91E63] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E91E63] group-hover:text-white transition-colors">
-                        <CheckCircle2 size={18} />
+                  {/* Action Banner for Tours / Treks */}
+                  {isToursOrTreks && (
+                    <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-pink-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div>
+                        <h3 className="font-bold text-[#2D1347] text-base">Looking for all packages?</h3>
+                        <p className="text-xs text-gray-600 mt-0.5">Explore our complete catalog of curated tours, treks, and adventures.</p>
                       </div>
-                      <span className="font-bold text-gray-800 text-sm">{sub}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Visual Showcase Gallery */}
-            {galleryImages.length > 0 && (
-              <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2.5 rounded-xl bg-pink-50 text-[#E91E63]">
-                    <ImageIcon size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                      Visual Showcase
-                    </h3>
-                    <p className="text-xs text-gray-400 font-medium">Moments from recent experiences</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {galleryImages.map((img, i) => (
-                    <div key={i} className="h-56 sm:h-64 rounded-2xl overflow-hidden shadow-xs group">
-                      <img
-                        src={img}
-                        alt={`${service.name} preview ${i + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 3-Step Process */}
-            <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-8 sm:p-12 rounded-3xl shadow-xl">
-              <h3 className="text-2xl sm:text-3xl font-black mb-8 tracking-tight">
-                How It Works — Simple 3-Step Process
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {[
-                  {
-                    step: "01",
-                    title: "Consult",
-                    desc: "Contact us via WhatsApp, phone, or quotation form with your preferred dates and requirements.",
-                  },
-                  {
-                    step: "02",
-                    title: "Customize",
-                    desc: "Our destination experts create an optimal plan tailored to your budget and specifications.",
-                  },
-                  {
-                    step: "03",
-                    title: "Confirm",
-                    desc: "Receive immediate bookings, ticket confirmations, vouchers, and 24/7 on-trip assistance.",
-                  },
-                ].map((item) => (
-                  <div key={item.step} className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10">
-                    <span className="text-3xl font-black text-pink-400 block mb-2">{item.step}</span>
-                    <h4 className="font-black text-base uppercase tracking-wider text-white mb-2">{item.title}</h4>
-                    <p className="text-gray-300 text-xs leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* FAQs Accordion */}
-            <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 rounded-xl bg-pink-50 text-[#E91E63]">
-                  <HelpCircle size={20} />
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                    Frequently Asked Questions
-                  </h3>
-                  <p className="text-xs text-gray-400 font-medium">Clear answers to common questions</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {faqs.map((faq, index) => {
-                  const isOpen = openFaq === index;
-                  return (
-                    <div
-                      key={index}
-                      className="border border-gray-100 rounded-2xl overflow-hidden transition-all"
-                    >
                       <button
-                        type="button"
-                        onClick={() => setOpenFaq(isOpen ? null : index)}
-                        className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-sm text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => navigate("/packages")}
+                        className="px-6 py-3 bg-[#E91E63] hover:bg-pink-600 text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
                       >
-                        <span>{faq.question}</span>
-                        <ChevronDown
-                          size={18}
-                          className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
-                            isOpen ? "rotate-180 text-[#E91E63]" : ""
-                          }`}
-                        />
+                        <span>View All Packages</span>
+                        <ArrowRight size={14} />
                       </button>
-                      {isOpen && (
-                        <div className="px-5 pb-5 text-xs sm:text-sm text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-3">
-                          {faq.answer}
-                        </div>
-                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  )}
+                </div>
 
+                {/* Sub-services / Key Features */}
+                {service.subServices && service.subServices.length > 0 && (
+                  <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
+                    <span className="text-[#E91E63] font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
+                      WHAT WE OFFER
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight mb-6">
+                      Key Service Options
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {service.subServices.map((sub, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3.5 p-4 rounded-2xl bg-gray-50/80 hover:bg-pink-50/40 border border-gray-100 transition-all group"
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-white shadow-xs text-[#E91E63] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E91E63] group-hover:text-white transition-colors">
+                            <CheckCircle2 size={18} />
+                          </div>
+                          <span className="font-bold text-gray-800 text-sm">{sub}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Visual Showcase Gallery */}
+                {galleryImages.length > 0 && (
+                  <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2.5 rounded-xl bg-pink-50 text-[#E91E63]">
+                        <ImageIcon size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                          Visual Showcase
+                        </h3>
+                        <p className="text-xs text-gray-400 font-medium">Moments from recent experiences</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {galleryImages.map((img, i) => (
+                        <div key={i} className="h-56 sm:h-64 rounded-2xl overflow-hidden shadow-xs group">
+                          <img
+                            src={img}
+                            alt={`${service.name} preview ${i + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3-Step Process */}
+                <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-8 sm:p-12 rounded-3xl shadow-xl">
+                  <h3 className="text-2xl sm:text-3xl font-black mb-8 tracking-tight">
+                    How It Works — Simple 3-Step Process
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    {[
+                      {
+                        step: "01",
+                        title: "Consult",
+                        desc: "Contact us via WhatsApp, phone, or quotation form with your preferred dates and requirements.",
+                      },
+                      {
+                        step: "02",
+                        title: "Customize",
+                        desc: "Our destination experts create an optimal plan tailored to your budget and specifications.",
+                      },
+                      {
+                        step: "03",
+                        title: "Confirm",
+                        desc: "Receive immediate bookings, ticket confirmations, vouchers, and 24/7 on-trip assistance.",
+                      },
+                    ].map((item) => (
+                      <div key={item.step} className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10">
+                        <span className="text-3xl font-black text-pink-400 block mb-2">{item.step}</span>
+                        <h4 className="font-black text-base uppercase tracking-wider text-white mb-2">{item.title}</h4>
+                        <p className="text-gray-300 text-xs leading-relaxed">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dynamic FAQs Section */}
+                <DynamicFaqSection
+                  targetType="service"
+                  targetId={service.slug}
+                  defaultFaqs={faqs}
+                  title="Frequently Asked Questions"
+                  subtitle={`Everything you need to know about our ${service.name}`}
+                />
+              </>
+            )}
           </div>
 
           {/* Right Column: Sticky Sidebar with Inquiry & Quick Contacts */}
@@ -500,8 +524,8 @@ const ServiceDetail: React.FC = () => {
       <PreFooter
         title="Need a Customized Package or Service?"
         description="Our destination specialists are ready to tailor an unforgettable experience for you."
-        btn1="CALL US NOW"
-        btn2="CHAT ON WHATSAPP"
+        btn1="Call Us Now"
+        btn2="Chat on WhatsApp"
       />
     </div>
   );

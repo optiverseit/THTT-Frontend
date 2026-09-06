@@ -685,46 +685,51 @@ const faqs = isAirTicket
   </div>
 </section>
       {/* FAQ – below Testimonials, above CTA */}
-<section className="py-12 bg-white">
-  <div className="max-w-8xl mx-auto px-4 md:px-8">
-    <div id="faqs" className="max-w-4xl mx-auto">
-      <h2 className="text-2xl md:text-3xl font-black text-[#2D1347] mb-4">
-        Frequently Asked Questions (FAQs)
-      </h2>
-
-      <div className="space-y-2">
-        {faqs.map((faq, idx) => (
-          <div
-            key={idx}
-            className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm"
-          >
-            <button
-              type="button"
-              onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-              className="w-full px-8 py-5 flex items-center justify-between text-left group"
-            >
-              <span className="font-black text-[#2D1347] group-hover:text-[#D92671] transition-colors">
-                {faq.question}
-              </span>
-              <ChevronDown
-                size={20}
-                className={`text-slate-400 transition-transform ${
-                  openFaq === idx ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {openFaq === idx && (
-              <div className="px-8 pb-6 text-slate-500 text-sm font-medium leading-relaxed animate-in slide-in-from-top-2 duration-300">
-                {faq.answer}
+      <section className="py-12 bg-gray-50/60">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 rounded-xl bg-pink-50 text-[#E11D48]">
+                <HelpCircle size={22} />
               </div>
-            )}
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  Frequently Asked Questions
+                </h3>
+                <p className="text-xs text-gray-500 font-medium">Common questions answered by our travel specialists</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {faqs.map((faq, index) => {
+                const isOpen = openFaq === index;
+                return (
+                  <div key={index} className="border border-gray-100 rounded-2xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : index)}
+                      className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <span>{faq.question}</span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
+                          isOpen ? "rotate-180 text-[#E11D48]" : ""
+                        }`}
+                      />
+                    </button>
+                    {isOpen && (
+                      <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</section>
+        </div>
+      </section>
 
 
       {/* CTA Strip */}

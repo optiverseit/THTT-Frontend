@@ -322,8 +322,8 @@ function Blog() {
       <PreFooter
         title="Inspired by Our Travel Stories?"
         description="Let our experienced team craft your next unforgettable journey."
-        btn1="CALL US NOW"
-        btn2="GET A FREE QUOTE"
+        btn1="Call Us Now"
+        btn2="Get a Free Quote"
       />
     </div>
   );

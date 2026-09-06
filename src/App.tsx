@@ -14,6 +14,7 @@ import TravelGuide from "./pages/TravelGuide";
 import Gallery from "./pages/Gallery";
 import VideoVlog from "./pages/VideoVlog";
 import VideoDetails from "./components/video-vlogs/VideoDetails";
+import NotFound from "./pages/NotFound";
 import Packages from "./pages/Packages";
 import PackageOverview from "./components/TravelPackage/PackageDetail/PackageOverview";
 import PackageDetails from "./components/TravelPackage/PackageDetail/PackageDetails";
@@ -29,6 +30,7 @@ import WorkPermit from "./pages/WorkPermit";
 import WorkPermitDetails from "./components/work-permit/permit-details/WorkPermitDetails";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GlobalCurrencyProvider } from "./context/CurrencyContext";
+import { FaqProvider } from "./context/FaqContext";
 
 const MainLayout = () => {
   const { isLoggedIn } = useAuth();
@@ -82,6 +84,9 @@ const MainLayout = () => {
         {/* work permit */}
         <Route path="/work-permit" element={<WorkPermit />} />
         <Route path="/permit-details/:id" element={<WorkPermitDetails />} />
+
+        {/* 404 Catch-All Route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {/* Global Footer */}
@@ -96,7 +101,9 @@ function App() {
       {/* GlobalCurrencyProvider makes the selected currency (NPR or USD)
           and live exchange rate available to every component in the app. */}
       <GlobalCurrencyProvider>
-        <MainLayout />
+        <FaqProvider>
+          <MainLayout />
+        </FaqProvider>
       </GlobalCurrencyProvider>
     </AuthProvider>
   );

@@ -18,8 +18,8 @@ const Home = () => {
       <PreFooter
         title="Start Your Journey Today"
         description="Get a free consultation from our travel experts"
-        btn1="CALL US NOW"
-        btn2="GET A FREE QUOTE"
+        btn1="Call Us Now"
+        btn2="Get a Free Quote"
       />
     </div>
   );

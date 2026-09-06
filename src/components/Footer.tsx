@@ -68,131 +68,131 @@ const Footer: React.FC = () => {
         {/* ── TOP SECTION: 4 COLUMNS ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 mb-16">
           
-          {/* Column 1: QUICK LINKS */}
+          {/* Column 1: Quick Links */}
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <h3 className="text-sm font-extrabold tracking-widest uppercase text-white">
-                QUICK LINKS
+              <h3 className="text-base font-extrabold tracking-wider text-white">
+                Quick Links
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
-            <ul className="space-y-3 text-xs font-bold text-gray-300 tracking-wider">
+            <ul className="space-y-3.5 text-sm font-semibold text-gray-300">
               <li>
                 <Link to="/" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  HOME
+                  Home
                 </Link>
               </li>
               <li>
                 <Link to="/about" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  ABOUT THTT
+                  About THTT
                 </Link>
               </li>
               <li>
                 <Link to="/packages" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  TOUR &amp; TREK PACKAGES
+                  Tour &amp; Trek Packages
                 </Link>
               </li>
               <li>
                 <Link to="/work-permit" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  WORK PERMIT (श्रम)
+                  Work Permit (श्रम)
                 </Link>
               </li>
               <li>
                 <Link to="/gallery" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  PHOTO GALLERY
+                  Photo Gallery
                 </Link>
               </li>
               <li>
                 <Link to="/travel-guide" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  TRAVEL GUIDE
+                  Travel Guide
                 </Link>
               </li>
               <li>
                 <Link to="/blog" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  BLOG &amp; ARTICLES
+                  Blog &amp; Articles
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 2: OUR SERVICES */}
+          {/* Column 2: Our Services */}
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <h3 className="text-sm font-extrabold tracking-widest uppercase text-white">
-                OUR SERVICES
+              <h3 className="text-base font-extrabold tracking-wider text-white">
+                Our Services
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
-            <ul className="space-y-3 text-xs font-bold text-gray-300 tracking-wider">
+            <ul className="space-y-3.5 text-sm font-semibold text-gray-300">
               <li>
                 <Link to="/service/air-ticket" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  AIR TICKET BOOKING
+                  Air Tickets
                 </Link>
               </li>
               <li>
                 <Link to="/service/tours" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  HOLIDAY TOURS
+                  Holiday Tours
                 </Link>
               </li>
               <li>
                 <Link to="/service/trekking" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  HIMALAYAN TREKKING
+                  Himalayan Trekking
                 </Link>
               </li>
               <li>
                 <Link to="/service/activities" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  ADVENTURE ACTIVITIES
+                  Adventure Activities
                 </Link>
               </li>
               <li>
                 <Link to="/service/hotel-booking" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  HOTEL &amp; RESORT BOOKING
+                  Hotel &amp; Resort Booking
                 </Link>
               </li>
               <li>
                 <Link to="/service/visa-services" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  VISA ASSISTANCE
+                  Visa Assistance
                 </Link>
               </li>
               <li>
                 <Link to="/service/travel-insurance" className="hover:text-[#E11D48] transition-colors block py-0.5">
-                  TRAVEL INSURANCE
+                  Travel Insurance
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: GET IN TOUCH */}
+          {/* Column 3: Get In Touch */}
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <h3 className="text-sm font-extrabold tracking-widest uppercase text-white">
-                GET IN TOUCH
+              <h3 className="text-base font-extrabold tracking-wider text-white">
+                Get In Touch
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
-            <ul className="space-y-4 text-xs font-bold text-gray-300 tracking-wider">
+            <ul className="space-y-4 text-sm font-semibold text-gray-300">
               <li className="flex items-start gap-3">
-                <MapPin size={16} className="text-[#E11D48] flex-shrink-0 mt-0.5" />
+                <MapPin size={17} className="text-[#E11D48] flex-shrink-0 mt-0.5" />
                 <a
                   href="https://maps.google.com/?q=Kantipath,Kathmandu,Nepal"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors leading-snug"
                 >
-                  KANTIPATH, KATHMANDU, NEPAL
-                  <span className="block text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">
-                    (NEAR NTB OFFICE)
+                  Kantipath, Kathmandu, Nepal
+                  <span className="block text-xs text-gray-400 font-medium tracking-normal mt-0.5">
+                    (Near NTB Office)
                   </span>
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <Phone size={15} className="text-[#E11D48] flex-shrink-0" />
+                <Phone size={16} className="text-[#E11D48] flex-shrink-0" />
                 <a href="tel:+97714240000" className="hover:text-white transition-colors">
                   +977 1 4240000 / 9800000000
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail size={15} className="text-[#E11D48] flex-shrink-0" />
+                <Mail size={16} className="text-[#E11D48] flex-shrink-0" />
                 <a
                   href="mailto:info@triphimalaya.com.np"
                   className="hover:text-white transition-colors break-all"
@@ -201,31 +201,31 @@ const Footer: React.FC = () => {
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <MessageCircle size={15} className="text-[#E11D48] flex-shrink-0" />
+                <MessageCircle size={16} className="text-[#E11D48] flex-shrink-0" />
                 <a
                   href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20would%20like%20to%20inquire%20about%20your%20services."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors text-emerald-400"
                 >
-                  WHATSAPP: +977 9800000003
+                  WhatsApp: +977 9800000003
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: JOIN OUR NEWSLETTER */}
+          {/* Column 4: Join Our Newsletter */}
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <h3 className="text-sm font-extrabold tracking-widest uppercase text-white">
-                JOIN OUR NEWSLETTER
+              <h3 className="text-base font-extrabold tracking-wider text-white">
+                Join Our Newsletter
               </h3>
               <span className="w-6 h-[3px] bg-[#E11D48] rounded-full" />
             </div>
             
             <div className="bg-[#0F1626]/80 border border-white/10 rounded-2xl p-5 shadow-xl">
-              <p className="text-xs text-gray-300 mb-4 leading-relaxed font-medium">
-                Subscribe our newsletter to know more about travel deals.
+              <p className="text-sm text-gray-300 mb-4 leading-relaxed font-medium">
+                Subscribe to our newsletter to stay updated on the latest travel deals.
               </p>
               <form onSubmit={handleSubscribe} className="space-y-3">
                 <input
@@ -233,7 +233,7 @@ const Footer: React.FC = () => {
                   placeholder="Enter Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-[#162035]/80 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-400 outline-none focus:border-[#E11D48] transition-colors font-medium"
+                  className="w-full bg-[#162035]/80 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-400 outline-none focus:border-[#E11D48] transition-colors font-medium"
                 />
                 <input
                   type="email"
@@ -241,14 +241,14 @@ const Footer: React.FC = () => {
                   placeholder="Enter Your Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#162035]/80 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-400 outline-none focus:border-[#E11D48] transition-colors font-medium"
+                  className="w-full bg-[#162035]/80 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-400 outline-none focus:border-[#E11D48] transition-colors font-medium"
                 />
                 <button
                   type="submit"
-                  className="w-full bg-[#E11D48] hover:bg-[#BE123C] active:scale-98 text-white font-extrabold text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-pink-900/40"
+                  className="w-full bg-[#E11D48] hover:bg-[#BE123C] active:scale-98 text-white font-extrabold text-sm py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-pink-900/40"
                 >
-                  <span>{subscribed ? "THANK YOU!" : "SUBSCRIBE NOW"}</span>
-                  <ArrowRight size={14} />
+                  <span>{subscribed ? "Thank You!" : "Subscribe Now"}</span>
+                  <ArrowRight size={15} />
                 </button>
               </form>
             </div>
@@ -258,14 +258,14 @@ const Footer: React.FC = () => {
 
         {/* ── MIDDLE SECTION: OUR ASSOCIATIONS CARD ── */}
         <div className="bg-[#0F1626] border border-white/10 rounded-3xl p-6 sm:p-8 md:p-10 mb-12 shadow-2xl">
-          <span className="text-[#E11D48] text-[10px] font-black tracking-[0.25em] uppercase block mb-1.5">
-            CERTIFIED & TRUSTED
+          <span className="text-[#E11D48] text-xs font-bold tracking-[0.2em] block mb-1.5">
+            Certified &amp; Trusted
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-1.5 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">
             Our Associations
           </h2>
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-8">
-            AUTHORIZED TRAVEL PARTNER RECOGNIZED BY NEPAL'S LEADING TOURISM BODIES.
+          <p className="text-sm font-medium text-gray-400 tracking-wide mb-8">
+            Authorized travel partner recognized by Nepal's leading tourism bodies.
           </p>
 
           {/* Association Round Badges — clickable links */}
@@ -300,17 +300,17 @@ const Footer: React.FC = () => {
         </div>
 
         {/* ── BOTTOM BAR: COPYRIGHT & DEVELOPED BY ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-          <p>© {new Date().getFullYear()} TRIP HIMALAYA TOURS & TRAVELS PVT. LTD. ALL RIGHTS RESERVED.</p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 text-xs sm:text-[13px] font-medium text-gray-400 tracking-wide">
+          <p>© {new Date().getFullYear()} Trip Himalaya Tours &amp; Travels Pvt. Ltd. All Rights Reserved.</p>
           <p className="text-gray-400">
-            DEVELOPED BY{" "}
+            Developed by{" "}
             <a
               href="https://optiverseits.com.np/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white hover:text-[#E11D48] transition-colors font-extrabold"
             >
-              OPTIVERSE IT SOLUTIONS PVT. LTD.
+              Optiverse IT Solutions Pvt. Ltd.
             </a>
           </p>
         </div>

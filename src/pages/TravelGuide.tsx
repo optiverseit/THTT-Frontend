@@ -150,8 +150,8 @@ const TravelGuide: React.FC = () => {
       <PreFooter
         title="Ready to Plan Your Nepal Expedition?"
         description="Get in touch with our local Himalayan travel experts for personalized guidance."
-        btn1="CALL US NOW"
-        btn2="GET A FREE QUOTE"
+        btn1="Call Us Now"
+        btn2="Get a Free Quote"
       />
     </div>
   );

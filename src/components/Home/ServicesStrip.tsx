@@ -50,26 +50,29 @@ const ServicesStrip: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-0 sm:px-2 md:px-0">
-      {/* Container aligned with the white logo scoop on mobile, tablet, and desktop */}
-      <div className="pl-[150px] sm:pl-[175px] md:pl-[200px] lg:pl-[210px] w-full pr-2 sm:pr-4 lg:pr-6">
-        {/* Translucent pill bar — lighter luminous frosted glass styling */}
-        <div className="relative flex items-center w-full bg-white/15 backdrop-blur-xl border border-white/30 rounded-full shadow-2xl overflow-hidden p-1">
+    <div className="w-full">
+      {/* Container aligned right beside the logo curve on desktop, and full-width below logo on mobile */}
+      <div className="px-2.5 sm:px-0 sm:pl-[150px] md:pl-[162px] lg:pl-[172px] w-full pr-2.5 sm:pr-4 lg:pr-10">
+        {/* Light-dark transparent frosted glass bar */}
+        <div
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.35)" }}
+          className="relative flex items-center w-full bg-black/40 backdrop-blur-xl border border-white/20 rounded-full shadow-2xl overflow-hidden p-0.5 sm:p-1"
+        >
           
           {/* Left Arrow Button */}
           <button
             type="button"
             onClick={() => scroll("left")}
             aria-label="Scroll services left"
-            className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 hover:bg-[#FF4FA3] text-white flex items-center justify-center transition-all cursor-pointer z-10 mr-1 border border-white/20"
+            className="flex-shrink-0 w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-full bg-white/10 hover:bg-[#FF4FA3] text-white flex items-center justify-center transition-all cursor-pointer z-10 mr-1 border border-white/15"
           >
-            <ChevronLeft size={15} />
+            <ChevronLeft size={13} />
           </button>
 
           {/* Scrollable Services List — flex-1 fills remaining space */}
           <div
             ref={scrollRef}
-            className="flex items-center gap-2 overflow-x-auto scroll-smooth px-1 py-0.5 flex-1"
+            className="flex items-center gap-1.5 overflow-x-auto scroll-smooth px-0.5 py-0.5 flex-1"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {servicesList.map((item) => {
@@ -78,10 +81,10 @@ const ServicesStrip: React.FC = () => {
                 <Link
                   key={item.id}
                   to={item.slug}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/25 bg-white/10 hover:bg-white hover:text-[#2D1347] text-white transition-all duration-200 flex-shrink-0 group cursor-pointer shadow-sm"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/15 bg-white/10 hover:bg-white hover:text-[#2D1347] text-white transition-all duration-200 flex-shrink-0 group cursor-pointer shadow-sm"
                 >
-                  <Icon size={12} className="text-white/90 group-hover:text-[#2D1347] transition-colors flex-shrink-0" />
-                  <span className="text-[10px] font-black tracking-widest uppercase whitespace-nowrap">
+                  <Icon size={11} className="text-white/90 group-hover:text-[#2D1347] transition-colors flex-shrink-0" />
+                  <span className="text-[9px] sm:text-[9.5px] font-bold tracking-wider uppercase whitespace-nowrap">
                     {item.name}
                   </span>
                 </Link>
@@ -94,9 +97,9 @@ const ServicesStrip: React.FC = () => {
             type="button"
             onClick={() => scroll("right")}
             aria-label="Scroll services right"
-            className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 hover:bg-[#FF4FA3] text-white flex items-center justify-center transition-all cursor-pointer z-10 ml-1 border border-white/20"
+            className="flex-shrink-0 w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-full bg-white/10 hover:bg-[#FF4FA3] text-white flex items-center justify-center transition-all cursor-pointer z-10 ml-1 border border-white/15"
           >
-            <ChevronRight size={15} />
+            <ChevronRight size={13} />
           </button>
 
         </div>

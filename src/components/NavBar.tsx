@@ -52,20 +52,20 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   return (
     <nav className="w-full bg-gradient-to-r from-[#2D1347] via-[#3B145C] to-[#2D1347] border-b border-white/10 text-white relative z-20">
       <div className="w-full pl-3 pr-2 sm:pr-4 lg:px-10">
-        <div className="h-[66px] sm:h-[72px] flex items-center justify-between pl-[180px] sm:pl-[205px] md:pl-[225px] lg:pl-[270px]">
+        <div className="h-[48px] sm:h-[52px] flex items-center justify-between pl-[114px] sm:pl-[155px] md:pl-[168px] lg:pl-[178px]">
           
           {/* Mobile view brand — placeholder to maintain justify-between spacing */}
           <div className="md:hidden flex items-center">
             <span className="sr-only">Menu</span>
           </div>
 
-          {/* Desktop Navigation Links — flex-1 fills all space, justify-between gives equal spacing */}
-          <div className="hidden lg:flex items-center justify-between flex-1 font-bold text-[15px] tracking-wide px-4">
+          {/* Desktop Centered Navigation: Links + Action Buttons */}
+          <div className="hidden lg:flex items-center justify-center gap-7 xl:gap-10 2xl:gap-12 flex-1 font-semibold text-[13px] xl:text-[13.5px] tracking-normal px-2">
             {navLinks.map((item) => (
               <Link
                 key={item.name}
                 to={item.path}
-                className={`transition-colors whitespace-nowrap py-1 ${
+                className={`transition-colors whitespace-nowrap py-0.5 ${
                   isActive(item.path)
                     ? "text-[#FF4FA3] font-bold"
                     : "text-white/90 hover:text-[#FF4FA3]"
@@ -74,45 +74,66 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
                 {item.name}
               </Link>
             ))}
+
+            {/* Desktop Action Buttons: Get Quote & Login */}
+            <div className="flex items-center gap-5 xl:gap-6 flex-shrink-0">
+              {/* Get Quote Pill */}
+              <button
+                onClick={handleGetQuote}
+                className="bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] hover:brightness-110 active:scale-95 text-white font-semibold text-[11px] sm:text-[11.5px] rounded-full px-3.5 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1.5 shadow-md shadow-pink-900/25 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <MessageCircle size={13.5} />
+                <span>Get Quote</span>
+              </button>
+
+              {/* Login Pill with Icon */}
+              <button
+                onClick={() => navigate("/login")}
+                className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+              >
+                <LogIn size={13.5} />
+                <span>Login</span>
+              </button>
+            </div>
           </div>
 
-          {/* Tablet & Desktop Action Buttons: Get Quote & Login */}
-          <div className="hidden md:flex items-center gap-3 lg:gap-4 flex-shrink-0 ml-auto lg:ml-6">
+          {/* Tablet Action Buttons: Get Quote & Login (md only, hidden on lg) */}
+          <div className="hidden md:flex lg:hidden items-center gap-2.5 flex-shrink-0 ml-auto">
             {/* Get Quote Pill */}
             <button
               onClick={handleGetQuote}
-              className="bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] hover:brightness-110 active:scale-95 text-white font-bold text-xs rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg shadow-pink-900/30 transition-all cursor-pointer whitespace-nowrap"
+              className="bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] hover:brightness-110 active:scale-95 text-white font-semibold text-[11px] sm:text-[11.5px] rounded-full px-3.5 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1.5 shadow-md shadow-pink-900/25 transition-all cursor-pointer whitespace-nowrap"
             >
-              <MessageCircle size={15} />
+              <MessageCircle size={13.5} />
               <span>Get Quote</span>
             </button>
 
             {/* Login Pill with Icon */}
             <button
               onClick={() => navigate("/login")}
-              className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-semibold text-xs rounded-full px-4 py-2.5 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+              className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
             >
-              <LogIn size={15} />
+              <LogIn size={13.5} />
               <span>Login</span>
             </button>
           </div>
 
           {/* Mobile Action buttons & Hamburger toggle */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="md:hidden flex items-center gap-1.5">
             <button
               onClick={handleGetQuote}
-              className="bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] text-white text-[11px] font-bold rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-md"
+              className="bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] text-white text-[10px] font-bold rounded-full px-2.5 py-1 flex items-center gap-1 shadow-sm"
             >
-              <MessageCircle size={13} />
+              <MessageCircle size={11} />
               <span>Quote</span>
             </button>
             
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle navigation menu"
-              className="text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+              className="text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
             >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
 

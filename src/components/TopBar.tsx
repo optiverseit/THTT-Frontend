@@ -165,17 +165,17 @@ const TopBar: React.FC<TopBarProps> = () => {
   return (
     <div className="w-full bg-white border-b border-gray-100/80 relative z-30">
       <div className="w-full pl-3 pr-2 sm:pr-4 lg:px-10">
-        <div className="h-[46px] flex items-center justify-end pl-[180px] sm:pl-[205px] md:pl-[225px] lg:pl-[265px]">
+        <div className="h-[30px] sm:h-[32px] flex items-center justify-end">
 
           {/* All contact, social, and currency controls — right-aligned */}
-          <div className="flex items-center gap-3 sm:gap-5 lg:gap-7 text-[12px] sm:text-[13.5px] font-semibold text-[#2D1347]">
+          <div className="flex items-center gap-2 sm:gap-3.5 lg:gap-4 text-[10px] sm:text-[11px] font-medium text-[#2D1347]">
 
             {/* ── Email Link ── */}
             <a
               href="mailto:info@triphimalaya.com.np"
-              className="hidden sm:flex items-center gap-2 hover:text-[#FF4FA3] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 hover:text-[#FF4FA3] transition-colors"
             >
-              <Mail size={16} className="text-[#FF4FA3]" />
+              <Mail size={12} className="text-[#FF4FA3]" />
               <span>info@triphimalaya.com.np</span>
             </a>
 
@@ -184,14 +184,14 @@ const TopBar: React.FC<TopBarProps> = () => {
               <button
                 type="button"
                 onClick={() => setIsWhatsappDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-1.5 text-green-600 hover:text-green-700 transition-colors py-1 cursor-pointer font-semibold"
+                className="flex items-center gap-1 text-green-600 hover:text-green-700 transition-colors py-0.5 cursor-pointer font-medium"
                 aria-expanded={isWhatsappDropdownOpen}
                 aria-label="Open WhatsApp team selector"
               >
-                <MessageCircle size={16} className="text-green-500" />
+                <MessageCircle size={12} className="text-green-500" />
                 <span>WhatsApp</span>
                 <ChevronDown
-                  size={12}
+                  size={9}
                   className={`transition-transform duration-200 ${isWhatsappDropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>
@@ -228,33 +228,33 @@ const TopBar: React.FC<TopBarProps> = () => {
             {/* ── Phone Link ── */}
             <a
               href="tel:+9779800000000"
-              className="hidden sm:flex items-center gap-1.5 hover:text-[#FF4FA3] transition-colors"
+              className="hidden sm:flex items-center gap-1 hover:text-[#FF4FA3] transition-colors"
             >
-              <Phone size={16} className="text-[#FF4FA3]" />
-              <span className="whitespace-nowrap font-semibold">+977 980 0000000</span>
+              <Phone size={12} className="text-[#FF4FA3]" />
+              <span className="whitespace-nowrap font-medium">+977 980 0000000</span>
             </a>
 
             {/* ── Subtle Divider ── */}
-            <span className="hidden sm:block h-4 w-px bg-gray-200 mx-0.5" />
+            <span className="hidden sm:block h-3 w-px bg-gray-200 mx-0.5" />
 
             {/* ── Social Icons ── */}
-            <div className="flex items-center gap-3 text-[#64748B]">
+            <div className="flex items-center gap-2 text-[#64748B]">
               <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="hover:text-[#2D1347] transition-colors">
-                <Facebook size={18} />
+                <Facebook size={12.5} />
               </a>
               <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="hover:text-[#FF4FA3] transition-colors">
-                <Instagram size={18} />
+                <Instagram size={12.5} />
               </a>
               <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="Twitter" className="hover:text-sky-500 transition-colors">
-                <Twitter size={18} />
+                <Twitter size={12.5} />
               </a>
               <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="hover:text-blue-700 transition-colors">
-                <Linkedin size={18} />
+                <Linkedin size={12.5} />
               </a>
             </div>
 
             {/* ── Subtle Divider before Flag Selector ── */}
-            <span className="hidden sm:block h-4 w-px bg-gray-200 mx-0.5" />
+            <span className="hidden sm:block h-3 w-px bg-gray-200 mx-0.5" />
 
             {/* ── Currency / Flag Selector Dropdown ── */}
             <div ref={currencyDropdownRef} className="relative">
@@ -265,14 +265,14 @@ const TopBar: React.FC<TopBarProps> = () => {
                 onClick={() => setIsCurrencyDropdownOpen((prev) => !prev)}
                 aria-expanded={isCurrencyDropdownOpen}
                 aria-label="Select currency"
-                className="flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                className="flex items-center gap-1 py-0.5 px-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200"
               >
-                <span className="text-lg leading-none">{activeCurrencyOption.flagEmoji}</span>
-                <span className="text-[11px] font-black text-[#2D1347] tracking-wide">
+                <span className="text-xs leading-none">{activeCurrencyOption.flagEmoji}</span>
+                <span className="text-[10px] font-bold text-[#2D1347] tracking-wider">
                   {activeCurrencyOption.shortLabel}
                 </span>
                 <ChevronDown
-                  size={11}
+                  size={9}
                   className={`text-gray-400 transition-transform duration-200 ${isCurrencyDropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>

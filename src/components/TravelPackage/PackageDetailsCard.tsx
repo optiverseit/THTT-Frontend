@@ -12,7 +12,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
   const navigate = useNavigate();
 
   /** Read global currency mode and live exchange rate */
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   /**
    * Extract the base USD price from the package price string (e.g. "$85" -> 85),
@@ -22,7 +22,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
   const baseUSDPrice = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
   const baseNPRPrice = baseUSDPrice * nprPerOneDollar;
   const formattedStartingPrice = baseUSDPrice > 0
-    ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar)
+    ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)
     : "Contact Us";
 
   const handleCardClick = () => {

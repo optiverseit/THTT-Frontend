@@ -49,7 +49,7 @@ const HOTEL_FAQS = [
 export const HotelBookingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   // Search box state
   const [searchCity, setSearchCity] = useState("All Destinations");
@@ -61,7 +61,7 @@ export const HotelBookingDetailContent: React.FC = () => {
 
   const formatPrice = (usdAmount: number) => {
     const nprAmount = usdAmount * nprPerOneDollar;
-    return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar);
+    return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
   };
 
   // 100% Dynamically sourced and filtered from mockData

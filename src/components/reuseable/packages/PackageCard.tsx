@@ -19,14 +19,14 @@ interface Props {
 const PackageCard: React.FC<Props> = ({ pkg }) => {
   const navigate = useNavigate();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   // Dynamic currency price calculation
   const baseUSDPrice = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
   const baseNPRPrice = baseUSDPrice * nprPerOneDollar;
   const formattedPrice =
     baseUSDPrice > 0
-      ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar)
+      ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)
       : pkg.price || "On Request";
 
   // Navigate to package details page

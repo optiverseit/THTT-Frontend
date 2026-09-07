@@ -24,6 +24,7 @@ import {
   Twitter,
   Linkedin,
 } from "lucide-react";
+import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, type CurrencyMode } from "../context/CurrencyContext";
 
 // =============================================================================
@@ -32,15 +33,17 @@ import { useGlobalCurrency, type CurrencyMode } from "../context/CurrencyContext
 
 interface CurrencyOption {
   mode: CurrencyMode;
-  flagEmoji: string;       // Unicode flag emoji for visual display
+  countryCode: string;     // ISO 3166-1 alpha-2 code for SVG flag
+  flagEmoji: string;       // Unicode flag emoji fallback
   label: string;           // Full country + currency label shown in dropdown
   shortLabel: string;      // Short label shown in the trigger button
-  currencySymbol: string;  // Symbol like "Rs." or "$"
+  currencySymbol: string;  // Symbol like "Rs.", "$", or "₹"
 }
 
 const CURRENCY_OPTIONS: CurrencyOption[] = [
   {
     mode: "nepali",
+    countryCode: "NP",
     flagEmoji: "🇳🇵",
     label: "Nepali Rupee (NPR)",
     shortLabel: "NPR",
@@ -48,10 +51,19 @@ const CURRENCY_OPTIONS: CurrencyOption[] = [
   },
   {
     mode: "foreigner",
+    countryCode: "US",
     flagEmoji: "🇺🇸",
     label: "US Dollar (USD)",
     shortLabel: "USD",
     currencySymbol: "$",
+  },
+  {
+    mode: "inr",
+    countryCode: "IN",
+    flagEmoji: "🇮🇳",
+    label: "Indian Rupee (INR)",
+    shortLabel: "INR",
+    currencySymbol: "₹",
   },
 ];
 
@@ -259,15 +271,20 @@ const TopBar: React.FC<TopBarProps> = () => {
             {/* ── Currency / Flag Selector Dropdown ── */}
             <div ref={currencyDropdownRef} className="relative">
 
-              {/* Trigger Button: shows current flag emoji + short label + chevron */}
+              {/* Trigger Button: shows current country flag + short label + chevron */}
               <button
                 type="button"
                 onClick={() => setIsCurrencyDropdownOpen((prev) => !prev)}
                 aria-expanded={isCurrencyDropdownOpen}
                 aria-label="Select currency"
-                className="flex items-center gap-1 py-0.5 px-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                className="flex items-center gap-1.5 py-0.5 px-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200"
               >
-                <span className="text-xs leading-none">{activeCurrencyOption.flagEmoji}</span>
+                <ReactCountryFlag
+                  svg
+                  countryCode={activeCurrencyOption.countryCode}
+                  style={{ width: "1.25em", height: "1.25em", borderRadius: "2px" }}
+                  aria-label={activeCurrencyOption.label}
+                />
                 <span className="text-[10px] font-bold text-[#2D1347] tracking-wider">
                   {activeCurrencyOption.shortLabel}
                 </span>
@@ -304,8 +321,15 @@ const TopBar: React.FC<TopBarProps> = () => {
                         }`}
                         aria-selected={isCurrentlySelected}
                       >
-                        {/* Flag emoji */}
-                        <span className="text-2xl leading-none">{option.flagEmoji}</span>
+                        {/* SVG Flag */}
+                        <div className="flex-shrink-0 flex items-center justify-center">
+                          <ReactCountryFlag
+                            svg
+                            countryCode={option.countryCode}
+                            style={{ width: "1.6em", height: "1.6em", borderRadius: "3px" }}
+                            aria-label={option.label}
+                          />
+                        </div>
 
                         {/* Currency name and symbol */}
                         <div className="flex-1">

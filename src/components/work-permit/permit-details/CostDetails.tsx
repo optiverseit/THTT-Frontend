@@ -1,11 +1,26 @@
+import React from "react";
 import { ArrowRight, MessageCircle } from "lucide-react";
+import { useGlobalCurrency, displayPrice } from "../../../context/CurrencyContext";
 
-const CostDetails = () => {
+const CostDetails: React.FC = () => {
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
+
   const ageGroups = [
-    { label: "Below 35 years", cost: "Rs. 11,000" },
-    { label: "35–50 years", cost: "Rs. 12,500" },
-    { label: "Above 51 years", cost: "Rs. 15,500" },
+    { label: "Below 35 years", npr: 11000 },
+    { label: "35–50 years", npr: 12500 },
+    { label: "Above 51 years", npr: 15500 },
   ];
+
+  const currencyLabel =
+    selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
+
+  const handleWhatsAppInquiry = () => {
+    const minPrice = displayPrice(11000, selectedCurrency, nprPerOneDollar, nprPerOneINR);
+    const msg = encodeURIComponent(
+      `Hello Trip Himalaya! I would like to inquire about the Work Permit service (fees starting around ${minPrice}). Please guide me through the application process and required documents.`
+    );
+    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div>
@@ -14,7 +29,7 @@ const CostDetails = () => {
         <div className="mb-5">
           <h2 className="text-xl font-bold text-purple-950">Cost Breakdown</h2>
           <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mt-1">
-            Based on Age Groups (NPR)
+            Based on Age Groups ({currencyLabel})
           </p>
         </div>
 
@@ -24,7 +39,7 @@ const CostDetails = () => {
             Age Group
           </span>
           <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">
-            Cost (NPR)
+            Cost ({currencyLabel})
           </span>
         </div>
 
@@ -41,7 +56,7 @@ const CostDetails = () => {
                 {item.label}
               </span>
               <span className="text-sm font-bold text-pink-500">
-                {item.cost}
+                {displayPrice(item.npr, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
               </span>
             </div>
           ))}
@@ -56,11 +71,14 @@ const CostDetails = () => {
               ) as HTMLDialogElement;
               modal?.showModal();
             }}
-            className="w-full font-bold cursor-pointer shadow hover:shadow-pink-400/30 flex gap-2 items-center justify-center rounded-2xl bg-pink-500 text-white py-3"
+            className="w-full font-bold cursor-pointer shadow hover:shadow-pink-400/30 flex gap-2 items-center justify-center rounded-2xl bg-pink-500 text-white py-3 transition-all"
           >
             Process Now <ArrowRight size={14} />
           </button>
-          <button className="w-full font-bold cursor-pointer shadow hover:shadow-green-400/30 flex gap-2 items-center justify-center rounded-2xl bg-green-500 text-white py-3">
+          <button
+            onClick={handleWhatsAppInquiry}
+            className="w-full font-bold cursor-pointer shadow hover:shadow-green-400/30 flex gap-2 items-center justify-center rounded-2xl bg-green-500 text-white py-3 transition-all"
+          >
             <MessageCircle size={14} />
             WhatsApp Inquiry
           </button>

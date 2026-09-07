@@ -1,16 +1,18 @@
-﻿/**
+/**
  * CurrencyContext.tsx  (Global)
  * ----------------------------------------------------------------
  * A React Context that provides site-wide currency management:
  *   - "nepali"    -> display all prices in NPR (Nepalese Rupee)
  *   - "foreigner" -> display all prices in USD (US Dollar)
+ *   - "inr"       -> display all prices in INR (Indian Rupee)
  *
- * Persistence:
- *  - Stores selected currency in localStorage (and sessionStorage fallback)
- *    so the user''s selection is remembered across page reloads and when
- *    reopening the browser.
- *  - Listens to cross-tab storage events to keep open tabs in sync.
- *  - Fetches the live USD->NPR exchange rate on startup with fallback.
+ * Real-Time Rates:
+ *  - Automatically fetches live exchange rates from open.er-api.com
+ *  - Live 1 USD = ~151.09+ NPR (updated dynamically)
+ *  - Live 1 INR = ~1.60 NPR (derived dynamically from USD rates)
+ *  - Automatically re-fetches when window gains focus or on periodic intervals
+ *  - Remembers user's selection in localStorage and sessionStorage
+ *  - Listens to cross-tab storage events to keep open tabs in sync
  * ----------------------------------------------------------------
  */
 
@@ -20,33 +22,42 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 // Types
 // =============================================================================
 
-/** The two supported currency display modes across the site */
-export type CurrencyMode = "nepali" | "foreigner";
+/** The supported currency display modes across the site */
+export type CurrencyMode = "nepali" | "foreigner" | "inr";
 
 /** Shape of the context value exposed to all consumer components */
 interface GlobalCurrencyContextValue {
-  /** Currently active currency: "nepali" (NPR) or "foreigner" (USD) */
+  /** Currently active currency: "nepali" (NPR), "foreigner" (USD), or "inr" (INR) */
   selectedCurrency: CurrencyMode;
 
   /** Call to switch the currency globally across the site */
   setSelectedCurrency: (mode: CurrencyMode) => void;
 
-  /** Live USD->NPR exchange rate (1 USD = N NPR) */
+  /** Live USD->NPR exchange rate (1 USD = N NPR, e.g. 151.09) */
   nprPerOneDollar: number;
+
+  /** Live INR->NPR exchange rate (1 INR = N NPR, e.g. 1.60) */
+  nprPerOneINR: number;
 
   /** True while the exchange rate is being fetched from the API */
   isRateLoading: boolean;
 
   /** True if the live rate fetch failed (using fallback rate instead) */
   rateLoadFailed: boolean;
+
+  /** Convenience method: formats a base NPR price into the currently active currency */
+  formatPrice: (priceInNPR: number) => string;
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-/** Fallback exchange rate: 1 USD = 135 NPR */
-const FALLBACK_NPR_PER_USD = 135;
+/** Current fallback exchange rate: 1 USD = 151.09 NPR */
+const FALLBACK_NPR_PER_USD = 151.09;
+
+/** Fallback exchange rate: 1 INR = 1.60 NPR */
+const FALLBACK_NPR_PER_INR = 1.60;
 
 /** Free public exchange rate API endpoint */
 const EXCHANGE_RATE_API_URL = "https://open.er-api.com/v6/latest/USD";
@@ -67,7 +78,7 @@ function getCachedCurrencyMode(): CurrencyMode {
 
   try {
     const localValue = localStorage.getItem(CACHE_STORAGE_KEY);
-    if (localValue === "nepali" || localValue === "foreigner") {
+    if (localValue === "nepali" || localValue === "foreigner" || localValue === "inr") {
       return localValue;
     }
   } catch (error) {
@@ -76,7 +87,7 @@ function getCachedCurrencyMode(): CurrencyMode {
 
   try {
     const sessionValue = sessionStorage.getItem(CACHE_STORAGE_KEY);
-    if (sessionValue === "nepali" || sessionValue === "foreigner") {
+    if (sessionValue === "nepali" || sessionValue === "foreigner" || sessionValue === "inr") {
       return sessionValue;
     }
   } catch (error) {
@@ -119,6 +130,7 @@ export const GlobalCurrencyProvider: React.FC<{ children: React.ReactNode }> = (
   // Initialize state directly from the cached value
   const [selectedCurrency, setSelectedCurrencyState] = useState<CurrencyMode>(() => getCachedCurrencyMode());
   const [nprPerOneDollar, setNprPerOneDollar] = useState<number>(FALLBACK_NPR_PER_USD);
+  const [nprPerOneINR, setNprPerOneINR] = useState<number>(FALLBACK_NPR_PER_INR);
   const [isRateLoading, setIsRateLoading] = useState<boolean>(false);
   const [rateLoadFailed, setRateLoadFailed] = useState<boolean>(false);
 
@@ -137,7 +149,7 @@ export const GlobalCurrencyProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === CACHE_STORAGE_KEY && event.newValue) {
-        if (event.newValue === "nepali" || event.newValue === "foreigner") {
+        if (event.newValue === "nepali" || event.newValue === "foreigner" || event.newValue === "inr") {
           setSelectedCurrencyState(event.newValue);
         }
       }
@@ -148,7 +160,7 @@ export const GlobalCurrencyProvider: React.FC<{ children: React.ReactNode }> = (
   }, []);
 
   /**
-   * Fetch live exchange rate from API on mount
+   * Fetch live exchange rate from API on mount, on window focus, and periodically
    */
   useEffect(() => {
     let isMounted = true;
@@ -166,10 +178,17 @@ export const GlobalCurrencyProvider: React.FC<{ children: React.ReactNode }> = (
 
         const data = await response.json();
         const liveNPRRate: number = data?.rates?.NPR;
+        const liveINRRate: number = data?.rates?.INR;
 
         if (isMounted) {
           if (liveNPRRate && liveNPRRate > 0) {
-            setNprPerOneDollar(Math.round(liveNPRRate));
+            // Keep precise float rate for exact calculations
+            setNprPerOneDollar(Number(liveNPRRate.toFixed(2)));
+
+            if (liveINRRate && liveINRRate > 0) {
+              const liveNprPerInr = liveNPRRate / liveINRRate;
+              setNprPerOneINR(Number(liveNprPerInr.toFixed(4)));
+            }
           } else {
             throw new Error("NPR rate is missing or zero.");
           }
@@ -178,6 +197,7 @@ export const GlobalCurrencyProvider: React.FC<{ children: React.ReactNode }> = (
         console.warn("[CurrencyContext] Exchange rate fetch failed, using fallback:", error);
         if (isMounted) {
           setNprPerOneDollar(FALLBACK_NPR_PER_USD);
+          setNprPerOneINR(FALLBACK_NPR_PER_INR);
           setRateLoadFailed(true);
         }
       } finally {
@@ -189,17 +209,40 @@ export const GlobalCurrencyProvider: React.FC<{ children: React.ReactNode }> = (
 
     fetchLiveExchangeRate();
 
+    // Re-fetch whenever user comes back to the browser tab
+    const handleFocus = () => {
+      fetchLiveExchangeRate();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    // Also refresh every 30 minutes for real-time accuracy
+    const refreshInterval = setInterval(fetchLiveExchangeRate, 30 * 60 * 1000);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(refreshInterval);
     };
   }, []);
+
+  /**
+   * Convenience formatting function bound to active currency state
+   */
+  const formatPrice = useCallback(
+    (priceInNPR: number): string => {
+      return displayPrice(priceInNPR, selectedCurrency, nprPerOneDollar, nprPerOneINR);
+    },
+    [selectedCurrency, nprPerOneDollar, nprPerOneINR]
+  );
 
   const contextValue: GlobalCurrencyContextValue = {
     selectedCurrency,
     setSelectedCurrency,
     nprPerOneDollar,
+    nprPerOneINR,
     isRateLoading,
     rateLoadFailed,
+    formatPrice,
   };
 
   return (
@@ -247,15 +290,32 @@ export function formatUSD(amountInUSD: number): string {
 }
 
 /**
+ * Formats a numeric INR amount as a display string.
+ * @example formatINR(7172) -> "₹7,172"
+ */
+export function formatINR(amountInINR: number): string {
+  return `₹${Math.round(amountInINR).toLocaleString("en-IN")}`;
+}
+
+/**
  * Given a base NPR price, formats it in the currently active currency.
+ * - "nepali": NPR
+ * - "inr": INR (converted by real-time nprPerINR)
+ * - "foreigner": USD (converted by real-time nprPerDollar)
  */
 export function displayPrice(
   priceInNPR: number,
   currency: CurrencyMode,
-  nprPerDollar: number
+  nprPerDollar: number = FALLBACK_NPR_PER_USD,
+  nprPerINR: number = FALLBACK_NPR_PER_INR
 ): string {
   if (currency === "nepali") {
     return formatNPR(priceInNPR);
   }
-  return formatUSD(priceInNPR / nprPerDollar);
+  if (currency === "inr") {
+    const rate = nprPerINR && nprPerINR > 0 ? nprPerINR : FALLBACK_NPR_PER_INR;
+    return formatINR(priceInNPR / rate);
+  }
+  const dollarRate = nprPerDollar && nprPerDollar > 0 ? nprPerDollar : FALLBACK_NPR_PER_USD;
+  return formatUSD(priceInNPR / dollarRate);
 }

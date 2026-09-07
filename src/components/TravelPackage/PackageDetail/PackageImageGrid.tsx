@@ -9,7 +9,7 @@ interface PackageProp {
 }
 
 const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
@@ -28,11 +28,13 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
 
   /**
    * The formatted "STARTS FROM" price string to display in the sub-nav.
-   * In Nepali mode: shows NPR price. In Foreigner mode: shows USD price.
+   * Dynamically formats in NPR, INR, or USD.
    */
   const startsFromDisplayPrice =
     selectedCurrency === "nepali"
       ? `NPR ${Math.round(calculatedNPRPrice).toLocaleString("en-IN")}`
+      : selectedCurrency === "inr"
+      ? `₹${Math.round(calculatedNPRPrice / nprPerOneINR).toLocaleString("en-IN")}`
       : pkg.price || `$${basePackagePriceInUSD}`;
 
   const navigate = useNavigate();

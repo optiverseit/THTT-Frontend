@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PackagePricing.tsx
  * -----------------------------------------------------------------
  * Displays the pricing options card for a travel package detail page.
@@ -19,7 +19,7 @@ import React, { useState } from "react";
 import type { Package } from "../../../assets/data/types";
 import VerificationCard from "./VerificationCard";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
-import { useGlobalCurrency, formatNPR, formatUSD } from "../../../context/CurrencyContext";
+import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 
 // =============================================================================
 // Types
@@ -28,7 +28,7 @@ import { useGlobalCurrency, formatNPR, formatUSD } from "../../../context/Curren
 /**
  * A single row in the pricing table.
  * Prices are always stored internally as raw NPR numbers.
- * USD conversion happens at render time using the live exchange rate.
+ * USD and INR conversions happen at render time using the live exchange rate.
  */
 interface PricingRow {
   serviceName: string;      // Human-readable name of the service or tier
@@ -76,6 +76,7 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
     selectedCurrency,
     setSelectedCurrency,
     nprPerOneDollar,
+    nprPerOneINR,
     isRateLoading,
     rateLoadFailed,
   } = useGlobalCurrency();
@@ -135,11 +136,14 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   /**
    * Unit price used for the total calculation:
    * - In Nepali mode: raw NPR of the first row
+   * - In INR mode: first row NPR divided by exchange rate (in INR)
    * - In Foreigner mode: first row NPR divided by exchange rate (in USD)
    */
   const unitPriceForEstimatedTotal: number =
     selectedCurrency === "nepali"
       ? pricingRows[0].priceInNPR
+      : selectedCurrency === "inr"
+      ? Math.round(pricingRows[0].priceInNPR / nprPerOneINR)
       : Math.round(pricingRows[0].priceInNPR / nprPerOneDollar);
 
   /** Final estimated total = unit price * guest count */
@@ -156,6 +160,9 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
     if (selectedCurrency === "nepali") {
       return formatNPR(row.priceInNPR);
     }
+    if (selectedCurrency === "inr") {
+      return formatINR(row.priceInNPR / nprPerOneINR);
+    }
     return formatUSD(row.priceInNPR / nprPerOneDollar);
   };
 
@@ -165,6 +172,9 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   const getFormattedEstimatedTotal = (): string => {
     if (selectedCurrency === "nepali") {
       return formatNPR(estimatedTotalPrice);
+    }
+    if (selectedCurrency === "inr") {
+      return formatINR(estimatedTotalPrice);
     }
     return formatUSD(estimatedTotalPrice);
   };
@@ -181,22 +191,25 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
     setNumberOfGuests((previousCount) => Math.max(1, previousCount - 1));
   };
 
-  const handleWhatsAppInquiry = (): void => {
-    const formattedTotal = getFormattedEstimatedTotal();
-    const preFilledMessage = encodeURIComponent(
-      `Hello Trip Himalaya! I would like to inquire about "${pkg.title}" ` +
-        `for ${numberOfGuests} traveler${numberOfGuests > 1 ? "s" : ""}. ` +
-        `Estimated total: ${formattedTotal}. Please confirm availability.`
-    );
-    window.open(
-      `https://wa.me/${WHATSAPP_BUSINESS_NUMBER}?text=${preFilledMessage}`,
-      "_blank"
-    );
-  };
-
   const handleBookNow = (): void => {
     setIsBookingConfirmed(true);
     setTimeout(() => setIsBookingConfirmed(false), 3000);
+  };
+
+  const handleWhatsAppInquiry = (): void => {
+    const currencyText =
+      selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
+    const packageTitle = pkg.title;
+    const guestCount = numberOfGuests;
+    const totalFormatted = getFormattedEstimatedTotal();
+
+    const inquiryMessage = encodeURIComponent(
+      `Hello Trip Himalaya! I am interested in booking "${packageTitle}" for ${guestCount} guest(s). ` +
+        `Estimated Total: ${totalFormatted} (${currencyText}). Please provide availability and confirmation steps.`
+    );
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_BUSINESS_NUMBER}?text=${inquiryMessage}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   };
 
   // ---------------------------------------------------------------------------
@@ -219,8 +232,8 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
             <p className="text-[9px] text-gray-300 font-medium">Standard rates &amp; inclusions</p>
           </div>
 
-          {/* NEPALI / FOREIGNER currency toggle buttons (syncs site-wide) */}
-          <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider">
+          {/* NEPALI / USD / INR currency toggle buttons (syncs site-wide) */}
+          <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
             <button
               onClick={() => setSelectedCurrency("nepali")}
               aria-label="Show prices in Nepali Rupees (NPR)"
@@ -241,13 +254,24 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
                   : "text-white/80 hover:text-white"
               }`}
             >
-              FOREIGNER
+              USD ($)
+            </button>
+            <button
+              onClick={() => setSelectedCurrency("inr")}
+              aria-label="Show prices in Indian Rupees (INR)"
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                selectedCurrency === "inr"
+                  ? "bg-[#FF5722] text-white shadow-xs"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              INR (₹)
             </button>
           </div>
         </div>
 
-        {/* Exchange Rate Status Banner — shown when Foreigner (USD) mode is active */}
-        {selectedCurrency === "foreigner" && (
+        {/* Exchange Rate Status Banner — shown when USD or INR mode is active */}
+        {selectedCurrency !== "nepali" && (
           <div
             className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${
               rateLoadFailed
@@ -267,13 +291,17 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
                 {isRateLoading
                   ? "Fetching live exchange rate..."
                   : rateLoadFailed
-                  ? `Offline estimate — 1 USD = NPR 135`
-                  : `Live rate: 1 USD = NPR ${nprPerOneDollar}`}
+                  ? selectedCurrency === "inr"
+                    ? `Offline estimate — 1 INR = NPR 1.60`
+                    : `Offline estimate — 1 USD = NPR 151.09`
+                  : selectedCurrency === "inr"
+                  ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)} (100 INR = NPR ${(nprPerOneINR * 100).toFixed(1)})`
+                  : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
               </span>
             </div>
             {!isRateLoading && (
               <span className="text-[8px] opacity-60">
-                {rateLoadFailed ? "Fallback rate" : "Open Exchange Rates"}
+                {rateLoadFailed ? "Fallback rate" : "Live Exchange Rate"}
               </span>
             )}
           </div>

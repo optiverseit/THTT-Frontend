@@ -22,6 +22,7 @@ import HotelBookingDetailContent from "../components/Service/HotelBookingDetailC
 import TravelInsuranceDetailContent from "../components/Service/TravelInsuranceDetailContent";
 import VehicleRentalDetailContent from "../components/Service/VehicleRentalDetailContent";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
+import VisaServicesDetailContent from "../components/Service/VisaServicesDetailContent";
 import DynamicFaqSection from "../components/reuseable/DynamicFaqSection";
 
 const ServiceDetail: React.FC = () => {
@@ -98,6 +99,7 @@ const ServiceDetail: React.FC = () => {
   const isTravelInsurance = service.slug === "travel-insurance";
   const isVehicleRental = service.slug === "vehicle-rental";
   const isHeliServices = service.slug === "heli-services";
+  const isVisaServices = service.slug === "visa-services" || service.slug === "visa";
   const isToursOrTreks = isTours || isTrekking || isActivities;
 
   const faqs = isAirTicket
@@ -179,6 +181,7 @@ const ServiceDetail: React.FC = () => {
     if (isTravelInsurance) return "ALTITUDE RESCUE";
     if (isVehicleRental) return "CHAUFFEUR FLEET";
     if (isHeliServices) return "HIMALAYAN HELI TOURS";
+    if (isVisaServices) return "EMBASSY VERIFIED";
     return "PREMIUM SERVICE";
   };
 
@@ -321,6 +324,8 @@ const ServiceDetail: React.FC = () => {
               <VehicleRentalDetailContent />
             ) : isHeliServices ? (
               <HeliServicesDetailContent />
+            ) : isVisaServices ? (
+              <VisaServicesDetailContent />
             ) : (
               <>
                 {/* Overview */}

@@ -37,7 +37,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -83,7 +83,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const baseNPRPrice = baseUSDPrice * nprPerOneDollar;
   const formattedPrice =
     baseUSDPrice > 0
-      ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar)
+      ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)
       : pkg.price || "On Request";
 
   const handleChange = (

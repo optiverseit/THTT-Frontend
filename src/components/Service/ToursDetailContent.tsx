@@ -47,14 +47,14 @@ export const ToursDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const navigate = useNavigate();
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   const formatPackagePrice = (priceStr?: string) => {
     if (!priceStr) return null;
     const numericUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
     if (numericUSD > 0) {
       const nprAmount = numericUSD * nprPerOneDollar;
-      return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar);
+      return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
     }
     return priceStr;
   };

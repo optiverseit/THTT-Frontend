@@ -85,7 +85,7 @@ const VEHICLE_FAQS = [
 export const VehicleRentalDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   // Booking Modal State
   const [selectedBookingItem, setSelectedBookingItem] = useState<BookingItem | null>(null);
@@ -98,7 +98,7 @@ export const VehicleRentalDetailContent: React.FC = () => {
 
   const formatPrice = (usdAmount: number) => {
     const nprAmount = usdAmount * nprPerOneDollar;
-    return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar);
+    return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
   };
 
   // 100% Dynamically sourced and filtered from mockData

@@ -1,6 +1,6 @@
 import { Filter, Star, Tag } from "lucide-react";
 import React from "react";
-import { useGlobalCurrency, formatNPR, formatUSD } from "../../context/CurrencyContext";
+import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
 
 interface FilterSideBarProps {
   priceRange?: number;
@@ -19,7 +19,7 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
   selectedRating,
   setSelectedRating,
 }) => {
-  const { selectedCurrency, nprPerOneDollar } = useGlobalCurrency();
+  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const ratings = [5, 4, 3, 2, 1];
   const keywords = [
     "EVEREST",
@@ -62,7 +62,7 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
       {/* ── 1. PRICE RANGE ── */}
       <div className="py-5 border-b border-gray-100">
         <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block mb-3">
-          PRICE RANGE ({selectedCurrency === "nepali" ? "NPR" : "USD"})
+          PRICE RANGE ({selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD"})
         </label>
         <input
           type="range"
@@ -74,11 +74,13 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
         />
         <div className="flex justify-between items-center text-xs font-bold mt-3">
           <span className="text-gray-400">
-            {selectedCurrency === "nepali" ? "NPR 0" : "$0"}
+            {selectedCurrency === "nepali" ? "NPR 0" : selectedCurrency === "inr" ? "₹0" : "$0"}
           </span>
           <span className="text-[#E91E63] font-black">
             {selectedCurrency === "nepali"
               ? formatNPR(priceRange * nprPerOneDollar)
+              : selectedCurrency === "inr"
+              ? formatINR((priceRange * nprPerOneDollar) / nprPerOneINR)
               : formatUSD(priceRange)}
           </span>
         </div>

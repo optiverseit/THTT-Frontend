@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { packages } from "../../assets/data/mockData";
+import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
+import BookingModal from "../reuseable/packages/BookingModal";
 import {
   Mountain,
   Clock,
@@ -18,6 +20,8 @@ import {
   Activity,
   Layers,
   Star,
+  CalendarCheck,
+  ArrowUpRight,
 } from "lucide-react";
 
 const TREK_FAQS = [
@@ -45,9 +49,17 @@ const TREK_FAQS = [
 
 export const TrekkingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [visibleCount, setVisibleCount] = useState<number>(9);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const navigate = useNavigate();
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
+  const [selectedBookingTrek, setSelectedBookingTrek] = useState<Package | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  const handleBookTrek = (trek: Package) => {
+    setSelectedBookingTrek(trek);
+    setIsBookingModalOpen(true);
+  };
 
   const formatPackagePrice = (priceStr?: string) => {
     if (!priceStr) return null;
@@ -73,6 +85,9 @@ export const TrekkingDetailContent: React.FC = () => {
     if (activeTab === "featured") return pkg.isFeatured;
     return true;
   });
+
+  const visibleTreks = filteredTreks.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredTreks.length;
 
   const handleInquiry = (trekTitle: string, priceStr?: string) => {
     const formattedPrice = formatPackagePrice(priceStr);
@@ -163,8 +178,8 @@ export const TrekkingDetailContent: React.FC = () => {
         </div>
 
         {/* Dynamic Treks Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredTreks.map((trek) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleTreks.map((trek) => (
             <div
               key={trek.id}
               className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
@@ -232,25 +247,55 @@ export const TrekkingDetailContent: React.FC = () => {
                 </div>
               </div>
 
-              {/* Card Footer Actions */}
-              <div className="p-6 pt-0 border-t border-gray-100 flex items-center justify-between gap-3 mt-auto">
+              {/* Card Footer Actions - Format as in Image 5 */}
+              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
+                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleInquiry(trek.title, trek.price)}
+                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    title="WhatsApp Inquiry"
+                  >
+                    <MessageCircle size={14} className="text-pink-400" />
+                    <span>Inquiry</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBookTrek(trek)}
+                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
+                  >
+                    <CalendarCheck size={14} />
+                    <span>Book Now</span>
+                  </button>
+                </div>
+
+                {/* Row 2: Full Details Centered */}
                 <button
-                  onClick={() => handleInquiry(trek.title, trek.price)}
-                  className="w-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-pink-900/20"
-                >
-                  <MessageCircle size={15} />
-                  <span>Book This Trek</span>
-                </button>
-                <button
+                  type="button"
                   onClick={() => navigate(`/details/${trek.id}`)}
-                  className="px-4 py-3 bg-white border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs rounded-2xl transition-all cursor-pointer whitespace-nowrap"
+                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                 >
-                  Full Itinerary
+                  <span>Full Details</span>
+                  <ArrowUpRight size={13} />
                 </button>
               </div>
             </div>
           ))}
         </div>
+
+        {/* See More Button */}
+        {hasMore && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 15)}
+              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
+            >
+              <span>See More</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── 3. SAFETY, ACCLIMATIZATION & MEDICAL READINESS ── */}
@@ -399,6 +444,13 @@ export const TrekkingDetailContent: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* ── BOOKING MODAL POPUP ── */}
+      <BookingModal
+        pkg={selectedBookingTrek}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+      />
     </div>
   );
 };

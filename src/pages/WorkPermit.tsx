@@ -42,47 +42,48 @@ const WorkPermit = () => {
             heading="FAST, SIMPLE & RELIABLE PROCESSING"
             title="Work Permit (श्रम स्वीकृति)"
             description="Fast work permit approvals for UAE, Qatar & beyond."
+            searchBar={
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <Globe size={18} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full text-left">
+                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      SELECT COUNTRY
+                    </label>
+                    <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+                      <option value="">All Countries</option>
+                      <option value="uae">UAE (Dubai)</option>
+                      <option value="qatar">Qatar</option>
+                      <option value="saudi">Saudi Arabia</option>
+                      <option value="kuwait">Kuwait</option>
+                      <option value="malaysia">Malaysia</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <FileText size={18} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full text-left">
+                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      PERMIT TYPE
+                    </label>
+                    <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+                      <option value="new">New Work Permit</option>
+                      <option value="renew">Renewal Permit</option>
+                      <option value="individual">Individual Permit</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => scrollToSection("section-services", "SERVICES")}
+                  className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+                >
+                  SEARCH
+                </button>
+              </div>
+            }
           />
-
-          {/* Floating Search Bar */}
-          <div className="max-w-4xl mx-auto px-4 -mt-8 sm:-mt-12 relative z-20">
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-                <Globe size={18} className="text-pink-500 flex-shrink-0" />
-                <div className="flex flex-col w-full">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                    SELECT COUNTRY
-                  </label>
-                  <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1">
-                    <option value="">All Countries</option>
-                    <option value="uae">UAE (Dubai)</option>
-                    <option value="qatar">Qatar</option>
-                    <option value="saudi">Saudi Arabia</option>
-                    <option value="kuwait">Kuwait</option>
-                    <option value="malaysia">Malaysia</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-                <FileText size={18} className="text-pink-500 flex-shrink-0" />
-                <div className="flex flex-col w-full">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                    PERMIT TYPE
-                  </label>
-                  <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1">
-                    <option value="new">New Work Permit</option>
-                    <option value="renew">Renewal Permit</option>
-                    <option value="individual">Individual Permit</option>
-                  </select>
-                </div>
-              </div>
-
-              <button className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap">
-                SEARCH
-              </button>
-            </div>
-          </div>
 
           {/* Sub-navigation Tabs — scroll to section */}
           <div className="mt-8 flex justify-center items-center px-4 overflow-x-auto">

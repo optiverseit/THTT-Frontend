@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Camera,
   Compass,
   Eye,
   X,
@@ -8,6 +7,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import PreFooter from "../components/reuseable/PreFooter";
+import BannerSection from "../components/reuseable/BannerSection";
 
 interface GalleryPhoto {
   id: string;
@@ -161,36 +161,20 @@ const Gallery: React.FC = () => {
   return (
     <div className="w-full bg-white font-sans min-h-screen">
       
-      {/* ── HERO HEADER ── */}
-      <section className="relative h-[320px] sm:h-[400px] md:h-[480px] flex items-center justify-center overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=2000"
-          alt="Himalayan Gallery"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/50 to-slate-50" />
-
-        <div className="relative z-10 text-center px-4 max-w-4xl">
-          <span className="inline-flex items-center gap-2 bg-[#D92671] text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.3em] mb-4 shadow-xl border border-white/10">
-            <Camera size={13} />
-            Capturing Memories
-          </span>
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-4 tracking-tight drop-shadow-2xl">
-            Photo Gallery
-          </h1>
-          <div className="h-1.5 w-20 bg-[#D92671] mx-auto rounded-full mb-4 shadow-lg" />
-          <p className="text-white/90 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto leading-relaxed">
-            Explore authentic moments from our treks, luxury tours, thrilling adventures, and cultural journeys across Nepal and beyond.
-          </p>
-        </div>
-        <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white to-transparent" />
-      </section>
+      {/* ── HERO HEADER matching Image 4 style ── */}
+      <BannerSection
+        background="https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=2000"
+        alt="Himalayan Gallery"
+        heading="CAPTURING MEMORIES"
+        title="Photo Gallery"
+        description="Explore authentic moments from our treks, luxury tours, thrilling adventures, and cultural journeys across Nepal and beyond."
+      />
 
       {/* ── MAIN CONTENT ── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-12 md:pb-16">
         
         {/* Category Filters */}
-        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-12">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-8 sm:mb-10">
           {categories.map((cat) => (
             <button
               key={cat.id}

@@ -20,6 +20,7 @@ import {
   HeartHandshake,
   Clock,
   CalendarCheck,
+  ArrowUpRight,
 } from "lucide-react";
 import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
 
@@ -48,6 +49,7 @@ const HOTEL_FAQS = [
 
 export const HotelBookingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [visibleCount, setVisibleCount] = useState<number>(9);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
@@ -77,6 +79,9 @@ export const HotelBookingDetailContent: React.FC = () => {
     return true;
   });
 
+  const visibleHotels = filteredHotels.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredHotels.length;
+
   const handleInquiry = (hotelName: string, priceUSD: number) => {
     const priceFormatted = formatPrice(priceUSD);
     const msg = encodeURIComponent(
@@ -95,6 +100,14 @@ export const HotelBookingDetailContent: React.FC = () => {
       image: hotel.image,
     });
     setIsBookingModalOpen(true);
+  };
+
+  const handleFullDetails = (hotel: Hotel) => {
+    const priceFormatted = formatPrice(hotel.priceUSD);
+    const msg = encodeURIComponent(
+      `Hello Trip Himalaya! Please share full details, room photos, amenities, and policies for "${hotel.name}" in ${hotel.location || hotel.city} (${priceFormatted}/night).`
+    );
+    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   const handleQuickSearch = (e: React.FormEvent) => {
@@ -258,8 +271,8 @@ export const HotelBookingDetailContent: React.FC = () => {
         </div>
 
         {/* Dynamic Hotel Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredHotels.map((hotel) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleHotels.map((hotel) => (
             <div
               key={hotel.id}
               className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
@@ -326,28 +339,55 @@ export const HotelBookingDetailContent: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="p-6 pt-0 border-t border-gray-100 flex items-center justify-between gap-2.5 mt-auto">
+              {/* Card Footer Actions - Format as in Image 5 */}
+              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
+                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleInquiry(hotel.name, hotel.priceUSD)}
+                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    title="WhatsApp Inquiry"
+                  >
+                    <MessageCircle size={14} className="text-pink-400" />
+                    <span>Inquiry</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBookHotel(hotel)}
+                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
+                  >
+                    <CalendarCheck size={14} />
+                    <span>Book Now</span>
+                  </button>
+                </div>
+
+                {/* Row 2: Full Details Centered */}
                 <button
                   type="button"
-                  onClick={() => handleInquiry(hotel.name, hotel.priceUSD)}
-                  className="flex-1 bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-pink-900/20 whitespace-nowrap"
+                  onClick={() => handleFullDetails(hotel)}
+                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                 >
-                  <MessageCircle size={15} />
-                  <span>Inquiry</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBookHotel(hotel)}
-                  className="flex-1 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap"
-                >
-                  <CalendarCheck size={14} className="text-pink-400" />
-                  <span>Book Now</span>
+                  <span>Full Details</span>
+                  <ArrowUpRight size={13} />
                 </button>
               </div>
             </div>
           ))}
         </div>
+
+        {/* See More Button */}
+        {hasMore && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 15)}
+              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
+            >
+              <span>See More</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── 4. WHAT'S INCLUDED IN OUR HOTEL CONCIERGE ── */}

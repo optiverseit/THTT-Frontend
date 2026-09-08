@@ -7,8 +7,9 @@ import {
   Clock,
   Calendar,
   ChevronUp,
+  Globe,
 } from "lucide-react";
-import SubHero from "../components/reuseable/HeroImage/HeroImg";
+import BannerSection from "../components/reuseable/BannerSection";
 import PreFooter from "../components/reuseable/PreFooter";
 
 export interface BlogPost {
@@ -188,6 +189,21 @@ const SidebarNewsItem = ({ post }: { post: BlogPost }) => (
 
 function Blog() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const filteredBlogPosts = blogPosts.filter((post) => {
+    const matchesSearch =
+      !searchTerm ||
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.author.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      post.category.toLowerCase() === selectedCategory.toLowerCase();
+
+    return matchesSearch && matchesCategory;
+  });
 
   // We use the first 3 for news sidebar simulation
   const newsPosts = blogPosts.slice(0, 3);
@@ -198,39 +214,76 @@ function Blog() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] font-sans">
-      {/* Header Section */}
-      <SubHero
-        badge="The Travel Journal"
-        title="Blog & News"
-        description="Your Weekly Does of Himalayan inspiration and global travel insights."
-        backgroundImage="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
-      />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-8 bg-[#E91E63] rounded-full"></div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#2D1B69]">
-              Latest Blogs
-            </h1>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search articles..."
-                className="pl-10 pr-4 py-2.5 rounded-full text-sm w-full sm:w-56 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#E91E63]/20 shadow-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search
-                className="absolute left-3.5 top-2.5 text-gray-400"
-                size={18}
-              />
+      {/* ── 1. EXACT HERO / BANNER SECTION (Title -> SearchBar -> Quote) ── */}
+      <BannerSection
+        background="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
+        alt="The Travel Journal"
+        heading="THE TRAVEL JOURNAL"
+        title="Blog & Articles"
+        description="Your weekly dose of Himalayan inspiration and global travel insights."
+        overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/55 to-[#2D1347]/20"
+        bottomGradient="h-10 sm:h-14 bg-gradient-to-t from-[#F8F9FC] to-transparent"
+        searchBar={
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Search Keyword */}
+            <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+              <Search size={18} className="text-pink-500 flex-shrink-0" />
+              <div className="flex flex-col w-full text-left">
+                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  SEARCH ARTICLES
+                </label>
+                <input
+                  type="text"
+                  className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
+                  placeholder="Search articles, guides, tips..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-            <button className="bg-[#2D1B69] text-white px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#1a0f40] transition-colors shadow-lg shadow-indigo-900/20 whitespace-nowrap">
-              Watch Vlogs
+
+            {/* Topic Category */}
+            <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+              <Globe size={18} className="text-pink-500 flex-shrink-0" />
+              <div className="flex flex-col w-full text-left">
+                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  TOPIC CATEGORY
+                </label>
+                <select
+                  className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer uppercase"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="all">All Topics</option>
+                  <option value="TREKKING">Trekking &amp; Alpine</option>
+                  <option value="INTERNATIONAL">International Travel</option>
+                  <option value="TRAVEL TIPS">Travel Tips &amp; Guides</option>
+                  <option value="VISA ASSISTANCE">Visa Assistance</option>
+                  <option value="LUXURY">Luxury &amp; Heli Tours</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Search Button */}
+            <button
+              onClick={() => {
+                const el = document.getElementById("blog-articles");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+            >
+              SEARCH
             </button>
           </div>
+        }
+      />
+
+      <div id="blog-articles" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-8 bg-[#E91E63] rounded-full"></div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2D1B69]">
+            Latest Articles &amp; Insights
+          </h2>
         </div>
       </div>
 
@@ -240,9 +293,26 @@ function Blog() {
           {/* Left Column: All Vertical Cards (8 cols) */}
           <div className="lg:col-span-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
-              {blogPosts.map((post) => (
-                <BlogCard key={post.id} post={post} />
-              ))}
+              {filteredBlogPosts.length > 0 ? (
+                filteredBlogPosts.map((post) => (
+                  <BlogCard key={post.id} post={post} />
+                ))
+              ) : (
+                <div className="sm:col-span-2 bg-white rounded-2xl p-10 text-center border border-gray-100">
+                  <p className="text-gray-500 font-bold text-sm">
+                    No articles found matching "{searchTerm}".
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("all");
+                    }}
+                    className="mt-4 px-5 py-2 bg-pink-600 text-white rounded-full text-xs font-bold uppercase tracking-wider"
+                  >
+                    Clear Filter
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

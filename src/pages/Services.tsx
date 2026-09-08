@@ -4,7 +4,7 @@ import {
   Plane, Map, Activity, Mountain, Bed, ShieldCheck,
   Heart, Car, Wind, FileText, ArrowRight, MessageCircle,
 } from "lucide-react";
-import SubHero from "../components/reuseable/HeroImage/HeroImg";
+import BannerSection from "../components/reuseable/BannerSection";
 import PreFooter from "../components/reuseable/PreFooter";
 
 export interface Service {
@@ -211,17 +211,18 @@ export default function ServicesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50 font-sans">
-      {/* Reusable SubHero */}
-      <SubHero
-        badge="Comprehensive Solutions"
+      {/* BannerSection matching Image 4 structure */}
+      <BannerSection
+        heading="COMPREHENSIVE SOLUTIONS"
         title="Our Services"
         description="Everything you need for a seamless journey, from domestic ticketing to global expeditions."
-        backgroundImage="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
+        background="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
+        alt="Trip Himalaya Services"
       />
 
-      <main className="relative z-20 mx-auto flex-grow px-4 pb-20 pt-16 sm:px-6 lg:px-8 max-w-7xl">
-        <header className="mb-10 md:mb-14 text-center">
-          <h2 className="mb-3 text-2xl sm:text-3xl md:text-4xl font-black text-[#2e1065] tracking-tight">
+      <main className="relative z-20 mx-auto flex-grow px-4 pb-16 pt-6 sm:pt-8 sm:px-6 lg:px-8 max-w-7xl">
+        <header className="mb-6 sm:mb-8 text-center">
+          <h2 className="mb-2.5 text-2xl sm:text-3xl md:text-4xl font-black text-[#2e1065] tracking-tight">
             Tailored Travel Management
           </h2>
           <p className="mx-auto max-w-2xl text-sm sm:text-base font-medium leading-relaxed text-gray-500">

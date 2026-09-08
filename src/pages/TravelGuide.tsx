@@ -30,6 +30,7 @@ const TravelGuide: React.FC = () => {
         heading="ESSENTIAL INFORMATION"
         title="Travel Guide"
         description="Your complete handbook for a safe and memorable journey in Nepal."
+        contentClassName="-translate-y-1.5 sm:-translate-y-2 md:-translate-y-3"
       />
 
       <div className="min-h-screen bg-gray-50 p-4 md:p-8">

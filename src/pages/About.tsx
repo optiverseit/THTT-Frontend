@@ -4,36 +4,22 @@ import {
   Car, Mountain, Briefcase, CreditCard, MapPin, Heart, Globe,
   Zap, Activity, History,
 } from "lucide-react";
+import BannerSection from "../components/reuseable/BannerSection";
 
 const About: React.FC = () => {
   return (
-    <div>
-      {/* Hero Header */}
-      <section className="relative h-[320px] sm:h-[400px] md:h-[500px] flex items-center justify-center overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
-          alt="Himalayan Peaks"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/40 to-slate-50" />
-
-        <div className="relative z-10 text-center px-4 max-w-4xl">
-          <span className="inline-block bg-[#D92671] text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.35em] mb-4 shadow-xl border border-white/10">
-            Discover Our Legacy
-          </span>
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white mb-5 tracking-tight drop-shadow-2xl">
-            About Trip Himalaya
-          </h1>
-          <div className="h-1.5 w-16 sm:w-24 bg-[#D92671] mx-auto rounded-full mb-5 shadow-lg" />
-          <p className="text-white/90 text-sm sm:text-base md:text-xl font-medium max-w-2xl mx-auto leading-relaxed italic">
-            "Your dedicated partner for unforgettable travel experiences across the Himalayas and beyond."
-          </p>
-        </div>
-        <div className="absolute bottom-0 left-0 w-full h-16 sm:h-24 bg-gradient-to-t from-slate-50 to-transparent" />
-      </section>
+    <div className="w-full bg-white">
+      {/* Hero Header matching Image 4 style */}
+      <BannerSection
+        background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
+        alt="Himalayan Peaks"
+        heading="DISCOVER OUR LEGACY"
+        title="About Trip Himalaya"
+        description="Your dedicated partner for unforgettable travel experiences across the Himalayas and beyond."
+      />
 
       {/* Story Section */}
-      <section className="py-10 md:py-16 px-4 sm:px-6 lg:px-8">
+      <section className="pt-6 sm:pt-10 pb-12 md:pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center">
             <div className="relative group order-2 lg:order-1">

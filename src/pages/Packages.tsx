@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import BannerSection from "../components/reuseable/BannerSection";
-import { Search, MapPin, ChevronDown } from "lucide-react";
+import { Search, MapPin } from "lucide-react";
 import FilterSideBar from "../components/TravelPackage/FilterSiderBar";
 import { packages } from "../assets/data/mockData";
 import PackageDetailsSection from "../components/TravelPackage/PackageDetailsSection";
@@ -79,7 +79,7 @@ const Packages: React.FC = () => {
 
   return (
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans">
-      {/* ── 1. EXACT HERO / BANNER SECTION ── */}
+      {/* ── 1. EXACT HERO / BANNER SECTION (Title -> SearchBar -> Quote) ── */}
       <div className="relative">
         <BannerSection
           background="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000"
@@ -87,59 +87,56 @@ const Packages: React.FC = () => {
           heading="CURATED ADVENTURES"
           title="Travel Packages"
           description="Explore the tours and trek crafted for your next adventure."
-        />
-      </div>
-
-      {/* ── 2. FLOATING SEARCH & CATEGORY BAR ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 sm:-mt-14 relative z-20">
-        <div className="bg-white rounded-full shadow-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row items-center border border-gray-100 gap-3 sm:gap-4">
-          {/* Search Keyword */}
-          <div className="flex items-center px-5 sm:px-7 py-3 sm:py-3.5 gap-3.5 flex-1 w-full sm:border-r border-gray-100">
-            <Search size={19} className="text-[#E91E63] flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] font-black tracking-widest uppercase text-gray-400 mb-0.5">
-                SEARCH KEYWORD
-              </label>
-              <input
-                type="text"
-                className="focus:outline-none text-xs sm:text-sm font-bold text-[#200B3B] w-full placeholder:text-gray-400 placeholder:font-normal py-0.5"
-                placeholder="Where do you want to go?"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Select Category */}
-          <div className="flex items-center px-5 sm:px-7 py-3 sm:py-3.5 gap-3.5 sm:w-76 lg:w-84 w-full">
-            <MapPin size={19} className="text-[#E91E63] flex-shrink-0" />
-            <div className="flex flex-col w-full relative">
-              <label className="text-[10px] font-black tracking-widest uppercase text-gray-400 mb-0.5">
-                SELECT CATEGORY
-              </label>
-              <div className="flex items-center justify-between">
-                <select
-                  className="focus:outline-none text-xs sm:text-sm font-black text-[#200B3B] bg-transparent cursor-pointer uppercase w-full appearance-none pr-6 py-0.5"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  <option value="all">ALL CATEGORIES</option>
-                  <option value="domestic">DOMESTIC</option>
-                  <option value="international">INTERNATIONAL</option>
-                </select>
-                <ChevronDown size={14} className="text-gray-400 pointer-events-none -ml-4" />
+          overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/55 to-[#2D1347]/20"
+          bottomGradient="h-10 sm:h-14 bg-gradient-to-t from-[#FBFBFE] to-transparent"
+          searchBar={
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Search Keyword */}
+              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                <Search size={18} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full text-left">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    SEARCH KEYWORD
+                  </label>
+                  <input
+                    type="text"
+                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
+                    placeholder="Where do you want to go?"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Search Button */}
-          <button
-            onClick={handleSearch}
-            className="w-full sm:w-auto bg-[#E91E63] hover:bg-pink-600 active:scale-95 text-white font-black text-xs sm:text-sm px-10 sm:px-14 py-4 sm:py-5 rounded-full uppercase tracking-wider shadow-lg shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
-          >
-            SEARCH
-          </button>
-        </div>
+              {/* Select Category */}
+              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                <MapPin size={18} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full text-left">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    SELECT CATEGORY
+                  </label>
+                  <select
+                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="domestic">Domestic Nepal</option>
+                    <option value="international">International Holidays</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Search Button */}
+              <button
+                onClick={handleSearch}
+                className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+              >
+                SEARCH
+              </button>
+            </div>
+          }
+        />
       </div>
 
       {/* ── 3. MAIN CONTENT: SIDEBAR + PACKAGES LIST ── */}

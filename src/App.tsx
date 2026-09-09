@@ -1,33 +1,41 @@
 import "./App.css";
 import { Routes, Route } from "react-router-dom";
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
+import ScrollToTop from "./components/layout/ScrollToTop";
+
+// Pages
 import Home from "./pages/Home";
 import About from "./pages/About";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import ScrollToTop from "./components/ScrollToTop";
 import ServicesPage from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
-
 import TravelGuide from "./pages/TravelGuide";
 import Gallery from "./pages/Gallery";
 import VideoVlog from "./pages/VideoVlog";
-import VideoDetails from "./components/video-vlogs/VideoDetails";
 import NotFound from "./pages/NotFound";
 import Packages from "./pages/Packages";
-import PackageOverview from "./components/TravelPackage/PackageDetail/PackageOverview";
-import PackageDetails from "./components/TravelPackage/PackageDetail/PackageDetails";
-import PackagePolicy from "./components/TravelPackage/PackageDetail/PackagePolicy";
-import PackageFaq from "./components/TravelPackage/PackageDetail/PackageFaq";
-import PackageTestimonial from "./components/TravelPackage/PackageDetail/PackageTestimonial";
 import Login from "./pages/Login";
+import WorkPermit from "./pages/WorkPermit";
+
+// Page-level detail views (moved from deep component paths to pages/)
+import VideoDetail from "./pages/VideoDetail";
+import WorkPermitDetail from "./pages/WorkPermitDetail";
+import PackageDetail, {
+  PackageOverview,
+  PackagePolicy,
+  PackageFaq,
+  PackageTestimonial,
+} from "./pages/PackageDetail";
+
+// Login sub-views
 import LoginForm from "./components/login/LoginForm";
 import LoginOtp from "./components/login/LoginOtp";
 import LoginDetails from "./components/login/LoginDetails";
 import LoginForgotPass from "./components/login/LoginForgotPass";
-import WorkPermit from "./pages/WorkPermit";
-import WorkPermitDetails from "./components/work-permit/permit-details/WorkPermitDetails";
+
+// Contexts
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GlobalCurrencyProvider } from "./context/CurrencyContext";
 import { FaqProvider } from "./context/FaqContext";
@@ -42,7 +50,7 @@ const MainLayout = () => {
 
       {/* ── 3-TIER HEADER (TopBar, NavBar, ServicesStrip) ──
           Rendered across all pages when user is NOT logged in.
-          If logged in, these 3 navs are not applied. */}
+          If logged in, the header is hidden. */}
       {!isLoggedIn && (
         <div className="sticky top-0 z-50">
           <Header />
@@ -50,9 +58,10 @@ const MainLayout = () => {
       )}
 
       <Routes>
+        {/* ── HOME ── */}
         <Route path="/" element={<Home />} />
 
-        {/* login */}
+        {/* ── LOGIN (nested subroutes) ── */}
         <Route path="/login" element={<Login />}>
           <Route index path="" element={<LoginForm />} />
           <Route path="otp" element={<LoginOtp />} />
@@ -60,32 +69,41 @@ const MainLayout = () => {
           <Route path="forgot-password" element={<LoginForgotPass />} />
         </Route>
 
+        {/* ── ABOUT ── */}
         <Route path="/about" element={<About />} />
-        <Route path="/service" element={<ServicesPage/>} />
+
+        {/* ── SERVICES ── */}
+        <Route path="/service" element={<ServicesPage />} />
         <Route path="/service/:slug" element={<ServiceDetail />} />
-        <Route path="/blog" element={<Blog/>}/>
+
+        {/* ── BLOG (Read Stories & Video Vlogs dual-mode) ── */}
+        <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogDetail />} />
+
+        {/* ── TRAVEL GUIDE ── */}
         <Route path="/travel-guide" element={<TravelGuide />} />
+
+        {/* ── GALLERY ── */}
         <Route path="/gallery" element={<Gallery />} />
 
-        {/* packages */}
+        {/* ── PACKAGES (with nested subroutes) ── */}
         <Route path="/packages" element={<Packages />} />
-        <Route path="/details/:packageId" element={<PackageDetails />}>
+        <Route path="/details/:packageId" element={<PackageDetail />}>
           <Route index path="" element={<PackageOverview />} />
           <Route path="policies" element={<PackagePolicy />} />
           <Route path="faqs" element={<PackageFaq />} />
           <Route path="testimonies" element={<PackageTestimonial />} />
         </Route>
 
-        {/* vlogs */}
+        {/* ── VIDEO VLOGS ── */}
         <Route path="/vlogs" element={<VideoVlog />} />
-        <Route path="/watch/:videoId" element={<VideoDetails />} />
+        <Route path="/watch/:videoId" element={<VideoDetail />} />
 
-        {/* work permit */}
+        {/* ── WORK PERMIT ── */}
         <Route path="/work-permit" element={<WorkPermit />} />
-        <Route path="/permit-details/:id" element={<WorkPermitDetails />} />
+        <Route path="/permit-details/:id" element={<WorkPermitDetail />} />
 
-        {/* 404 Catch-All Route */}
+        {/* ── 404 Catch-All Route ── */}
         <Route path="*" element={<NotFound />} />
       </Routes>
 
@@ -98,7 +116,7 @@ const MainLayout = () => {
 function App() {
   return (
     <AuthProvider>
-      {/* GlobalCurrencyProvider makes the selected currency (NPR or USD)
+      {/* GlobalCurrencyProvider makes the selected currency (NPR / USD / INR)
           and live exchange rate available to every component in the app. */}
       <GlobalCurrencyProvider>
         <FaqProvider>

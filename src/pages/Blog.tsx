@@ -1,399 +1,635 @@
-import { useState, Fragment } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useMemo } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   Search,
-  PlayCircle,
   ArrowRight,
   Clock,
   Calendar,
-  ChevronUp,
-  Globe,
+  Eye,
+  Play,
+  Share2,
+  Tv2,
+  BookOpen,
+  BookOpenText,
+  Clapperboard,
 } from "lucide-react";
-import BannerSection from "../components/reuseable/BannerSection";
-import PreFooter from "../components/reuseable/PreFooter";
+import BannerSection from "../components/reusable/BannerSection";
+import { blogPosts, videoPosts } from "../assets/data/mockData";
+import type { BlogPost, VideoPost } from "../assets/data/types";
+import PreFooter from "../components/reusable/PreFooter";
 
-export interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  category: string;
-  author: string;
-  date: string;
-  image: string;
-  readTime: string;
-}
+// Re-export for backward compatibility
+export type { BlogPost };
+type BlogMode = "read" | "video";
 
-// --- Data ---
-// eslint-disable-next-line react-refresh/only-export-components
-export const blogPosts: BlogPost[] = [
-  {
-    id: "b1",
-    title: "Top 10 Essential Tips for Your First Everest Base Camp Trek",
-    slug: "ebc-trekking-tips",
-    excerpt:
-      "Planning your first trek to the roof of the world? Here is everything you need to know about packing, training, and altitude.",
-    category: "TREKKING",
-    author: "Adventure Desk",
-    date: "Sept 21, 2025",
-    image:
-      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600",
-    readTime: "8 min read",
-  },
-  {
-    id: "b2",
-    title: "Bali Beyond Beaches: Discovering the Cultural Heart of Ubud",
-    slug: "bali-cultural-guide",
-    excerpt:
-      "Experience the spiritual side of Bali with our guide to hidden temples, local art markets, and traditional ceremonies.",
-    category: "INTERNATIONAL",
-    author: "Travel Editor",
-    date: "Aug 24, 2025",
-    image:
-      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800",
-    readTime: "6 min read",
-  },
-  {
-    id: "b3",
-    title: "How to Choose the Right Travel Insurance for Himalayan Tours",
-    slug: "travel-insurance-guide",
-    excerpt:
-      "Safety first! Learn why specific mountain coverage is vital for your high-altitude adventures in Nepal.",
-    category: "TRAVEL TIPS",
-    author: "Support Team",
-    date: "Nov 21, 2024",
-    image:
-      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800",
-    readTime: "5 min read",
-  },
-  {
-    id: "b4",
-    title: "Nepal Visa on Arrival: A Simplified 2025 Guide for Foreigners",
-    slug: "nepal-visa-guide",
-    excerpt:
-      "Getting your entry permit at Kathmandu airport is easier than ever with our step-by-step documentation guide.",
-    category: "VISA ASSISTANCE",
-    author: "Legal Desk",
-    date: "Nov 17, 2024",
-    image:
-      "https://images.unsplash.com/photo-1554931670-4ebfabf6e7a9?auto=format&fit=crop&q=80&w=800",
-    readTime: "4 min read",
-  },
-  {
-    id: "b5",
-    title: "Everything You Need to Know About the ABC Heli Tour Experience",
-    slug: "abc-heli-tour-blog",
-    excerpt:
-      "Short on time but want the big views? The Annapurna Base Camp Helicopter tour is the ultimate luxury experience.",
-    category: "LUXURY",
-    author: "Tour Guide",
-    date: "Nov 10, 2024",
-    image:
-      "https://images.unsplash.com/photo-1544016768-982d1554f0b9?auto=format&fit=crop&q=80&w=800",
-    readTime: "7 min read",
-  },
-];
-
-// --- Reusable Sub-Components ---
-
-const CategoryBadge = ({ label }: { label: string }) => (
-  <span className="inline-block px-3 py-1 text-[10px] font-bold tracking-wider text-pink-500 uppercase bg-white rounded-full shadow-sm mb-3">
-    {label}
-  </span>
-);
-
-const Metadata = ({ date, readTime }: { date: string; readTime?: string }) => (
-  <div className="flex items-center gap-4 text-xs font-medium text-gray-400 mt-2 mb-3">
-    <div className="flex items-center gap-1">
-      <Calendar size={12} />
-      {date}
-    </div>
-    {readTime && (
-      <div className="flex items-center gap-1">
-        <Clock size={12} />
-        {readTime}
-      </div>
-    )}
-  </div>
-);
-
-// Unified Vertical Card Component
-const BlogCard = ({ post }: { post: BlogPost }) => {
-  return (
-    <article className="flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100">
-      <div className="relative h-64 overflow-hidden group">
-        <img
-          src={post.image}
-          alt={post.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <div className="absolute top-4 left-4">
-          <CategoryBadge label={post.category} />
-        </div>
-      </div>
-      <div className="p-6 flex flex-col flex-grow">
-        <Metadata date={post.date} readTime={post.readTime} />
-        <h3 className="text-xl font-extrabold text-[#2E1347] mb-3 leading-tight line-clamp-2">
-          {post.title}
-        </h3>
-        <p className="text-sm text-gray-500 mb-4 line-clamp-3 font-semibold flex-grow">
-          {post.excerpt}
-        </p>
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          {/* // Change your button to a Link */}
-          <Link
-            to={`/blog/${post.slug}`}
-            className="flex items-center gap-2 text-xs font-bold text-gray-800 uppercase tracking-wide group"
-          >
-            Read More
-            <span className="bg-[#E91E63] text-white rounded-full p-1 group-hover:translate-x-1 transition-transform">
-              <ArrowRight size={10} />
-            </span>
-          </Link>
-          <div className="flex items-center gap-2 text-[#2D1B69] text-xs font-bold">
-            <div className="w-6 h-6 rounded-full bg-[#2D1B69] flex items-center justify-center text-white text-[10px]">
-              {post.author.charAt(0)}
-            </div>
-            {post.author}
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-};
-
-const SidebarNewsItem = ({ post }: { post: BlogPost }) => (
-  <div className="flex gap-4 mb-6 group cursor-pointer">
-    <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+// ─── BLOG CARD ───────────────────────────────────────────────────────────────
+const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => (
+  <article className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg border border-gray-100 group transition-all duration-300 flex flex-col h-full">
+    <div className="relative h-52 overflow-hidden flex-shrink-0">
       <img
         src={post.image}
         alt={post.title}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
-    </div>
-    <div>
-      <span className="text-[10px] font-bold text-[#E91E63] uppercase block mb-1">
-        {post.date}
+      <span className="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full text-[9px] font-black text-[#E91E63] uppercase tracking-wider shadow-sm">
+        {post.category}
       </span>
-      <h4 className="text-sm font-bold text-gray-800 leading-snug group-hover:text-[#E91E63] transition-colors line-clamp-2">
+    </div>
+    <div className="p-5 flex flex-col flex-grow">
+      <div className="flex items-center gap-3 text-[10px] text-gray-400 font-semibold mb-2">
+        <span className="flex items-center gap-1">
+          <Calendar size={10} />
+          {post.date}
+        </span>
+        {post.readTime && (
+          <span className="flex items-center gap-1">
+            <Clock size={10} />
+            {post.readTime}
+          </span>
+        )}
+      </div>
+      <h3 className="font-extrabold text-[#2D1347] text-sm leading-snug line-clamp-2 mb-2">
         {post.title}
-      </h4>
-      <div className="mt-2 text-[10px] text-gray-400 font-bold flex items-center gap-1">
-        READ MORE <ArrowRight size={8} />
+      </h3>
+      <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-grow">
+        {post.excerpt}
+      </p>
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+        <Link
+          to={`/blog/${post.slug}`}
+          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-800 hover:text-[#E91E63] transition-colors group/link"
+        >
+          Read More
+          <span className="w-5 h-5 rounded-full bg-[#E91E63] flex items-center justify-center group-hover/link:translate-x-0.5 transition-transform">
+            <ArrowRight size={8} className="text-white" />
+          </span>
+        </Link>
+        <span className="text-[9px] text-gray-400 font-bold uppercase">
+          By {post.author}
+        </span>
       </div>
     </div>
-  </div>
+  </article>
 );
 
-// --- Main Page Component ---
-
-function Blog() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-
-  const filteredBlogPosts = blogPosts.filter((post) => {
-    const matchesSearch =
-      !searchTerm ||
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.author.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesCategory =
-      selectedCategory === "all" ||
-      post.category.toLowerCase() === selectedCategory.toLowerCase();
-
-    return matchesSearch && matchesCategory;
-  });
-
-  // We use the first 3 for news sidebar simulation
-  const newsPosts = blogPosts.slice(0, 3);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F8F9FC] font-sans">
-      {/* ── 1. EXACT HERO / BANNER SECTION (Title -> SearchBar -> Quote) ── */}
-      <BannerSection
-        background="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
-        alt="The Travel Journal"
-        heading="THE TRAVEL JOURNAL"
-        title="Blog & Articles"
-        description="Your weekly dose of Himalayan inspiration and global travel insights."
-        overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/55 to-[#2D1347]/20"
-        bottomGradient="h-10 sm:h-14 bg-gradient-to-t from-[#F8F9FC] to-transparent"
-        searchBar={
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            {/* Search Keyword */}
-            <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-              <Search size={18} className="text-pink-500 flex-shrink-0" />
-              <div className="flex flex-col w-full text-left">
-                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                  SEARCH ARTICLES
-                </label>
-                <input
-                  type="text"
-                  className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
-                  placeholder="Search articles, guides, tips..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Topic Category */}
-            <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-              <Globe size={18} className="text-pink-500 flex-shrink-0" />
-              <div className="flex flex-col w-full text-left">
-                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                  TOPIC CATEGORY
-                </label>
-                <select
-                  className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer uppercase"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  <option value="all">All Topics</option>
-                  <option value="TREKKING">Trekking &amp; Alpine</option>
-                  <option value="INTERNATIONAL">International Travel</option>
-                  <option value="TRAVEL TIPS">Travel Tips &amp; Guides</option>
-                  <option value="VISA ASSISTANCE">Visa Assistance</option>
-                  <option value="LUXURY">Luxury &amp; Heli Tours</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Search Button */}
-            <button
-              onClick={() => {
-                const el = document.getElementById("blog-articles");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
-            >
-              SEARCH
-            </button>
-          </div>
-        }
+// ─── VIDEO CARD ──────────────────────────────────────────────────────────────
+const VideoCard: React.FC<{ vlog: VideoPost }> = ({ vlog }) => (
+  <article className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg border border-gray-100 group transition-all duration-300 flex flex-col h-full">
+    <div className="relative h-52 overflow-hidden flex-shrink-0">
+      <img
+        src={vlog.thumbnail}
+        alt={vlog.title}
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
-
-      <div id="blog-articles" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-8 bg-[#E91E63] rounded-full"></div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2D1B69]">
-            Latest Articles &amp; Insights
-          </h2>
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors" />
+      {/* Play button */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-[#E91E63]/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+          <Play size={18} className="text-white ml-0.5" fill="white" />
         </div>
       </div>
-
-      {/* Main Grid Layout */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-          {/* Left Column: All Vertical Cards (8 cols) */}
-          <div className="lg:col-span-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
-              {filteredBlogPosts.length > 0 ? (
-                filteredBlogPosts.map((post) => (
-                  <BlogCard key={post.id} post={post} />
-                ))
-              ) : (
-                <div className="sm:col-span-2 bg-white rounded-2xl p-10 text-center border border-gray-100">
-                  <p className="text-gray-500 font-bold text-sm">
-                    No articles found matching "{searchTerm}".
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedCategory("all");
-                    }}
-                    className="mt-4 px-5 py-2 bg-pink-600 text-white rounded-full text-xs font-bold uppercase tracking-wider"
-                  >
-                    Clear Filter
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Sidebar (4 cols) */}
-          <aside className="lg:col-span-4 space-y-8">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-6">
-                <Calendar className="text-[#E91E63]" size={20} />
-                <h3 className="text-lg font-extrabold text-[#2D1B69] uppercase">
-                  Latest News
-                </h3>
-              </div>
-              <div className="space-y-2">
-                {newsPosts.map((post, idx) => (
-                  <Fragment key={`news-${post.id}`}>
-                    <SidebarNewsItem post={post} />
-                    {idx !== newsPosts.length - 1 && (
-                      <hr className="border-gray-100 mb-6" />
-                    )}
-                  </Fragment>
-                ))}
-              </div>
-              <button className="w-full bg-[#2D1B69] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-opacity-90 transition-colors mt-2">
-                All Updates
-              </button>
-            </div>
-
-            <div className="relative bg-[#2D1B69] p-8 rounded-3xl shadow-xl overflow-hidden text-center text-white">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#E91E63] opacity-10 rounded-full -ml-10 -mb-10"></div>
-              <h3 className="text-xl font-bold mb-2 relative z-10">
-                Stay Inspired, Get Updates.
-              </h3>
-              <p className="text-xs text-gray-300 mb-6 relative z-10">
-                Subscribe to our newsletter for exclusive tour offers and
-                Himalayan news.
-              </p>
-              <div className="relative z-10 space-y-3">
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-[#E91E63] text-sm"
-                />
-                <button className="w-full bg-[#E91E63] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#d81557] transition-colors shadow-lg shadow-pink-600/30">
-                  Subscribe Now
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <PlayCircle className="text-[#E91E63]" size={20} />
-                <h3 className="text-lg font-extrabold text-[#2D1B69] uppercase">
-                  Video Vlogs
-                </h3>
-              </div>
-              <button className="w-full bg-[#2D1B69] text-white py-4 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
-                Watch Latest Vlogs
-              </button>
-            </div>
-          </aside>
-        </div>
-      </main>
-
-      {/* Back to Top Button */}
-      <div className="flex justify-center mt-12 mb-16">
-        <button
-          onClick={scrollToTop}
-          className="flex items-center gap-2 bg-[#E91E63] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg hover:-translate-y-1 transition-transform cursor-pointer"
+      {/* Category badge */}
+      <span className="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full text-[9px] font-black text-[#E91E63] uppercase tracking-wider shadow-sm">
+        {vlog.category}
+      </span>
+      {/* Duration badge */}
+      <span className="absolute bottom-3 right-3 px-2 py-0.5 bg-black/70 rounded text-[9px] text-white font-bold">
+        {vlog.duration}
+      </span>
+    </div>
+    <div className="p-5 flex flex-col flex-grow">
+      <div className="flex items-center gap-3 text-[10px] text-gray-400 font-semibold mb-2">
+        <span className="flex items-center gap-1">
+          <Eye size={10} />
+          {vlog.views}
+        </span>
+        <span className="flex items-center gap-1">
+          <Calendar size={10} />
+          {vlog.date}
+        </span>
+      </div>
+      <h3 className="font-extrabold text-[#2D1347] text-sm leading-snug line-clamp-2 mb-2">
+        {vlog.title}
+      </h3>
+      <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-grow">
+        {vlog.description}
+      </p>
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+        <Link
+          to={`/watch/${vlog.id}`}
+          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-800 hover:text-[#E91E63] transition-colors group/link"
         >
-          Back to Top
-          <ChevronUp size={14} />
+          Watch Video
+          <span className="w-5 h-5 rounded-full bg-[#E91E63] flex items-center justify-center group-hover/link:translate-x-0.5 transition-transform">
+            <ArrowRight size={8} className="text-white" />
+          </span>
+        </Link>
+        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 cursor-pointer">
+          <Share2 size={12} />
+        </button>
+      </div>
+    </div>
+  </article>
+);
+
+// ─── READ SIDEBAR ─────────────────────────────────────────────────────────────
+const ReadSidebar: React.FC<{ onSwitchVideo: () => void }> = ({
+  onSwitchVideo,
+}) => {
+  const recent = [...blogPosts]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 4);
+
+  return (
+    <div className="space-y-5">
+      {/* Latest News */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <h4 className="flex items-center gap-2 text-[11px] font-black text-[#2D1347] uppercase tracking-widest mb-4">
+          <span className="w-1 h-4 bg-[#E91E63] rounded-full inline-block flex-shrink-0" />
+          Latest News
+        </h4>
+        <div className="space-y-4">
+          {recent.map((post) => (
+            <Link
+              key={post.id}
+              to={`/blog/${post.slug}`}
+              className="flex gap-3 group"
+            >
+              <img
+                src={post.image}
+                alt={post.title}
+                className="w-16 h-12 object-cover rounded-lg flex-shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-[9px] text-gray-400 font-semibold mb-0.5">
+                  {post.date}
+                </p>
+                <p className="text-xs font-bold text-[#2D1347] line-clamp-2 group-hover:text-[#E91E63] transition-colors leading-snug">
+                  {post.title}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <Link
+          to="/blog"
+          className="mt-5 w-full flex justify-center py-2.5 rounded-full border border-[#E91E63] text-[#E91E63] text-[10px] font-black uppercase tracking-widest hover:bg-[#E91E63] hover:text-white transition-colors"
+        >
+          All Stories
+        </Link>
+      </div>
+
+      {/* Newsletter */}
+      <div className="bg-[#2D1347] rounded-2xl p-6 text-white">
+        <h4 className="text-xl font-black mb-1 leading-tight">
+          Stay Inspired,
+          <br />
+          Get Updates.
+        </h4>
+        <p className="text-xs text-purple-300 mb-4 leading-relaxed">
+          Subscribe for exclusive tips and travel deals.
+        </p>
+        <input
+          type="email"
+          placeholder="Email address..."
+          className="w-full px-4 py-2.5 rounded-full text-xs bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#E91E63] mb-3"
+        />
+        <button className="w-full py-2.5 rounded-full bg-[#E91E63] hover:bg-pink-600 text-white text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer">
+          Subscribe Now
         </button>
       </div>
 
-      {/* PreFooter CTA */}
+      {/* Video Vlogs CTA */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-center">
+        <div className="flex items-center gap-2 justify-center mb-3">
+          <Tv2 size={14} className="text-[#E91E63]" />
+          <span className="text-[10px] font-black text-[#2D1347] uppercase tracking-widest">
+            Video Vlogs
+          </span>
+        </div>
+        <button
+          onClick={onSwitchVideo}
+          className="w-full py-2.5 rounded-full bg-[#2D1347] hover:bg-purple-900 text-white text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer"
+        >
+          Watch Latest Vlogs
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── VIDEO SIDEBAR ────────────────────────────────────────────────────────────
+const VideoSidebar: React.FC<{ onSwitchRead: () => void }> = ({
+  onSwitchRead,
+}) => {
+  const recent = [...videoPosts]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 3);
+
+  return (
+    <div className="space-y-5">
+      {/* Latest Videos */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <h4 className="flex items-center gap-2 text-[11px] font-black text-[#2D1347] uppercase tracking-widest mb-4">
+          <span className="w-1 h-4 bg-[#E91E63] rounded-full inline-block flex-shrink-0" />
+          Latest Videos
+        </h4>
+        <div className="space-y-4">
+          {recent.map((v) => (
+            <Link
+              key={v.id}
+              to={`/watch/${v.id}`}
+              className="flex gap-3 group"
+            >
+              <div className="relative w-20 h-13 rounded-lg overflow-hidden flex-shrink-0">
+                <img
+                  src={v.thumbnail}
+                  alt={v.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] px-1 rounded font-bold">
+                  {v.duration}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] text-[#E91E63] font-bold uppercase mb-0.5">
+                  {v.category}
+                </p>
+                <p className="text-xs font-bold text-[#2D1347] line-clamp-2 group-hover:text-[#E91E63] transition-colors leading-snug">
+                  {v.title}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <Link
+          to="/vlogs"
+          className="mt-5 w-full flex justify-center py-2.5 rounded-full border border-[#E91E63] text-[#E91E63] text-[10px] font-black uppercase tracking-widest hover:bg-[#E91E63] hover:text-white transition-colors"
+        >
+          View All Vlogs
+        </Link>
+      </div>
+
+      {/* Newsletter */}
+      <div className="bg-[#2D1347] rounded-2xl p-6 text-white">
+        <h4 className="text-xl font-black mb-1 leading-tight">
+          Weekly Vlogs,
+          <br />
+          Zero Spam.
+        </h4>
+        <p className="text-xs text-purple-300 mb-4 leading-relaxed">
+          Subscribe to get fresh vlogs and travel blogs every week.
+        </p>
+        <input
+          type="email"
+          placeholder="Email address..."
+          className="w-full px-4 py-2.5 rounded-full text-xs bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#E91E63] mb-3"
+        />
+        <button className="w-full py-2.5 rounded-full bg-[#E91E63] hover:bg-pink-600 text-white text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer">
+          Subscribe Now
+        </button>
+      </div>
+
+      {/* Blog & News CTA */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-center">
+        <div className="flex items-center gap-2 justify-center mb-3">
+          <BookOpen size={14} className="text-[#E91E63]" />
+          <span className="text-[10px] font-black text-[#2D1347] uppercase tracking-widest">
+            Blog &amp; News
+          </span>
+        </div>
+        <button
+          onClick={onSwitchRead}
+          className="w-full py-2.5 rounded-full bg-[#2D1347] hover:bg-purple-900 text-white text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer"
+        >
+          Read Latest Articles
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+const Blog: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialMode: BlogMode =
+    searchParams.get("mode") === "video" ? "video" : "read";
+
+  const [mode, setMode] = useState<BlogMode>(initialMode);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const handleModeChange = (newMode: BlogMode) => {
+    setMode(newMode);
+    setSelectedCategory("All");
+    setSearchQuery("");
+    setSearchParams(newMode === "video" ? { mode: "video" } : {});
+  };
+
+  const readCategories = [
+    "All",
+    "TREKKING",
+    "INTERNATIONAL",
+    "TRAVEL TIPS",
+    "VISA ASSISTANCE",
+    "LUXURY",
+  ];
+  const videoCategories = ["All", "ADVENTURE", "DESTINATIONS", "WILDLIFE", "LUXURY"];
+
+  const filteredPosts = useMemo(
+    () =>
+      blogPosts.filter((p) => {
+        const s = searchQuery.toLowerCase();
+        const matchSearch =
+          p.title.toLowerCase().includes(s) ||
+          p.excerpt.toLowerCase().includes(s);
+        const matchCat =
+          selectedCategory === "All" ||
+          p.category.toUpperCase() === selectedCategory;
+        return matchSearch && matchCat;
+      }),
+    [searchQuery, selectedCategory]
+  );
+
+  const filteredVideos = useMemo(
+    () =>
+      videoPosts.filter((v) => {
+        const s = searchQuery.toLowerCase();
+        const matchSearch =
+          v.title.toLowerCase().includes(s) ||
+          v.description.toLowerCase().includes(s);
+        const matchCat =
+          selectedCategory === "All" ||
+          v.category.toUpperCase() === selectedCategory;
+        return matchSearch && matchCat;
+      }),
+    [searchQuery, selectedCategory]
+  );
+
+  const categories = mode === "read" ? readCategories : videoCategories;
+  const title = mode === "read" ? "Latest Blogs" : "Latest Vlogs";
+
+  return (
+    <div className="bg-[#F8F8FB] min-h-screen font-sans">
+
+      {/* ── HERO BANNER — identical structure to Packages page ── */}
+      <div className="relative">
+        {mode === "read" ? (
+          <BannerSection
+            background="https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=2000"
+            alt="Himalayan Sunset & Base Camp"
+            heading="THE HIMALAYAN JOURNAL"
+            title="Travel Stories & Guides"
+            description="Explore the stories and guides crafted for your next adventure."
+            overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/55 to-[#2D1347]/20"
+            bottomGradient="h-10 sm:h-14 bg-gradient-to-t from-[#F8F8FB] to-transparent"
+            searchBar={
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {/* Search Keyword */}
+                <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <Search size={18} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full text-left">
+                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      SEARCH KEYWORD
+                    </label>
+                    <input
+                      type="text"
+                      className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
+                      placeholder="Search articles, guides, topics..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {/* Select Category */}
+                <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <BookOpenText size={18} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full text-left">
+                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      SELECT CATEGORY
+                    </label>
+                    <select
+                      className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="TREKKING">Trekking</option>
+                      <option value="INTERNATIONAL">International</option>
+                      <option value="TRAVEL TIPS">Travel Tips</option>
+                      <option value="VISA ASSISTANCE">Visa Assistance</option>
+                      <option value="LUXURY">Luxury</option>
+                    </select>
+                  </div>
+                </div>
+                {/* Search Button */}
+                <button className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer">
+                  SEARCH
+                </button>
+              </div>
+            }
+          />
+        ) : (
+          <BannerSection
+            background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
+            alt="Himalayan Mountain Vista"
+            heading="THE VISUAL JOURNAL"
+            title="Video Vlogs & Short Films"
+            description="Watch the Himalayas come alive through cinematic stories and adventure films."
+            overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/55 to-[#2D1347]/20"
+            bottomGradient="h-10 sm:h-14 bg-gradient-to-t from-[#F8F8FB] to-transparent"
+            searchBar={
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {/* Search Keyword */}
+                <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <Search size={18} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full text-left">
+                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      SEARCH KEYWORD
+                    </label>
+                    <input
+                      type="text"
+                      className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
+                      placeholder="Search vlogs, destinations..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {/* Select Category */}
+                <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <Clapperboard size={18} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full text-left">
+                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      SELECT CATEGORY
+                    </label>
+                    <select
+                      className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="ADVENTURE">Adventure</option>
+                      <option value="DESTINATIONS">Destinations</option>
+                      <option value="WILDLIFE">Wildlife</option>
+                      <option value="LUXURY">Luxury</option>
+                    </select>
+                  </div>
+                </div>
+                {/* Search Button */}
+                <button className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer">
+                  SEARCH
+                </button>
+              </div>
+            }
+          />
+        )}
+      </div>
+
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+          {/* ── LEFT: Main Content ── */}
+          <div className="lg:col-span-8 space-y-6">
+
+            {/* Section header row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#2D1347] flex items-center gap-3">
+                <span className="w-1.5 h-8 bg-[#E91E63] rounded-full inline-block flex-shrink-0" />
+                {title}
+              </h2>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {/* Search input */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={
+                      mode === "read" ? "Search blogs..." : "Search vlogs..."
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-36 sm:w-48 pl-8 pr-3 py-2 rounded-full border border-gray-200 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E91E63] shadow-xs"
+                  />
+                  <Search
+                    size={12}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                </div>
+                {/* Mode toggle button */}
+                {mode === "read" ? (
+                  <button
+                    id="blog-watch-vlogs-btn"
+                    onClick={() => handleModeChange("video")}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#2D1347] hover:bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <Play size={9} fill="white" />
+                    Watch Vlogs
+                  </button>
+                ) : (
+                  <button
+                    id="blog-read-blog-btn"
+                    onClick={() => handleModeChange("read")}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#2D1347] hover:bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <BookOpen size={9} />
+                    Read Blog
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Category filter pills */}
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    selectedCategory === cat
+                      ? "bg-[#E91E63] text-white shadow-sm shadow-pink-200"
+                      : "bg-white text-gray-500 hover:bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* ── BLOG GRID ── */}
+            {mode === "read" &&
+              (filteredPosts.length === 0 ? (
+                <div className="col-span-2 text-center py-16 bg-white rounded-2xl border border-gray-100">
+                  <p className="text-gray-400 text-sm font-medium">
+                    No articles found for your search.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory("All");
+                      setSearchQuery("");
+                    }}
+                    className="mt-3 px-5 py-2 bg-[#E91E63] text-white rounded-full text-xs font-bold cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {filteredPosts.map((post) => (
+                    <BlogCard key={post.id} post={post} />
+                  ))}
+                </div>
+              ))}
+
+            {/* ── VIDEO GRID ── */}
+            {mode === "video" &&
+              (filteredVideos.length === 0 ? (
+                <div className="col-span-2 text-center py-16 bg-white rounded-2xl border border-gray-100">
+                  <p className="text-gray-400 text-sm font-medium">
+                    No vlogs found for your search.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory("All");
+                      setSearchQuery("");
+                    }}
+                    className="mt-3 px-5 py-2 bg-[#E91E63] text-white rounded-full text-xs font-bold cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {filteredVideos.map((v) => (
+                    <VideoCard key={v.id} vlog={v} />
+                  ))}
+                </div>
+              ))}
+          </div>
+
+          {/* ── RIGHT: Sidebar ── */}
+          <aside className="lg:col-span-4">
+            {mode === "read" ? (
+              <ReadSidebar
+                onSwitchVideo={() => handleModeChange("video")}
+              />
+            ) : (
+              <VideoSidebar
+                onSwitchRead={() => handleModeChange("read")}
+              />
+            )}
+          </aside>
+        </div>
+      </div>
+
+      {/* Pre-footer CTA */}
       <PreFooter
-        title="Inspired by Our Travel Stories?"
-        description="Let our experienced team craft your next unforgettable journey."
-        btn1="Call Us Now"
-        btn2="Get a Free Quote"
+        title="Inspired to Explore the Himalayas?"
+        description="Connect with our travel architects to craft your tailored journey today."
+        btn1="Speak With an Expert"
+        btn2="Plan Custom Itinerary"
       />
     </div>
   );

@@ -9,6 +9,7 @@ import type {
   TravelGuide,
   BlogPost,
   VideoPost,
+  GalleryPhoto,
 } from "./types";
 
 export const services: Service[] = [
@@ -2061,7 +2062,7 @@ export const videoPosts: VideoPost[] = [
     id: "v1",
     title: "Everest Base Camp: The Ultimate Trekking Experience",
     slug: "everest-base-camp-vlog",
-    videoUrl: "https://www.youtube.com/embed/S_8S_f5zWfQ",
+    videoUrl: "https://www.youtube.com/embed/3dHEAJPpFEs?rel=0&modestbranding=1",
     thumbnail:
       "https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&q=80&w=1600",
     category: "ADVENTURE",
@@ -2083,7 +2084,7 @@ export const videoPosts: VideoPost[] = [
     id: "v2",
     title: "A Glimpse of Heaven: Pokhara City Guide",
     slug: "pokhara-city-guide-video",
-    videoUrl: "https://www.youtube.com/embed/6iWvI_W9tYI",
+    videoUrl: "https://www.youtube.com/embed/NvUZkQ3PiN8?rel=0&modestbranding=1",
     thumbnail:
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600",
     category: "DESTINATIONS",
@@ -2105,7 +2106,7 @@ export const videoPosts: VideoPost[] = [
     id: "v3",
     title: "Wild Nepal: Chitwan National Park Safari",
     slug: "chitwan-safari-vlog",
-    videoUrl: "https://www.youtube.com/embed/8oW8I5S4p2w",
+    videoUrl: "https://www.youtube.com/embed/VibFaLKr9nY?rel=0&modestbranding=1",
     thumbnail:
       "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1600",
     category: "WILDLIFE",
@@ -2127,7 +2128,7 @@ export const videoPosts: VideoPost[] = [
     id: "v4",
     title: "Himalayan Heli Tour: Annapurna Base Camp",
     slug: "abc-heli-tour-vlog",
-    videoUrl: "https://www.youtube.com/embed/TIDoIOn2m6w",
+    videoUrl: "https://www.youtube.com/embed/LCsVrpFrFKU?rel=0&modestbranding=1",
     thumbnail:
       "https://images.unsplash.com/photo-1544016768-982d1554f0b9?auto=format&fit=crop&q=80&w=1200",
     category: "LUXURY",
@@ -2659,4 +2660,18 @@ export const heliTours: HeliTour[] = [
   },
 ];
 
-
+// -- GALLERY DATA ------------------------------------------------------------
+export const galleryData: GalleryPhoto[] = [
+  { id: "g1", title: "Everest Base Camp Panorama", category: "treks", location: "Solukhumbu, Nepal", image: "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1600", caption: "Breathtaking panoramic view of the majestic Everest range during sunrise." },
+  { id: "g2", title: "Phewa Lake Boating & Sunset", category: "tours", location: "Pokhara, Nepal", image: "https://images.unsplash.com/photo-1544735745-b81216c7ad8f?auto=format&fit=crop&q=80&w=1200", caption: "Tranquil evening reflection over the calm waters of Phewa Lake in Pokhara." },
+  { id: "g3", title: "Tandem Paragliding High Skies", category: "adventures", location: "Sarangkot, Pokhara", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?auto=format&fit=crop&q=80&w=1200", caption: "Soaring through the clouds above the Annapurna mountain range." },
+  { id: "g4", title: "Annapurna Sanctuary Expedition", category: "treks", location: "Annapurna Region, Nepal", image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200", caption: "Hikers trekking through the rugged trails of the Annapurna massif." },
+  { id: "g5", title: "Luxury Beachfront Getaway", category: "tours", location: "Bali, Indonesia", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=1200", caption: "Exclusive luxury villa escape with turquoise ocean views." },
+  { id: "g6", title: "Premium Tourist Coaches & Vans", category: "vehicles", location: "Kathmandu Valley", image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1200", caption: "Our modern, air-conditioned private fleet ready for airport transfers and tours." },
+  { id: "g7", title: "White Water Rafting Adrenaline", category: "adventures", location: "Trishuli River, Nepal", image: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&q=80&w=1200", caption: "Conquering thrilling class III rapids on the pristine Trishuli River." },
+  { id: "g8", title: "Boudhanath Stupa Evening Chants", category: "cultural", location: "Kathmandu, Nepal", image: "https://images.unsplash.com/photo-1545231097-cbd796f1d95f?auto=format&fit=crop&q=80&w=1200", caption: "Spiritual ambiance around the ancient UNESCO World Heritage monument." },
+  { id: "g9", title: "Himalayan Heli Sightseeing Tour", category: "vehicles", location: "Everest Region", image: "https://images.unsplash.com/photo-1502444330042-d1a1ddf9bb5b?auto=format&fit=crop&q=80&w=1200", caption: "VIP helicopter flight touching down near Kalapathar overlooking Mt. Everest." },
+  { id: "g10", title: "Dubai Desert Safari Sunset", category: "tours", location: "Dubai, UAE", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=1200", caption: "Dune bashing and traditional Bedouin desert camp experience." },
+  { id: "g11", title: "Langtang Rhododendron Trails", category: "treks", location: "Langtang Valley", image: "https://images.unsplash.com/photo-1583267746897-2cf415887172?auto=format&fit=crop&q=80&w=1200", caption: "Blooming spring trails winding through traditional Tamang villages." },
+  { id: "g12", title: "Pashupatinath Sacred Heritage", category: "cultural", location: "Kathmandu, Nepal", image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=1200", caption: "Centuries-old architecture and cultural heritage preserved in time." },
+];

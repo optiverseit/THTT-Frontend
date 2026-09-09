@@ -139,6 +139,15 @@ export interface GalleryItem {
   image: string;
   title: string;
 }
+
+export interface GalleryPhoto {
+  id: string;
+  title: string;
+  category: "all" | "tours" | "treks" | "adventures" | "vehicles" | "cultural";
+  image: string;
+  location: string;
+  caption?: string;
+}
 export interface BlogPost {
   id: string;
   title: string;

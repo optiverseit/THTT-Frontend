@@ -127,23 +127,33 @@ const INSURANCE_PLANS: InsurancePlan[] = [
 const INSURANCE_FAQS = [
   {
     q: "Why is specialized travel insurance mandatory for trekking in Nepal?",
+    qNp: "नेपालमा ट्रेकिङको लागि विशेष यात्रा बीमा किन अनिवार्य छ?",
     a: "Standard travel insurances from regular credit cards or general agents usually cap altitude at 2,000m to 2,500m and exclude helicopter search and rescue. In regions like Everest Base Camp (5,364m) or Thorong La Pass (5,416m), emergency medical helicopter evacuation costs between $2,500 and $5,000 per flight. Specialized high-altitude trekking insurance guarantees 100% cashless helicopter airlift with zero out-of-pocket delays.",
+    aNp: "साधारण क्रेडिट कार्ड वा सामान्य एजेन्टको यात्रा बीमाले उचाइलाई २,००० मिटरदेखि २,५०० मिटरमा सीमित गर्दछ र हेलिकप्टर खोजी तथा उद्धार बहिष्कृत गर्दछ। एभरेस्ट बेस क्याम्प (५,३६४ मिटर) वा थोराङ ला पास (५,४१६ मिटर) जस्ता क्षेत्रहरूमा आपतकालीन मेडिकल हेलिकप्टर उद्धार खर्च प्रति उडान $२,५०० देखि $५,००० सम्म पर्छ। विशेष उच्च-उचाइ ट्रेकिङ बीमाले शून्य जेब खर्चमा १००% क्यासलेस हेलिकप्टर एयरलिफ्ट सुनिश्चित गर्दछ।",
   },
   {
     q: "How fast can a rescue helicopter be dispatched during an emergency on the trail?",
+    qNp: "मार्गमा आपतकालिन अवस्थामा उद्धार हेलिकप्टर कति चाँडो पठाउन सकिन्छ?",
     a: "Once our lead Sherpa guide and wilderness first-responder assess your condition, our 24/7 Kathmandu operations desk coordinates immediate flight clearance. The rescue helicopter typically arrives at the high-altitude helipad within 30 to 45 minutes (weather permitting).",
+    aNp: "हाम्रा मुख्य शेर्पा गाइड र फर्स्ट-रेस्पोन्डरले तपाईंको अवस्था मूल्याङ्कन गरेपछि, हाम्रो २४/७ काठमाडौँ अपरेसन डेस्कले तुरुन्तै उडान क्लियरेन्स समन्वय गर्छ। मौसम अनुकूल भएमा उद्धार हेलिकप्टर सामान्यतया ३० देखि ४५ मिनेट भित्र उच्च-उचाइ हेलिप्याडमा आइपुग्छ।",
   },
   {
     q: "Which hospitals in Nepal provide direct cashless billing with this insurance?",
+    qNp: "नेपालका कुन अस्पतालहरूले यस बीमासँग प्रत्यक्ष क्यासलेस बिलिङ सुविधा प्रदान गर्छन्?",
     a: "We work directly with Nepal's premier tourist medical facilities including CIWEC Hospital & Travel Medicine Center (Kathmandu & Pokhara), Swacon International Hospital, and Era Health Care for immediate cashless admission.",
+    aNp: "हामी तत्काल क्यासलेस भर्नाको लागि CIWEC अस्पताल र ट्राभल मेडिसिन सेन्टर (काठमाडौं र पोखरा), स्वाकन इन्टरनेशनल अस्पताल, र इरा हेल्थ केयरलगायत नेपालका प्रमुख मेडिकल सुविधाहरूसँग प्रत्यक्ष सहकार्य गर्छौं।",
   },
   {
     q: "Does the policy provide certification for Schengen, US, and UK visa applications?",
+    qNp: "के यो बीमा नीतिले शेन्जेन, अमेरिका र बेलायत भिसा आवेदनहरूको लागि प्रमाणीकरण प्रदान गर्छ?",
     a: "Yes! Our International Outbound plan meets all European Union Schengen requirements (minimum €30,000 medical coverage, zero deductible, medical repatriation) and provides an official digital policy certificate recognized by all foreign embassies.",
+    aNp: "हो! हाम्रो अन्तर्राष्ट्रिय आउटबाउन्ड योजनाले युरोपेली संघ शेन्जेनका सबै आवश्यकताहरू (न्यूनतम €३०,००० चिकित्सा कभरेज, शून्य कटौती, चिकित्सा फिर्ती) पूरा गर्छ र सबै विदेशी दूतावासहरूद्वारा मान्यता प्राप्त आधिकारिक डिजिटल प्रमाणपत्र प्रदान गर्दछ।",
   },
   {
     q: "Can insurance be arranged on short notice after arriving in Kathmandu?",
+    qNp: "के काठमाडौं आइपुगेपछि छोटो समयमै बीमा व्यवस्था गर्न सकिन्छ?",
     a: "Yes. We can issue official policy certificates within 30 to 60 minutes after receiving your passport copy, planned trekking route, and travel dates.",
+    aNp: "हो। तपाईंको राहदानी प्रतिलिपि, योजनाबद्ध ट्रेकिङ मार्ग, र यात्रा मिति प्राप्त भएको ३० देखि ६० मिनेट भित्र हामी आधिकारिक नीति प्रमाणपत्र जारी गर्न सक्छौं।",
   },
 ];
 
@@ -481,7 +491,10 @@ export const TravelInsuranceDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -490,8 +503,9 @@ export const TravelInsuranceDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
-                    {faq.a}
+                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
+                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
+                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>

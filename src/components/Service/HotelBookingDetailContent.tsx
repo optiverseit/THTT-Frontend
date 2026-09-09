@@ -27,25 +27,36 @@ import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
 const HOTEL_FAQS = [
   {
     q: "Can Trip Himalaya guarantee lower hotel rates than online booking sites?",
+    qNp: "के ट्रिप हिमालयले अनलाइन बुकिङ साइटभन्दा सस्तो होटल दरको गारन्टी दिन सक्नुहुन्छ?",
     a: "Yes. Because we maintain direct, high-volume contracted agreements with over 500+ partner hotels and heritage properties across Nepal, our rates are consistently 15% to 30% lower than major online booking portals with free perks included.",
+    aNp: "हो। नेपालभरि ५००+ साझेदार होटल र हेरिटेज सम्पत्तिसंग सिधा उच्च-मात्रा करारदारी समझौता कायम राखेकाले हाम्रा दरहरू बडा अनलाइन बुकिङ पोर्टलभन्दा १५% देखि ३०% सस्तो हुन् — मुफ्त सुविधाहरू समेत।",
   },
   {
     q: "What complimentary benefits are included with hotel bookings through your agency?",
+    qNp: "तपाईंको एजेन्सीमार्फत होटल बुकिङ गरदा कुन मुफ्त सुविधाहरू समावेश छन्?",
     a: "Depending on the hotel tier, our clients receive complimentary airport/helipad pick-up, free buffet breakfast, flexible early check-in or late check-out, room category upgrades upon availability, and 24/7 concierge assistance.",
+    aNp: "होटल श्रेणी अनुसार, हाम्रा ग्राहकहरूले मुफ्त एयरपोर्ट/हेलिप्याड पिकअप, मुफ्त बुफे ब्रेकफास्ट, लचिला अर्ली चेक-इन वा लेट चेक-आउट, उपलब्धताअनुसार कोठा श्रेणी अपग्रेड, र २४/७ कन्सियर्ज सहायता पाउनुहुन्छ।",
   },
   {
     q: "Do you arrange teahouse and mountain lodge bookings for trekking routes?",
+    qNp: "के तपाईंले ट्रेकिङ मार्गहरूको लागि टीहाउस र पहाडी लज बुकिङ व्यवस्था गर्नुहुन्छ?",
     a: "Yes! During peak seasons in Everest, Annapurna, and Langtang, we pre-reserve the highest standard heated rooms in premium teahouses (such as Yeti Mountain Home and high-altitude luxury lodges) with attached bathrooms and warm blankets.",
+    aNp: "हो! एभरेस्ट, अन्नपूर्ण, र लाङ्ताङमा पीक सिजनमा, हामी प्रिमियम टीहाउसहरूमा (जस्तै Yeti Mountain Home) संलग्न बाथरुम र न्यानो कम्बलसहितका उच्चतम स्तरका गरम कोठाहरू अग्रिम आरक्षण गरिन्छ।",
   },
   {
     q: "What is your cancellation and date modification policy?",
+    qNp: "तपाईंको रद्दीकरण र मिति परिवर्तन नीति के हो?",
     a: "Most of our standard hotel reservations offer free cancellation up to 48 hours prior to check-in. For emergency weather delays or flight cancellations in mountain regions, we adjust your reservation dates with zero penalty fees.",
+    aNp: "हाम्रा अधिकांश स्तरीय होटल आरक्षणहरूले चेक-इनसम्म ४८ घन्टाअघि मुफ्त रद्दीकरण इजाजत दिन्छ। आपतकालीन मौसम विलम्ब वा उडान रद्दी भएमा, हामी शून्य जरिमानासह तपाईंको आरक्षण मिति परिवर्तन गर्छौं।",
   },
   {
     q: "How do we book a hotel room and confirm the voucher?",
+    qNp: "हामी होटल कोठा कसरी बुक गर्ने र भाउचर कसरी पुष्टि गर्ने?",
     a: "Simply select your preferred hotel or destination, submit your dates through our quick form or WhatsApp, and we will send a confirmed hotel booking voucher with QR code and confirmation number immediately.",
+    aNp: "आफनो मनपर्ने होटल वा गन्तव्य छनोट गर्नुहोस्, हाम्रो क्विक फर्म वा WhatsApp मार्यत तारिख पठाउनुहोस्, र हामी तुरिन्तै QR कोड र पुष्टि नम्बरसहित पुष्टिकृत होटल बुकिङ भाउचर पठाउँछौं।",
   },
 ];
+
 
 export const HotelBookingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -522,7 +533,10 @@ export const HotelBookingDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -531,8 +545,9 @@ export const HotelBookingDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
-                    {faq.a}
+                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
+                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
+                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>

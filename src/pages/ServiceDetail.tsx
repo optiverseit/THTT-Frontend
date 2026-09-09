@@ -1,16 +1,14 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
-import { services, workPermitTestimonials } from "../assets/data/mockData";
+import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
 import {
   Compass,
   ArrowRight,
   Shield,
-  Zap,
   Clock,
   Heart,
   FileText,
   Users,
-  MessageCircle,
   Globe,
   MapPin,
   Plane,
@@ -19,25 +17,13 @@ import {
   Car,
   Wind,
   ShieldCheck,
-  Award,
-  Camera,
-  Hotel,
   Sparkles,
-  HeartPulse,
   Activity,
-  Calendar,
+  Star,
 } from "lucide-react";
 import BannerSection from "../components/reuseable/BannerSection";
-import HeroSection from "../components/reuseable/HeroSection";
 import Testimonials from "../components/reuseable/Testimonials";
 import PreFooter from "../components/reuseable/PreFooter";
-import DynamicFaqSection from "../components/reuseable/DynamicFaqSection";
-import ServiceOverviewSection, {
-  type OverviewFeatureItem,
-} from "../components/Service/ServiceOverviewSection";
-import ServiceProcess, {
-  type ProcessStep,
-} from "../components/Service/ServiceProcess";
 import ToursDetailContent from "../components/Service/ToursDetailContent";
 import ActivitiesDetailContent from "../components/Service/ActivitiesDetailContent";
 import TrekkingDetailContent from "../components/Service/TrekkingDetailContent";
@@ -50,7 +36,6 @@ import VisaServicesDetailContent from "../components/Service/VisaServicesDetailC
 const ServiceDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("OVERVIEW");
 
   // If slug is work-permit, redirect to dedicated /work-permit route
   if (slug === "work-permit") {
@@ -73,8 +58,7 @@ const ServiceDetail: React.FC = () => {
       (slug === "heli-services" && s.slug === "heli-services")
   );
 
-  const scrollToSection = (id: string, tabName: string) => {
-    setActiveTab(tabName);
+  const scrollToSection = (id: string, _tabName?: string) => {
     const el = document.getElementById(id);
     if (el) {
       const offset = 120; // account for sticky 3-tier header
@@ -132,14 +116,7 @@ const ServiceDetail: React.FC = () => {
   const isHeliServices = service.slug === "heli-services";
   const isVisaServices = service.slug === "visa-services" || service.slug === "visa";
 
-  const tabs = [
-    { name: "OVERVIEW", id: "section-overview" },
-    ...(isAirTicket ? [] : [{ name: "SERVICES", id: "section-services" }]),
-    { name: "WHY US", id: "section-whyus" },
-    { name: "TESTIMONIES", id: "section-testimonies" },
-    { name: "PROCESS", id: "section-process" },
-    { name: "FAQS", id: "section-faqs" },
-  ];
+
 
   // 1. Banner Subtitle
   const getBannerHeading = () => {
@@ -205,14 +182,14 @@ const ServiceDetail: React.FC = () => {
 
     if (isTours) {
       return (
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Globe size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+        <div className="bg-white/95 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-md p-2 sm:p-2.5 border border-white/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full max-w-[725px] mx-auto">
+          <div className="flex items-center gap-2.5 w-full px-3 py-1 sm:py-1.5 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Globe size={15} className="text-[#E91E63] flex-shrink-0" />
+            <div className="flex flex-col w-full text-left">
+              <label className="text-[8.5px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">
                 SELECT DESTINATION
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+              <select className="text-xs sm:text-[13px] font-semibold text-gray-800 bg-transparent focus:outline-none py-0.5 cursor-pointer">
                 <option value="">All Destinations</option>
                 <option value="ktm">Kathmandu Valley</option>
                 <option value="pkr">Pokhara &amp; Annapurna</option>
@@ -223,13 +200,13 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Compass size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2.5 w-full px-3 py-1 sm:py-1.5 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Compass size={15} className="text-[#E91E63] flex-shrink-0" />
+            <div className="flex flex-col w-full text-left">
+              <label className="text-[8.5px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">
                 TOUR CATEGORY
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+              <select className="text-xs sm:text-[13px] font-semibold text-gray-800 bg-transparent focus:outline-none py-0.5 cursor-pointer">
                 <option value="">All Categories</option>
                 <option value="heritage">UNESCO Heritage &amp; Culture</option>
                 <option value="nature">Scenic Nature &amp; Lakes</option>
@@ -241,7 +218,7 @@ const ServiceDetail: React.FC = () => {
 
           <button
             onClick={() => scrollToSection("section-services", "SERVICES")}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+            className="rounded-lg sm:rounded-xl bg-[#E91E63] hover:bg-rose-700 py-2 sm:py-2.5 px-6 text-white font-bold text-xs tracking-wider transition-all shadow-xs whitespace-nowrap cursor-pointer hover:shadow-md active:scale-95"
           >
             SEARCH
           </button>
@@ -562,169 +539,9 @@ const ServiceDetail: React.FC = () => {
     );
   };
 
-  // 3. Overview 6 Feature Cards tailored to each service
-  const getOverviewFeatures = (): OverviewFeatureItem[] => {
-    if (isAirTicket) {
-      return [
-        { name: "REAL-TIME FARES", desc: "Live airline inventory & best rates.", icon: Zap },
-        { name: "INSTANT E-TICKETS", desc: "Delivered immediately on phone.", icon: Clock },
-        { name: "IATA CERTIFIED", desc: "Official domestic & global ticketing.", icon: ShieldCheck },
-        { name: "BAGGAGE ASSISTANCE", desc: "Clear luggage allowances.", icon: FileText },
-        { name: "24/7 TICKETING DESK", desc: "Flight changes & emergency support.", icon: Users },
-        { name: "CORPORATE FARES", desc: "Group seat discounts available.", icon: Sparkles },
-      ];
-    }
-    if (isTours) {
-      return [
-        { name: "CURATED ITINERARIES", desc: "Top UNESCO heritage & nature.", icon: Compass },
-        { name: "PRIVATE TRANSPORT", desc: "Clean AC SUVs, cars & HiAce.", icon: Car },
-        { name: "LICENSED GUIDES", desc: "Experienced multilingual experts.", icon: Users },
-        { name: "HANDPICKED HOTELS", desc: "Verified stays & luxury resorts.", icon: Hotel },
-        { name: "TRANSPARENT PRICING", desc: "Zero hidden charges guaranteed.", icon: Zap },
-        { name: "24/7 SUPPORT", desc: "Complete on-trip dedicated care.", icon: ShieldCheck },
-      ];
-    }
-    if (isTrekking) {
-      return [
-        { name: "SHERPA LEADERS", desc: "Licensed high-altitude native guides.", icon: Mountain },
-        { name: "SAFETY FIRST", desc: "Pulse oximeters & medical kits.", icon: HeartPulse },
-        { name: "ALL PERMITS SORTED", desc: "TIMS & National Park passes ready.", icon: FileText },
-        { name: "TEAHOUSE LODGES", desc: "Best comfortable rooms reserved.", icon: Bed },
-        { name: "HELI EVACUATION", desc: "Insurance standby coordination.", icon: Wind },
-        { name: "PORTER WELFARE", desc: "Ethical fair-wage equipment support.", icon: Users },
-      ];
-    }
-    if (isActivities) {
-      return [
-        { name: "APPI CERTIFIED", desc: "Internationally certified pilots.", icon: Award },
-        { name: "EUROPEAN GEAR", desc: "Petzl & highest safety gear.", icon: ShieldCheck },
-        { name: "HD VIDEO & PHOTOS", desc: "Free action camera footage.", icon: Camera },
-        { name: "DOORSTEP PICKUP", desc: "Complimentary hotel transfers.", icon: Car },
-        { name: "WEATHER FLEX", desc: "Free rescheduling on bad weather.", icon: Clock },
-        { name: "ZERO QUEUE", desc: "Direct instant launch passes.", icon: Zap },
-      ];
-    }
-    if (isHotelBooking) {
-      return [
-        { name: "VERIFIED STAYS", desc: "Hand-inspected hygienic rooms.", icon: ShieldCheck },
-        { name: "BEST RATE GUARANTEE", desc: "Exclusive contracted agency rates.", icon: Zap },
-        { name: "COMPLIMENTARY PERKS", desc: "Free breakfast & welcome drinks.", icon: Sparkles },
-        { name: "FLEXIBLE CANCEL", desc: "Easy modification terms.", icon: Clock },
-        { name: "AIRPORT TRANSFERS", desc: "Free shuttle coordination.", icon: Car },
-        { name: "24/7 CONCIERGE", desc: "Late check-in assistance.", icon: Users },
-      ];
-    }
-    if (isVisaServices) {
-      return [
-        { name: "99.2% SUCCESS RATE", desc: "Thorough pre-submission checks.", icon: ShieldCheck },
-        { name: "100% ONLINE FILING", desc: "Fast paperless applications.", icon: Zap },
-        { name: "EMBASSY COMPLIANT", desc: "Aligned with current consulate rules.", icon: Award },
-        { name: "SLOT BOOKING", desc: "Priority biometric appointments.", icon: Calendar },
-        { name: "WHATSAPP TRACKING", desc: "Real-time updates on phone.", icon: MessageCircle },
-        { name: "INTERVIEW COACHING", desc: "1-on-1 counseling support.", icon: Users },
-      ];
-    }
-    if (isTravelInsurance) {
-      return [
-        { name: "HELI RESCUE 6000M", desc: "High-altitude medical evacuation.", icon: Wind },
-        { name: "CASHLESS BILLING", desc: "Direct tie-up with top hospitals.", icon: Heart },
-        { name: "BAGGAGE LOSS", desc: "Comprehensive delay compensation.", icon: ShieldCheck },
-        { name: "TRIP CANCELLATION", desc: "Reimbursement for emergencies.", icon: Clock },
-        { name: "INSTANT POLICY", desc: "E-certificate issued in 10 minutes.", icon: Zap },
-        { name: "EMBASSY ACCEPTED", desc: "Valid for Schengen & Worldwide.", icon: Award },
-      ];
-    }
-    if (isVehicleRental) {
-      return [
-        { name: "VERIFIED CHAUFFEURS", desc: "Courteous & licensed drivers.", icon: Users },
-        { name: "FUEL & TOLLS INCLUDED", desc: "Zero surprise costs.", icon: Zap },
-        { name: "CLEAN & AC FLEET", desc: "Sanitized modern vehicles.", icon: Sparkles },
-        { name: "GPS TRACKED", desc: "Full safety & real-time monitoring.", icon: ShieldCheck },
-        { name: "PROMPT ARRIVAL", desc: "Guaranteed on-time doorstep pickup.", icon: Clock },
-        { name: "PAN-NEPAL PERMITS", desc: "Smooth travel across all districts.", icon: FileText },
-      ];
-    }
-    // Heli Services
-    return [
-      { name: "WINDOW SEAT ASSURED", desc: "Panoramic Himalayan aerial views.", icon: Sparkles },
-      { name: "EBC TOUCHDOWN", desc: "Everest landing & photography.", icon: Camera },
-      { name: "OXYGEN ONBOARD", desc: "Full high-altitude safety setup.", icon: HeartPulse },
-      { name: "VETERAN CAPTAINS", desc: "Over 10,000 mountain flight hours.", icon: Award },
-      { name: "INSTANT DISPATCH", desc: "Prompt takeoff clearances.", icon: Zap },
-      { name: "CIVIL AVIATION OK", desc: "Rigorous safety adherence.", icon: ShieldCheck },
-    ];
-  };
 
-  // 4. Why Us Items
-  const getWhyUsFeatures = () => {
-    return [
-      { name: "EXPERIENCED PROCESSING TEAM", icon: Shield },
-      { name: "TRANSPARENT PRICING SYSTEM", icon: Zap },
-      { name: "FAST & TIMELY RESPONSE", icon: Clock },
-      { name: "GOVERNMENT COMPLIANT PROCESS", icon: FileText },
-      { name: "TRUSTED BY HUNDREDS OF CLIENTS", icon: Heart },
-    ];
-  };
 
-  // 5. 4-Step Process tailored to each service
-  const getServiceSteps = (): ProcessStep[] => {
-    if (isAirTicket) {
-      return [
-        { number: 1, title: "SELECT ROUTE & DATES", description: "Search domestic mountain flights or international global destinations." },
-        { number: 2, title: "COMPARE AIRLINE FARES", description: "Receive real-time seat availability, timings, and lowest ticket fares." },
-        { number: 3, title: "INSTANT E-TICKET ISSUANCE", description: "Secure payment with immediate delivery via WhatsApp and email." },
-        { number: 4, title: "24/7 FLIGHT ASSISTANCE", description: "Free online web check-in, reschedule support, and baggage guidance." },
-      ];
-    }
-    if (isTours) {
-      return [
-        { number: 1, title: "CHOOSE DESTINATION & STYLE", description: "Select heritage, lake views, wildlife safari, or luxury circuits." },
-        { number: 2, title: "CUSTOMIZE ITINERARY", description: "Tailor hotel tiers, private transport, and personalized activities." },
-        { number: 3, title: "CONFIRMATION & PERMITS", description: "Receive instant booking vouchers, permits, and airport reception plan." },
-        { number: 4, title: "IMMERSIVE EXPERIENCE", description: "Enjoy seamless guided sightseeing with a 24/7 dedicated concierge." },
-      ];
-    }
-    if (isTrekking) {
-      return [
-        { number: 1, title: "SELECT TRAIL & REGION", description: "Everest, Annapurna, Langtang, Manaslu, or remote wilderness circuits." },
-        { number: 2, title: "PRE-TREK GEAR & BRIEFING", description: "Comprehensive packing advice, acclimatization schedule, and permits." },
-        { number: 3, title: "EXPEDITION COMMENCES", description: "Guided by licensed Sherpas with reserved teahouse accommodations." },
-        { number: 4, title: "SAFE SUMMIT & RETURN", description: "Daily health monitoring, emergency heli standby, and celebratory return." },
-      ];
-    }
-    if (isVisaServices) {
-      return [
-        { number: 1, title: "CHOOSE COUNTRY & VISA TYPE", description: "Select tourist, visit, transit, or business visa assistance." },
-        { number: 2, title: "SUBMIT REQUIRED DOCUMENTS", description: "Online document verification and consulate compliance check." },
-        { number: 3, title: "EMBASSY FILING & TRACKING", description: "Direct application filing, appointment booking, and live tracking." },
-        { number: 4, title: "VISA APPROVAL", description: "Receive your authentic verified visa with complete pre-travel advice." },
-      ];
-    }
-    return [
-      { number: 1, title: "CHOOSE OPTION & INQUIRE", description: "Select your preferred service package from our catalog." },
-      { number: 2, title: "CUSTOMIZE & QUOTATION", description: "Our dedicated travel specialists tailor dates and requirements." },
-      { number: 3, title: "FAST CONFIRMATION", description: "Receive verified digital vouchers, tickets, and clear pricing." },
-      { number: 4, title: "SEAMLESS EXPERIENCE", description: "Enjoy certified hospitality, licensed experts, and 24/7 support." },
-    ];
-  };
 
-  // 6. Faqs tailored to service
-  const getFaqs = () => {
-    if (isAirTicket) {
-      return [
-        { question: "What do I need to book a domestic or international flight ticket?", answer: "Share your full name as per passport or citizenship ID, chosen route, travel dates, and preferred timing. We issue options with real-time pricing and fast confirmation." },
-        { question: "Can I change, reschedule, or cancel my ticket?", answer: "Yes, changes and cancellations depend on the specific airline fare rules. Our 24/7 ticketing desk will guide you through any penalties or rebooking steps without hassle." },
-        { question: "Do you offer group booking discounts?", answer: "Yes, we provide special corporate and group flight fares with dedicated seat blocks on major domestic and international airlines." },
-        { question: "How fast do I receive my electronic ticket?", answer: "Electronic tickets are issued immediately after payment verification and delivered via WhatsApp and Email within minutes." },
-      ];
-    }
-    return [
-      { question: `How do I request a tailored quote for ${service.name}?`, answer: "Click 'WhatsApp Inquiry' or message our team directly with your planned dates and requirements. We reply with a detailed custom proposal within hours." },
-      { question: "Can this service be customized according to budget and schedule?", answer: "Absolutely! All our packages and services are 100% customizable to suit solo travelers, families, corporate delegations, or luxury seekers." },
-      { question: "What documentation or permits are required?", answer: "Our dedicated concierge team handles all required government permits, registrations, insurance policies, and paperwork from start to finish." },
-      { question: "What payment methods are supported?", answer: "We support eSewa, Khalti, direct bank transfers in NPR/USD/INR, major credit/debit cards, and swift wire transfers for international clients." },
-    ];
-  };
 
   // Section titles
   const getServicesSectionBadge = () => {
@@ -756,45 +573,115 @@ const ServiceDetail: React.FC = () => {
   return (
     <>
       <div className="w-full flex flex-col items-center">
-        <div className="w-full relative shadow-md bg-white">
+        <div className="w-full relative shadow-md bg-white border-b border-gray-200">
           {/* ── 1. TOP BANNER SECTION (With 1. Title at top, 2. SearchBar in middle, 3. Quote below) ── */}
-          <BannerSection
-            background={service.heroImage}
-            alt={service.name}
-            heading={getBannerHeading()}
-            title={service.name}
-            description={service.shortDesc}
-            searchBar={renderFloatingSearchBar()}
-          />
+          {isTours ? (
+            /* ── DEDICATED TOUR HERO BANNER (With compact contents & 4 Stat Cards) ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-9 sm:pt-10 pb-7 sm:pb-8">
+              {/* Background Image */}
+              <img
+                src={service.heroImage}
+                alt={service.name}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
 
-          {/* ── 3. SUB-NAVIGATION TABS (Exact Work Permit Tab Bar) ── */}
-          <div className="mt-8 flex justify-center items-center px-4 overflow-x-auto">
-            <div className="flex gap-4 sm:gap-8 border-b border-gray-200 pb-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => scrollToSection(tab.id, tab.name)}
-                  className={`py-1 font-bold tracking-widest text-xs transition-colors whitespace-nowrap cursor-pointer ${
-                    activeTab === tab.name
-                      ? "border-b-2 border-pink-600 text-pink-600 -mb-[9px]"
-                      : "text-purple-950 hover:text-pink-500"
-                  }`}
-                >
-                  {tab.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+              {/* Dark overlay with soft gradient for contrast */}
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
 
-        {/* ── 4. OVERVIEW SECTION (Left text & buttons, Right 6 rounded cards) ── */}
-        <div id="section-overview" className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mt-8">
-          <ServiceOverviewSection
-            serviceName={service.name}
-            description={service.description || service.shortDesc}
-            features={getOverviewFeatures()}
-            whatsappMessage={`Hello Trip Himalaya! I am interested in your "${service.name}" service. Please share details and pricing.`}
-          />
+              {/* Content Stack: 1. Badge & Title, 2. Compact Search Bar, 3. Quote, 4. 4 Stat Cards */}
+              <div className="relative z-10 text-center px-3 sm:px-4 max-w-4xl w-full mx-auto flex flex-col items-center -translate-y-1 sm:-translate-y-2">
+                {/* 1. Tagline & Title */}
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[8px] sm:text-[9px] font-bold px-2.5 sm:px-3 py-0.5 rounded-full uppercase tracking-[0.15em] sm:tracking-[0.18em] mb-1.5 shadow-sm max-w-[90vw] truncate">
+                    {getBannerHeading()}
+                  </span>
+                  <h1 className="text-[22px] sm:text-[34px] md:text-[38px] font-black text-white mb-1 sm:mb-1.5 tracking-tight drop-shadow-xl">
+                    {service.name}
+                  </h1>
+                  <div className="h-0.5 sm:h-1 w-10 sm:w-16 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-xs" />
+                </div>
+
+                {/* 2. Compact Search Bar */}
+                <div className="w-full max-w-[725px] my-1 sm:my-1.5 relative z-20 px-0 sm:px-0">
+                  {renderFloatingSearchBar()}
+                </div>
+
+                {/* 3. Short Description */}
+                {service.shortDesc && (
+                  <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
+                    "{service.shortDesc}"
+                  </p>
+                )}
+
+                {/* 4. 4 VALUE / TRUST STAT CARDS IN HERO */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3 px-0">
+                  {[
+                    {
+                      icon: Compass,
+                      label: `${packages.filter((p) => p.type === "tour").length}+ Curated Tours`,
+                      desc: "Nepal & International",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                    {
+                      icon: Sparkles,
+                      label: "100% Tailor-Made",
+                      desc: "Customized for you",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                    {
+                      icon: ShieldCheck,
+                      label: "Govt Certified Guides",
+                      desc: "Multilingual Experts",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                    {
+                      icon: Star,
+                      label: "4.9/5 Rating",
+                      desc: "Trusted by 5,000+ Guests",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                  ].map((stat, idx) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0"
+                      >
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}
+                        >
+                          <Icon size={14} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0">
+                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors truncate">
+                            {stat.label}
+                          </h4>
+                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight truncate">
+                            {stat.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+
+            </section>
+          ) : (
+            <BannerSection
+              background={service.heroImage}
+              alt={service.name}
+              heading={getBannerHeading()}
+              title={service.name}
+              description={service.shortDesc}
+              searchBar={renderFloatingSearchBar()}
+              bottomGradient="hidden"
+            />
+          )}
+
+          {/* ── 3. FULL-WIDTH DIVIDER LINE WITH SHADOW (Sub-navigation tab texts removed as requested) ── */}
+          <div className="w-full border-b border-gray-200/90 shadow-xs" />
         </div>
       </div>
 
@@ -802,17 +689,19 @@ const ServiceDetail: React.FC = () => {
       {!isAirTicket && (
         <div
           id="section-services"
-          className="w-full py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-8"
+          className="w-full pt-8 sm:pt-9 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-3 sm:mt-4"
         >
           <div className="max-w-7xl mx-auto">
-            <header className="text-center mb-8">
-              <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
-                {getServicesSectionBadge()}
-              </h2>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl text-purple-950 font-extrabold">
-                {getServicesSectionTitle()}
-              </h1>
-            </header>
+            {!isTours && (
+              <header className="text-center mb-8">
+                <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
+                  {getServicesSectionBadge()}
+                </h2>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl text-purple-950 font-extrabold">
+                  {getServicesSectionTitle()}
+                </h1>
+              </header>
+            )}
 
             {/* Dedicated Interactive Component for each Service */}
             {isTours ? (
@@ -836,36 +725,9 @@ const ServiceDetail: React.FC = () => {
         </div>
       )}
 
-      {/* ── 6. WHY US SECTION (Exact HeroSection with background image & 5 icons) ── */}
-      <div id="section-whyus">
-        <HeroSection
-          title="WHY CHOOSE US"
-          subject={`Why Choose Trip Himalaya for ${service.name}?`}
-          description="Reliable support, transparent pricing, verified operators, and a team that takes responsibility from start to finish."
-          backgroundImage={service.heroImage}
-          services={getWhyUsFeatures()}
-        />
-      </div>
-
       {/* ── 7. TESTIMONIES SECTION (Exact Testimonials carousel) ── */}
       <div id="section-testimonies">
         <Testimonials workTest={workPermitTestimonials} />
-      </div>
-
-      {/* ── 8. PROCESS SECTION (Exact 4-Step Circle Workflow) ── */}
-      <div id="section-process">
-        <ServiceProcess steps={getServiceSteps()} />
-      </div>
-
-      {/* ── 9. FAQS SECTION (Dynamic Accordion) ── */}
-      <div id="section-faqs" className="w-full max-w-5xl mx-auto px-4 py-12">
-        <DynamicFaqSection
-          targetType="service"
-          targetId={service.slug}
-          defaultFaqs={getFaqs()}
-          title="Frequently Asked Questions"
-          subtitle={`Everything you need to know about our ${service.name}`}
-        />
       </div>
 
       {/* ── 10. PREFOOTER CTA ── */}

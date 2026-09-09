@@ -5,11 +5,9 @@ import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reuseable/packages/BookingModal";
 import {
-  Compass,
   MapPin,
   Clock,
   CheckCircle2,
-  Sparkles,
   ShieldCheck,
   Award,
   Camera,
@@ -19,7 +17,6 @@ import {
   ChevronDown,
   MessageCircle,
   Globe,
-  Star,
   CalendarCheck,
   ArrowUpRight,
 } from "lucide-react";
@@ -27,25 +24,36 @@ import {
 const TOUR_FAQS = [
   {
     q: "Can our holiday tour itinerary be completely customized?",
+    qNp: "के हाम्रो हलिडे ट्यूर इटिनेरेरी पूर्णरूपमा अनुकूलन गर्न सकिन्छ?",
     a: "Yes! Every tour package can be customized to match your schedule, preferred hotel category (from budget to 5-star heritage resorts), private vehicle choice, and specific sightseeing interests.",
+    aNp: "हो! प्रत्येक ट्यूर प्याकेज तपाईंको तालिका, मनपर्ने होटल श्रेणी (बजेटदेखि ५-स्टार हेरिटेज रिसोर्टसम्म), निजी सवारी छनोट र विशेष दर्शनीय स्थानको रुचि अनुसार अनुकूलन गर्न सकिन्छ।",
   },
   {
     q: "What is included in the private transport during tours?",
+    qNp: "ट्यूरको क्रममा निजी यातायातमा के-के समावेश छ?",
     a: "We provide clean, air-conditioned private vehicles (Sedans, Scorpio 4x4 SUVs, Toyota Hiace vans, or luxury tourist coasters) with experienced, courteous chauffeurs covering all fuel, toll, and parking fees.",
+    aNp: "हामी अनुभवी र विनम्र चालकसहित सफा, एयर-कन्डिसन निजी सवारीसाधन (सेडान, स्कर्पियो ४x४ SUV, टोयोटा हाइस भ्यान, वा लक्जरी ट्यूरिस्ट कोस्टर) प्रदान गर्छौं — सबै इन्धन, टोल र पार्किङ शुल्क समावेश।",
   },
   {
     q: "Are monument entry fees and government permits covered?",
+    qNp: "स्मारक प्रवेश शुल्क र सरकारी अनुमति समावेश छन्?",
     a: "In all our full-board packages, entrance fees to UNESCO Heritage monuments, National Park entry tickets, and local permits are organized and included in advance so you can skip queues.",
+    aNp: "हाम्रा सबै फुल-बोर्ड प्याकेजमा युनेस्को हेरिटेज स्मारकहरूको प्रवेश शुल्क, राष्ट्रिय निकुञ्जको टिकट र स्थानीय अनुमति अग्रिम व्यवस्था गरिन्छ, ताकि तपाईंले लाइनमा पर्खन नपरोस्।",
   },
   {
     q: "Do you offer multi-lingual professional tour guides?",
+    qNp: "के तपाईंहरू बहु-भाषिक पेशेवर ट्यूर गाइड प्रदान गर्नुहुन्छ?",
     a: "Yes, our certified government-licensed tour guides speak English, Hindi, Nepali, French, German, Spanish, Japanese, and Chinese upon request for guided city excursions.",
+    aNp: "हो, हाम्रा सरकार-प्रमाणित ट्यूर गाइडहरू अनुरोधमा अंग्रेजी, हिन्दी, नेपाली, फ्रान्सेली, जर्मन, स्पेनिश, जापानी र चिनियाँ भाषामा निर्देशित सहर भ्रमण प्रदान गर्छन्।",
   },
   {
     q: "How do we confirm our booking and what payment options are accepted?",
+    qNp: "हामी बुकिङ कसरी पुष्टि गर्ने र कुन भुक्तानी विकल्पहरू स्वीकार्य छन्?",
     a: "You can reserve your tour with a 20% advance deposit via bank transfer, eSewa, Khalti, or credit card. The balance can be paid prior to departure or upon arrival in Kathmandu.",
+    aNp: "तपाईं बैंक ट्रान्सफर, eSewa, Khalti, वा क्रेडिट कार्डबाट २०% अग्रिम जम्मा गरेर ट्यूर आरक्षण गर्न सक्नुहुन्छ। बाँकी रकम काठमाडौं प्रस्थान गर्नुअघि वा आइपुगेपछि भुक्तान गर्न सकिन्छ।",
   },
 ];
+
 
 export const ToursDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -95,66 +103,40 @@ export const ToursDetailContent: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12">
-      {/* ── 1. VALUE PILLARS & STATS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { icon: Compass, label: `${tourPackages.length}+ Curated Tours`, desc: "Nepal & International", color: "text-[#E11D48] bg-pink-50" },
-          { icon: Sparkles, label: "100% Tailor-Made", desc: "Customized for you", color: "text-purple-600 bg-purple-50" },
-          { icon: ShieldCheck, label: "Govt Certified Guides", desc: "Multilingual Experts", color: "text-emerald-600 bg-emerald-50" },
-          { icon: Star, label: "4.9/5 Rating", desc: "Trusted by 5,000+ Guests", color: "text-amber-500 bg-amber-50" },
-        ].map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow"
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${stat.color}`}>
-                <Icon size={22} />
-              </div>
-              <h4 className="font-extrabold text-[#2D1347] text-sm leading-tight">{stat.label}</h4>
-              <p className="text-gray-500 text-xs mt-1 font-medium">{stat.desc}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── 2. DYNAMIC TOUR PACKAGES GRID ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-              CURATED TOUR PACKAGES
-            </span>
-            <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
-              Featured Holiday Itineraries
-            </h3>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: "all", label: `All Tours (${tourPackages.length})` },
-              { id: "domestic", label: "Domestic Nepal" },
-              { id: "international", label: "International Holidays" },
-              { id: "featured", label: "Top Featured" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? "bg-[#2D1347] text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-pink-50 hover:text-[#E11D48]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+    <div className="space-y-6 sm:space-y-8">
+      {/* ── HEADER & FILTER PILLS (Outside the box of cards) ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div>
+          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+            Featured Holiday Itineraries
+          </h3>
         </div>
 
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: `All Tours (${tourPackages.length})` },
+            { id: "domestic", label: "Domestic Nepal" },
+            { id: "international", label: "International Holidays" },
+            { id: "featured", label: "Top Featured" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === tab.id
+                  ? "bg-[#2D1347] text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── DYNAMIC TOUR PACKAGES GRID (The Box of Cards) ── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
         {/* Dynamic Package Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {visibleTours.map((tour) => (
@@ -400,7 +382,10 @@ export const ToursDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -409,13 +394,15 @@ export const ToursDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
-                    {faq.a}
+                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
+                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
+                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>
             );
           })}
+
         </div>
       </div>
 

@@ -60,7 +60,9 @@ export interface DynamicFaqItem {
   targetType: "package" | "service" | "work-permit" | "general";
   targetId: string;
   question: string;
+  questionNp?: string;
   answer: string;
+  answerNp?: string;
   category?: string;
   createdAt?: string;
 }

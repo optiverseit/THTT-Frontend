@@ -26,23 +26,33 @@ import {
 const ACTIVITY_FAQS = [
   {
     q: "Do I need prior experience to do Paragliding or Bungee jumping?",
+    qNp: "के प्याराग्लाइडिङ वा बन्जी जम्पिङ गर्नका लागि पूर्व अनुभव आवश्यक पर्छ?",
     a: "No prior experience is necessary! All our flights and jumps are conducted as tandem flights or under the direct supervision of internationally certified master instructors who manage the launch, flight, and landing.",
+    aNp: "कुनै पूर्व अनुभव आवश्यक पर्दैन! हाम्रा सबै उडान र जम्पहरू टेन्डम उडानको रूपमा वा अन्तर्राष्ट्रिय रूपमा प्रमाणित मास्टर इन्स्ट्रक्टरहरूको प्रत्यक्ष रेखदेखमा गरिन्छ जसले टेक-अफ, उडान, र अवतरण व्यवस्थापन गर्छन्।",
   },
   {
     q: "Are photos and videos included in adventure activities?",
+    qNp: "के साहसिक गतिविधिहरूमा फोटो र भिडियोहरू समावेश छन्?",
     a: "Yes! High-definition GoPro photos, wide-angle videos, and drone clips (where permitted) are either included or available with on-the-spot mobile transfer immediately after your session.",
+    aNp: "हो! हाइ-डेफिनिसन गोप्रो फोटो, वाइड-एंगल भिडियो, र ड्रोन क्लिपहरू (अनुमति भएको ठाउँमा) समावेश छन् वा तपाईंको सत्र तुरुन्तै सकिएपछि घटनास्थलमै मोबाइल ट्रान्सफरमार्फत उपलब्ध गराइन्छ।",
   },
   {
     q: "What are the weight and age requirements for extreme activities?",
+    qNp: "साहसिक गतिविधिहरूका लागि तौल र उमेरका आवश्यकताहरू के हुन्?",
     a: "For Paragliding: Weight 35kg to 105kg. For Bungee/Canyon Swing: Weight 40kg to 110kg and minimum age 12-16 years. Guests under 18 require signed parental/guardian consent.",
+    aNp: "प्याराग्लाइडिङका लागि: तौल ३५ देखि १०५ केजी। बन्जी/क्यान्यन स्विङका लागि: तौल ४० देखि ११० केजी र न्यूनतम उमेर १२–१६ वर्ष। १८ वर्ष मुनिका पाहुनाहरूका लागि अभिभावकको लिखित सहमति आवश्यक पर्छ।",
   },
   {
     q: "What happens if an activity is cancelled due to adverse weather?",
+    qNp: "प्रतिकूल मौसमका कारण गतिविधि रद्द भएमा के हुन्छ?",
     a: "Safety is our #1 priority. If weather (rain, excessive wind, or fog) forces a cancellation, we either reschedule for the next clear slot or issue a 100% immediate refund.",
+    aNp: "सुरक्षा हाम्रो पहिलो प्राथमिकता हो। यदि मौसम (पानी, अत्यधिक हावा, वा बाक्लो कुहिरो) का कारण गतिविधि रद्द गर्नुपरेमा, हामी अर्को सफा समयमा सार्छौं वा १००% तत्काल फिर्ता गर्छौं।",
   },
   {
     q: "What safety gear and certifications do you maintain?",
+    qNp: "तपाईंहरू कस्तो सुरक्षा उपकरण र प्रमाणीकरण मापदण्ड अपनाउनुहुन्छ?",
     a: "We only partner with APPI, UIAGM, and IRF certified operators utilizing European CE/UIAA certified harnesses, backup emergency reserve parachutes, and daily tension-checked cables.",
+    aNp: "हामी केवल APPI, UIAGM, र IRF प्रमाणित अपरेटरहरूसँग साझेदारी गर्दछौं जसले युरोपेली CE/UIAA प्रमाणित हार्नेस, ब्याकअप आपतकालीन प्यारासुट, र दैनिक तनाव-जाँच गरिएका डोरी/केबलहरू प्रयोग गर्छन्।",
   },
 ];
 
@@ -420,7 +430,10 @@ export const ActivitiesDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -429,8 +442,9 @@ export const ActivitiesDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
-                    {faq.a}
+                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
+                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
+                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>

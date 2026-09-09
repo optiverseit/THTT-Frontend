@@ -173,21 +173,30 @@ const VISA_PLANS: VisaPlan[] = [
 const VISA_FAQS = [
   {
     q: "What documents are generally required for international tourist visas from Nepal?",
+    qNp: "नेपालबाट अन्तर्राष्ट्रिय पर्यटक भिसाको लागि साधारणतया कुन कागजातहरू चाहिन्छन्?",
     a: "Most embassies require: (1) Original passport with at least 6 months validity, (2) Recent biometric photos as per embassy specs, (3) 6-month bank statements with sufficient funds and bank balance certificate, (4) Relationship/citizenship certificates, (5) Confirmed return flight and hotel vouchers, and (6) Leave/employment letters or business tax clearance. Trip Himalaya assists in preparing and verifying every document.",
+    aNp: "अधिकांश दूतावासहरूले माग्ने: (१) कमसेकम ६ महिना म्याद रहेको मूल राहदानी, (२) हालिया बायोमेट्रिक फोटो, (३) ६-महिनाको ब्यांक बिबरण र ब्यांक ब्यालेन्स प्रमाणपत्र, (४) नाता/नागरिकता प्रमाणपत्र, (५) पुष्टि भएको फिर्ता उडान र होटल भाउचर, (६) छुट्टी/रोजगार पत्र वा कर चुक्ता प्रमाणपत्र। ट्रिप हिमालयले सबै कागजात तयारी र पुष्टीमा सहयोग गर्छ।",
   },
   {
     q: "Do you guarantee visa approval?",
+    qNp: "के तपाईंहरूले भिसा अनुमोदनको गारन्टी दिनुहुन्छ?",
     a: "Visa granting is strictly the sovereign right of the respective embassy or consulate. However, Trip Himalaya maintains a 98%+ success rate by thoroughly reviewing your application, eliminating discrepancies, structuring your financial evidence correctly, and preparing tailored cover letters that satisfy embassy guidelines.",
+    aNp: "भिसा प्रदान गर्नु सम्बन्धित दूतावास वा कन्सुलेटको सार्वभौम अधिकार हो। तथापि, ट्रिप हिमालयले तपाईंको आवेदन ध्यानपूर्वक समीक्षा, त्रुटि निवारण, सही ठेगान वित्तीय प्रमाण र दूतावास निर्देशिका पूरा गर्ने कभर लेटर तयार गरेर ८९%+ सफलता दर कायम राख्छ।",
   },
   {
     q: "How early should I apply for my visa before my travel date?",
+    qNp: "यात्रा तारिखभन्दा कति अघि भिसाको लागि आवेदन गर्नुपर्छ?",
     a: "We recommend applying at least 3–4 weeks prior to your intended departure for Asian destinations (UAE, Thailand, Malaysia, Singapore), and at least 6–8 weeks in advance for European Schengen, UK, US, or Australian visas to secure convenient biometrics appointments.",
+    aNp: "एसियाली गन्तव्यहरू (UAE, थाइल्याण्ड, मलेसिया, सिङ्गापुर) को लागि कमसेकम ३-४ हप्ता अगाडि र युरोपीय Schengen, UK, US, वा अस्ट्रेलियाली भिसाको लागि कमसेकम ६-८ हप्ता अगाडि आवेदन गर्न सिफारिस गरिन्छ।",
   },
   {
     q: "Can I apply for a visa online without visiting your office?",
+    qNp: "के तपाईंको कार्यालय नगईकन अनलाइनमा भिसाको लागि आवेदन गर्न सकिन्छ?",
     a: "Yes! For e-Visas (such as Dubai/UAE, Malaysia, and Singapore), you can send your scanned passport and photo via WhatsApp or Email. We handle the complete filing, payment, and deliver your approved visa electronically.",
+    aNp: "हो! इ-भिसाहरूको लागि (जस्तै दुबई/UAE, मलेसिया, र सिङ्गापुर), तपाईंले WhatsApp वा Email मार्फत स्क्यान गरिएको राहदानी र फोटो पठाउन सक्नुहुन्छ। हामी सम्पूर्ण दाखिला, भुक्तानी र अनुमोदित भिसा इलेक्ट्रोनिक रूपमा पठाउने काम गर्छौं।",
   },
 ];
+
 
 export const VisaServicesDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -459,7 +468,10 @@ export const VisaServicesDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full text-left px-5 py-4 flex items-center justify-between gap-4 font-bold text-sm text-[#2D1347] hover:text-[#E91E63] cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
@@ -468,13 +480,15 @@ export const VisaServicesDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-4 text-xs sm:text-sm text-gray-600 leading-relaxed border-t border-gray-50 pt-3">
-                    {faq.a}
+                  <div className="px-5 pb-4 border-t border-gray-50 pt-3 space-y-2">
+                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{faq.a}</p>
+                    <p className="text-xs text-gray-400 leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>
             );
           })}
+
         </div>
       </div>
 

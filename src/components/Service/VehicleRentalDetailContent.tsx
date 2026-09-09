@@ -63,25 +63,36 @@ const POPULAR_ROUTES = [
 const VEHICLE_FAQS = [
   {
     q: "Is a professional chauffeur included in the rental price?",
+    qNp: "के भाडा मूल्यमा पेशेवर चालक समावेश छ?",
     a: "Yes! All our vehicle rentals include a courteous, government-licensed professional chauffeur with extensive experience in Nepal's mountain highways. Chauffeur daily salary, meals, and overnight lodging allowance are 100% included with no hidden extras.",
+    aNp: "हो! हाम्रा सबै सवारीसाधन भाडामा नेपालका पहाडी राजमार्गमा व्यापक अनुभव भएका सरकार-लाइसेन्सप्राप्त पेशेवर चालक समावेश हुन्छ। चालकको दैनिक तलब, खाना, र राति बसाइको भत्ता १००% समावेश छ — कुनै लुकावाटो शुल्क छैन।",
   },
   {
     q: "Are fuel, road tolls, and parking charges covered in the rate?",
+    qNp: "के इन्धन, सडक शुल्क, र पार्किङ शुल्क दरमा समावेश छन्?",
     a: "Yes. All our fixed-route quotes and per-day rental rates include fuel, highway road taxes, municipality permits, and hotel/airport parking charges.",
+    aNp: "हो। हाम्रा सबै निश्चित-मार्ग उद्धरण र प्रति-दिन भाडा दरहरूमा इन्धन, राजमार्ग कर, नगरपालिका अनुमति, र होटल/एयरपोर्ट पार्किङ शुल्क समावेश हुन्छ।",
   },
   {
     q: "Can we make spontaneous photo or food stops along the route?",
+    qNp: "के हामी मार्गमा अचानक फोटो वा खानाको लागि रोक्न सकिन्छौं?",
     a: "Absolutely! Since this is a private rental, you have total control over the pace. You can stop at scenic viewpoints, suspension bridges, riverside cafes, and fruit markets whenever you wish.",
+    aNp: "बिलकुल! यो निजी भाडा भएकाले, गतिमागमाथि तपाईंको पूर्ण नियन्त्रण हुन्छ। तपाईं जुनसुकै बेला दृश्यावलोकन बिन्दु, झुले पुल, नदीकिनारे क्याफे, र फलफल बजारमा रोक्न सक्नुहुन्छ।",
   },
   {
     q: "What happens if a vehicle experiences a mechanical breakdown?",
+    qNp: "सवारीमा मेकानिकल खराबी भएमा के हुन्छ?",
     a: "We maintain a nationwide 24/7 breakdown assistance network. In the unlikely event of any issue, our operations team will dispatch a replacement vehicle immediately to ensure your travel schedule is uninterrupted.",
+    aNp: "हामी राष्ट्रब्यापी २४/७ खराबी सहायता नेटवर्क कायम राख्छौं। कुनै समस्या भएमा, हाम्रो संचालन टोलीले तुरिन्तै विकल्प सवारी पठाउँछ — तपाईंको यात्रा तालिका निरन्तर रहोस्।",
   },
   {
     q: "Can I rent a self-drive car without a driver in Nepal?",
+    qNp: "के मैले नेपालमा चालक बिना स्वयं-चालन कार भाडामा लिन सक्छु?",
     a: "Due to road conditions, steep mountain passes, and local regulations in Nepal, we strongly recommend and exclusively provide chauffeur-driven vehicles to guarantee maximum safety, smooth navigation, and zero liability for damages.",
+    aNp: "नेपालको सडक अवस्था, खडा पहाडी घाटी, र स्थानीय नियमहरूका कारणले, हामी उच्चतम सुरक्षा, सहज नाभिकरण, र क्षतिको शून्य दायित्व सुनिश्चित गर्न चालक-चालित सवारी मात्र प्रदान गर्छौं।",
   },
 ];
+
 
 export const VehicleRentalDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -481,7 +492,10 @@ export const VehicleRentalDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -490,8 +504,9 @@ export const VehicleRentalDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
-                    {faq.a}
+                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
+                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
+                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>

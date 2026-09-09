@@ -1742,27 +1742,54 @@ export const testimonials: Testimonial[] = [
     name: "John Doe",
     country: "United Kingdom",
     message:
-      "Trip Himalaya made our EBC trek absolutely unforgettable. The organization was top-notch!",
+      "Trip Himalaya made our EBC trek absolutely unforgettable. The organization, local sherpa guides, and teahouse arrangements were top-notch!",
     rating: 5,
-    avatar: "https://i.pravatar.cc/150?u=john",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t2",
     name: "Anita Sharma",
     country: "Nepal",
     message:
-      "Best service for domestic air tickets. Highly recommended for their prompt response.",
+      "Best service for domestic air tickets and Pokhara luxury holiday. Highly recommended for their prompt WhatsApp responses.",
     rating: 5,
-    avatar: "https://i.pravatar.cc/150?u=anita",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t3",
     name: "David Smith",
     country: "USA",
     message:
-      "Amazing hospitality and expert guidance. They handled our visa and hotel bookings seamlessly.",
+      "Amazing hospitality and expert guidance. They handled our tourist visa, vehicle rental, and 5-star hotel bookings seamlessly.",
     rating: 5,
-    avatar: "https://i.pravatar.cc/150?u=david",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
+  },
+  {
+    id: "t4",
+    name: "Sarah Jenkins",
+    country: "Australia (Sydney)",
+    message:
+      "The Everest helicopter tour was the absolute highlight of our honeymoon. The pilot was warm and confident, and the breakfast view at Kala Patthar was majestic.",
+    rating: 5,
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+  },
+  {
+    id: "t5",
+    name: "Carlos Mendez",
+    country: "Spain (Madrid)",
+    message:
+      "Very reliable vehicle rental with a courteous driver. Navigated the winding roads from Kathmandu to Chitwan safely and comfortably.",
+    rating: 5,
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200",
+  },
+  {
+    id: "t6",
+    name: "Mei Ling",
+    country: "Singapore",
+    message:
+      "Seamless adventure activities booking in Pokhara! Paragliding video delivery was immediate, and their team was so attentive to safety.",
+    rating: 5,
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200",
   },
 ];
 

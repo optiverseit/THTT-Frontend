@@ -27,25 +27,36 @@ import {
 const TREK_FAQS = [
   {
     q: "How difficult is Himalayan trekking and what fitness level is needed?",
+    qNp: "हिमालयन ट्रेकिङ कति गाह्रो छ र कस्तो शारीरिक अवस्था चाहिन्छ?",
     a: "Trekking routes range from Moderate (Poon Hill, Mardi Himal — 4-5 hours walking daily) to Challenging (EBC, Manaslu — 6-7 hours daily with steep ascents). Regular cardiovascular exercise (jogging, stair climbing, hiking) 4-6 weeks prior to arrival is strongly recommended.",
+    aNp: "ट्रेकिङ मार्गहरू मध्यम (पुन हिल, मर्दि हिमाल — दैनिक ४-५ घन्टा हिँडाइ) देखि चुनौतीपूर्ण (EBC, मनास्लु — दैनिक ६-७ घन्टा) सम्म छन्। आगमनभन्दा ४-६ हप्ता अघिदेखि नियमित कार्डियोभास्कुलर व्यायाम (जगिङ, सिँढी चढ्ने, हाइकिङ) दृढतापूर्वक सिफारिस गरिन्छ।",
   },
   {
     q: "What measures are taken to prevent and treat Altitude Sickness (AMS)?",
+    qNp: "उचाइ बिमारी (AMS) रोक्न र उपचार गर्न कस्ता उपायहरू अपनाइन्छन्?",
     a: "We design carefully paced itineraries with mandatory acclimatization days. Our guides carry pulse oximeters to test blood oxygen saturation every morning and evening. They are certified in mountain first aid and carry Diamox, oxygen kits, and 24/7 Heli-evacuation coordinates.",
+    aNp: "हामी अनिवार्य अनुकूलन दिनहरू सहितका सावधानीपूर्वक तयार पारिएका इटिनेरेरीहरू बनाउँछौं। हाम्रा गाइडहरूले प्रत्येक बिहान र साँझ रगतको अक्सिजन स्तर परीक्षण गर्न पल्स अक्सिमिटर बोक्छन् र Diamox, अक्सिजन किट, र २४/७ हेलि-निकासी समन्वय राख्छन्।",
   },
   {
     q: "What is the teahouse lodge accommodation and food like?",
+    qNp: "टीहाउस लज आवास र खाना कस्तो हुन्छ?",
     a: "Teahouses are cozy mountain lodges offering twin-bed private rooms with warm blankets. Meals are freshly cooked and hygienic: famous Dal Bhat (lentil soup with rice, vegetable curry, pickle), noodles, momos, porridge, eggs, pasta, and hot tea/coffee.",
+    aNp: "टीहाउसहरू न्यानो कम्बलसहित दुई-ओछ्यान निजी कोठा प्रदान गर्ने आरामदायी पहाडी लजहरू हुन्। खाना ताजा र सफा पकाइन्छ: प्रसिद्ध दाल भात, नूडल्स, मोमो, दलिया, अण्डा, पास्ता र तातो चिया/कफी।",
   },
   {
     q: "What permits are required and who arranges them?",
+    qNp: "कुन अनुमतिहरू चाहिन्छन् र को व्यवस्था गर्छ?",
     a: "All permits — including TIMS cards, Sagarmatha National Park, Annapurna Conservation Area (ACAP), Manaslu Restricted Area permits, and local rural municipality fees — are 100% arranged by Trip Himalaya prior to your trek departure.",
+    aNp: "सबै अनुमतिहरू — TIMS कार्ड, सगरमाथा राष्ट्रिय निकुञ्ज, अन्नपूर्ण संरक्षण क्षेत्र (ACAP), मनास्लु प्रतिबन्धित क्षेत्र अनुमति, र स्थानीय गाउँपालिका शुल्कसहित — ट्रिप हिमालयद्वारा ट्रेक प्रस्थानअघि १००% व्यवस्था गरिन्छ।",
   },
   {
     q: "What is the luggage weight limit for porters on the trek?",
+    qNp: "ट्रेकमा पोर्टरहरूको लागि मालसामानको तौल सीमा के हो?",
     a: "Each porter carries the luggage of two trekkers (up to 12kg – 15kg per person) in waterproof duffle bags provided by us. You only carry a lightweight daypack (5-6kg) with your water, jacket, camera, and personal valuables.",
+    aNp: "प्रत्येक पोर्टरले हाम्रा जलरोधी डफल ब्याग्मा दुई ट्रेकरको मालसामान (प्रति व्यक्ति १२-१५ केजी सम्म) बोक्छ। तपाईंले मात्र पानी, ज्याकेट, क्यामेरा र व्यक्तिगत सामान राखेको हल्का डेप्याक (५-६ केजी) बोक्नु पर्छ।",
   },
 ];
+
 
 export const TrekkingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -426,7 +437,10 @@ export const TrekkingDetailContent: React.FC = () => {
                   onClick={() => setOpenFaq(isOpen ? null : index)}
                   className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span>{faq.q}</span>
+                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
+                  </div>
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -435,13 +449,15 @@ export const TrekkingDetailContent: React.FC = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4.5 pb-4 text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed bg-gray-50/50 border-t border-gray-100 pt-2.5">
-                    {faq.a}
+                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
+                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
+                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
                   </div>
                 )}
               </div>
             );
           })}
+
         </div>
       </div>
 

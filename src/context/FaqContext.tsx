@@ -8,7 +8,13 @@ interface FaqContextType {
   getFaqs: (
     targetType: "package" | "service" | "work-permit" | "general",
     targetId: string,
-    defaultFaqs?: { question: string; answer: string; category?: string }[]
+    defaultFaqs?: {
+      question: string;
+      questionNp?: string;
+      answer: string;
+      answerNp?: string;
+      category?: string;
+    }[]
   ) => DynamicFaqItem[];
   addFaq: (
     targetType: "package" | "service" | "work-permit" | "general",
@@ -112,7 +118,13 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     (
       targetType: "package" | "service" | "work-permit" | "general",
       targetId: string,
-      defaultFaqs: { question: string; answer: string; category?: string }[] = []
+      defaultFaqs: {
+        question: string;
+        questionNp?: string;
+        answer: string;
+        answerNp?: string;
+        category?: string;
+      }[] = []
     ): DynamicFaqItem[] => {
       // 1. Convert default static FAQs to DynamicFaqItem with predictable deterministic IDs
       const normalizedDefaults: DynamicFaqItem[] = defaultFaqs.map((item, index) => {
@@ -122,7 +134,9 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           targetType,
           targetId,
           question: item.question,
+          questionNp: item.questionNp,
           answer: item.answer,
+          answerNp: item.answerNp,
           category: item.category || "General",
         };
       });

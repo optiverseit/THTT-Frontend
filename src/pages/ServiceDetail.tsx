@@ -20,6 +20,8 @@ import {
   Sparkles,
   Activity,
   Star,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import BannerSection from "../components/reuseable/BannerSection";
 import Testimonials from "../components/reuseable/Testimonials";
@@ -576,7 +578,7 @@ const ServiceDetail: React.FC = () => {
         <div className="w-full relative shadow-md bg-white border-b border-gray-200">
           {/* ── 1. TOP BANNER SECTION (With 1. Title at top, 2. SearchBar in middle, 3. Quote below) ── */}
           {isTours ? (
-            /* ── DEDICATED TOUR HERO BANNER (With compact contents & 4 Stat Cards) ── */
+            /* ── DEDICATED TOUR HERO BANNER (Compact original design) ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-9 sm:pt-10 pb-7 sm:pb-8">
               {/* Background Image */}
               <img
@@ -585,7 +587,7 @@ const ServiceDetail: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover object-center"
               />
 
-              {/* Dark overlay with soft gradient for contrast */}
+              {/* Dark overlay */}
               <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
 
               {/* Content Stack: 1. Badge & Title, 2. Compact Search Bar, 3. Quote, 4. 4 Stat Cards */}
@@ -666,8 +668,101 @@ const ServiceDetail: React.FC = () => {
                 </div>
 
               </div>
-
             </section>
+
+          ) : isActivities ? (
+            /* ── DEDICATED ACTIVITIES HERO BANNER (Tours design + Activities large sizes) ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              {/* Background Image */}
+              <img
+                src={service.heroImage}
+                alt={service.name}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+
+              {/* Dark overlay — same color/format as Tours */}
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+
+              {/* Content Stack: Tours format, Activities large sizes */}
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                {/* 1. Tagline & Title — Tours format, Activities font sizes kept */}
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
+                    {getBannerHeading()}
+                  </span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">
+                    {service.name}
+                  </h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+
+                {/* 2. Search Bar — original Activities width & spacing kept */}
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+                  {renderFloatingSearchBar()}
+                </div>
+
+                {/* 3. Short Description — Tours compact style */}
+                {service.shortDesc && (
+                  <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
+                    "{service.shortDesc}"
+                  </p>
+                )}
+
+                {/* 4. 4 TRUST / STAT CARDS — Tours format with Activities-relevant content */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3 px-0">
+                  {[
+                    {
+                      icon: Activity,
+                      label: `${packages.filter((p) => p.type === "activity" || p.type === "combo").length}+ Thrill Sports`,
+                      desc: "Air, River & Land",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                    {
+                      icon: ShieldCheck,
+                      label: "100% Certified Safety",
+                      desc: "CE & UIAA Approved",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                    {
+                      icon: Wind,
+                      label: "4K Action Media",
+                      desc: "Photos & Video Included",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                    {
+                      icon: Star,
+                      label: "Zero Compromise",
+                      desc: "Strict Safety Protocols",
+                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
+                    },
+                  ].map((stat, idx) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0"
+                      >
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}
+                        >
+                          <Icon size={14} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0">
+                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors truncate">
+                            {stat.label}
+                          </h4>
+                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight truncate">
+                            {stat.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+            </section>
+
           ) : (
             <BannerSection
               background={service.heroImage}

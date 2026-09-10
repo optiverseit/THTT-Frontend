@@ -243,24 +243,6 @@ export const VisaServicesDetailContent: React.FC = () => {
           for tourist, family, and business travel worldwide.
         </p>
 
-        {/* Highlight Stats */}
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: "Visas Approved", value: "98.4%", icon: Shield },
-            { label: "Destinations", value: "45+", icon: Globe2 },
-            { label: "Avg. Turnaround", value: "3-5 Days", icon: Clock },
-            { label: "Embassy Support", value: "24/7", icon: Zap },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-gradient-to-br from-purple-50 to-pink-50 border border-pink-100 rounded-2xl p-4 text-center"
-            >
-              <stat.icon size={22} className="text-[#E91E63] mx-auto mb-1.5" />
-              <p className="text-xl font-black text-[#2D1347]">{stat.value}</p>
-              <p className="text-[11px] text-gray-500 font-semibold">{stat.label}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* ── 2. DESTINATION SEARCH & REGION TABS ── */}

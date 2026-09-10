@@ -133,29 +133,6 @@ export const HotelBookingDetailContent: React.FC = () => {
 
   return (
     <div className="space-y-12">
-      {/* ── 1. VALUE PILLARS & STATS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { icon: Building2, label: "500+ Partner Hotels", desc: "Heritage & 5-Star Luxury", color: "text-[#E11D48] bg-pink-50" },
-          { icon: Award, label: "Best Rate Guarantee", desc: "Up to 30% Below OTAs", color: "text-purple-600 bg-purple-50" },
-          { icon: ShieldCheck, label: "Free Cancellation", desc: "Flexible Date Changes", color: "text-emerald-600 bg-emerald-50" },
-          { icon: HeartHandshake, label: "VIP Perks Included", desc: "Free Breakfast & Airport Pickup", color: "text-amber-500 bg-amber-50" },
-        ].map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow"
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${stat.color}`}>
-                <Icon size={22} />
-              </div>
-              <h4 className="font-extrabold text-[#2D1347] text-sm leading-tight">{stat.label}</h4>
-              <p className="text-gray-500 text-xs mt-1 font-medium">{stat.desc}</p>
-            </div>
-          );
-        })}
-      </div>
 
       {/* ── 2. QUICK HOTEL SEARCH / RESERVATION BAR ── */}
       <div className="bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] rounded-3xl p-6 sm:p-8 text-white shadow-xl">

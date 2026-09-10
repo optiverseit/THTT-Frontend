@@ -7,6 +7,7 @@ import {
   Shield,
   Clock,
   Heart,
+  HeartPulse,
   FileText,
   Users,
   Globe,
@@ -22,6 +23,13 @@ import {
   Star,
   ChevronUp,
   ChevronDown,
+  Building2,
+  Award,
+  HeartHandshake,
+  Stethoscope,
+  Globe2,
+  Zap,
+  Fuel,
 } from "lucide-react";
 import BannerSection from "../components/reuseable/BannerSection";
 import Testimonials from "../components/reuseable/Testimonials";
@@ -184,14 +192,14 @@ const ServiceDetail: React.FC = () => {
 
     if (isTours) {
       return (
-        <div className="bg-white/95 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-md p-2 sm:p-2.5 border border-white/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full max-w-[725px] mx-auto">
-          <div className="flex items-center gap-2.5 w-full px-3 py-1 sm:py-1.5 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Globe size={15} className="text-[#E91E63] flex-shrink-0" />
-            <div className="flex flex-col w-full text-left">
-              <label className="text-[8.5px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Globe size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                 SELECT DESTINATION
               </label>
-              <select className="text-xs sm:text-[13px] font-semibold text-gray-800 bg-transparent focus:outline-none py-0.5 cursor-pointer">
+              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
                 <option value="">All Destinations</option>
                 <option value="ktm">Kathmandu Valley</option>
                 <option value="pkr">Pokhara &amp; Annapurna</option>
@@ -202,13 +210,13 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full px-3 py-1 sm:py-1.5 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Compass size={15} className="text-[#E91E63] flex-shrink-0" />
-            <div className="flex flex-col w-full text-left">
-              <label className="text-[8.5px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Compass size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                 TOUR CATEGORY
               </label>
-              <select className="text-xs sm:text-[13px] font-semibold text-gray-800 bg-transparent focus:outline-none py-0.5 cursor-pointer">
+              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
                 <option value="">All Categories</option>
                 <option value="heritage">UNESCO Heritage &amp; Culture</option>
                 <option value="nature">Scenic Nature &amp; Lakes</option>
@@ -220,7 +228,7 @@ const ServiceDetail: React.FC = () => {
 
           <button
             onClick={() => scrollToSection("section-services", "SERVICES")}
-            className="rounded-lg sm:rounded-xl bg-[#E91E63] hover:bg-rose-700 py-2 sm:py-2.5 px-6 text-white font-bold text-xs tracking-wider transition-all shadow-xs whitespace-nowrap cursor-pointer hover:shadow-md active:scale-95"
+            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
           >
             SEARCH
           </button>
@@ -578,114 +586,11 @@ const ServiceDetail: React.FC = () => {
         <div className="w-full relative shadow-md bg-white border-b border-gray-200">
           {/* ── 1. TOP BANNER SECTION (With 1. Title at top, 2. SearchBar in middle, 3. Quote below) ── */}
           {isTours ? (
-            /* ── DEDICATED TOUR HERO BANNER (Compact original design) ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-9 sm:pt-10 pb-7 sm:pb-8">
-              {/* Background Image */}
-              <img
-                src={service.heroImage}
-                alt={service.name}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-              />
-
-              {/* Dark overlay */}
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-
-              {/* Content Stack: 1. Badge & Title, 2. Compact Search Bar, 3. Quote, 4. 4 Stat Cards */}
-              <div className="relative z-10 text-center px-3 sm:px-4 max-w-4xl w-full mx-auto flex flex-col items-center -translate-y-1 sm:-translate-y-2">
-                {/* 1. Tagline & Title */}
-                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
-                  <span className="inline-block bg-[#E91E63] text-white text-[8px] sm:text-[9px] font-bold px-2.5 sm:px-3 py-0.5 rounded-full uppercase tracking-[0.15em] sm:tracking-[0.18em] mb-1.5 shadow-sm max-w-[90vw] truncate">
-                    {getBannerHeading()}
-                  </span>
-                  <h1 className="text-[22px] sm:text-[34px] md:text-[38px] font-black text-white mb-1 sm:mb-1.5 tracking-tight drop-shadow-xl">
-                    {service.name}
-                  </h1>
-                  <div className="h-0.5 sm:h-1 w-10 sm:w-16 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-xs" />
-                </div>
-
-                {/* 2. Compact Search Bar */}
-                <div className="w-full max-w-[725px] my-1 sm:my-1.5 relative z-20 px-0 sm:px-0">
-                  {renderFloatingSearchBar()}
-                </div>
-
-                {/* 3. Short Description */}
-                {service.shortDesc && (
-                  <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
-                    "{service.shortDesc}"
-                  </p>
-                )}
-
-                {/* 4. 4 VALUE / TRUST STAT CARDS IN HERO */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3 px-0">
-                  {[
-                    {
-                      icon: Compass,
-                      label: `${packages.filter((p) => p.type === "tour").length}+ Curated Tours`,
-                      desc: "Nepal & International",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                    {
-                      icon: Sparkles,
-                      label: "100% Tailor-Made",
-                      desc: "Customized for you",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                    {
-                      icon: ShieldCheck,
-                      label: "Govt Certified Guides",
-                      desc: "Multilingual Experts",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                    {
-                      icon: Star,
-                      label: "4.9/5 Rating",
-                      desc: "Trusted by 5,000+ Guests",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                  ].map((stat, idx) => {
-                    const Icon = stat.icon;
-                    return (
-                      <div
-                        key={idx}
-                        className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0"
-                      >
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}
-                        >
-                          <Icon size={14} />
-                        </div>
-                        <div className="flex flex-col text-left min-w-0">
-                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors truncate">
-                            {stat.label}
-                          </h4>
-                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight truncate">
-                            {stat.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-              </div>
-            </section>
-
-          ) : isActivities ? (
-            /* ── DEDICATED ACTIVITIES HERO BANNER (Tours design + Activities large sizes) ── */
+            /* ── TOURS HERO BANNER (Exactly matching Adventure Activities) ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              {/* Background Image */}
-              <img
-                src={service.heroImage}
-                alt={service.name}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-              />
-
-              {/* Dark overlay — same color/format as Tours */}
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
               <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-
-              {/* Content Stack: Tours format, Activities large sizes */}
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
-                {/* 1. Tagline & Title — Tours format, Activities font sizes kept */}
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
                     {getBannerHeading()}
@@ -695,84 +600,276 @@ const ServiceDetail: React.FC = () => {
                   </h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-
-                {/* 2. Search Bar — original Activities width & spacing kept */}
                 <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
                   {renderFloatingSearchBar()}
                 </div>
-
-                {/* 3. Short Description — Tours compact style */}
                 {service.shortDesc && (
                   <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
                     "{service.shortDesc}"
                   </p>
                 )}
-
-                {/* 4. 4 TRUST / STAT CARDS — Tours format with Activities-relevant content */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3 px-0">
                   {[
-                    {
-                      icon: Activity,
-                      label: `${packages.filter((p) => p.type === "activity" || p.type === "combo").length}+ Thrill Sports`,
-                      desc: "Air, River & Land",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                    {
-                      icon: ShieldCheck,
-                      label: "100% Certified Safety",
-                      desc: "CE & UIAA Approved",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                    {
-                      icon: Wind,
-                      label: "4K Action Media",
-                      desc: "Photos & Video Included",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
-                    {
-                      icon: Star,
-                      label: "Zero Compromise",
-                      desc: "Strict Safety Protocols",
-                      color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25",
-                    },
+                    { icon: Compass, label: `${packages.filter((p) => p.type === "tour").length}+ Curated Tours`, desc: "Nepal & International", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: Sparkles, label: "100% Tailor-Made", desc: "Customized for you", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: ShieldCheck, label: "Govt Certified Guides", desc: "Multilingual Experts", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: Star, label: "4.9/5 Rating", desc: "Trusted by 5,000+ Guests", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
                   ].map((stat, idx) => {
                     const Icon = stat.icon;
                     return (
-                      <div
-                        key={idx}
-                        className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0"
-                      >
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}
-                        >
+                      <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}>
                           <Icon size={14} />
                         </div>
                         <div className="flex flex-col text-left min-w-0">
-                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors truncate">
-                            {stat.label}
-                          </h4>
-                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight truncate">
-                            {stat.desc}
-                          </p>
+                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4>
+                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p>
                         </div>
                       </div>
                     );
                   })}
                 </div>
+              </div>
+            </section>
 
+          ) : isActivities ? (
+            /* ── ACTIVITIES HERO BANNER (Original, unchanged) ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
+                    {getBannerHeading()}
+                  </span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">
+                    {service.name}
+                  </h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+                  {renderFloatingSearchBar()}
+                </div>
+                {service.shortDesc && (
+                  <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
+                    "{service.shortDesc}"
+                  </p>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3 px-0">
+                  {[
+                    { icon: Activity, label: `${packages.filter((p) => p.type === "activity" || p.type === "combo").length}+ Thrill Sports`, desc: "Air, River & Land", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: ShieldCheck, label: "100% Certified Safety", desc: "CE & UIAA Approved", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: Wind, label: "4K Action Media", desc: "Photos & Video Included", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: Star, label: "Zero Compromise", desc: "Strict Safety Protocols", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                  ].map((stat, idx) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}>
+                          <Icon size={14} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0">
+                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4>
+                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+          ) : isTrekking ? (
+            /* ── TREKKING HERO BANNER (Exactly matching Adventure Activities) ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
+                    {getBannerHeading()}
+                  </span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">
+                    {service.name}
+                  </h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+                  {renderFloatingSearchBar()}
+                </div>
+                {service.shortDesc && (
+                  <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
+                    "{service.shortDesc}"
+                  </p>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3 px-0">
+                  {[
+                    { icon: Mountain, label: `${packages.filter((p) => p.type === "trek").length}+ Epic Trails`, desc: "Everest, Annapurna & Beyond", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: HeartPulse, label: "Daily Oximeter Checks", desc: "Altitude Safety First", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: ShieldCheck, label: "Licensed Sherpas", desc: "Native Mountain Experts", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                    { icon: Sparkles, label: "24/7 Heli Standby", desc: "Emergency Medical Rescue", color: "text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25" },
+                  ].map((stat, idx) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border ${stat.color} group-hover:scale-105 transition-transform`}>
+                          <Icon size={14} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0">
+                          <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4>
+                          <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+          ) : isHotelBooking ? (
+            /* ── HOTEL BOOKING HERO ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                  {[
+                    { icon: Building2, label: "500+ Partner Hotels", desc: "Heritage & 5-Star Luxury" },
+                    { icon: Award, label: "Best Rate Guarantee", desc: "Up to 30% Below OTAs" },
+                    { icon: ShieldCheck, label: "Free Cancellation", desc: "Flexible Date Changes" },
+                    { icon: HeartHandshake, label: "VIP Perks Included", desc: "Free Breakfast & Airport Pickup" },
+                  ].map((stat, idx) => { const Icon = stat.icon; return (
+                    <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
+                      <div className="flex flex-col text-left min-w-0"><h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4><p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p></div>
+                    </div>
+                  ); })}
+                </div>
+              </div>
+            </section>
+
+          ) : isTravelInsurance ? (
+            /* ── TRAVEL INSURANCE HERO ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                  {[
+                    { icon: Activity, label: "Up to 6,000m+ Covered", desc: "EBC, ABC & Alpine Circuits" },
+                    { icon: Zap, label: "45-Min Heli Dispatch", desc: "Immediate Alpine Evacuation" },
+                    { icon: Stethoscope, label: "Cashless Hospitalization", desc: "Top International Hospitals" },
+                    { icon: Globe2, label: "Schengen Visa Approved", desc: "Embassy Certified Policies" },
+                  ].map((stat, idx) => { const Icon = stat.icon; return (
+                    <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
+                      <div className="flex flex-col text-left min-w-0"><h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4><p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p></div>
+                    </div>
+                  ); })}
+                </div>
+              </div>
+            </section>
+
+          ) : isVehicleRental ? (
+            /* ── VEHICLE RENTAL HERO ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                  {[
+                    { icon: Car, label: "50+ Fleet Vehicles", desc: "4x4 SUVs, Sedans & Vans" },
+                    { icon: ShieldCheck, label: "Chauffeur Included", desc: "Mountain-Licensed Drivers" },
+                    { icon: Fuel, label: "All-Inclusive Pricing", desc: "Fuel, Tolls & Parking Covered" },
+                    { icon: Zap, label: "24/7 Rapid Replacement", desc: "Zero Downtime Guarantee" },
+                  ].map((stat, idx) => { const Icon = stat.icon; return (
+                    <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
+                      <div className="flex flex-col text-left min-w-0"><h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4><p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p></div>
+                    </div>
+                  ); })}
+                </div>
+              </div>
+            </section>
+
+          ) : isHeliServices ? (
+            /* ── HELI SERVICES HERO ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                  {[
+                    { icon: Plane, label: "3,000+ Tours Completed", desc: "All Nepal Himalayan Routes" },
+                    { icon: Mountain, label: "5,600m Max Altitude", desc: "Everest Base Camp & Beyond" },
+                    { icon: Compass, label: "12+ Regions Covered", desc: "National Coverage" },
+                    { icon: Shield, label: "100% Safety Record", desc: "Zero Incident History" },
+                  ].map((stat, idx) => { const Icon = stat.icon; return (
+                    <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
+                      <div className="flex flex-col text-left min-w-0"><h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4><p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p></div>
+                    </div>
+                  ); })}
+                </div>
               </div>
             </section>
 
           ) : (
-            <BannerSection
-              background={service.heroImage}
-              alt={service.name}
-              heading={getBannerHeading()}
-              title={service.name}
-              description={service.shortDesc}
-              searchBar={renderFloatingSearchBar()}
-              bottomGradient="hidden"
-            />
+            /* ── VISA SERVICES HERO (default) ── */
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
+                <div className="flex flex-col items-center mt-2 sm:mt-1.5">
+                  <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
+                  <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
+                </div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                  {[
+                    { icon: Shield, label: "98.4% Approval Rate", desc: "Visas Successfully Approved" },
+                    { icon: Globe2, label: "45+ Destinations", desc: "Worldwide Coverage" },
+                    { icon: Clock, label: "3-5 Days Turnaround", desc: "Fast Processing" },
+                    { icon: Zap, label: "24/7 Embassy Support", desc: "Always Available" },
+                  ].map((stat, idx) => { const Icon = stat.icon; return (
+                    <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
+                      <div className="flex flex-col text-left min-w-0"><h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4><p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p></div>
+                    </div>
+                  ); })}
+                </div>
+              </div>
+            </section>
           )}
 
           {/* ── 3. FULL-WIDTH DIVIDER LINE WITH SHADOW (Sub-navigation tab texts removed as requested) ── */}
@@ -787,7 +884,7 @@ const ServiceDetail: React.FC = () => {
           className="w-full pt-8 sm:pt-9 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-3 sm:mt-4"
         >
           <div className="max-w-7xl mx-auto">
-            {!isTours && (
+            {!isTours && !isActivities && !isTrekking && (
               <header className="text-center mb-8">
                 <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
                   {getServicesSectionBadge()}

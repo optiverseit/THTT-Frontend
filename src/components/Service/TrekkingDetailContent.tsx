@@ -127,67 +127,42 @@ export const TrekkingDetailContent: React.FC = () => {
 
   return (
     <div className="space-y-12">
-      {/* ── 1. VALUE PILLARS & STATS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { icon: Mountain, label: `${trekPackages.length}+ Epic Trails`, desc: "Everest, Annapurna & Beyond", color: "text-[#E11D48] bg-pink-50" },
-          { icon: HeartPulse, label: "Daily Oximeter Checks", desc: "Altitude Safety First", color: "text-emerald-600 bg-emerald-50" },
-          { icon: ShieldCheck, label: "Licensed Sherpas", desc: "Native Mountain Experts", color: "text-purple-600 bg-purple-50" },
-          { icon: Sparkles, label: "24/7 Heli Standby", desc: "Emergency Medical Rescue", color: "text-amber-500 bg-amber-50" },
-        ].map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow"
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${stat.color}`}>
-                <Icon size={22} />
-              </div>
-              <h4 className="font-extrabold text-[#2D1347] text-sm leading-tight">{stat.label}</h4>
-              <p className="text-gray-500 text-xs mt-1 font-medium">{stat.desc}</p>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* ── 2. DYNAMIC TREK CIRCUITS ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-              LEGENDARY TRAILS
-            </span>
-            <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
-              Himalayan Trekking Expeditions
-            </h3>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: "all", label: `All Treks (${trekPackages.length})` },
-              { id: "everest", label: "Everest Region" },
-              { id: "annapurna", label: "Annapurna Region" },
-              { id: "langtang", label: "Langtang" },
-              { id: "remote", label: "Mustang & Manaslu" },
-              { id: "featured", label: "Top Featured" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? "bg-[#2D1347] text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-pink-50 hover:text-[#E11D48]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      {/* ── HEADER & FILTER PILLS (Outside the box, matching Tours design) ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div>
+          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+            Himalayan Trekking Expeditions
+          </h3>
         </div>
 
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: `All Treks (${trekPackages.length})` },
+            { id: "everest", label: "Everest Region" },
+            { id: "annapurna", label: "Annapurna Region" },
+            { id: "langtang", label: "Langtang" },
+            { id: "remote", label: "Mustang & Manaslu" },
+            { id: "featured", label: "Top Featured" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === tab.id
+                  ? "bg-[#2D1347] text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── DYNAMIC TREK CIRCUITS (The Box of Cards, matching Tours design) ── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
         {/* Dynamic Treks Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {visibleTreks.map((trek) => (

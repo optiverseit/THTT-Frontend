@@ -206,29 +206,6 @@ export const TravelInsuranceDetailContent: React.FC = () => {
 
   return (
     <div className="space-y-12">
-      {/* ── 1. VALUE PILLARS & STATS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { icon: Activity, label: "Up to 6,000m+ Covered", desc: "EBC, ABC & Alpine Circuits", color: "text-[#E11D48] bg-pink-50" },
-          { icon: Zap, label: "45-Min Heli Dispatch", desc: "Immediate Alpine Evacuation", color: "text-purple-600 bg-purple-50" },
-          { icon: Stethoscope, label: "Cashless Hospitalization", desc: "Top International Hospitals", color: "text-emerald-600 bg-emerald-50" },
-          { icon: Globe2, label: "Schengen Visa Approved", desc: "Embassy Certified Policies", color: "text-amber-500 bg-amber-50" },
-        ].map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow"
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${stat.color}`}>
-                <Icon size={22} />
-              </div>
-              <h4 className="font-extrabold text-[#2D1347] text-sm leading-tight">{stat.label}</h4>
-              <p className="text-gray-500 text-xs mt-1 font-medium">{stat.desc}</p>
-            </div>
-          );
-        })}
-      </div>
 
       {/* ── 2. QUICK POLICY QUOTE CALCULATOR ── */}
       <div className="bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] rounded-3xl p-6 sm:p-8 text-white shadow-xl">

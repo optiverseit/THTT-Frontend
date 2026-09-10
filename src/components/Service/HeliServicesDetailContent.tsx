@@ -107,24 +107,6 @@ export const HeliServicesDetailContent: React.FC = () => {
           deliver breathtaking aerial adventures, spiritual pilgrimages, and emergency rescue solutions across Nepal.
         </p>
 
-        {/* Stats Strip */}
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: "Tours Completed", value: "3,000+", icon: Plane },
-            { label: "Max Altitude", value: "5,600 m", icon: Mountain },
-            { label: "Regions Covered", value: "12+", icon: Compass },
-            { label: "Safety Record", value: "100%", icon: Shield },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-gradient-to-br from-purple-50 to-pink-50 border border-pink-100 rounded-2xl p-4 text-center"
-            >
-              <stat.icon size={22} className="text-[#E91E63] mx-auto mb-1.5" />
-              <p className="text-xl font-black text-[#2D1347]">{stat.value}</p>
-              <p className="text-[11px] text-gray-500 font-semibold">{stat.label}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
 

@@ -9,6 +9,7 @@ interface FilterSideBarProps {
   setSelectedKeywords: React.Dispatch<React.SetStateAction<string[]>>;
   selectedRating: number;
   setSelectedRating: React.Dispatch<React.SetStateAction<number>>;
+  customKeywords?: string[];
 }
 
 const FilterSideBar: React.FC<FilterSideBarProps> = ({
@@ -18,10 +19,11 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
   selectedKeywords,
   selectedRating,
   setSelectedRating,
+  customKeywords,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const ratings = [5, 4, 3, 2, 1];
-  const keywords = [
+  const keywords = customKeywords && customKeywords.length > 0 ? customKeywords : [
     "EVEREST",
     "ANNAPURNA",
     "BALI",

@@ -1,18 +1,70 @@
 import React from "react";
 import PackageImageGrid from "./PackageImageGrid";
 import { Outlet, useParams, Link } from "react-router-dom";
-import { packages } from "../../../assets/data/mockData";
+import { packages, hotels, vehicles } from "../../../assets/data/mockData";
 import PreFooter from "../../reuseable/PreFooter";
 import { Compass } from "lucide-react";
 
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
 
-  const pkg = packages.find(
+  let pkg = packages.find(
     (p) =>
       p.id.toLowerCase() === packageId?.toLowerCase() ||
       p.slug.toLowerCase() === packageId?.toLowerCase()
   );
+
+  if (!pkg && packageId) {
+    const matchedHotel = hotels.find(
+      (h) =>
+        h.id.toLowerCase() === packageId.toLowerCase() ||
+        h.slug.toLowerCase() === packageId.toLowerCase()
+    );
+    if (matchedHotel) {
+      pkg = {
+        id: matchedHotel.id,
+        title: matchedHotel.name,
+        slug: matchedHotel.slug,
+        duration: "Per Night Stay",
+        location: matchedHotel.location || matchedHotel.city,
+        price: `$${matchedHotel.priceUSD}`,
+        image: matchedHotel.image,
+        gallery: matchedHotel.gallery,
+        category: "domestic",
+        type: "activity",
+        description: matchedHotel.description,
+        highlights: matchedHotel.amenities || matchedHotel.features || [],
+        rating: matchedHotel.rating,
+        reviewsCount: matchedHotel.reviewsCount,
+      } as any;
+    }
+  }
+
+  if (!pkg && packageId) {
+    const matchedVehicle = vehicles.find(
+      (v) =>
+        v.id.toLowerCase() === packageId.toLowerCase() ||
+        v.slug.toLowerCase() === packageId.toLowerCase()
+    );
+    if (matchedVehicle) {
+      pkg = {
+        id: matchedVehicle.id,
+        title: matchedVehicle.name,
+        slug: matchedVehicle.slug,
+        duration: `Capacity: ${matchedVehicle.seats}`,
+        location: matchedVehicle.bestFor || "All Nepal Routes",
+        price: `$${matchedVehicle.pricePerDayUSD}`,
+        image: matchedVehicle.image,
+        gallery: matchedVehicle.gallery,
+        category: "domestic",
+        type: "activity",
+        description: matchedVehicle.description,
+        highlights: matchedVehicle.features || matchedVehicle.amenities || [],
+        rating: 5,
+        reviewsCount: 140,
+      } as any;
+    }
+  }
 
   if (!pkg) {
     return (

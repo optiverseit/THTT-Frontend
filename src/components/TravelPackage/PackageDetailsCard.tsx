@@ -6,9 +6,12 @@ import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 
 interface PackageCardProps {
   pkg: Package;
+  onBook?: (pkg: Package) => void;
+  onDetails?: (pkg: Package) => void;
+  priceUnit?: string;
 }
 
-const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
+const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg, onBook, onDetails, priceUnit }) => {
   const navigate = useNavigate();
 
   /** Read global currency mode and live exchange rate */
@@ -26,7 +29,11 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
     : "Contact Us";
 
   const handleCardClick = () => {
-    navigate(`/details/${pkg.id}`);
+    if (onDetails) {
+      onDetails(pkg);
+    } else {
+      navigate(`/details/${pkg.id}`);
+    }
   };
 
   const handleWhatsAppInquiry = (e: React.MouseEvent) => {
@@ -54,7 +61,15 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
 
         {/* Floating Category Badge */}
         <span className="absolute top-3.5 left-3.5 bg-white/95 text-[#2D1347] text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
-          {pkg.category === "international" ? "INTERNATIONAL" : "DOMESTIC"}
+          {(pkg as any).tierLabel ||
+            (pkg as any).categoryLabel ||
+            (pkg.adventureCategory
+              ? `${pkg.adventureCategory.toUpperCase()} ADVENTURE`
+              : pkg.type === "combo"
+              ? "COMBO PACK"
+              : pkg.category === "international"
+              ? "INTERNATIONAL"
+              : "DOMESTIC")}
         </span>
       </div>
 
@@ -81,7 +96,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
           <h2
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/details/${pkg.id}`);
+              handleCardClick();
             }}
             className="text-lg sm:text-xl font-extrabold text-[#200B3B] hover:text-[#E91E63] transition-colors cursor-pointer leading-snug"
           >
@@ -122,7 +137,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
         </p>
 
         <span className="text-[9px] text-gray-400 font-medium">
-          per person
+          {priceUnit || (pkg as any).priceUnit || "per person"}
         </span>
 
         {/* Buttons */}
@@ -130,7 +145,11 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/details/${pkg.id}`);
+              if (onDetails) {
+                onDetails(pkg);
+              } else {
+                navigate(`/details/${pkg.id}`);
+              }
             }}
             className="flex-1 px-3 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >
@@ -140,7 +159,11 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/details/${pkg.id}`);
+              if (onBook) {
+                onBook(pkg);
+              } else {
+                navigate(`/details/${pkg.id}`);
+              }
             }}
             className="flex-1 px-3 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#200B3B] hover:bg-[#2D1347] text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >

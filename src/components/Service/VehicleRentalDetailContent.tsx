@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { vehicles } from "../../assets/data/mockData";
-import type { Vehicle } from "../../assets/data/types";
+import type { Vehicle, Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
+import FilterSideBar from "../TravelPackage/FilterSiderBar";
+import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
 import {
   Car,
   Users,
@@ -68,35 +70,24 @@ const VEHICLE_FAQS = [
     aNp: "हो! हाम्रा सबै सवारीसाधन भाडामा नेपालका पहाडी राजमार्गमा व्यापक अनुभव भएका सरकार-लाइसेन्सप्राप्त पेशेवर चालक समावेश हुन्छ। चालकको दैनिक तलब, खाना, र राति बसाइको भत्ता १००% समावेश छ — कुनै लुकावाटो शुल्क छैन।",
   },
   {
-    q: "Are fuel, road tolls, and parking charges covered in the rate?",
-    qNp: "के इन्धन, सडक शुल्क, र पार्किङ शुल्क दरमा समावेश छन्?",
-    a: "Yes. All our fixed-route quotes and per-day rental rates include fuel, highway road taxes, municipality permits, and hotel/airport parking charges.",
-    aNp: "हो। हाम्रा सबै निश्चित-मार्ग उद्धरण र प्रति-दिन भाडा दरहरूमा इन्धन, राजमार्ग कर, नगरपालिका अनुमति, र होटल/एयरपोर्ट पार्किङ शुल्क समावेश हुन्छ।",
+    q: "Are fuel, road tolls, and driver allowances included in the price?",
+    qNp: "के इन्धन, सडक दस्तुर, र चालक भत्ता मूल्यमा समावेश छन्?",
+    a: "Yes, 100%! All our quoted rental rates are completely all-inclusive: vehicle rental, experienced mountain chauffeur, all fuel costs, interstate highway tolls, parking charges, and complete driver lodging/meals.",
+    aNp: "हो, १००%! हाम्रा सबै उद्धृत भाडा दरहरू पूर्ण रूपमा सबै-समावेशी छन्: सवारी साधन, अनुभवी पहाडी चालक, सबै इन्धन खर्च, राजमार्ग कर, पार्किङ शुल्क, र चालकको सम्पूर्ण खाना/बसोबास।",
   },
   {
-    q: "Can we make spontaneous photo or food stops along the route?",
-    qNp: "के हामी मार्गमा अचानक फोटो वा खानाको लागि रोक्न सकिन्छौं?",
-    a: "Absolutely! Since this is a private rental, you have total control over the pace. You can stop at scenic viewpoints, suspension bridges, riverside cafes, and fruit markets whenever you wish.",
-    aNp: "बिलकुल! यो निजी भाडा भएकाले, गतिमागमाथि तपाईंको पूर्ण नियन्त्रण हुन्छ। तपाईं जुनसुकै बेला दृश्यावलोकन बिन्दु, झुले पुल, नदीकिनारे क्याफे, र फलफल बजारमा रोक्न सक्नुहुन्छ।",
-  },
-  {
-    q: "What happens if a vehicle experiences a mechanical breakdown?",
-    qNp: "सवारीमा मेकानिकल खराबी भएमा के हुन्छ?",
-    a: "We maintain a nationwide 24/7 breakdown assistance network. In the unlikely event of any issue, our operations team will dispatch a replacement vehicle immediately to ensure your travel schedule is uninterrupted.",
-    aNp: "हामी राष्ट्रब्यापी २४/७ खराबी सहायता नेटवर्क कायम राख्छौं। कुनै समस्या भएमा, हाम्रो संचालन टोलीले तुरिन्तै विकल्प सवारी पठाउँछ — तपाईंको यात्रा तालिका निरन्तर रहोस्।",
-  },
-  {
-    q: "Can I rent a self-drive car without a driver in Nepal?",
+    q: "Can I rent a vehicle for self-drive in Nepal without a driver?",
     qNp: "के मैले नेपालमा चालक बिना स्वयं-चालन कार भाडामा लिन सक्छु?",
     a: "Due to road conditions, steep mountain passes, and local regulations in Nepal, we strongly recommend and exclusively provide chauffeur-driven vehicles to guarantee maximum safety, smooth navigation, and zero liability for damages.",
     aNp: "नेपालको सडक अवस्था, खडा पहाडी घाटी, र स्थानीय नियमहरूका कारणले, हामी उच्चतम सुरक्षा, सहज नाभिकरण, र क्षतिको शून्य दायित्व सुनिश्चित गर्न चालक-चालित सवारी मात्र प्रदान गर्छौं।",
   },
 ];
 
-
 export const VehicleRentalDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [visibleCount, setVisibleCount] = useState<number>(9);
+  const [priceRange, setPriceRange] = useState<number>(5000);
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
@@ -104,60 +95,100 @@ export const VehicleRentalDetailContent: React.FC = () => {
   const [selectedBookingItem, setSelectedBookingItem] = useState<BookingItem | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  // Quick route form state
-  const [pickupCity, setPickupCity] = useState("Kathmandu (Airport / Hotel)");
-  const [dropCity, setDropCity] = useState("Pokhara (Lakeside)");
-  const [vehicleType, setVehicleType] = useState("All Categories");
-
   const formatPrice = (usdAmount: number) => {
     const nprAmount = usdAmount * nprPerOneDollar;
     return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
   };
 
-  // 100% Dynamically sourced and filtered from mockData
-  const filteredFleet = vehicles.filter((vehicle) => {
-    if (activeTab !== "all" && vehicle.category !== activeTab) return false;
-    return true;
+  const vehicleKeywords = [
+    "4X4",
+    "SUV",
+    "SCORPIO",
+    "PRADO",
+    "HIACE",
+    "VAN",
+    "SEDAN",
+    "COASTER",
+    "CHAUFFEUR",
+    "MOUNTAIN",
+    "POKHARA",
+    "MUKTINATH",
+  ];
+
+  // Convert vehicles into standard Package format for consistent card rendering
+  const vehiclePackages: Package[] = vehicles.map((v) => ({
+    id: v.id,
+    title: v.name,
+    slug: v.slug,
+    duration: `Capacity: ${v.seats}`,
+    highlights: v.amenities || v.features || [],
+    price: `$${v.pricePerDayUSD}`,
+    image: v.image,
+    category: "domestic",
+    type: "activity",
+    isFeatured: Boolean(v.isFeatured),
+    description:
+      v.description ||
+      `${v.categoryLabel} with ${v.seats} passenger capacity, air conditioning, and experienced mountain chauffeur service.`,
+    location: v.bestFor || "All Nepal Routes",
+    rating: 5,
+    categoryLabel: v.categoryLabel,
+    priceUnit: "per day / trip",
+  } as any));
+
+  const filteredFleet = vehiclePackages.filter((pkg) => {
+    const rawVehicle = vehicles.find((v) => v.id === pkg.id);
+
+    // 1. Category Tab Filter
+    if (activeTab !== "all" && rawVehicle?.category !== activeTab) return false;
+
+    // 2. Price Range Filter
+    const priceNum = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
+    const matchesPrice = priceNum === 0 || priceNum <= priceRange;
+
+    // 3. Ratings Filter
+    const matchesRating = selectedRating === 0 || Math.round(pkg.rating || 5) >= selectedRating;
+
+    // 4. Keywords Filter
+    const matchesKeywords =
+      selectedKeywords.length === 0
+        ? true
+        : selectedKeywords.some((keyword) => {
+            const kw = keyword.toLowerCase();
+            return (
+              pkg.title?.toLowerCase().includes(kw) ||
+              pkg.location?.toLowerCase().includes(kw) ||
+              rawVehicle?.categoryLabel?.toLowerCase().includes(kw) ||
+              rawVehicle?.seats?.toLowerCase().includes(kw) ||
+              rawVehicle?.bestFor?.toLowerCase().includes(kw) ||
+              rawVehicle?.amenities?.some((a) => a.toLowerCase().includes(kw)) ||
+              rawVehicle?.features?.some((f) => f.toLowerCase().includes(kw))
+            );
+          });
+
+    return matchesPrice && matchesRating && matchesKeywords;
   });
 
-  const visibleFleet = filteredFleet.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredFleet.length;
-
-  const handleInquiry = (vehicleName: string, priceUSD: number) => {
-    const priceFormatted = formatPrice(priceUSD);
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I would like to inquire about renting the "${vehicleName}" (${priceFormatted}/day). Please confirm availability, driver details, and route pricing.`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
-  };
-
-  const handleBookVehicle = (v: Vehicle) => {
+  const handleBookVehicle = (pkg: Package) => {
+    const rawVehicle = vehicles.find((v) => v.id === pkg.id);
     setSelectedBookingItem({
-      id: v.id,
-      title: v.name,
-      location: `Capacity: ${v.seats}`,
+      id: pkg.id,
+      title: pkg.title,
+      location: `Capacity: ${rawVehicle?.seats || pkg.duration}`,
       duration: "Chauffeur Rental (Per Day / Trip)",
-      price: `$${v.pricePerDayUSD}`,
-      image: v.image,
+      price: pkg.price || "$0",
+      image: pkg.image,
     });
     setIsBookingModalOpen(true);
   };
 
-  const handleFullDetails = (v: Vehicle) => {
-    const priceFormatted = formatPrice(v.pricePerDayUSD);
+  const handleFullDetails = (pkg: Package) => {
+    const rawVehicle = vehicles.find((v) => v.id === pkg.id);
+    const priceStr = pkg.price || "$0";
+    const baseUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
+    const priceFormatted = formatPrice(baseUSD);
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! Please share full vehicle specifications, luggage capacity, photos, and all-inclusive rental terms for "${v.name}" (${v.categoryLabel || v.category}) at ${priceFormatted}/day.`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
-  };
-
-  const handleQuickRouteQuote = (e: React.FormEvent) => {
-    e.preventDefault();
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I would like to book a private vehicle rental. ` +
-        `Pickup: ${pickupCity} -> Destination: ${dropCity}. ` +
-        `Vehicle: ${vehicleType}. ` +
-        `Please share the exact all-inclusive fare and booking confirmation.`
+      `Hello Trip Himalaya! Please share full vehicle specifications, luggage capacity, photos, and all-inclusive rental terms for "${pkg.title}" (${rawVehicle?.categoryLabel || "Rental"}) at ${priceFormatted}/day.`
     );
     window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
   };
@@ -165,244 +196,66 @@ export const VehicleRentalDetailContent: React.FC = () => {
   return (
     <div className="space-y-12">
 
-      {/* ── 2. QUICK ROUTE FARE CALCULATOR ── */}
-      <div className="bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] rounded-3xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="max-w-2xl mb-6">
-          <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-            DIRECT ROUTE BOOKING
-          </span>
-          <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Reserve Private Chauffeur Transport Across Nepal
+      {/* ── HEADER & FILTER PILLS ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div>
+          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+            Comfort &amp; 4WD Vehicles with Driver
           </h3>
-          <p className="text-gray-300 text-xs mt-1 font-medium">
-            Door-to-door hotel pickups with zero hidden fuel surcharges or driver meal costs.
+          <p className="text-xs text-gray-500 font-medium mt-1">
+            Choose a vehicle category or filter by daily rate, ratings, and vehicle tags below.
           </p>
         </div>
 
-        <form onSubmit={handleQuickRouteQuote} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Pickup */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Pickup Point
-            </label>
-            <div className="flex items-center gap-2">
-              <MapPin size={15} className="text-pink-400 flex-shrink-0" />
-              <input
-                type="text"
-                value={pickupCity}
-                onChange={(e) => setPickupCity(e.target.value)}
-                placeholder="Kathmandu / Airport"
-                className="w-full bg-transparent text-white font-bold text-xs outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Destination */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Destination / Route
-            </label>
-            <div className="flex items-center gap-2">
-              <Compass size={15} className="text-pink-400 flex-shrink-0" />
-              <input
-                type="text"
-                value={dropCity}
-                onChange={(e) => setDropCity(e.target.value)}
-                placeholder="Pokhara / Chitwan / Nagarkot"
-                className="w-full bg-transparent text-white font-bold text-xs outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Vehicle Type */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Vehicle Model
-            </label>
-            <div className="flex items-center gap-2">
-              <Car size={15} className="text-pink-400 flex-shrink-0" />
-              <select
-                value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer [&>option]:text-gray-800"
-              >
-                <option>Scorpio 4x4 SUV (4-6 Seats)</option>
-                <option>Toyota Prado VIP (Luxury 5 Seats)</option>
-                <option>Toyota HiAce Van (12-14 Seats)</option>
-                <option>Comfort Sedan (3-4 Seats)</option>
-                <option>Tourist Coaster (20-22 Seats)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="flex items-end">
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: `All Vehicles (${vehicles.length})` },
+            { id: "suv", label: "4WD SUVs" },
+            { id: "van", label: "HiAce Vans" },
+            { id: "sedan", label: "Sedans" },
+            { id: "bus", label: "Coasters" },
+          ].map((tab) => (
             <button
-              type="submit"
-              className="w-full h-full min-h-[46px] bg-[#E11D48] hover:bg-[#BE123C] text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === tab.id
+                  ? "bg-[#2D1347] text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"
+              }`}
             >
-              <Search size={15} />
-              <span>CHECK EXACT FARE</span>
+              {tab.label}
             </button>
-          </div>
-        </form>
-      </div>
-
-      {/* ── 3. FLEET VEHICLES CATALOG GRID ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-              OUR VERIFIED FLEET
-            </span>
-            <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
-              Comfort &amp; 4WD Vehicles with Driver
-            </h3>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: "all", label: `All Vehicles (${vehicles.length})` },
-              { id: "suv", label: "4WD SUVs" },
-              { id: "van", label: "HiAce Vans" },
-              { id: "sedan", label: "Sedans" },
-              { id: "bus", label: "Coasters" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? "bg-[#2D1347] text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-pink-50 hover:text-[#E11D48]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Fleet Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleFleet.map((v) => (
-            <div
-              key={v.id}
-              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                {/* Image & Badges */}
-                <div className="relative h-52 sm:h-56 w-full overflow-hidden">
-                  <img
-                    src={v.image}
-                    alt={v.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#2D1347] text-white shadow-md">
-                      {v.categoryLabel}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-3 right-3 bg-black/65 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5 shadow-md">
-                    <Users size={13} className="text-pink-400" />
-                    <span>{v.seats}</span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug">
-                      {v.name}
-                    </h4>
-                    <div className="text-right flex-shrink-0">
-                      <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl block">
-                        {formatPrice(v.pricePerDayUSD)}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">per day / full trip</span>
-                    </div>
-                  </div>
-
-                  {/* Best For Tag */}
-                  <div className="p-2.5 rounded-xl bg-purple-50 text-[#2D1347] text-xs font-bold mb-4 flex items-center gap-2 border border-purple-100/70">
-                    <Sparkles size={14} className="text-[#E11D48] flex-shrink-0" />
-                    <span className="truncate">Best for: {v.bestFor}</span>
-                  </div>
-
-                  {/* Capacity pills */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="px-2.5 py-1 rounded-lg bg-white border border-gray-200/80 text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                      <Users size={12} className="text-[#E11D48]" />
-                      {v.seats}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-white border border-gray-200/80 text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                      <Luggage size={12} className="text-[#E11D48]" />
-                      {v.luggage}
-                    </span>
-                  </div>
-
-                  {/* Features */}
-                  <div className="space-y-1.5 mb-2">
-                    {v.features.map((feat, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-600 font-medium">
-                        <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="leading-tight">{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Footer Actions - Format as in Image 5 */}
-              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
-                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleInquiry(v.name, v.pricePerDayUSD)}
-                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                    title="WhatsApp Inquiry"
-                  >
-                    <MessageCircle size={14} className="text-pink-400" />
-                    <span>Inquiry</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleBookVehicle(v)}
-                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
-                  >
-                    <CalendarCheck size={14} />
-                    <span>Book Now</span>
-                  </button>
-                </div>
-
-                {/* Row 2: Full Details Centered */}
-                <button
-                  type="button"
-                  onClick={() => handleFullDetails(v)}
-                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                >
-                  <span>Full Details</span>
-                  <ArrowUpRight size={13} />
-                </button>
-              </div>
-            </div>
           ))}
         </div>
+      </div>
 
-        {/* See More Button */}
-        {hasMore && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => setVisibleCount(prev => prev + 15)}
-              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
-            >
-              <span>See More</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-          </div>
-        )}
+      {/* ── MAIN CONTENT: SIDEBAR + PACKAGES LIST (EXACTLY SAME AS PACKAGES PAGE) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        {/* Left: Filter Sidebar */}
+        <div className="lg:col-span-1">
+          <FilterSideBar
+            setPriceRange={setPriceRange}
+            priceRange={priceRange}
+            selectedRating={selectedRating}
+            setSelectedRating={setSelectedRating}
+            selectedKeywords={selectedKeywords}
+            setSelectedKeywords={setSelectedKeywords}
+            customKeywords={vehicleKeywords}
+          />
+        </div>
+
+        {/* Right: Package Details Cards */}
+        <div className="lg:col-span-3">
+          <PackageDetailsSection
+            pkgs={filteredFleet}
+            onBook={handleBookVehicle}
+            onDetails={handleFullDetails}
+            priceUnit="per day / trip"
+            itemsPerPage={12}
+          />
+        </div>
       </div>
 
       {/* ── 4. POPULAR ROUTES & FIXED ALL-INCLUSIVE RATES ── */}

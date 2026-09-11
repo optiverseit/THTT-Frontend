@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { hotels } from "../../assets/data/mockData";
-import type { Hotel } from "../../assets/data/types";
+import type { Hotel, Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
+import FilterSideBar from "../TravelPackage/FilterSiderBar";
+import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
+import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
 import {
   Star,
   MapPin,
@@ -22,7 +25,6 @@ import {
   CalendarCheck,
   ArrowUpRight,
 } from "lucide-react";
-import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
 
 const HOTEL_FAQS = [
   {
@@ -50,8 +52,8 @@ const HOTEL_FAQS = [
     aNp: "हाम्रा अधिकांश स्तरीय होटल आरक्षणहरूले चेक-इनसम्म ४८ घन्टाअघि मुफ्त रद्दीकरण इजाजत दिन्छ। आपतकालीन मौसम विलम्ब वा उडान रद्दी भएमा, हामी शून्य जरिमानासह तपाईंको आरक्षण मिति परिवर्तन गर्छौं।",
   },
   {
-    q: "How do we book a hotel room and confirm the voucher?",
-    qNp: "हामी होटल कोठा कसरी बुक गर्ने र भाउचर कसरी पुष्टि गर्ने?",
+    q: "How does the reservation and confirmation voucher process work?",
+    qNp: "होटल आरक्षण र पुष्टिकरण भाउचर प्रक्रिया कसरी काम गर्छ?",
     a: "Simply select your preferred hotel or destination, submit your dates through our quick form or WhatsApp, and we will send a confirmed hotel booking voucher with QR code and confirmation number immediately.",
     aNp: "आफनो मनपर्ने होटल वा गन्तव्य छनोट गर्नुहोस्, हाम्रो क्विक फर्म वा WhatsApp मार्यत तारिख पठाउनुहोस्, र हामी तुरिन्तै QR कोड र पुष्टि नम्बरसहित पुष्टिकृत होटल बुकिङ भाउचर पठाउँछौं।",
   },
@@ -60,14 +62,11 @@ const HOTEL_FAQS = [
 
 export const HotelBookingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [visibleCount, setVisibleCount] = useState<number>(9);
+  const [priceRange, setPriceRange] = useState<number>(5000);
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-
-  // Search box state
-  const [searchCity, setSearchCity] = useState("All Destinations");
-  const [checkIn, setCheckIn] = useState("");
-  const [roomType, setRoomType] = useState("Deluxe Room (1-2 Guests)");
 
   const [selectedBookingItem, setSelectedBookingItem] = useState<BookingItem | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -77,56 +76,92 @@ export const HotelBookingDetailContent: React.FC = () => {
     return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
   };
 
-  // 100% Dynamically sourced and filtered from mockData
-  const filteredHotels = hotels.filter((hotel) => {
-    if (activeTab !== "all" && hotel.category !== activeTab) return false;
-    if (searchCity !== "All Destinations") {
-      const cityLower = searchCity.toLowerCase();
-      const hotelCityLower = (hotel.city + " " + hotel.location).toLowerCase();
-      if (!hotelCityLower.includes(cityLower.replace(" valley", "").replace(" lakeside", "").replace(" national park", "").replace(" sacred garden", "").replace(" mountain lodges", ""))) {
-        return false;
-      }
-    }
-    return true;
+  const hotelKeywords = [
+    "KATHMANDU",
+    "POKHARA",
+    "CHITWAN",
+    "NAGARKOT",
+    "LUMBINI",
+    "HERITAGE",
+    "LUXURY",
+    "RESORT",
+    "SPA",
+    "BOUTIQUE",
+    "SWIMMING POOL",
+    "MOUNTAIN VIEW",
+  ];
+
+  // Convert hotels into standard Package format for consistent card rendering
+  const hotelPackages: Package[] = hotels.map((h) => ({
+    id: h.id,
+    title: h.name,
+    slug: h.slug,
+    duration: "Per Night Stay",
+    highlights: h.amenities || h.features || [],
+    price: `$${h.priceUSD}`,
+    image: h.image,
+    category: "domestic",
+    type: "activity",
+    isFeatured: Boolean(h.isFeatured),
+    description:
+      h.description ||
+      `${h.tierLabel} in ${h.location || h.city}. Handcrafted comfort, premium hospitality, and verified contract rates.`,
+    location: h.location || h.city,
+    rating: h.rating,
+    reviewsCount: h.reviewsCount,
+    tierLabel: h.tierLabel,
+    priceUnit: "per night",
+  } as any));
+
+  const filteredHotels = hotelPackages.filter((pkg) => {
+    const rawHotel = hotels.find((h) => h.id === pkg.id);
+
+    // 1. Category Tab Filter
+    if (activeTab !== "all" && rawHotel?.category !== activeTab) return false;
+
+    // 2. Price Range Filter
+    const priceNum = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
+    const matchesPrice = priceNum === 0 || priceNum <= priceRange;
+
+    // 3. Ratings Filter
+    const matchesRating = selectedRating === 0 || Math.round(pkg.rating || 5) >= selectedRating;
+
+    // 4. Keywords Filter
+    const matchesKeywords =
+      selectedKeywords.length === 0
+        ? true
+        : selectedKeywords.some((keyword) => {
+            const kw = keyword.toLowerCase();
+            return (
+              pkg.title?.toLowerCase().includes(kw) ||
+              pkg.location?.toLowerCase().includes(kw) ||
+              rawHotel?.tierLabel?.toLowerCase().includes(kw) ||
+              rawHotel?.amenities?.some((a) => a.toLowerCase().includes(kw)) ||
+              rawHotel?.features?.some((f) => f.toLowerCase().includes(kw))
+            );
+          });
+
+    return matchesPrice && matchesRating && matchesKeywords;
   });
 
-  const visibleHotels = filteredHotels.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredHotels.length;
-
-  const handleInquiry = (hotelName: string, priceUSD: number) => {
-    const priceFormatted = formatPrice(priceUSD);
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I would like to inquire about "${hotelName}" (${priceFormatted}/night). Please share room availability, inclusions, and best rates.`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
-  };
-
-  const handleBookHotel = (hotel: Hotel) => {
+  const handleBookHotel = (pkg: Package) => {
     setSelectedBookingItem({
-      id: hotel.id,
-      title: hotel.name,
-      location: hotel.location || hotel.city,
+      id: pkg.id,
+      title: pkg.title,
+      location: pkg.location || "Nepal",
       duration: "Per Night Stay",
-      price: `$${hotel.priceUSD}`,
-      image: hotel.image,
+      price: pkg.price || "$0",
+      image: pkg.image,
     });
     setIsBookingModalOpen(true);
   };
 
-  const handleFullDetails = (hotel: Hotel) => {
-    const priceFormatted = formatPrice(hotel.priceUSD);
+  const handleFullDetails = (pkg: Package) => {
+    const priceStr = pkg.price || "$0";
+    const baseUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
+    const priceFormatted = formatPrice(baseUSD);
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! Please share full details, room photos, amenities, and policies for "${hotel.name}" in ${hotel.location || hotel.city} (${priceFormatted}/night).`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
-  };
-
-  const handleQuickSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am looking for hotel booking in ${searchCity}. ` +
-        (checkIn ? `Preferred Date: ${checkIn}. ` : "") +
-        `Room type: ${roomType}. Please share available hotels and discounted quotes.`
+      `Hello Trip Himalaya! Please share full details, room photos, amenities, and policies for "${pkg.title}" in ${pkg.location} (${priceFormatted}/night).`
     );
     window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
   };
@@ -134,248 +169,65 @@ export const HotelBookingDetailContent: React.FC = () => {
   return (
     <div className="space-y-12">
 
-      {/* ── 2. QUICK HOTEL SEARCH / RESERVATION BAR ── */}
-      <div className="bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] rounded-3xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="max-w-2xl mb-6">
-          <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-            INSTANT HOTEL CONCIERGE
-          </span>
-          <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Find &amp; Reserve Verified Stays at Contract Rates
+      {/* ── HEADER & FILTER PILLS ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div>
+          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+            Featured Luxury &amp; Boutique Hotels
           </h3>
-          <p className="text-gray-300 text-xs mt-1 font-medium">
-            Get instant room availability, free cancellation vouchers, and complimentary breakfast.
+          <p className="text-xs text-gray-500 font-medium mt-1">
+            Browse 5-star heritage hotels, lakeside boutique stays, jungle safari eco-resorts, and mountain lodges.
           </p>
         </div>
 
-        <form onSubmit={handleQuickSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* City */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Destination City
-            </label>
-            <div className="flex items-center gap-2">
-              <MapPin size={15} className="text-pink-400 flex-shrink-0" />
-              <select
-                value={searchCity}
-                onChange={(e) => setSearchCity(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer [&>option]:text-gray-800"
-              >
-                <option>All Destinations</option>
-                <option>Kathmandu Valley</option>
-                <option>Pokhara Lakeside</option>
-                <option>Chitwan National Park</option>
-                <option>Nagarkot / Dhulikhel</option>
-                <option>Lumbini Sacred Garden</option>
-                <option>Everest Mountain Lodges</option>
-                <option>International (Dubai / Bali)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Check In */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Check-In Date
-            </label>
-            <div className="flex items-center gap-2">
-              <Calendar size={15} className="text-pink-400 flex-shrink-0" />
-              <input
-                type="date"
-                value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer"
-              />
-            </div>
-          </div>
-
-          {/* Room Type */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Room &amp; Guests
-            </label>
-            <div className="flex items-center gap-2">
-              <Users size={15} className="text-pink-400 flex-shrink-0" />
-              <select
-                value={roomType}
-                onChange={(e) => setRoomType(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer [&>option]:text-gray-800"
-              >
-                <option>Deluxe Room (1-2 Guests)</option>
-                <option>Executive Suite (2-3 Guests)</option>
-                <option>Family Cottage (4-5 Guests)</option>
-                <option>Heritage Royal Villa (Luxury)</option>
-                <option>Trekking Teahouse Room</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="flex items-end">
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: `All Stays (${hotels.length})` },
+            { id: "luxury", label: "5-Star Heritage" },
+            { id: "boutique", label: "Lakeside Boutique" },
+            { id: "resort", label: "Safari & Resorts" },
+          ].map((tab) => (
             <button
-              type="submit"
-              className="w-full h-full min-h-[46px] bg-[#E11D48] hover:bg-[#BE123C] text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === tab.id
+                  ? "bg-[#2D1347] text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"
+              }`}
             >
-              <Search size={15} />
-              <span>SEARCH RATES</span>
+              {tab.label}
             </button>
-          </div>
-        </form>
-      </div>
-
-      {/* ── 3. FEATURED HOTELS CATALOG GRID ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-              PRE-VERIFIED STAYS
-            </span>
-            <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
-              Featured Luxury &amp; Boutique Hotels
-            </h3>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: "all", label: `All Stays (${hotels.length})` },
-              { id: "luxury", label: "5-Star Heritage" },
-              { id: "boutique", label: "Lakeside Boutique" },
-              { id: "resort", label: "Safari & Resorts" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? "bg-[#2D1347] text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-pink-50 hover:text-[#E11D48]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Dynamic Hotel Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleHotels.map((hotel) => (
-            <div
-              key={hotel.id}
-              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                {/* Image & Badges */}
-                <div className="relative h-52 sm:h-56 w-full overflow-hidden">
-                  <img
-                    src={hotel.image}
-                    alt={hotel.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
-                      {hotel.tierLabel}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-3 right-3 bg-black/65 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5 shadow-md">
-                    <Star size={13} className="text-amber-400 fill-amber-400" />
-                    <span>{hotel.rating.toFixed(1)} ({hotel.reviewsCount}+)</span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug">
-                      {hotel.name}
-                    </h4>
-                    <div className="text-right flex-shrink-0">
-                      <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl block">
-                        {formatPrice(hotel.priceUSD)}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">per night</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mb-4">
-                    <MapPin size={14} className="text-[#E11D48] flex-shrink-0" />
-                    <span className="truncate">{hotel.city}</span>
-                  </div>
-
-                  {/* Amenities badges */}
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {hotel.amenities.slice(0, 4).map((amenity, i) => (
-                      <span
-                        key={i}
-                        className="px-2.5 py-1 rounded-lg bg-white border border-gray-200/80 text-[11px] font-bold text-gray-700 shadow-2xs"
-                      >
-                        {amenity}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Highlights */}
-                  <div className="space-y-1.5 mb-2">
-                    {hotel.features.slice(0, 3).map((feat, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-600 font-medium">
-                        <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="leading-tight">{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Footer Actions - Format as in Image 5 */}
-              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
-                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleInquiry(hotel.name, hotel.priceUSD)}
-                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                    title="WhatsApp Inquiry"
-                  >
-                    <MessageCircle size={14} className="text-pink-400" />
-                    <span>Inquiry</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleBookHotel(hotel)}
-                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
-                  >
-                    <CalendarCheck size={14} />
-                    <span>Book Now</span>
-                  </button>
-                </div>
-
-                {/* Row 2: Full Details Centered */}
-                <button
-                  type="button"
-                  onClick={() => handleFullDetails(hotel)}
-                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                >
-                  <span>Full Details</span>
-                  <ArrowUpRight size={13} />
-                </button>
-              </div>
-            </div>
           ))}
         </div>
+      </div>
 
-        {/* See More Button */}
-        {hasMore && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => setVisibleCount(prev => prev + 15)}
-              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
-            >
-              <span>See More</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-          </div>
-        )}
+      {/* ── MAIN CONTENT: SIDEBAR + PACKAGES LIST (EXACTLY SAME AS PACKAGES PAGE) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        {/* Left: Filter Sidebar */}
+        <div className="lg:col-span-1">
+          <FilterSideBar
+            setPriceRange={setPriceRange}
+            priceRange={priceRange}
+            selectedRating={selectedRating}
+            setSelectedRating={setSelectedRating}
+            selectedKeywords={selectedKeywords}
+            setSelectedKeywords={setSelectedKeywords}
+            customKeywords={hotelKeywords}
+          />
+        </div>
+
+        {/* Right: Package Details Cards */}
+        <div className="lg:col-span-3">
+          <PackageDetailsSection
+            pkgs={filteredHotels}
+            onBook={handleBookHotel}
+            onDetails={handleFullDetails}
+            priceUnit="per night"
+            itemsPerPage={12}
+          />
+        </div>
       </div>
 
       {/* ── 4. WHAT'S INCLUDED IN OUR HOTEL CONCIERGE ── */}

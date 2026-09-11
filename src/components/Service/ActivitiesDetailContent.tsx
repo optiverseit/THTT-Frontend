@@ -4,6 +4,8 @@ import { packages } from "../../assets/data/mockData";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reuseable/packages/BookingModal";
+import FilterSideBar from "../TravelPackage/FilterSiderBar";
+import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
 import {
   Wind,
   ShieldCheck,
@@ -58,76 +60,89 @@ const ACTIVITY_FAQS = [
 
 export const ActivitiesDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [visibleCount, setVisibleCount] = useState<number>(9);
+  const [priceRange, setPriceRange] = useState<number>(5000);
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const navigate = useNavigate();
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const [selectedBookingActivity, setSelectedBookingActivity] = useState<Package | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  const handleBookActivity = (act: Package) => {
-    setSelectedBookingActivity(act);
-    setIsBookingModalOpen(true);
-  };
-
-  const formatPackagePrice = (priceStr?: string) => {
-    if (!priceStr) return null;
-    const numericUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
-    if (numericUSD > 0) {
-      const nprAmount = numericUSD * nprPerOneDollar;
-      return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
-    }
-    return priceStr;
-  };
-
   // 100% Dynamically sourced from packages data
-  const activityPackages = packages.filter((p) => p.type === "activity" || p.type === "combo");
+  const activityPackages = packages.filter(
+    (p) => p.type === "activity" || p.type === "combo" || p.adventureCategory
+  );
+
+  const adventureKeywords = [
+    "PARAGLIDING",
+    "BUNGEE",
+    "RAFTING",
+    "ZIPFLYER",
+    "CANYONING",
+    "POKHARA",
+    "KUSHMA",
+    "SARANGKOT",
+    "ADVENTURE",
+    "HIGH THRILL",
+    "TANDEM",
+    "COMBO",
+  ];
 
   const filteredActivities = activityPackages.filter((pkg) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "Air") return pkg.adventureCategory === "Air";
-    if (activeTab === "Water") return pkg.adventureCategory === "Water";
-    if (activeTab === "Land") return pkg.adventureCategory === "Land";
-    if (activeTab === "combo") return pkg.type === "combo";
-    return true;
+    // 1. Category Tab Filter
+    if (activeTab === "Air" && pkg.adventureCategory !== "Air") return false;
+    if (activeTab === "Water" && pkg.adventureCategory !== "Water") return false;
+    if (activeTab === "Land" && pkg.adventureCategory !== "Land") return false;
+    if (activeTab === "combo" && pkg.type !== "combo") return false;
+
+    // 2. Price Range Filter
+    const priceNum = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
+    const matchesPrice = priceNum === 0 || priceNum <= priceRange;
+
+    // 3. Ratings Filter
+    const pkgRating =
+      pkg.rating !== undefined
+        ? pkg.rating
+        : pkg.testimonies && pkg.testimonies.length > 0
+        ? pkg.testimonies[0].rating
+        : 5;
+    const matchesRating = selectedRating === 0 || Math.round(pkgRating) >= selectedRating;
+
+    // 4. Keywords Filter
+    const matchesKeywords =
+      selectedKeywords.length === 0
+        ? true
+        : selectedKeywords.some((keyword) => {
+            const kw = keyword.toLowerCase();
+            return (
+              pkg.title?.toLowerCase().includes(kw) ||
+              pkg.location?.toLowerCase().includes(kw) ||
+              pkg.adventureCategory?.toLowerCase().includes(kw) ||
+              pkg.highlights?.some((hl) => hl.toLowerCase().includes(kw))
+            );
+          });
+
+    return matchesPrice && matchesRating && matchesKeywords;
   });
 
-  const visibleActivities = filteredActivities.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredActivities.length;
-
-  const handleInquiry = (activityTitle: string, priceStr?: string) => {
-    const formattedPrice = formatPackagePrice(priceStr);
-    const priceText = formattedPrice ? ` (${formattedPrice})` : "";
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I want to book the "${activityTitle}"${priceText}. Please share available slots, timings, and discount options.`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
-  };
-
-  const getDifficultyColor = (diff?: string) => {
-    switch (diff) {
-      case "Easy":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "Moderate":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Hard":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case "Extreme":
-        return "bg-rose-100 text-rose-800 border-rose-200";
-      default:
-        return "bg-purple-100 text-purple-800 border-purple-200";
-    }
+  const handleBookActivity = (pkg: Package) => {
+    setSelectedBookingActivity(pkg);
+    setIsBookingModalOpen(true);
   };
 
   return (
     <div className="space-y-12">
 
-      {/* ── HEADER & FILTER PILLS (Outside the box, matching Tours design) ── */}
+      {/* ── HEADER & FILTER PILLS ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
         <div>
           <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
             Featured Adventure Activities &amp; Combos
           </h3>
+          <p className="text-xs text-gray-500 font-medium mt-1">
+            Browse adrenaline experiences, aerial flights, whitewater runs, and multi-activity combos.
+          </p>
         </div>
 
         {/* Filter Pills */}
@@ -154,127 +169,29 @@ export const ActivitiesDetailContent: React.FC = () => {
         </div>
       </div>
 
-      {/* ── DYNAMIC ACTIVITIES GRID (The Box of Cards, matching Tours design) ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
-        {/* Dynamic Activities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleActivities.map((act) => (
-            <div
-              key={act.id}
-              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                {/* Image, Badge & Timing */}
-                <div className="relative h-48 sm:h-52 w-full overflow-hidden">
-                  <img
-                    src={act.image}
-                    alt={act.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
-                      {act.type === "combo" ? "Combo Pack" : act.adventureCategory || "Adventure"}
-                    </span>
-                    {act.difficulty && (
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase border shadow-sm ${getDifficultyColor(act.difficulty)}`}>
-                        {act.difficulty}
-                      </span>
-                    )}
-                  </div>
-                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
-                    <Clock size={13} className="text-pink-400" />
-                    <span>{act.duration}</span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug">
-                      {act.title}
-                    </h4>
-                    {act.price && (
-                      <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl">
-                        {formatPackagePrice(act.price)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs font-semibold text-gray-500 mb-4">
-                    {act.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin size={14} className="text-[#E11D48]" />
-                        <span>{act.location}</span>
-                      </div>
-                    )}
-                    {act.intensity && (
-                      <div className="flex items-center gap-1">
-                        <Zap size={14} className="text-amber-500" />
-                        <span>{act.intensity}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 mb-6">
-                    {act.highlights && act.highlights.slice(0, 3).map((hl, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-600 font-medium">
-                        <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="leading-tight">{hl}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Footer Actions - Format as in Image 5 */}
-              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
-                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleInquiry(act.title, act.price)}
-                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                    title="WhatsApp Inquiry"
-                  >
-                    <MessageCircle size={14} className="text-pink-400" />
-                    <span>Inquiry</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleBookActivity(act)}
-                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
-                  >
-                    <CalendarCheck size={14} />
-                    <span>Book Now</span>
-                  </button>
-                </div>
-
-                {/* Row 2: Full Details Centered */}
-                <button
-                  type="button"
-                  onClick={() => navigate(`/details/${act.id}`)}
-                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                >
-                  <span>Full Details</span>
-                  <ArrowUpRight size={13} />
-                </button>
-              </div>
-            </div>
-          ))}
+      {/* ── MAIN CONTENT: SIDEBAR + PACKAGES LIST (EXACTLY SAME AS PACKAGES PAGE) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        {/* Left: Filter Sidebar */}
+        <div className="lg:col-span-1">
+          <FilterSideBar
+            setPriceRange={setPriceRange}
+            priceRange={priceRange}
+            selectedRating={selectedRating}
+            setSelectedRating={setSelectedRating}
+            selectedKeywords={selectedKeywords}
+            setSelectedKeywords={setSelectedKeywords}
+            customKeywords={adventureKeywords}
+          />
         </div>
 
-        {/* See More Button */}
-        {hasMore && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => setVisibleCount(prev => prev + 15)}
-              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
-            >
-              <span>See More</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-          </div>
-        )}
+        {/* Right: Package Details Cards */}
+        <div className="lg:col-span-3">
+          <PackageDetailsSection
+            pkgs={filteredActivities}
+            onBook={handleBookActivity}
+            itemsPerPage={12}
+          />
+        </div>
       </div>
 
       {/* ── 3. SAFETY FIRST PROTOCOLS ── */}

@@ -97,9 +97,9 @@ export const ToursDetailContent: React.FC = () => {
     const formattedPrice = formatPackagePrice(priceStr);
     const priceText = formattedPrice ? ` (${formattedPrice})` : "";
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am interested in booking the "${tourTitle}"${priceText}. Please share details, day-by-day itinerary, and pricing.`
+      `Hello Trip Himalaya (Tours & Holidays Team)! I am interested in booking the "${tourTitle}"${priceText}. Please share details, day-by-day itinerary, and pricing.`
     );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   return (

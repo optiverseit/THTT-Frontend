@@ -6,6 +6,7 @@ import {
   Mail,
   MessageCircle,
   ArrowRight,
+  Globe,
 } from "lucide-react";
 
 const associations = [
@@ -62,7 +63,7 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="w-full bg-[#080C16] text-white pt-16 pb-8 px-4 sm:px-6 lg:px-12 relative z-20 border-t border-white/5" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
+    <footer className="print:hidden w-full bg-[#080C16] text-white pt-16 pb-8 px-4 sm:px-6 lg:px-12 relative z-20 border-t border-white/5" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
       <div className="max-w-7xl mx-auto">
         
         {/* ── TOP SECTION: 4 COLUMNS ── */}
@@ -174,30 +175,36 @@ const Footer: React.FC = () => {
               <li className="flex items-start gap-3">
                 <MapPin size={17} className="text-[#E11D48] flex-shrink-0 mt-0.5" />
                 <a
-                  href="https://maps.google.com/?q=Kantipath,Kathmandu,Nepal"
+                  href="https://maps.google.com/?q=Airport,Shambhu+Marg,Road+No+04,Kathmandu,Nepal"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors leading-snug"
                 >
-                  Kantipath, Kathmandu, Nepal
+                  Airport, Shambhu Marg, Road No. 04
                   <span className="block text-xs text-gray-400 font-medium tracking-normal mt-0.5">
-                    (Near NTB Office)
+                    Kathmandu, Nepal
                   </span>
                 </a>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={16} className="text-[#E11D48] flex-shrink-0" />
-                <a href="tel:+97714240000" className="hover:text-white transition-colors">
-                  +977 1 4240000 / 9800000000
-                </a>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <a href="tel:01-5922697" className="hover:text-white transition-colors">
+                    Tel: 01-5922697
+                  </a>
+                  <span className="text-gray-500">|</span>
+                  <a href="tel:+977-9851420882" className="hover:text-white transition-colors">
+                    +977-9851420882
+                  </a>
+                </div>
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={16} className="text-[#E11D48] flex-shrink-0" />
                 <a
-                  href="mailto:info@triphimalaya.com.np"
+                  href="mailto:triphimalayatt@gmail.com"
                   className="hover:text-white transition-colors break-all"
                 >
-                  info@triphimalaya.com.np
+                  triphimalayatt@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-3">
@@ -209,6 +216,17 @@ const Footer: React.FC = () => {
                   className="hover:text-white transition-colors text-emerald-400"
                 >
                   WhatsApp: +977 9800000003
+                </a>
+              </li>
+              <li className="flex items-center gap-3">
+                <Globe size={16} className="text-[#E11D48] flex-shrink-0" />
+                <a
+                  href="https://triphimalaya.com.np"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  triphimalaya.com.np
                 </a>
               </li>
             </ul>

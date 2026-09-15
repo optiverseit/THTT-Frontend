@@ -27,7 +27,7 @@ const PackageFaq: React.FC = () => {
         </div>
 
         {/* ── RIGHT STICKY PRICING SIDEBAR (4 cols) ── */}
-        <div className="lg:col-span-4 lg:sticky lg:top-[190px] self-start space-y-6">
+        <div className="lg:col-span-4 lg:sticky lg:top-[220px] self-start space-y-6">
           <PackagePricing pkg={pkg} />
         </div>
       </div>

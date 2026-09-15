@@ -38,12 +38,14 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg, onBook, onDetails
 
   const handleWhatsAppInquiry = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const whatsappPhone = "9779800000003";
-    const priceText = formattedStartingPrice !== "Contact Us" ? ` (Starting from ${formattedStartingPrice})` : "";
-    const locationText = pkg.location ? ` in ${pkg.location}` : "";
-    const message = `Hello Trip Himalaya! I would like to inquire about "${pkg.title}"${locationText}${priceText}. Duration: ${pkg.duration}. Please provide more details.`;
-    const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    const isTour = pkg.type === "tour";
+    const teamName = isTour ? "Tours & Holidays Team" : "Trekking & Adventure Activity Team";
+    const whatsappPhone = "9779851403761";
+    const priceText = formattedStartingPrice !== "Contact Us" ? ` Starting price: ${formattedStartingPrice}.` : "";
+    const locationText = pkg.location ? ` (${pkg.location})` : "";
+    const durationText = pkg.duration ? ` - Duration: ${pkg.duration}.` : "";
+    const message = `Hello Trip Himalaya (${teamName})! I am interested in "${pkg.title}"${locationText}${durationText}${priceText} Please share availability and details.`;
+    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -143,6 +145,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg, onBook, onDetails
         {/* Buttons */}
         <div className="flex items-center gap-2 mt-2 w-full justify-center">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               if (onDetails) {
@@ -151,12 +154,13 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg, onBook, onDetails
                 navigate(`/details/${pkg.id}`);
               }
             }}
-            className="flex-1 px-3 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            className="flex-1 px-3 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
           >
             VIEW DETAILS
           </button>
 
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               if (onBook) {
@@ -165,7 +169,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({ pkg, onBook, onDetails
                 navigate(`/details/${pkg.id}`);
               }
             }}
-            className="flex-1 px-3 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#200B3B] hover:bg-[#2D1347] text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            className="flex-1 px-3 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#200B3B] hover:bg-[#2D1347] text-white shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
           >
             BOOK NOW
           </button>

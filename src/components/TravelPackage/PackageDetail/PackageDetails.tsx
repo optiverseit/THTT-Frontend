@@ -1,12 +1,40 @@
 import React from "react";
 import PackageImageGrid from "./PackageImageGrid";
-import { Outlet, useParams, Link } from "react-router-dom";
+import { Outlet, useParams, Link, useNavigate } from "react-router-dom";
 import { packages, hotels, vehicles } from "../../../assets/data/mockData";
+import { VISA_PLANS } from "../../Service/VisaServicesDetailContent";
+import VisaCountryDetailView from "../../Service/VisaCountryDetailView";
 import PreFooter from "../../reuseable/PreFooter";
 import { Compass } from "lucide-react";
 
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
+  const navigate = useNavigate();
+
+  // Check if this route is for a Visa Destination (e.g. /details/thailand, /details/thailand-visit, etc.)
+  const matchedVisa = VISA_PLANS.find(
+    (v) =>
+      v.id.toLowerCase() === packageId?.toLowerCase() ||
+      v.country.toLowerCase() === packageId?.toLowerCase() ||
+      v.country.toLowerCase().replace(/[^a-z0-9]+/g, "-") === packageId?.toLowerCase() ||
+      packageId?.toLowerCase().includes(v.country.toLowerCase().replace(/[^a-z0-9]+/g, "-")) ||
+      packageId?.toLowerCase().includes(v.id.toLowerCase())
+  );
+
+  if (matchedVisa) {
+    return (
+      <div className="w-full min-h-screen bg-[#FBFBFE] font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 print:max-w-none print:p-0 print:m-0">
+          <VisaCountryDetailView
+            plan={matchedVisa}
+            allPlans={VISA_PLANS}
+            onSelectPlan={(newPlan) => navigate(`/details/${newPlan.id}`)}
+            onBack={() => navigate("/service/visa-services")}
+          />
+        </div>
+      </div>
+    );
+  }
 
   let pkg = packages.find(
     (p) =>
@@ -205,17 +233,23 @@ const PackageDetails: React.FC = () => {
     ...pkg,
     gallery,
     pricingTable,
+    allItenary,
+    allIncludes,
+    allExcludes,
+    restrictions,
+    whatToBring,
+    allfaqs,
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-0">
-      {/* ── 100% FULL WIDTH IMAGE GALLERY MOSAIC ── */}
+    <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-0 print:min-h-0 print:bg-white">
+      {/* ── IMAGE GALLERY + HERO & PRINT QUOTATION ── */}
       <div className="w-full">
         <PackageImageGrid pkg={enrichedPkg} />
       </div>
 
-      {/* ── TAB CONTENT OUTLET ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-12 sm:pb-16">
+      {/* ── TAB CONTENT OUTLET (hidden on print) ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-12 sm:pb-16 print:hidden">
         <Outlet
           context={{
             pkg: enrichedPkg,
@@ -230,13 +264,15 @@ const PackageDetails: React.FC = () => {
         />
       </div>
 
-      {/* ── PREFOOTER ── */}
-      <PreFooter
-        title="Ready to Experience This Adventure?"
-        description="Connect with our Himalayan travel specialists for tailored dates, group discounts, and custom arrangements."
-        btn1="Call Us Now"
-        btn2="Request Custom Quote"
-      />
+      {/* ── PREFOOTER (hidden on print) ── */}
+      <div className="print:hidden">
+        <PreFooter
+          title="Ready to Experience This Adventure?"
+          description="Connect with our Himalayan travel specialists for tailored dates, group discounts, and custom arrangements."
+          btn1="Call Us Now"
+          btn2="Request Custom Quote"
+        />
+      </div>
     </div>
   );
 };

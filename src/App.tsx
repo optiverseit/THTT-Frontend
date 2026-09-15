@@ -52,7 +52,7 @@ const MainLayout = () => {
           Rendered across all pages when user is NOT logged in.
           If logged in, the header is hidden. */}
       {!isLoggedIn && (
-        <div className="sticky top-0 z-50">
+        <div className="sticky top-0 z-50 print:hidden">
           <Header />
         </div>
       )}
@@ -108,7 +108,9 @@ const MainLayout = () => {
       </Routes>
 
       {/* Global Footer */}
-      <Footer />
+      <div className="print:hidden">
+        <Footer />
+      </div>
     </>
   );
 };

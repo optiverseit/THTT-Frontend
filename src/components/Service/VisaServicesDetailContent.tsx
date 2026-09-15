@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import ReactCountryFlag from "react-country-flag";
 import {
   Shield,
@@ -11,24 +12,21 @@ import {
   Zap,
   Globe2,
   Search,
+  Eye,
+  X,
+  FileText,
+  Check,
+  ArrowLeft,
+  Printer,
 } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
+import VisaCountryDetailView, { VisaDetailPlan, CostOption } from "./VisaCountryDetailView";
 
-interface VisaPlan {
-  id: string;
-  country: string;
-  countryCode: string;
-  region: "all" | "middle-east" | "asia" | "europe" | "west";
-  visaType: string;
-  duration: string;
-  processingTime: string;
-  baseNPRPrice: number;
-  entryType: string;
-  inclusions: string[];
-  popular?: boolean;
-}
+export type { VisaDetailPlan, CostOption };
 
-const VISA_PLANS: VisaPlan[] = [
+
+
+const VISA_PLANS_RAW: VisaDetailPlan[] = [
   {
     id: "uae-30",
     country: "UAE (Dubai / Abu Dhabi)",
@@ -46,24 +44,86 @@ const VISA_PLANS: VisaPlan[] = [
       "24/7 Processing Support",
     ],
     popular: true,
+    aboutText:
+      "UAE tourist visas allow Nepali passport holders to visit Dubai, Abu Dhabi, and other emirates for tourism and leisure. Fast-tracked paperless filing with instant electronic delivery.",
+    requirementDocuments: [
+      "Clear color copy of Passport (valid for at least 6 months)",
+      "Passport size photo (white background, digital copy)",
+      "Confirmed return flight ticket",
+      "Hotel reservation or host residency proof",
+    ],
+    termsAndConditions: [
+      "Visa fee is strictly non-refundable once applied in immigration portal.",
+      "Overstay fine applies per day as per UAE GDRFA regulations.",
+      "Flight tickets subject to airline fare cancellation penalties.",
+    ],
+    costOptions: [
+      {
+        name: "Single Entry (30 Days)",
+        days: "30 Days",
+        nprPrice: 14500,
+        entryType: "Single Entry",
+      },
+      {
+        name: "Single Entry (60 Days)",
+        days: "60 Days",
+        nprPrice: 21000,
+        entryType: "Single Entry",
+      },
+    ],
+    successfulApplications: "2500+",
+    successRate: "99.4%",
   },
   {
-    id: "thailand-60",
+    id: "thailand-visit",
     country: "Thailand",
     countryCode: "TH",
     region: "asia",
-    visaType: "Tourist Visa",
-    duration: "60 Days Stay",
-    processingTime: "3 – 5 Working Days",
-    baseNPRPrice: 8500,
+    visaType: "Visit Visa",
+    duration: "30 Days Valid",
+    processingTime: "5 – 7 Working Days",
+    baseNPRPrice: 5100,
     entryType: "Single Entry",
     inclusions: [
-      "Royal Thai Embassy Submission",
-      "Hotel Voucher & Flight Itinerary",
-      "Document Verification & Stamp Tracking",
-      "Expert Guidance for Visa on Arrival",
+      "Royal Thai Embassy Submission Support",
+      "Confirmed Round Trip Ticket Booking",
+      "Confirm Hotel Booking Voucher",
+      "Certified English Translations & Verification",
     ],
     popular: true,
+    aboutText:
+      "Nepali passport holders require a pre-approved tourist visa to enter Thailand. Following major policy changes, Nepal is not eligible for Visa on Arrival (VOA), meaning you must secure an e-Visa before booking your travel. Trip Himalaya provides end-to-end guidance for Royal Thai Embassy visa submission, ensuring seamless verification of bank funds, hotel bookings, flight itineraries, and all certified translations.",
+    requirementDocuments: [
+      "Passport copy",
+      "passport size photo",
+      "bank statement (up to 6 months closing balance Npr: 200000)",
+      "Confirmed Round trip ticket",
+      "Confirm hotel booking",
+      "Certified English translations for any documents originally in Nepali",
+    ],
+    termsAndConditions: [
+      "Payment fully non-refundable if visa refused",
+      "Ticket canceled as per system penalties",
+      "hotels payment is fully non-refundable",
+    ],
+    costOptions: [
+      {
+        name: "Single Entry",
+        days: "30 Days",
+        nprPrice: 5100,
+        entryType: "Single Entry",
+        description: "Standard tourist visit visa",
+      },
+      {
+        name: "Multiple Entry",
+        days: "90 Days",
+        nprPrice: 7600,
+        entryType: "Multiple Entry",
+        description: "Frequent traveler multi-entry visit visa",
+      },
+    ],
+    successfulApplications: "1000+",
+    successRate: "99%",
   },
   {
     id: "schengen-tourist",
@@ -168,7 +228,447 @@ const VISA_PLANS: VisaPlan[] = [
       "Instant Electronic Delivery via WhatsApp",
     ],
   },
+  {
+    id: "australia-600",
+    country: "Australia",
+    countryCode: "AU",
+    region: "west",
+    visaType: "Visitor Visa (Subclass 600)",
+    duration: "3, 6 or 12 Months",
+    processingTime: "15 – 20 Working Days",
+    baseNPRPrice: 22500,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "ImmiAccount Portal Online Lodgement",
+      "Biometrics Collection (VFS Global) Support",
+      "Genuine Temporary Entrant (GTE) Statement",
+      "Financial & Family Ties Audit",
+    ],
+    popular: true,
+  },
+  {
+    id: "canada-v1",
+    country: "Canada",
+    countryCode: "CA",
+    region: "west",
+    visaType: "Visitor Visa (V-1 / TRV)",
+    duration: "Up to 10 Years",
+    processingTime: "20 – 30 Working Days",
+    baseNPRPrice: 21000,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "IRCC Portal Application Filing",
+      "Invitation Letter & Purpose Drafting",
+      "VFS Biometrics Appointment Booking",
+      "Financial Capability Statement Review",
+    ],
+    popular: true,
+  },
+  {
+    id: "south-korea-c39",
+    country: "South Korea",
+    countryCode: "KR",
+    region: "asia",
+    visaType: "C-3-9 Tourist Visa",
+    duration: "Up to 90 Days",
+    processingTime: "7 – 10 Working Days",
+    baseNPRPrice: 11500,
+    entryType: "Single Entry",
+    inclusions: [
+      "KVAC / Embassy of Republic of Korea Filing",
+      "Travel Schedule & Hotel Reservation",
+      "Income Tax Certificate Verification",
+      "Complete Dossier Organization",
+    ],
+  },
+  {
+    id: "qatar-tourist",
+    country: "Qatar",
+    countryCode: "QA",
+    region: "middle-east",
+    visaType: "Tourist / Hayya Visa",
+    duration: "30 Days Stay",
+    processingTime: "2 – 3 Working Days",
+    baseNPRPrice: 9500,
+    entryType: "Single Entry",
+    inclusions: [
+      "Hayya Portal Registration & Approval",
+      "Discover Qatar Hotel Voucher Assistance",
+      "Fast-Track 48-Hour Electronic Delivery",
+      "WhatsApp Instant Confirmation",
+    ],
+  },
+  {
+    id: "saudi-arabia-evisa",
+    country: "Saudi Arabia",
+    countryCode: "SA",
+    region: "middle-east",
+    visaType: "Tourist & Umrah eVisa",
+    duration: "90 Days Stay",
+    processingTime: "1 – 3 Working Days",
+    baseNPRPrice: 16500,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "Official MOFA Portal Submission",
+      "Mandatory Travel Medical Insurance",
+      "Valid for Tourism, Leisure & Umrah",
+      "Fast Electronic Approval Guarantee",
+    ],
+    popular: true,
+  },
+  {
+    id: "bali-indonesia",
+    country: "Indonesia (Bali)",
+    countryCode: "ID",
+    region: "asia",
+    visaType: "Tourist e-VoA / B211A",
+    duration: "30 – 60 Days",
+    processingTime: "2 – 4 Working Days",
+    baseNPRPrice: 8200,
+    entryType: "Single Entry",
+    inclusions: [
+      "Molina Immigration Official e-VoA",
+      "Airport Fast-Track Guidance",
+      "Extension Assistance Available in Bali",
+      "Digital eVisa with QR Code",
+    ],
+  },
+  {
+    id: "vietnam-evisa",
+    country: "Vietnam",
+    countryCode: "VN",
+    region: "asia",
+    visaType: "Tourist eVisa",
+    duration: "30 – 90 Days",
+    processingTime: "3 – 4 Working Days",
+    baseNPRPrice: 6500,
+    entryType: "Single / Multiple Entry",
+    inclusions: [
+      "Vietnam Immigration Department Submission",
+      "Airport Border Entry Gate Pre-registration",
+      "No Stamp Fee at Airport Required",
+      "Quick WhatsApp Delivery",
+    ],
+  },
+  {
+    id: "turkey-evisa",
+    country: "Turkey",
+    countryCode: "TR",
+    region: "europe",
+    visaType: "Tourist Visa Assistance",
+    duration: "30 – 90 Days",
+    processingTime: "10 – 15 Working Days",
+    baseNPRPrice: 14000,
+    entryType: "Single Entry",
+    inclusions: [
+      "Gateway Management Embassy Submission",
+      "Detailed Cover Letter & Daily Itinerary",
+      "Travel Insurance & Flight Reservation",
+      "Financial Verification Support",
+    ],
+  },
+  {
+    id: "egypt-tourist",
+    country: "Egypt",
+    countryCode: "EG",
+    region: "middle-east",
+    visaType: "Tourist Visa",
+    duration: "30 Days Stay",
+    processingTime: "5 – 7 Working Days",
+    baseNPRPrice: 9800,
+    entryType: "Single Entry",
+    inclusions: [
+      "Embassy of Egypt Application Lodgement",
+      "Cairo, Luxor & Nile Cruise Plan Dossier",
+      "Bank Statement & Sponsor Verification",
+      "Courier & Submission Assistance",
+    ],
+  },
+  {
+    id: "new-zealand-visitor",
+    country: "New Zealand",
+    countryCode: "NZ",
+    region: "west",
+    visaType: "Visitor Visa",
+    duration: "Up to 9 Months",
+    processingTime: "20 – 25 Working Days",
+    baseNPRPrice: 24000,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "Immigration New Zealand RealMe Filing",
+      "Comprehensive Itinerary & Ties Evidence",
+      "Financial Solvency Proof Preparation",
+      "Direct VFS Biometrics Guidance",
+    ],
+  },
+  {
+    id: "china-tourist",
+    country: "China",
+    countryCode: "CN",
+    region: "asia",
+    visaType: "L-Category Tourist Visa",
+    duration: "30 – 60 Days",
+    processingTime: "4 – 7 Working Days",
+    baseNPRPrice: 13500,
+    entryType: "Single / Double Entry",
+    inclusions: [
+      "Chinese Visa Application Center (Kathmandu)",
+      "Invitation Letter / Tour Plan Drafting",
+      "Hotel Vouchers & Round-Trip Flights",
+      "Biometric Appointment Booking",
+    ],
+  },
+  {
+    id: "oman-evisa",
+    country: "Oman",
+    countryCode: "OM",
+    region: "middle-east",
+    visaType: "Tourist eVisa",
+    duration: "30 Days Stay",
+    processingTime: "2 – 4 Working Days",
+    baseNPRPrice: 8900,
+    entryType: "Single Entry",
+    inclusions: [
+      "Royal Oman Police eVisa Portal Submission",
+      "Direct Electronic Approval",
+      "Hotel & Travel Insurance Verification",
+      "Instant Delivery via WhatsApp",
+    ],
+  },
+  {
+    id: "bahrain-evisa",
+    country: "Bahrain",
+    countryCode: "BH",
+    region: "middle-east",
+    visaType: "Tourist eVisa",
+    duration: "14 – 30 Days",
+    processingTime: "3 – 5 Working Days",
+    baseNPRPrice: 8500,
+    entryType: "Single Entry",
+    inclusions: [
+      "NPRA Bahrain Official Electronic Portal",
+      "Return Flight & Hotel Verification",
+      "Direct Digital eVisa Delivery",
+      "Full Guidance for Airport Transit",
+    ],
+  },
+  {
+    id: "kuwait-visit",
+    country: "Kuwait",
+    countryCode: "KW",
+    region: "middle-east",
+    visaType: "Tourist / Family Visit",
+    duration: "30 Days Stay",
+    processingTime: "5 – 7 Working Days",
+    baseNPRPrice: 11000,
+    entryType: "Single Entry",
+    inclusions: [
+      "Kuwait Ministry of Interior Processing",
+      "Sponsor & Document Validation",
+      "Embassy Legalization Assistance",
+      "Safe Electronic Transmission",
+    ],
+  },
+  {
+    id: "sri-lanka-eta",
+    country: "Sri Lanka",
+    countryCode: "LK",
+    region: "asia",
+    visaType: "ETA Tourist Visa",
+    duration: "30 Days Stay",
+    processingTime: "1 – 2 Working Days",
+    baseNPRPrice: 6200,
+    entryType: "Double Entry",
+    inclusions: [
+      "Official Sri Lanka ETA Online Filing",
+      "Immediate Electronic Confirmation",
+      "Colombo & Kandy Holiday Itinerary Aid",
+      "24/7 WhatsApp Assistance",
+    ],
+  },
+  {
+    id: "maldives-arrival",
+    country: "Maldives",
+    countryCode: "MV",
+    region: "asia",
+    visaType: "Tourist On-Arrival Support",
+    duration: "30 Days Stay",
+    processingTime: "Instant / Same Day",
+    baseNPRPrice: 4500,
+    entryType: "Single Entry",
+    inclusions: [
+      "IMUGA Traveler Declaration Submission",
+      "Resort Booking Confirmation Verification",
+      "Confirmed Return Air Ticket Assistance",
+      "Smooth Immigration Clearance Guide",
+    ],
+  },
+  {
+    id: "cambodia-evisa",
+    country: "Cambodia",
+    countryCode: "KH",
+    region: "asia",
+    visaType: "Tourist eVisa (Type T)",
+    duration: "30 Days Stay",
+    processingTime: "2 – 3 Working Days",
+    baseNPRPrice: 7200,
+    entryType: "Single Entry",
+    inclusions: [
+      "Ministry of Foreign Affairs Cambodia Filing",
+      "Siem Reap & Angkor Wat Travel Itinerary",
+      "High Approval Electronic Delivery",
+      "Digital Certificate PDF",
+    ],
+  },
+  {
+    id: "philippines-9a",
+    country: "Philippines",
+    countryCode: "PH",
+    region: "asia",
+    visaType: "9A Temporary Visitor",
+    duration: "30 – 59 Days",
+    processingTime: "5 – 8 Working Days",
+    baseNPRPrice: 9000,
+    entryType: "Single Entry",
+    inclusions: [
+      "Embassy of the Philippines Verification",
+      "Notarized Affidavit of Support Review",
+      "Flight & Hotel Booking Vouchers",
+      "Complete Filing Support",
+    ],
+  },
+  {
+    id: "hong-kong-par",
+    country: "Hong Kong",
+    countryCode: "HK",
+    region: "asia",
+    visaType: "Pre-Arrival Registration (PAR)",
+    duration: "14 Days Stay",
+    processingTime: "1 – 2 Working Days",
+    baseNPRPrice: 5500,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "Hong Kong Immigration Department Portal",
+      "Immediate Registration Slip Issuance",
+      "Valid for 6 Months Multiple Trips",
+      "Electronic Document via WhatsApp",
+    ],
+  },
+  {
+    id: "south-africa-tourist",
+    country: "South Africa",
+    countryCode: "ZA",
+    region: "west",
+    visaType: "Visitor Tourist Visa",
+    duration: "Up to 90 Days",
+    processingTime: "15 – 20 Working Days",
+    baseNPRPrice: 16000,
+    entryType: "Single Entry",
+    inclusions: [
+      "VFS Global / High Commission Lodgement",
+      "Safari & Cape Town Travel Plan",
+      "Bank Statement & Ties Audit",
+      "Yellow Fever Vaccination Guidance",
+    ],
+  },
+  {
+    id: "brazil-tourist",
+    country: "Brazil",
+    countryCode: "BR",
+    region: "west",
+    visaType: "Visitor Visa (VIVIS)",
+    duration: "Up to 90 Days",
+    processingTime: "10 – 14 Working Days",
+    baseNPRPrice: 18000,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "Embassy of Brazil Consular Portal Filing",
+      "Rio & Amazon Holiday Itinerary Review",
+      "Financial Stability & Bank Proof",
+      "Complete Dossier Preparation",
+    ],
+  },
+  {
+    id: "switzerland-schengen",
+    country: "Switzerland",
+    countryCode: "CH",
+    region: "europe",
+    visaType: "Swiss Schengen Tourist",
+    duration: "Up to 90 Days",
+    processingTime: "10 – 15 Working Days",
+    baseNPRPrice: 18500,
+    entryType: "Multiple Entry",
+    inclusions: [
+      "Embassy of Switzerland VFS Booking",
+      "Alpine Train & Hotel Itinerary Preparation",
+      "Schengen Compliant Medical Insurance Aid",
+      "Full Financial Statement Audit",
+    ],
+    popular: true,
+  },
 ];
+
+const ensurePlanDetails = (p: VisaDetailPlan): VisaDetailPlan => {
+  const costOptions: CostOption[] =
+    p.costOptions && p.costOptions.length > 0
+      ? p.costOptions
+      : [
+          {
+            name: "Single Entry",
+            days: p.duration,
+            nprPrice: p.baseNPRPrice,
+            entryType: "Single Entry",
+            description: `Standard single entry ${p.visaType}`,
+          },
+          {
+            name: "Multiple Entry",
+            days: "90 Days",
+            nprPrice: Math.round(p.baseNPRPrice * 1.45),
+            entryType: "Multiple Entry",
+            description: `Frequent traveler multi-entry ${p.visaType}`,
+          },
+        ];
+
+  const requirementDocuments =
+    p.requirementDocuments && p.requirementDocuments.length > 0
+      ? p.requirementDocuments
+      : [
+          "Passport copy (Valid for at least 6 months with blank pages)",
+          "Passport size photo (Recent white background 35mm x 45mm)",
+          "Bank statement (Up to 6 months closing balance minimum NPR 200,000)",
+          "Confirmed Round trip ticket reservation",
+          "Confirm hotel booking voucher",
+          "Certified English translations for any documents originally in Nepali",
+          "Covering letter stating purpose and duration of visit",
+        ];
+
+  const termsAndConditions =
+    p.termsAndConditions && p.termsAndConditions.length > 0
+      ? p.termsAndConditions
+      : [
+          "Payment fully non-refundable if visa refused",
+          "Ticket canceled as per system penalties",
+          "Hotels payment is fully non-refundable",
+          "Embassy visa processing fees and service fees are strictly non-refundable.",
+          "Visa grant and processing timelines are at the sole discretion of the embassy.",
+        ];
+
+  const aboutText =
+    p.aboutText ||
+    `Nepali passport holders require a pre-approved tourist visa to enter ${p.country}. Trip Himalaya provides end-to-end guidance for official visa submission, ensuring seamless verification of bank funds, hotel bookings, flight itineraries, and certified translations.`;
+
+  return {
+    ...p,
+    costOptions,
+    requirementDocuments,
+    termsAndConditions,
+    aboutText,
+    successfulApplications: p.successfulApplications || "1000+",
+    successRate: p.successRate || "99%",
+  };
+};
+
+export const VISA_PLANS: VisaDetailPlan[] = VISA_PLANS_RAW.map(ensurePlanDetails);
 
 const VISA_FAQS = [
   {
@@ -197,13 +697,22 @@ const VISA_FAQS = [
   },
 ];
 
-
 export const VisaServicesDetailContent: React.FC = () => {
+  const navigate = useNavigate();
+  const INITIAL_COUNT = 9;
+  const LOAD_MORE_STEP = 15;
+
   const [activeTab, setActiveTab] = useState<string>("all");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_COUNT);
 
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
+
+  // Reset to initial 9 cards whenever filters or search change
+  useEffect(() => {
+    setVisibleCount(INITIAL_COUNT);
+  }, [activeTab, searchQuery]);
 
   const filteredPlans = VISA_PLANS.filter((plan) => {
     if (activeTab !== "all" && plan.region !== activeTab) return false;
@@ -213,7 +722,18 @@ export const VisaServicesDetailContent: React.FC = () => {
     return true;
   });
 
-  const handleWhatsAppInquiry = (plan: VisaPlan) => {
+  const displayedPlans = filteredPlans.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredPlans.length;
+
+  const handleSeeMore = () => {
+    setVisibleCount((prev) => prev + LOAD_MORE_STEP);
+  };
+
+  const handleSelectPlan = (plan: VisaDetailPlan) => {
+    navigate(`/details/${plan.id}`);
+  };
+
+  const handleWhatsAppInquiry = (plan: VisaDetailPlan) => {
     const formattedPrice = displayPrice(
       plan.baseNPRPrice,
       selectedCurrency,
@@ -221,72 +741,72 @@ export const VisaServicesDetailContent: React.FC = () => {
       nprPerOneINR
     );
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I would like to inquire about visa assistance for "${plan.country}" (${plan.visaType}, fee starting around ${formattedPrice}). Please guide me with requirements and next steps.`
+      `Hello Trip Himalaya (Visa & Documentation Team)! I would like to inquire about visa assistance for "${plan.country}" (${plan.visaType}, fee starting around ${formattedPrice}). Please guide me with requirements and next steps.`
     );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
+      {/* ── 1. DESTINATION SEARCH & REGION PILL BAR (Enclosed format as in sketch) ── */}
+      <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl sm:rounded-full border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 px-4 sm:px-6">
+        {/* Left side: "All Destination :" + Region Tabs */}
+        <div className="flex items-center flex-wrap gap-2 w-full md:w-auto">
+          <span className="text-xs sm:text-sm font-black text-[#2D1347] uppercase tracking-wider mr-1 whitespace-nowrap">
+            All Destination :
+          </span>
+          {[
+            { id: "all", label: "All" },
+            { id: "asia", label: "Asia" },
+            { id: "middle-east", label: "Gulf & UAE" },
+            { id: "europe", label: "Schengen" },
+            { id: "west", label: "USA & UK" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "bg-[#2D1347] text-white shadow-xs"
+                  : "text-gray-600 hover:text-[#2D1347] hover:bg-gray-100/80"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      {/* ── 1. OVERVIEW BANNER ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-        <span className="text-[#E91E63] font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
-          INTERNATIONAL VISA COUNSELING &amp; PROCESSING
-        </span>
-        <h2 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-4">
-          Hassle-Free Visa Solutions for Nepali &amp; Global Travelers
-        </h2>
-        <p className="text-gray-600 text-base leading-relaxed font-medium">
-          Navigating foreign embassy requirements, appointment backlogs, and strict financial documentation can be daunting.
-          Trip Himalaya provides end-to-end visa counseling, official appointment booking, and certified dossier preparation
-          for tourist, family, and business travel worldwide.
-        </p>
+        {/* Center vertical separator */}
+        <div className="hidden md:block h-6 w-[1px] bg-gray-200" />
 
+        {/* Right side: Search Box */}
+        <div className="relative w-full md:w-72">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search destination..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 hover:bg-gray-100/60 focus:bg-white border border-gray-200 rounded-full text-xs sm:text-sm font-semibold text-[#2D1347] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#E91E63] transition-colors"
+          />
+        </div>
       </div>
 
-      {/* ── 2. DESTINATION SEARCH & REGION TABS ── */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Region Tabs */}
-          <div className="flex bg-white p-1 rounded-2xl border border-gray-200 shadow-xs overflow-x-auto gap-1">
-            {[
-              { id: "all", label: "All Destinations" },
-              { id: "asia", label: "Asia" },
-              { id: "middle-east", label: "Gulf & UAE" },
-              { id: "europe", label: "Schengen" },
-              { id: "west", label: "USA & UK" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "bg-[#2D1347] text-white shadow-sm"
-                    : "text-gray-500 hover:text-[#2D1347] hover:bg-gray-50"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search destination..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9.5 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#2D1347] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#E91E63]"
-            />
+      {/* ── 2. POPULAR VISA DESTINATION SECTION (Underlined title as in sketch) ── */}
+      <div className="space-y-6">
+        <div className="text-center pt-2 pb-1">
+          <div className="inline-flex flex-col items-center">
+            <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#2D1347] tracking-tight">
+              Popular Visa Destination
+            </h3>
+            <div className="h-1.5 w-32 sm:w-40 bg-[#E91E63] rounded-full mt-2.5 shadow-xs" />
           </div>
         </div>
 
-        {/* ── 3. VISA CARDS GRID ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredPlans.map((plan) => {
+        {/* ── 3 COLUMNS & 3 ROWS GRID (Total 9 initially, as requested) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayedPlans.map((plan) => {
             const formattedPrice = displayPrice(
               plan.baseNPRPrice,
               selectedCurrency,
@@ -297,88 +817,119 @@ export const VisaServicesDetailContent: React.FC = () => {
             return (
               <div
                 key={plan.id}
-                className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
+                className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between relative group"
               >
                 {plan.popular && (
-                  <span className="absolute top-4 right-4 bg-gradient-to-r from-[#E91E63] to-pink-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-xs">
+                  <span className="absolute top-4 right-4 bg-gradient-to-r from-[#E91E63] to-pink-500 text-white text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full shadow-xs">
                     Popular
                   </span>
                 )}
 
                 <div>
-                  {/* Flag & Destination */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  {/* Flag & Destination (Text size increased as in Tours) */}
+                  <div className="flex items-center gap-3 mb-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-xs">
                       {plan.countryCode === "EU" ? (
-                        <span className="text-xl">🇪🇺</span>
+                        <span className="text-2xl">🇪🇺</span>
                       ) : (
                         <ReactCountryFlag
                           svg
                           countryCode={plan.countryCode}
-                          style={{ width: "1.6em", height: "1.6em", borderRadius: "3px" }}
+                          style={{ width: "1.8em", height: "1.8em", borderRadius: "4px" }}
                         />
                       )}
                     </div>
-                    <div>
-                      <h3 className="text-base font-black text-[#2D1347] tracking-tight">
+                    <div className="min-w-0 pr-14">
+                      <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug tracking-tight truncate">
                         {plan.country}
-                      </h3>
-                      <p className="text-[11px] font-bold text-[#E91E63]">{plan.visaType}</p>
+                      </h4>
+                      <p className="text-xs sm:text-sm font-bold text-[#E91E63] mt-0.5 truncate">
+                        {plan.visaType}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Key Metadata Badges */}
+                  {/* Key Metadata Badges (Text size increased) */}
                   <div className="flex flex-wrap gap-2 my-3">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-[#2D1347] text-[10px] font-bold">
-                      <Calendar size={11} className="text-[#E91E63]" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 text-[#2D1347] text-xs font-bold border border-purple-100/60">
+                      <Calendar size={13} className="text-[#E91E63]" />
                       <span>{plan.duration}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 text-gray-700 text-[10px] font-semibold border border-gray-100">
-                      <Clock size={11} className="text-gray-400" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gray-50 text-gray-700 text-xs font-semibold border border-gray-200/70">
+                      <Clock size={13} className="text-gray-400" />
                       <span>{plan.processingTime}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
                       <span>{plan.entryType}</span>
                     </span>
                   </div>
 
-                  {/* Inclusions List */}
-                  <div className="space-y-1.5 my-4 pt-3 border-t border-gray-100">
+                  {/* Inclusions List (Text size increased to text-xs sm:text-sm as in Tours) */}
+                  <div className="space-y-2 my-4 pt-3 border-t border-gray-100">
                     {plan.inclusions.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-gray-600">
-                        <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span>{item}</span>
+                      <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-gray-600 font-medium leading-tight">
+                        <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{item}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Pricing & CTA */}
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between mt-2">
-                  <div>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
+                {/* Pricing & Double Action Buttons (View Detail & Inquire) */}
+                <div className="pt-4 border-t border-gray-100 flex flex-col gap-2.5 mt-2">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
                       Assistance Fee Starts At
                     </span>
-                    <span className="text-xl font-black text-[#2D1347]">
+                    <span className="text-lg sm:text-xl font-black text-[#2D1347]">
                       {formattedPrice}
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => handleWhatsAppInquiry(plan)}
-                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-[#E91E63] to-pink-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <MessageCircle size={13} />
-                    <span>Inquire Now</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2.5 mt-1">
+                    <button
+                      onClick={() => handleSelectPlan(plan)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-purple-50 hover:bg-purple-100 text-[#2D1347] font-bold text-xs sm:text-sm rounded-xl border border-purple-200/80 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Eye size={15} className="text-[#E91E63]" />
+                      <span>View Detail</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleWhatsAppInquiry(plan)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-[#E91E63] to-pink-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <MessageCircle size={15} />
+                      <span>Inquire</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* ── SEE MORE BUTTON (Loads 15 more cards when clicked, matched to Tours page) ── */}
+        {hasMore ? (
+          <div className="flex flex-col items-center justify-center pt-8">
+            <button
+              onClick={handleSeeMore}
+              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
+            >
+              <span>See More</span>
+              <ChevronDown size={16} />
+            </button>
+          </div>
+        ) : filteredPlans.length > INITIAL_COUNT ? (
+          <div className="text-center pt-6">
+            <span className="inline-block px-5 py-2 rounded-full bg-purple-50 text-[#2D1347] text-xs sm:text-sm font-bold border border-purple-100 shadow-xs">
+              ✓ Showing all {filteredPlans.length} visa destinations
+            </span>
+          </div>
+        ) : null}
       </div>
 
-      {/* ── 4. HOW IT WORKS ── */}
+      {/* ── 4. HOW IT WORKS (Preserved as requested) ── */}
       <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-8 sm:p-12 rounded-3xl shadow-xl">
         <span className="text-pink-400 font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
           SEAMLESS 4-STEP PROCEDURE
@@ -423,7 +974,7 @@ export const VisaServicesDetailContent: React.FC = () => {
         </div>
       </div>
 
-      {/* ── 5. VISA FAQS ── */}
+      {/* ── 6. VISA FAQS (Preserved as requested) ── */}
       <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 rounded-xl bg-pink-50 text-[#E91E63]">
@@ -431,7 +982,7 @@ export const VisaServicesDetailContent: React.FC = () => {
           </div>
           <div>
             <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              Visa Service FAQs
+              FAQS Question
             </h3>
             <p className="text-xs text-gray-400 font-medium">Important answers to common visa queries</p>
           </div>
@@ -470,12 +1021,11 @@ export const VisaServicesDetailContent: React.FC = () => {
               </div>
             );
           })}
-
         </div>
       </div>
-
     </div>
   );
 };
 
 export default VisaServicesDetailContent;
+

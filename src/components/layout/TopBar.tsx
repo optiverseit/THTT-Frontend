@@ -21,11 +21,35 @@ import {
   ChevronDown,
   Facebook,
   Instagram,
-  Twitter,
+  Youtube,
   Linkedin,
 } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, type CurrencyMode } from "../../context/CurrencyContext";
+
+// =============================================================================
+// Social Icons
+// =============================================================================
+
+export const TikTokIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 13,
+  className = "",
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+);
 
 // =============================================================================
 // Currency / Flag Options
@@ -109,22 +133,22 @@ const TopBar: React.FC<TopBarProps> = () => {
   const whatsappTeams = useMemo(
     () => [
       {
-        label: "Marketing Team",
-        phone: "9779800000001",
+        label: "Tours & Holidays Team",
+        phone: "9779851403761",
         status: "Available",
-        message: "Hi Marketing Team, I''d like to know about your latest offers/packages.",
+        message: "Hi Tours & Holidays Team, I'd like to plan a tour/holiday package.",
       },
       {
-        label: "Ticketing Team",
-        phone: "9779800000002",
+        label: "Trekking & Adventure Activity",
+        phone: "9779851403761",
         status: "Available",
-        message: "Hi Ticketing Team, I need help with flight tickets and pricing.",
+        message: "Hi Trekking & Adventure Team, I need help with trekking/adventure activities.",
       },
       {
-        label: "Travel Team",
-        phone: "9779800000003",
+        label: "Visa & Documentation Team",
+        phone: "9779851420882",
         status: "Available",
-        message: "Hi Travel Team, I want to plan a trip. Please guide me.",
+        message: "Hi Visa & Documentation Team, I need help with visa application and documentation.",
       },
     ],
     []
@@ -184,11 +208,11 @@ const TopBar: React.FC<TopBarProps> = () => {
 
             {/* ── Email Link ── */}
             <a
-              href="mailto:info@triphimalaya.com.np"
+              href="mailto:triphimalayatt@gmail.com"
               className="hidden sm:flex items-center gap-1.5 hover:text-[#FF4FA3] transition-colors"
             >
               <Mail size={12} className="text-[#FF4FA3]" />
-              <span>info@triphimalaya.com.np</span>
+              <span>triphimalayatt@gmail.com</span>
             </a>
 
             {/* ── WhatsApp Dropdown (hidden on mobile, visible from sm up) ── */}
@@ -237,30 +261,74 @@ const TopBar: React.FC<TopBarProps> = () => {
               )}
             </div>
 
-            {/* ── Phone Link ── */}
-            <a
-              href="tel:+9779800000000"
-              className="hidden sm:flex items-center gap-1 hover:text-[#FF4FA3] transition-colors"
-            >
+            {/* ── Phone Links (Landline & Mobile) ── */}
+            <div className="hidden sm:flex items-center gap-1.5 font-medium">
               <Phone size={12} className="text-[#FF4FA3]" />
-              <span className="whitespace-nowrap font-medium">+977 980 0000000</span>
-            </a>
+              <a
+                href="tel:01-5922697"
+                className="hover:text-[#FF4FA3] transition-colors whitespace-nowrap"
+                title="Landline"
+              >
+                <span>Tel: 01-5922697</span>
+              </a>
+              <span className="text-gray-300">|</span>
+              <a
+                href="tel:+977-9851420882"
+                className="hover:text-[#FF4FA3] transition-colors whitespace-nowrap"
+                title="Mobile Phone"
+              >
+                <span>Phone: +977-9851420882</span>
+              </a>
+            </div>
 
             {/* ── Subtle Divider ── */}
             <span className="hidden sm:block h-3 w-px bg-gray-200 mx-0.5" />
 
             {/* ── Social Icons ── */}
             <div className="flex items-center gap-2 text-[#64748B]">
-              <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="hover:text-[#2D1347] transition-colors">
+              <a
+                href="https://www.facebook.com/profile.php?id=61567928307209"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook"
+                className="hover:text-[#1877F2] transition-colors"
+              >
                 <Facebook size={12.5} />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="hover:text-[#FF4FA3] transition-colors">
+              <a
+                href="https://www.instagram.com/triphimalayatt"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram"
+                className="hover:text-[#FF4FA3] transition-colors"
+              >
                 <Instagram size={12.5} />
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="Twitter" className="hover:text-sky-500 transition-colors">
-                <Twitter size={12.5} />
+              <a
+                href="https://www.tiktok.com/@trip.himalaya"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="TikTok"
+                className="hover:text-black transition-colors"
+              >
+                <TikTokIcon size={12.5} />
               </a>
-              <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="hover:text-blue-700 transition-colors">
+              <a
+                href="https://www.youtube.com/@triphimalaya"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="YouTube"
+                className="hover:text-[#FF0000] transition-colors"
+              >
+                <Youtube size={13.5} />
+              </a>
+              <a
+                href="https://www.linkedin.com/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="LinkedIn"
+                className="hover:text-[#0A66C2] transition-colors"
+              >
                 <Linkedin size={12.5} />
               </a>
             </div>

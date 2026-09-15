@@ -17,6 +17,7 @@ import BannerSection from "../components/reusable/BannerSection";
 import { blogPosts, videoPosts } from "../assets/data/mockData";
 import type { BlogPost, VideoPost } from "../assets/data/types";
 import PreFooter from "../components/reusable/PreFooter";
+import { copyToClipboard, triggerNativeShare } from "../utils/shareUtils";
 
 // Re-export for backward compatibility
 export type { BlogPost };
@@ -125,7 +126,22 @@ const VideoCard: React.FC<{ vlog: VideoPost }> = ({ vlog }) => (
             <ArrowRight size={8} className="text-white" />
           </span>
         </Link>
-        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 cursor-pointer">
+        <button
+          onClick={async (e) => {
+            e.preventDefault();
+            const shareUrl = `${window.location.origin}/watch/${vlog.id}`;
+            const shared = await triggerNativeShare({
+              title: `${vlog.title} | Trip Himalaya Video`,
+              text: vlog.description,
+              url: shareUrl,
+            });
+            if (!shared) {
+              await copyToClipboard(shareUrl);
+            }
+          }}
+          title="Share Video"
+          className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-[#E91E63] cursor-pointer"
+        >
           <Share2 size={12} />
         </button>
       </div>

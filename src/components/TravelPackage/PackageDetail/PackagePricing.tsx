@@ -18,6 +18,7 @@
 import React, { useState } from "react";
 import type { Package } from "../../../assets/data/types";
 import VerificationCard from "./VerificationCard";
+import BookingModal from "../../reuseable/packages/BookingModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 
@@ -46,7 +47,7 @@ interface PackagePricingProps {
 // =============================================================================
 
 /** WhatsApp business phone number for direct inquiries */
-const WHATSAPP_BUSINESS_NUMBER = "9779800000000";
+const WHATSAPP_BUSINESS_NUMBER = "9779851403761";
 
 // =============================================================================
 // Pure Helper Functions
@@ -85,8 +86,14 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   // Local State
   // ---------------------------------------------------------------------------
 
+  /** Selected experience tier index */
+  const [selectedTierIndex, setSelectedTierIndex] = useState<number>(0);
+
   /** Number of travelers selected by the user */
   const [numberOfGuests, setNumberOfGuests] = useState<number>(1);
+
+  /** Controls opening the upgraded BookingModal */
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
 
   /** Controls the booking confirmation animation (resets after 3s) */
   const [isBookingConfirmed, setIsBookingConfirmed] = useState<boolean>(false);
@@ -115,17 +122,17 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
           {
             serviceName: "Standard Experience",
             targetAgeGroup: "Adult (16+)",
-            priceInNPR: basePackagePriceInUSD * nprPerOneDollar,
+            priceInNPR: 9500,
           },
           {
             serviceName: "VIP Tandem + Media Pack",
             targetAgeGroup: "All Ages",
-            priceInNPR: Math.round(basePackagePriceInUSD * 1.3 * nprPerOneDollar),
+            priceInNPR: 12500,
           },
           {
             serviceName: "Student / Youth Special",
             targetAgeGroup: "Youth (12-15)",
-            priceInNPR: Math.round(basePackagePriceInUSD * 0.85 * nprPerOneDollar),
+            priceInNPR: 8000,
           },
         ];
 
@@ -134,17 +141,16 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   // ---------------------------------------------------------------------------
 
   /**
-   * Unit price used for the total calculation:
-   * - In Nepali mode: raw NPR of the first row
-   * - In INR mode: first row NPR divided by exchange rate (in INR)
-   * - In Foreigner mode: first row NPR divided by exchange rate (in USD)
+   * Unit price used for the total calculation based on the user-selected tier
    */
+  const selectedRow = pricingRows[selectedTierIndex] || pricingRows[0];
+
   const unitPriceForEstimatedTotal: number =
     selectedCurrency === "nepali"
-      ? pricingRows[0].priceInNPR
+      ? selectedRow.priceInNPR
       : selectedCurrency === "inr"
-      ? Math.round(pricingRows[0].priceInNPR / nprPerOneINR)
-      : Math.round(pricingRows[0].priceInNPR / nprPerOneDollar);
+      ? Math.round(selectedRow.priceInNPR / nprPerOneINR)
+      : Math.round(selectedRow.priceInNPR / nprPerOneDollar);
 
   /** Final estimated total = unit price * guest count */
   const estimatedTotalPrice: number = unitPriceForEstimatedTotal * numberOfGuests;
@@ -192,24 +198,24 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   };
 
   const handleBookNow = (): void => {
-    setIsBookingConfirmed(true);
-    setTimeout(() => setIsBookingConfirmed(false), 3000);
+    setIsBookingModalOpen(true);
   };
 
   const handleWhatsAppInquiry = (): void => {
     const currencyText =
       selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
+    const isTour = pkg.type === "tour";
+    const teamName = isTour ? "Tours & Holidays Team" : "Trekking & Adventure Activity Team";
     const packageTitle = pkg.title;
     const guestCount = numberOfGuests;
     const totalFormatted = getFormattedEstimatedTotal();
+    const tierName = selectedRow.serviceName;
 
     const inquiryMessage = encodeURIComponent(
-      `Hello Trip Himalaya! I am interested in booking "${packageTitle}" for ${guestCount} guest(s). ` +
-        `Estimated Total: ${totalFormatted} (${currencyText}). Please provide availability and confirmation steps.`
+      `Hello Trip Himalaya (${teamName})! I am interested in booking "${packageTitle}" (${tierName}) for ${guestCount} guest(s). Estimated Total: ${totalFormatted} (${currencyText}). Please share availability and confirmation details.`
     );
 
-    const whatsappUrl = `https://wa.me/${WHATSAPP_BUSINESS_NUMBER}?text=${inquiryMessage}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/${WHATSAPP_BUSINESS_NUMBER}?text=${inquiryMessage}`, "_blank", "noopener,noreferrer");
   };
 
   // ---------------------------------------------------------------------------
@@ -217,6 +223,7 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   // ---------------------------------------------------------------------------
 
   return (
+    <>
     <div className="space-y-4">
 
       {/* =======================================================================
@@ -310,33 +317,64 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
         {/* Pricing Table + Controls body */}
         <div className="p-3 sm:p-3.5 space-y-2.5">
 
-          {/* Pricing Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
-                <tr>
-                  <th className="pb-2">Service</th>
-                  <th className="pb-2">Age Group</th>
-                  <th className="pb-2 text-right">Price</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100/60">
-                {pricingRows.map((pricingRow, rowIndex) => (
-                  <tr key={rowIndex} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-2 font-bold text-[#200B3B] text-xs">
-                      {pricingRow.serviceName}
+          {/* Pricing Table — proper HTML table for guaranteed column alignment */}
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/2">
+                  Option / Tier
+                </th>
+                <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">
+                  Age Group
+                </th>
+                <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-right">
+                  Price
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {pricingRows.map((pricingRow, rowIndex) => {
+                const isSelected = selectedTierIndex === rowIndex;
+                return (
+                  <tr
+                    key={rowIndex}
+                    onClick={() => setSelectedTierIndex(rowIndex)}
+                    className="cursor-pointer hover:bg-gray-50/60 transition-colors"
+                  >
+                    {/* Radio + service name */}
+                    <td className="py-2.5 pr-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isSelected
+                              ? "border-[#E91E63] bg-[#E91E63]"
+                              : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                          )}
+                        </span>
+                        <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
+                          {pricingRow.serviceName}
+                        </span>
+                      </div>
                     </td>
-                    <td className="py-2 text-gray-500 text-[11px]">
+
+                    {/* Age Group */}
+                    <td className="py-2.5 text-[10px] text-gray-500">
                       {pricingRow.targetAgeGroup}
                     </td>
-                    <td className="py-2 text-right font-black text-[#E91E63] text-sm">
+
+                    {/* Price */}
+                    <td className={`py-2.5 text-xs font-black text-right whitespace-nowrap ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
                       {getRowDisplayPrice(pricingRow)}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </tbody>
+          </table>
 
           {/* Guest Count Selector */}
           <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
@@ -373,18 +411,12 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
           </div>
 
           {/* Estimated Total */}
-          <div className="flex items-center justify-between pt-0.5">
-            <div>
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                Estimated Total
-              </span>
-              <span className="text-lg font-black text-[#200B3B]">
-                {getFormattedEstimatedTotal()}
-              </span>
-            </div>
-            <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Zap size={10} />
-              Best Rate
+          <div className="pt-0.5">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+              Estimated Total
+            </span>
+            <span className="text-lg font-black text-[#200B3B]">
+              {getFormattedEstimatedTotal()}
             </span>
           </div>
 
@@ -426,6 +458,18 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
           ======================================================================= */}
       <VerificationCard />
     </div>
+
+    {/* =======================================================================
+        BOOKING MODAL — opens when user clicks "Book This Trip Now"
+        ======================================================================= */}
+    <BookingModal
+      pkg={pkg}
+      isOpen={isBookingModalOpen}
+      onClose={() => setIsBookingModalOpen(false)}
+      initialTierIndex={selectedTierIndex}
+      initialGuests={numberOfGuests}
+    />
+    </>
   );
 };
 

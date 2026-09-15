@@ -104,9 +104,9 @@ export const TrekkingDetailContent: React.FC = () => {
     const formattedPrice = formatPackagePrice(priceStr);
     const priceText = formattedPrice ? ` (${formattedPrice})` : "";
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am interested in trekking the "${trekTitle}"${priceText}. Please share the day-by-day itinerary, dates, and package price.`
+      `Hello Trip Himalaya (Trekking & Adventure Activity Team)! I am interested in trekking "${trekTitle}"${priceText}. Please share the day-by-day itinerary, dates, and package price.`
     );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   const getDifficultyColor = (diff?: string) => {

@@ -9,7 +9,7 @@ interface Props {
 
 const PreFooter: React.FC<Props> = ({ title, description, btn1, btn2 }) => {
   return (
-    <section className="w-full bg-gradient-to-r from-pink-600 to-rose-500 py-10 px-4 sm:px-6 md:px-16">
+    <section className="print:hidden w-full bg-gradient-to-r from-pink-600 to-rose-500 py-10 px-4 sm:px-6 md:px-16">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         {/* Left Content */}
         <div className="text-white text-center md:text-left">
@@ -20,7 +20,7 @@ const PreFooter: React.FC<Props> = ({ title, description, btn1, btn2 }) => {
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <a
-            href="tel:+9779800000000"
+            href="tel:+9779851420882"
             className="bg-indigo-950 text-white px-6 sm:px-8 py-3 rounded-full font-semibold hover:bg-indigo-900 transition text-sm sm:text-base w-full sm:w-auto text-center inline-block cursor-pointer shadow-md"
           >
             {btn1}

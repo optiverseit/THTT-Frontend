@@ -181,9 +181,9 @@ const About: React.FC = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-black text-[#2D1347] mb-4 tracking-tight">Visit Our Office</h2>
-            <p className="text-slate-500 font-medium mb-10 text-base">Located in the heart of Kathmandu.</p>
+            <p className="text-slate-500 font-medium mb-10 text-base">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</p>
             <a
-              href="https://maps.google.com/?q=Kantipath,Kathmandu,Nepal"
+              href="https://maps.google.com/?q=Airport,Shambhu+Marg,Road+No+04,Kathmandu,Nepal"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 bg-[#5D2A8E] text-white px-8 sm:px-12 py-4 sm:py-5 rounded-full font-black tracking-widest hover:bg-[#D92671] transition-all shadow-xl active:scale-95"

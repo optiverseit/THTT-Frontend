@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Share2,
   Bookmark,
@@ -15,10 +15,13 @@ import {
 import { useNavigate, useParams, Link } from "react-router-dom";
 import PreFooter from "../components/reusable/PreFooter";
 import { blogPosts } from "../assets/data/mockData";
+import ShareModal from "../components/reuseable/ShareModal";
+import { shareToPlatform } from "../utils/shareUtils";
 
 const BlogDetailMore: React.FC = () => {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const post = blogPosts.find(
     (p) => p.slug.toLowerCase() === slug?.toLowerCase() || p.id === slug
@@ -159,13 +162,39 @@ const BlogDetailMore: React.FC = () => {
         <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400">
           <span>Share Story:</span>
           <div className="flex gap-3">
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors cursor-pointer">
+            <button
+              onClick={() =>
+                shareToPlatform("facebook", {
+                  title: `${post.title} | Trip Himalaya Travel Stories`,
+                  text: post.excerpt || "Read this inspiring story on Trip Himalaya Tours & Travel!",
+                  image: post.image,
+                  url: typeof window !== "undefined" ? window.location.href : undefined,
+                })
+              }
+              title="Share on Facebook"
+              className="p-2 rounded-full bg-gray-100 hover:bg-[#1877F2] hover:text-white text-gray-500 transition-all cursor-pointer"
+            >
               <Facebook size={13} />
             </button>
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors cursor-pointer">
+            <button
+              onClick={() =>
+                shareToPlatform("twitter", {
+                  title: `${post.title} | Trip Himalaya Travel Stories`,
+                  text: post.excerpt || "Read this inspiring story on Trip Himalaya Tours & Travel!",
+                  image: post.image,
+                  url: typeof window !== "undefined" ? window.location.href : undefined,
+                })
+              }
+              title="Share on X"
+              className="p-2 rounded-full bg-gray-100 hover:bg-black hover:text-white text-gray-500 transition-all cursor-pointer"
+            >
               <Twitter size={13} />
             </button>
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors cursor-pointer">
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              title="More sharing options"
+              className="p-2 rounded-full bg-gray-100 hover:bg-[#E91E63] hover:text-white text-gray-500 transition-all cursor-pointer"
+            >
               <Share2 size={13} />
             </button>
           </div>
@@ -350,6 +379,17 @@ const BlogDetailMore: React.FC = () => {
         description="Connect with our Himalayan travel specialists to book your trek, tour, or custom package."
         btn1="Call Us Now"
         btn2="Get a Free Quote"
+      />
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        data={{
+          title: `${post.title} | Trip Himalaya Travel Stories`,
+          text: post.excerpt || "Read this inspiring travel story on Trip Himalaya Tours & Travel.",
+          image: post.image,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        }}
       />
     </div>
   );

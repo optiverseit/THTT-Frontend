@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { videoPosts } from "../../assets/data/mockData";
 import YouTubePlayer from "./YouTubePlayer";
+import ShareModal from "../reuseable/ShareModal";
+import { shareToPlatform } from "../../utils/shareUtils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,6 +21,7 @@ import {
 const VideoDetails: React.FC = () => {
   const { videoId } = useParams();
   const navigate = useNavigate();
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const video = videoPosts.find(
     (v) => v.id.toLowerCase() === videoId?.toLowerCase()
@@ -142,14 +145,41 @@ const VideoDetails: React.FC = () => {
                 </button>
               </div>
               <div className="flex gap-2">
-                {[Facebook, Twitter, Share2].map((Icon, i) => (
-                  <button
-                    key={i}
-                    className="p-2.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 cursor-pointer"
-                  >
-                    <Icon size={14} />
-                  </button>
-                ))}
+                <button
+                  onClick={() =>
+                    shareToPlatform("facebook", {
+                      title: `${video.title} | Trip Himalaya Video Journeys`,
+                      text: video.description,
+                      image: video.thumbnail,
+                      url: typeof window !== "undefined" ? window.location.href : undefined,
+                    })
+                  }
+                  title="Share on Facebook"
+                  className="p-2.5 rounded-full bg-gray-100 hover:bg-[#1877F2] hover:text-white transition-all text-gray-600 cursor-pointer"
+                >
+                  <Facebook size={14} />
+                </button>
+                <button
+                  onClick={() =>
+                    shareToPlatform("twitter", {
+                      title: `${video.title} | Trip Himalaya Video Journeys`,
+                      text: video.description,
+                      image: video.thumbnail,
+                      url: typeof window !== "undefined" ? window.location.href : undefined,
+                    })
+                  }
+                  title="Share on X"
+                  className="p-2.5 rounded-full bg-gray-100 hover:bg-black hover:text-white transition-all text-gray-600 cursor-pointer"
+                >
+                  <Twitter size={14} />
+                </button>
+                <button
+                  onClick={() => setIsShareModalOpen(true)}
+                  title="More sharing options"
+                  className="p-2.5 rounded-full bg-gray-100 hover:bg-[#E91E63] hover:text-white transition-all text-gray-600 cursor-pointer"
+                >
+                  <Share2 size={14} />
+                </button>
               </div>
             </div>
 
@@ -221,6 +251,18 @@ const VideoDetails: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        data={{
+          title: `${video.title} | Trip Himalaya Video Journeys`,
+          text: video.description || "Watch this breathtaking journey with Trip Himalaya Tours & Travel!",
+          image: video.thumbnail,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        }}
+      />
     </div>
   );
 };

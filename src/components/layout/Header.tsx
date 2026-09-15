@@ -11,7 +11,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onOpenInquiry }) => {
   return (
-    <header className="w-full relative z-[300] isolate">
+    <header className="print:hidden w-full relative z-[300] isolate">
       <div className="relative">
 
         {/* ── RESPONSIVE OVAL LOGO CARD ──

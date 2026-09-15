@@ -2,7 +2,6 @@ import React from "react";
 import { useOutletContext } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
 import { CheckCircle2, Clock, MapPin } from "lucide-react";
-import PackageTimeline from "./PackageTimeline";
 import IncludesExclude from "./IncludesExclude";
 import PackagePricing from "./PackagePricing";
 
@@ -66,15 +65,12 @@ const PackageOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Timeline & Roadmap */}
-          <PackageTimeline />
-
           {/* Inclusions & Exclusions */}
           <IncludesExclude />
         </div>
 
         {/* ── RIGHT STICKY PRICING SIDEBAR (4 cols) ── */}
-        <div id="pricing-section" className="lg:col-span-4 lg:sticky lg:top-[190px] self-start space-y-6">
+        <div id="pricing-section" className="lg:col-span-4 lg:sticky lg:top-[220px] self-start space-y-6">
           <PackagePricing pkg={pkg} />
         </div>
       </div>

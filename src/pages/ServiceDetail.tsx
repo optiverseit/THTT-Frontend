@@ -30,6 +30,7 @@ import {
   Globe2,
   Zap,
   Fuel,
+  CheckCircle2,
 } from "lucide-react";
 import BannerSection from "../components/reuseable/BannerSection";
 import Testimonials from "../components/reuseable/Testimonials";
@@ -380,13 +381,14 @@ const ServiceDetail: React.FC = () => {
             <Globe size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                SELECT DESTINATION
+                DESTINATION COUNTRY
               </label>
               <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="">All Destinations</option>
+                <option value="">Select Country</option>
                 <option value="uae">UAE (Dubai / Abu Dhabi)</option>
                 <option value="thailand">Thailand</option>
                 <option value="singapore">Singapore</option>
+                <option value="malaysia">Malaysia</option>
                 <option value="japan">Japan</option>
                 <option value="schengen">Schengen Europe</option>
                 <option value="uk">United Kingdom</option>
@@ -399,13 +401,27 @@ const ServiceDetail: React.FC = () => {
             <FileText size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                VISA CATEGORY
+                VISA TYPE
               </label>
               <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="tourist">Tourist / Visit Visa</option>
+                <option value="tourist">Tourist Visa</option>
                 <option value="business">Business Visa</option>
                 <option value="transit">Transit Visa</option>
-                <option value="express">Express Fast-Track Filing</option>
+                <option value="express">Express Fast-Track</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Shield size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                ENTRY TYPE
+              </label>
+              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+                <option value="single">Single Entry</option>
+                <option value="multiple">Multiple Entry</option>
+                <option value="transit">Transit Entry</option>
               </select>
             </div>
           </div>
@@ -843,7 +859,7 @@ const ServiceDetail: React.FC = () => {
             </section>
 
           ) : (
-            /* ── VISA SERVICES HERO (default) ── */
+            /* ── VISA SERVICES HERO ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
               <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
               <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
@@ -854,17 +870,23 @@ const ServiceDetail: React.FC = () => {
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
                 <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
-                {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
+                  "Find the right visa for your destination"
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
-                    { icon: Shield, label: "98.4% Approval Rate", desc: "Visas Successfully Approved" },
-                    { icon: Globe2, label: "45+ Destinations", desc: "Worldwide Coverage" },
-                    { icon: Clock, label: "3-5 Days Turnaround", desc: "Fast Processing" },
-                    { icon: Zap, label: "24/7 Embassy Support", desc: "Always Available" },
+                    { icon: Shield, label: "98%+", desc: "Visa Approved" },
+                    { icon: Globe2, label: "45+", desc: "Destinations" },
+                    { icon: Clock, label: "3–5 Days", desc: "Working Days" },
+                    { icon: Zap, label: "24/7", desc: "Supports" },
+                    { icon: CheckCircle2, label: "●", desc: "Document Pickup Sec." },
                   ].map((stat, idx) => { const Icon = stat.icon; return (
                     <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
                       <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
-                      <div className="flex flex-col text-left min-w-0"><h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4><p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p></div>
+                      <div className="flex flex-col text-left min-w-0">
+                        <h4 className="font-bold text-[#2D1347] text-[10px] sm:text-[11px] leading-tight group-hover:text-[#E91E63] transition-colors break-words">{stat.label}</h4>
+                        <p className="text-[#2D1347]/70 text-[8.5px] sm:text-[9.5px] mt-0.5 font-medium leading-tight break-words">{stat.desc}</p>
+                      </div>
                     </div>
                   ); })}
                 </div>
@@ -884,7 +906,7 @@ const ServiceDetail: React.FC = () => {
           className="w-full pt-8 sm:pt-9 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-3 sm:mt-4"
         >
           <div className="max-w-7xl mx-auto">
-            {!isTours && !isActivities && !isTrekking && !isHotelBooking && !isVehicleRental && (
+            {!isTours && !isActivities && !isTrekking && !isHotelBooking && !isVehicleRental && !isVisaServices && (
               <header className="text-center mb-8">
                 <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
                   {getServicesSectionBadge()}

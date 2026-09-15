@@ -3,7 +3,9 @@ import BannerSection from "../components/reuseable/BannerSection";
 import { Search, MapPin, Star, ShieldCheck, Users } from "lucide-react";
 import FilterSideBar from "../components/TravelPackage/FilterSiderBar";
 import { packages } from "../assets/data/mockData";
+import type { Package } from "../assets/data/types";
 import PackageDetailsSection from "../components/TravelPackage/PackageDetailsSection";
+import BookingModal from "../components/reuseable/packages/BookingModal";
 import Testimonials from "../components/reuseable/Testimonials";
 import PreFooter from "../components/reuseable/PreFooter";
 
@@ -14,6 +16,13 @@ const Packages: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number>(5000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [selectedBookingPkg, setSelectedBookingPkg] = useState<Package | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
+
+  const handleBookPackage = (pkgToBook: Package) => {
+    setSelectedBookingPkg(pkgToBook);
+    setIsBookingModalOpen(true);
+  };
 
   const handleSearch = () => {
     const filtered = packages.filter((pkg) => {
@@ -184,7 +193,10 @@ const Packages: React.FC = () => {
 
           {/* Right: Package Details Cards */}
           <div className="lg:col-span-3">
-            <PackageDetailsSection pkgs={filteredPackages} />
+            <PackageDetailsSection
+              pkgs={filteredPackages}
+              onBook={handleBookPackage}
+            />
           </div>
         </div>
 
@@ -200,6 +212,13 @@ const Packages: React.FC = () => {
         description="Speak with our travel specialists to create your dream custom itinerary."
         btn1="Call Us Now"
         btn2="Request Custom Quote"
+      />
+
+      {/* ── 5. BOOKING MODAL POPUP ── */}
+      <BookingModal
+        pkg={selectedBookingPkg}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
       />
     </div>
   );

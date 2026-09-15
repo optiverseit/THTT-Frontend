@@ -9,9 +9,10 @@ import {
   Phone,
   Facebook,
   Instagram,
-  Twitter,
+  Youtube,
   Linkedin,
 } from "lucide-react";
+import { TikTokIcon } from "./TopBar";
 
 interface NavBarProps {
   onOpenInquiry?: () => void;
@@ -188,22 +189,35 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
           {/* Contacts in mobile drawer */}
           <div className="pt-3 border-t border-white/10 flex flex-col gap-2 text-xs text-white/80">
-            <a href="mailto:info@triphimalaya.com.np" className="flex items-center gap-2 hover:text-[#FF4FA3]">
+            <a href="mailto:triphimalayatt@gmail.com" className="flex items-center gap-2 hover:text-[#FF4FA3]">
               <Mail size={14} className="text-[#FF4FA3]" />
-              <span>info@triphimalaya.com.np</span>
+              <span>triphimalayatt@gmail.com</span>
             </a>
-            <a href="tel:+9779800000000" className="flex items-center gap-2 hover:text-[#FF4FA3]">
+            <div className="flex items-center gap-2 flex-wrap">
               <Phone size={14} className="text-[#FF4FA3]" />
-              <span>+977 980 0000000</span>
-            </a>
+              <a href="tel:01-5922697" className="hover:text-[#FF4FA3]">Tel: 01-5922697</a>
+              <span className="text-white/40">|</span>
+              <a href="tel:+977-9851420882" className="hover:text-[#FF4FA3]">Phone: +977-9851420882</a>
+            </div>
           </div>
 
           {/* Socials */}
           <div className="pt-2 flex items-center gap-4 text-gray-300">
-            <Facebook size={16} className="cursor-pointer hover:text-blue-400" />
-            <Instagram size={16} className="cursor-pointer hover:text-pink-400" />
-            <Twitter size={16} className="cursor-pointer hover:text-sky-400" />
-            <Linkedin size={16} className="cursor-pointer hover:text-blue-400" />
+            <a href="https://www.facebook.com/profile.php?id=61567928307209" target="_blank" rel="noreferrer" aria-label="Facebook" className="hover:text-blue-400">
+              <Facebook size={16} />
+            </a>
+            <a href="https://www.instagram.com/triphimalayatt" target="_blank" rel="noreferrer" aria-label="Instagram" className="hover:text-pink-400">
+              <Instagram size={16} />
+            </a>
+            <a href="https://www.tiktok.com/@trip.himalaya" target="_blank" rel="noreferrer" aria-label="TikTok" className="hover:text-white">
+              <TikTokIcon size={16} />
+            </a>
+            <a href="https://www.youtube.com/@triphimalaya" target="_blank" rel="noreferrer" aria-label="YouTube" className="hover:text-red-500">
+              <Youtube size={17} />
+            </a>
+            <a href="https://www.linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="hover:text-blue-400">
+              <Linkedin size={16} />
+            </a>
           </div>
         </div>
       )}

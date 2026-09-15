@@ -37,14 +37,14 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
   // Open WhatsApp for direct package inquiry
   const handleInquiryClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const whatsappPhone = "9779800000003";
-    const priceText = formattedPrice ? ` (${formattedPrice})` : "";
-    const locationText = pkg.location ? ` in ${pkg.location}` : "";
-    const durationText = pkg.duration ? ` - Duration: ${pkg.duration}` : "";
-
-    const message = `Hello Trip Himalaya! I would like to inquire about the "${pkg.title}" package${locationText}${durationText}${priceText}. Please share more details and availability.`;
-    const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    const isTour = pkg.type === "tour";
+    const teamName = isTour ? "Tours & Holidays Team" : "Trekking & Adventure Activity Team";
+    const whatsappPhone = "9779851403761";
+    const priceText = formattedPrice ? ` Starting price: ${formattedPrice}.` : "";
+    const locationText = pkg.location ? ` (${pkg.location})` : "";
+    const durationText = pkg.duration ? ` - Duration: ${pkg.duration}.` : "";
+    const message = `Hello Trip Himalaya (${teamName})! I am interested in "${pkg.title}"${locationText}${durationText}${priceText} Please share availability and details.`;
+    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
   };
 
   // Open Booking Modal

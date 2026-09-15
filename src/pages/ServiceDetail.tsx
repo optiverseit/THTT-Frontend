@@ -421,7 +421,6 @@ const ServiceDetail: React.FC = () => {
               <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
                 <option value="single">Single Entry</option>
                 <option value="multiple">Multiple Entry</option>
-                <option value="transit">Transit Entry</option>
               </select>
             </div>
           </div>
@@ -873,7 +872,7 @@ const ServiceDetail: React.FC = () => {
                 <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
                   "Find the right visa for your destination"
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
                     { icon: Shield, label: "98%+", desc: "Visa Approved" },
                     { icon: Globe2, label: "45+", desc: "Destinations" },

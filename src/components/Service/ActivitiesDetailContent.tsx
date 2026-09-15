@@ -195,20 +195,20 @@ export const ActivitiesDetailContent: React.FC = () => {
       </div>
 
       {/* ── 3. SAFETY FIRST PROTOCOLS ── */}
-      <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-3xl p-8 sm:p-10 shadow-xl">
-        <div className="max-w-3xl mb-8">
-          <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
+      <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 shadow-xl">
+        <div className="max-w-3xl mb-6 sm:mb-8">
+          <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs block mb-1">
             SAFETY &amp; CERTIFICATION
           </span>
-          <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight">
             How We Protect You On Every Jump, Flight &amp; Rapid
           </h3>
-          <p className="text-gray-300 text-sm mt-2 font-medium">
+          <p className="text-gray-300 text-xs sm:text-sm mt-2 font-medium">
             We adhere to the highest international adventure tourism safety codes with certified instructors, double-checked equipment, and daily inspections.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
           {[
             {
               icon: ShieldCheck,
@@ -243,7 +243,7 @@ export const ActivitiesDetailContent: React.FC = () => {
           ].map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div key={idx} className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10">
+              <div key={idx} className="bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] flex items-center justify-center text-white mb-3 shadow-md">
                   <Icon size={20} />
                 </div>
@@ -256,11 +256,11 @@ export const ActivitiesDetailContent: React.FC = () => {
       </div>
 
       {/* ── 4. WHAT TO BRING & PACKING GUIDE ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm">
+        <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs block mb-1">
           ESSENTIAL CHECKLIST
         </span>
-        <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-6">
+        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2D1347] tracking-tight mb-4 sm:mb-6">
           What to Wear &amp; Bring for Adventure Sports
         </h3>
 

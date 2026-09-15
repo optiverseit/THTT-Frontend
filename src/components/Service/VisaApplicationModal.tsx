@@ -813,32 +813,34 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
                 <button
                   type="button"
                   onClick={handleWhatsAppShare}
-                  className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer truncate"
+                  className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer"
                 >
                   <MessageCircle size={15} />
                   <span>Chat on WhatsApp</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handlePrintSlip}
-                  className="py-2.5 px-3.5 bg-white hover:bg-purple-50/70 border border-purple-200 text-[#1A0B2E] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer hover:border-purple-300"
-                >
-                  <Printer size={13} className="text-purple-700" />
-                  <span>Print Slip</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrintSlip}
+                    className="flex-1 py-2.5 px-3.5 bg-white hover:bg-purple-50/70 border border-purple-200 text-[#1A0B2E] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer hover:border-purple-300"
+                  >
+                    <Printer size={13} className="text-purple-700" />
+                    <span>Print Slip</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleResetAndClose}
-                  className="py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  Done
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleResetAndClose}
+                    className="flex-1 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -928,7 +930,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </h4>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {/* Passport Number */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">

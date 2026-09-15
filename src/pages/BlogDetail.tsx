@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Facebook,
   Twitter,
-  ChevronLeft,
   ArrowRight,
   TrendingUp,
   FileQuestion,
@@ -92,27 +91,18 @@ const BlogDetailMore: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a0d35]/95 via-[#2D1B69]/40 to-transparent" />
         </div>
 
-        <div className="relative h-full max-w-7xl mx-auto px-5 sm:px-8 flex flex-col justify-between py-8">
-          {/* Back button — top left */}
-          <button
-            onClick={() => navigate("/blog")}
-            className="flex items-center gap-2 w-fit px-5 py-2 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-black tracking-widest text-[#2D1B69] hover:bg-white transition-all uppercase cursor-pointer shadow-sm"
-          >
-            <ChevronLeft size={14} />
-            Back to Journal
-          </button>
-
+        <div className="relative h-full max-w-7xl mx-auto px-5 sm:px-8 flex flex-col justify-end py-8">
           {/* Title block — bottom */}
           <div className="max-w-3xl pb-4">
             <span className="inline-block px-4 py-1 bg-[#E91E63] text-[10px] font-black tracking-widest rounded-md mb-4 uppercase text-white">
               {post.category}
             </span>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 sm:mb-6 leading-tight">
               {post.title}
             </h1>
 
             {/* Author / Published / Read Time row */}
-            <div className="flex flex-wrap gap-6 sm:gap-10">
+            <div className="flex flex-wrap gap-4 sm:gap-6 md:gap-10">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-[#E91E63] flex items-center justify-center text-white text-sm font-black flex-shrink-0">
                   {post.author.slice(0, 2).toUpperCase()}
@@ -121,7 +111,7 @@ const BlogDetailMore: React.FC = () => {
                   <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest">
                     Author
                   </p>
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-xs sm:text-sm font-bold text-white">
                     {post.author.toUpperCase()}
                   </p>
                 </div>
@@ -130,14 +120,14 @@ const BlogDetailMore: React.FC = () => {
                 <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest flex items-center gap-1">
                   <Calendar size={9} /> Published
                 </p>
-                <p className="text-sm font-bold text-white">{post.date}</p>
+                <p className="text-xs sm:text-sm font-bold text-white">{post.date}</p>
               </div>
               {post.readTime && (
                 <div>
                   <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest flex items-center gap-1">
                     <Clock size={9} /> Read Time
                   </p>
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-xs sm:text-sm font-bold text-white">
                     {post.readTime}
                   </p>
                 </div>
@@ -148,7 +138,7 @@ const BlogDetailMore: React.FC = () => {
       </section>
 
       {/* ── META ACTION BAR ── */}
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-5 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-4 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex gap-6 text-[10px] font-bold tracking-widest text-gray-400">
           <button className="flex items-center gap-2 hover:text-[#E91E63] transition-colors cursor-pointer">
             <Bookmark size={14} />
@@ -202,8 +192,8 @@ const BlogDetailMore: React.FC = () => {
       </div>
 
       {/* ── MAIN CONTENT + SIDEBAR ── */}
-      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-14">
+      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-14">
 
           {/* Article body */}
           <div className="lg:col-span-8 space-y-6">
@@ -277,9 +267,9 @@ const BlogDetailMore: React.FC = () => {
           </div>
 
           {/* Sidebar */}
-          <aside className="lg:col-span-4 space-y-10">
+          <aside className="lg:col-span-4 space-y-8 sm:space-y-10">
             {/* Author card */}
-            <div className="bg-[#2D1B69] rounded-[36px] p-8 text-white relative overflow-hidden shadow-xl">
+            <div className="bg-[#2D1B69] rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-xl">
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <TrendingUp size={80} />
               </div>
@@ -348,7 +338,7 @@ const BlogDetailMore: React.FC = () => {
             )}
 
             {/* CTA box */}
-            <div className="bg-[#F8FAFC] p-8 rounded-[40px] text-center flex flex-col items-center border border-gray-100">
+            <div className="bg-[#F8FAFC] p-6 sm:p-8 rounded-2xl sm:rounded-3xl text-center flex flex-col items-center border border-gray-100">
               <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-[#E91E63] mb-5">
                 <Share2 size={22} />
               </div>

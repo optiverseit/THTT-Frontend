@@ -33,39 +33,39 @@ const TravelGuide: React.FC = () => {
         contentClassName="-translate-y-1.5 sm:-translate-y-2 md:-translate-y-3"
       />
 
-      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-14">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10 lg:gap-14">
           {/* Main Content */}
-          <div className="lg:col-span-2 bg-white rounded-3xl shadow-lg p-8 md:p-16 h-fit">
+          <div className="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 md:p-12 lg:p-16 h-fit">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <Plane className="w-7 h-7 text-white" />
+            <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-pink-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <Plane className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
-              <h1 className="text-4xl md:text-5xl font-black text-purple-950">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-purple-950">
                 GETTING IN NEPAL
-                <div className="h-1 w-20 bg-pink-500 rounded-full mt-2"></div>
+                <div className="h-1 w-16 sm:w-20 bg-pink-500 rounded-full mt-2"></div>
               </h1>
             </div>
 
             {/* Content */}
-            <div className="space-y-6 text-gray-700 leading-relaxed text-lg">
-              <p className="text-lg">
+            <div className="space-y-4 sm:space-y-6 text-gray-700 leading-relaxed text-base sm:text-lg">
+              <p className="text-base sm:text-lg">
                 Nepal is primarily accessed by air through Tribhuvan
-                International Airport (KTM) in Kathmandu. <br /> There are
+                International Airport (KTM) in Kathmandu. <br className="hidden sm:inline" /> There are
                 several international carriers connecting Kathmandu to major
                 hubs in the Middle East, Asia, and Europe.
               </p>
 
               <div className="pt-2">
-                <p className="text-lg">
+                <p className="text-base sm:text-lg">
                   <span className="font-semibold text-gray-900">By Land:</span>{" "}
                   There are several border crossing points from India
                   (Kakarbhitta, Birgunj, Belahiya, Jamunaha, Mohana, and
                   Gaddachauki) and one from China (Kodari/Rasuwagadhi).
                 </p>
 
-                <p className="text-lg">
+                <p className="text-base sm:text-lg mt-3">
                   Travelers entering by land must ensure they have the proper
                   visa documentation at the checkpoint.
                 </p>
@@ -73,16 +73,16 @@ const TravelGuide: React.FC = () => {
             </div>
 
             {/* Contact Expert Section */}
-            <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-extrabold text-purple-950 mt-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-purple-950 mt-1 sm:mt-2">
                   NEED MORE SPECIFIC HELP?
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-sm sm:text-base text-gray-500">
                   Our travel experts are ready to assist you 24/7.
                 </p>
               </div>
-              <button className=" bg-purple-950 hover:from-purple-800 hover:to-purple-700 text-white px-10 py-3.5 rounded-2xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200">
+              <button className="w-full sm:w-auto bg-purple-950 hover:from-purple-800 hover:to-purple-700 text-white px-8 sm:px-10 py-3.5 rounded-2xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200 text-center">
                 CONTACT EXPERT
               </button>
             </div>

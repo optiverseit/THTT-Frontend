@@ -23,39 +23,39 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ id, country }) => {
   ];
 
   return (
-    <div className="relative h-80 w-full rounded-4xl overflow-hidden shadow-lg shadow-gray-400">
+    <div className="relative min-h-[22rem] sm:h-80 w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg shadow-gray-400 flex flex-col justify-center">
       <img
         src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600"
         alt=""
-        className="w-screen h-full object-cover "
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
-      <div className="absolute inset-0 bg-black/60 px-20">
-        <h1 className="text-white text-3xl font-bold mt-20  w-fit rounded-full backdrop-blur-xs bg-gray-200/20">
-          <span className="px-4 py-2 flex  items-center gap-2">
+      <div className="relative z-10 bg-black/60 px-4 sm:px-8 md:px-12 lg:px-20 py-6 sm:py-8 flex flex-col justify-between h-full">
+        <h1 className="text-white text-lg sm:text-2xl md:text-3xl font-bold w-fit rounded-full backdrop-blur-xs bg-gray-200/20 max-w-full">
+          <span className="px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2 flex-wrap">
             {country && (
               <ReactCountryFlag
-                className="text-[20px]"
+                className="text-[18px] sm:text-[20px]"
                 countryCode={country.flag}
                 svg
               />
             )}
-            {id.toUpperCase()} - NEW LABOUR PERMIT
+            <span className="truncate">{id.toUpperCase()} - NEW LABOUR PERMIT</span>
           </span>
         </h1>
 
         {/* details */}
-        <div className="flex text-white mt-8 w-full justify-between">
+        <div className="grid grid-cols-2 lg:flex text-white mt-6 sm:mt-8 w-full justify-between gap-3 sm:gap-4">
           {serviceDetails.map((item, index) => {
             const Icon = item.icon;
             return (
-              <div key={index} className="flex items-center gap-2">
-                <div className="p-4 backdrop-blur-xs rounded-2xl bg-gray-200/20">
-                  <Icon size={20} />
+              <div key={index} className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2.5 sm:p-3.5 md:p-4 backdrop-blur-xs rounded-xl sm:rounded-2xl bg-gray-200/20 flex-shrink-0">
+                  <Icon size={18} className="sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <h1 className="font-bold">{item.label.toUpperCase()}</h1>
-                  <p className="text-xs text-gray-300 tracking-wide">
+                <div className="min-w-0">
+                  <h1 className="font-bold text-xs sm:text-sm md:text-base leading-tight truncate">{item.label.toUpperCase()}</h1>
+                  <p className="text-[10px] sm:text-xs text-gray-300 tracking-wide truncate">
                     {item.title.toUpperCase()}
                   </p>
                 </div>

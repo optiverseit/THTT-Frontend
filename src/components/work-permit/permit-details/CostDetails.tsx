@@ -24,7 +24,7 @@ const CostDetails: React.FC = () => {
 
   return (
     <div>
-      <div className="bg-white rounded-4xl p-7 shadow-xl shadow-gray-300">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-gray-300">
         {/* Header */}
         <div className="mb-5">
           <h2 className="text-xl font-bold text-purple-950">Cost Breakdown</h2>

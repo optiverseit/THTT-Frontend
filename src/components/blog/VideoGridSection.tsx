@@ -8,7 +8,7 @@ interface VideoGridProps {
 
 const VideoGridSection: React.FC<VideoGridProps> = ({ vlogs }) => {
   return (
-    <div className="grid grid-cols-2 gap-8 mt-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mt-8">
       {vlogs.map((vlog) => (
         <VideoCard key={vlog.id} vlog={vlog} />
       ))}

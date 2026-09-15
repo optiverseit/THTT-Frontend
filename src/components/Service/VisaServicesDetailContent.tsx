@@ -750,9 +750,9 @@ export const VisaServicesDetailContent: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* ── 1. DESTINATION SEARCH & REGION PILL BAR (Enclosed format as in sketch) ── */}
-      <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl sm:rounded-full border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 px-4 sm:px-6">
-        {/* Left side: "All Destination :" + Region Tabs */}
-        <div className="flex items-center flex-wrap gap-2 w-full md:w-auto">
+      <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-3 px-4 sm:px-6">
+        {/* Top row: "All Destination :" + Region Tabs */}
+        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 w-full">
           <span className="text-xs sm:text-sm font-black text-[#2D1347] uppercase tracking-wider mr-1 whitespace-nowrap">
             All Destination :
           </span>
@@ -766,7 +766,7 @@ export const VisaServicesDetailContent: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id
                   ? "bg-[#2D1347] text-white shadow-xs"
                   : "text-gray-600 hover:text-[#2D1347] hover:bg-gray-100/80"
@@ -777,11 +777,8 @@ export const VisaServicesDetailContent: React.FC = () => {
           ))}
         </div>
 
-        {/* Center vertical separator */}
-        <div className="hidden md:block h-6 w-[1px] bg-gray-200" />
-
-        {/* Right side: Search Box */}
-        <div className="relative w-full md:w-72">
+        {/* Search Box — full width on mobile */}
+        <div className="relative w-full">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -930,14 +927,14 @@ export const VisaServicesDetailContent: React.FC = () => {
       </div>
 
       {/* ── 4. HOW IT WORKS (Preserved as requested) ── */}
-      <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-8 sm:p-12 rounded-3xl shadow-xl">
+      <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-6 sm:p-8 md:p-12 rounded-3xl shadow-xl">
         <span className="text-pink-400 font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
           SEAMLESS 4-STEP PROCEDURE
         </span>
-        <h3 className="text-2xl sm:text-3xl font-black mb-8 tracking-tight">
+        <h3 className="text-xl sm:text-2xl md:text-3xl font-black mb-6 sm:mb-8 tracking-tight">
           How Our Visa Concierge Works
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {[
             {
               step: "01",

@@ -259,11 +259,11 @@ export const VehicleRentalDetailContent: React.FC = () => {
       </div>
 
       {/* ── 4. POPULAR ROUTES & FIXED ALL-INCLUSIVE RATES ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm">
+        <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs block mb-1">
           FIXED HIGHWAY FARES
         </span>
-        <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-6">
+        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2D1347] tracking-tight mb-4 sm:mb-6">
           Popular Tourist Route Fares (Fuel &amp; Driver Included)
         </h3>
 
@@ -299,13 +299,13 @@ export const VehicleRentalDetailContent: React.FC = () => {
       </div>
 
       {/* ── 5. FLEET VEHICLE FAQS ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 rounded-xl bg-pink-50 text-[#E11D48]">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-10 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
+          <div className="p-2.5 rounded-xl bg-pink-50 text-[#E11D48] flex-shrink-0">
             <HelpCircle size={22} />
           </div>
           <div>
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+            <h3 className="text-lg sm:text-xl md:text-2xl font-black text-[#2D1347] tracking-tight">
               Vehicle Rental FAQ
             </h3>
             <p className="text-xs text-gray-500 font-medium">Important details regarding chauffeur services and highway routes</p>

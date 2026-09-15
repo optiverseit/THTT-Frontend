@@ -640,29 +640,29 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
 
         {/* Content */}
-        <div className="relative z-10 p-6 sm:p-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div className="flex items-center gap-4">
+        <div className="relative z-10 p-4 sm:p-6 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
               {/* Flag in a glassy circle */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center flex-shrink-0 shadow-lg">
                 {plan.countryCode === "EU" ? (
-                  <span className="text-4xl">🇪🇺</span>
+                  <span className="text-3xl sm:text-4xl">🇪🇺</span>
                 ) : (
                   <ReactCountryFlag
                     svg
                     countryCode={plan.countryCode}
-                    style={{ width: "2.8em", height: "2.8em", borderRadius: "6px" }}
+                    style={{ width: "2.4em", height: "2.4em", borderRadius: "6px" }}
                   />
                 )}
               </div>
 
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight drop-shadow-sm">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight drop-shadow-sm">
                     {plan.country} – {plan.visaType}
                   </h2>
                   {plan.popular && (
-                    <span className="bg-[#E91E63] text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm">
+                    <span className="bg-[#E91E63] text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex-shrink-0">
                       Popular
                     </span>
                   )}
@@ -674,17 +674,17 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             </div>
 
             {/* Action buttons on the right */}
-            <div className="print:hidden flex flex-col items-center gap-1.5 flex-shrink-0 w-40">
+            <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-0">
               <button
                 onClick={handleWhatsAppInquiry}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
+                className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
               >
                 <MessageCircle size={13} />
                 <span>Ask on WhatsApp</span>
               </button>
               <button
                 onClick={handlePrint}
-                className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 text-white/75 hover:text-white rounded-md text-[10px] font-medium transition-all cursor-pointer"
+                className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 text-white/75 hover:text-white rounded-md text-[10px] font-medium transition-all cursor-pointer"
                 title="Print or Save as PDF"
               >
                 <Printer size={11} />
@@ -712,11 +712,11 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           </div>
         </div>
 
-        {/* ── SHARE BUTTON — absolute bottom-right of hero ── */}
-        <div ref={shareRef} className="print:hidden absolute bottom-4 right-4 z-20">
-          {/* Share popup — appears to the LEFT of the button */}
+        {/* ── SHARE BUTTON — top-right of hero ── */}
+        <div ref={shareRef} className="print:hidden absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+          {/* Share popup — appears below on mobile, to the LEFT on desktop */}
           {isShareOpen && (
-            <div className="absolute bottom-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max animate-in fade-in slide-in-from-right-2 duration-150">
+            <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-wrap sm:flex-nowrap min-w-[200px] sm:min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
               {shareButtons.map((item) => (
                 <button
                   key={item.name}
@@ -739,8 +739,8 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               >
                 {isCopied ? <Check size={13} color="white" /> : <Link2 size={13} color="white" />}
               </button>
-              {/* Arrow tip pointing right toward share button */}
-              <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
+              {/* Arrow tip pointing right toward share button — hidden on mobile */}
+              <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
             </div>
           )}
 

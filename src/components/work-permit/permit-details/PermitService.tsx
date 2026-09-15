@@ -42,18 +42,18 @@ const PermitService: React.FC<PermitServiceProps> = ({ service }) => {
           VIEW ALL SERVICES
         </button>
       </header>
-      <div className="flex w-full justify-between mt-4 items-center">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mt-4">
         {service.slice(0, 5).map((item, index) => {
           const Icon = iconMap[item.icon];
           return (
             <div
               key={index}
-              className="flex flex-col w-60 justify-center items-center rounded-xl shadow-xl shadow-gray-200 bg-white px-8 py-6 cursor-pointer hover:shadow-pink-400/60"
+              className="flex flex-col w-full justify-center items-center rounded-xl shadow-md sm:shadow-xl shadow-gray-200 bg-white px-3 py-4 sm:px-4 sm:py-6 cursor-pointer hover:shadow-pink-400/60 text-center transition-shadow"
             >
-              <div className="rounded-xl bg-pink-400/20 p-3">
-                {Icon && <Icon className="text-pink-500" />}
+              <div className="rounded-xl bg-pink-400/20 p-2.5 sm:p-3">
+                {Icon && <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-pink-500" />}
               </div>
-              <p className="font-bold text-purple-950 mt-2 text-sm">
+              <p className="font-bold text-purple-950 mt-2 text-xs sm:text-sm truncate w-full">
                 {item.name.toUpperCase()}
               </p>
             </div>

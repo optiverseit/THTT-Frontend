@@ -37,11 +37,11 @@ const WorkPermitDetails = () => {
   }
 
   return (
-    <div className="w-full mt-10 flex justify-center items-center bg-gray-100">
+    <div className="w-full mt-10 flex justify-center items-center bg-gray-100 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl w-full">
         <PermitBanner id={id} country={selectedCountry} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mt-12 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-8 sm:mt-12 mb-8 sm:mb-10">
           <AboutPermit id={id} country={selectedCountry} />
           <CostDetails />
         </div>

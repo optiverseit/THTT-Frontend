@@ -1219,6 +1219,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         countryCode={plan.countryCode}
         visaType={plan.visaType}
         selectedOption={selectedCostOption}
+        numberOfGuests={numberOfGuests}
       />
     </div>
   );

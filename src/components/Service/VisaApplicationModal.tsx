@@ -42,6 +42,7 @@ export interface VisaApplicationModalProps {
     nprPrice: number;
     entryType: string;
   };
+  numberOfGuests?: number;
 }
 
 export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
@@ -51,6 +52,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   countryCode,
   visaType,
   selectedOption,
+  numberOfGuests = 1,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
@@ -69,43 +71,47 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
     termsAgreed: false,
   });
 
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  // Per-field document attachments
+  const [passportFile, setPassportFile] = useState<File | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [flightFile, setFlightFile] = useState<File | null>(null);
+  const [hotelFile, setHotelFile] = useState<File | null>(null);
+  const passportRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const flightRef = useRef<HTMLInputElement>(null);
+  const hotelRef = useRef<HTMLInputElement>(null);
+
   const [submitted, setSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copied, setCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const formattedFee = displayPrice(
+  const guests = numberOfGuests > 0 ? numberOfGuests : 1;
+  const totalNprPrice = selectedOption.nprPrice * guests;
+
+  const formattedPerPerson = displayPrice(
     selectedOption.nprPrice,
     selectedCurrency,
     nprPerOneDollar,
     nprPerOneINR
   );
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setUploadedFiles((prev) => [...prev, ...newFiles]);
+  const formattedFee = displayPrice(
+    totalNprPrice,
+    selectedCurrency,
+    nprPerOneDollar,
+    nprPerOneINR
+  );
+
+  const makeSingleFileHandler = (
+    setter: React.Dispatch<React.SetStateAction<File | null>>
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setter(e.target.files[0]);
     }
-  };
-
-  const handleRemoveFile = (indexToRemove: number) => {
-    setUploadedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      setUploadedFiles((prev) => [...prev, ...droppedFiles]);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
+    e.target.value = "";
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -142,12 +148,14 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       `📌 *Submission Number:* ${submissionId}\n` +
       `🌍 *Destination:* ${country} (${visaType})\n` +
       `📋 *Option:* ${selectedOption.name} (${selectedOption.days})\n` +
-      `👤 *Applicant Name:* ${formData.fullName}\n` +
+      `👥 *Number of Applicants:* ${guests}\n` +
+      `👤 *Lead Applicant Name:* ${formData.fullName}\n` +
       `🛂 *Passport Number:* ${formData.passportNumber}\n` +
       `📅 *Travel Date:* ${formData.travelDate}\n` +
       `📞 *Contact:* ${formData.phone}\n` +
       `✉️ *Email:* ${formData.email}\n` +
-      `💵 *Processing Fee:* ${formattedFee}\n\n` +
+      `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
+      `💰 *Total Processing Fee (${guests} applicant${guests > 1 ? 's' : ''}):* ${formattedFee}\n\n` +
       `Hello Trip Himalaya (Visa & Documentation Team), I have submitted my visa application online. Please confirm document receipt and advise on embassy processing.`
     );
     window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
@@ -572,8 +580,14 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <td class="td-value">${formData.travelDate || "Flexible"}</td>
             </tr>
             <tr>
+              <td class="td-label">Number of Applicants</td>
+              <td class="td-value">${guests} ${guests === 1 ? "Applicant" : "Applicants"}</td>
+              <td class="td-label">Fee Per Person</td>
+              <td class="td-value">${formattedPerPerson}</td>
+            </tr>
+            <tr>
               <td class="td-label" style="background:#fdf2f8; border-color:#f9a8d4;">Total Processing Fee</td>
-              <td class="td-value fee" colspan="3" style="background:#fdf2f8; border-color:#f9a8d4;">${formattedFee} &nbsp;<span style="font-size:9px;font-weight:600;color:#9D174D;">(inclusive of all service charges)</span></td>
+              <td class="td-value fee" colspan="3" style="background:#fdf2f8; border-color:#f9a8d4;">${formattedFee} &nbsp;<span style="font-size:9px;font-weight:600;color:#9D174D;">(${guests} applicant${guests > 1 ? 's' : ''} × ${formattedPerPerson}/person, inclusive of all service charges)</span></td>
             </tr>
           </table>
 
@@ -694,14 +708,29 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <span className="text-gray-600 font-semibold text-xs">
                 {selectedOption.days} Validity
               </span>
+              {guests > 1 && (
+                <>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-[10px] font-bold text-[#7C3AED] bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                    {guests} Applicants
+                  </span>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                Processing Fee:
-              </span>
-              <span className="text-xs sm:text-sm font-black text-[#E91E63] bg-pink-50 px-2 py-0.5 rounded-lg border border-pink-100">
-                {formattedFee}
-              </span>
+            <div className="flex flex-col items-end gap-0.5">
+              {guests > 1 && (
+                <span className="text-[9px] text-gray-400 font-medium">
+                  {formattedPerPerson} × {guests} persons
+                </span>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  {guests > 1 ? "Total Fee:" : "Processing Fee:"}
+                </span>
+                <span className="text-xs sm:text-sm font-black text-[#E91E63] bg-pink-50 px-2 py-0.5 rounded-lg border border-pink-100">
+                  {formattedFee}
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -782,10 +811,17 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </div>
 
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Processing Fee</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                      {guests > 1 ? `Total Fee (${guests} pax)` : "Processing Fee"}
+                    </span>
                     <span className="font-black text-[#1A0B2E] text-xs mt-0.5 block">
                       {formattedFee}
                     </span>
+                    {guests > 1 && (
+                      <span className="text-[9px] text-slate-400 block">
+                        {formattedPerPerson}/person
+                      </span>
+                    )}
                   </div>
 
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
@@ -975,75 +1011,136 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                 </div>
               </div>
 
-              {/* ── SECTION 3: DOCUMENT SUBMISSION (OPTIONAL) ── */}
+              {/* ── SECTION 3: DOCUMENT ATTACHMENTS ── */}
               <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
                 <div className="flex items-center gap-2 text-[#200B3B] pb-2 border-b border-gray-200/60">
                   <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
                     <UploadCloud size={13} />
                   </div>
                   <h4 className="text-xs font-black uppercase tracking-wider">
-                    3. Document Submission (Optional for Instant Quote)
+                    3. Document Attachments
                   </h4>
                 </div>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+                <p className="text-[11px] text-gray-400 -mt-1">
+                  Attach files here or send later via WhatsApp. Accepted: PDF, JPG, PNG (max 10 MB each).
+                </p>
 
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  className="border-2 border-dashed border-purple-200 hover:border-[#E91E63] rounded-2xl p-4 bg-white text-center hover:bg-purple-50/30 transition-all cursor-pointer group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-pink-50 text-[#E91E63] flex items-center justify-center mx-auto mb-1.5 group-hover:scale-110 transition-transform">
-                    <UploadCloud size={18} />
-                  </div>
-                  <p className="text-xs font-bold text-[#200B3B]">
-                    Click or Drag Passport scan &amp; photo here
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
-                    PDF, JPG, PNG up to 10MB (Or attach later via WhatsApp)
-                  </p>
-                </div>
+                {/* Hidden inputs */}
+                <input ref={passportRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={makeSingleFileHandler(setPassportFile)} className="hidden" />
+                <input ref={photoRef}    type="file" accept=".jpg,.jpeg,.png"       onChange={makeSingleFileHandler(setPhotoFile)}    className="hidden" />
+                <input ref={flightRef}   type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={makeSingleFileHandler(setFlightFile)}   className="hidden" />
+                <input ref={hotelRef}    type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={makeSingleFileHandler(setHotelFile)}    className="hidden" />
 
-                {/* Uploaded Files Chips */}
-                {uploadedFiles.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                      Attached Documents ({uploadedFiles.length}):
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {uploadedFiles.map((file, idx) => (
+                <div className="space-y-2.5">
+                  {/* 1. Passport / National ID — REQUIRED */}
+                  {([
+                    {
+                      label: "Passport / National ID",
+                      required: true,
+                      ref: passportRef,
+                      file: passportFile,
+                      clear: () => setPassportFile(null),
+                      hint: "Clear color copy of Passport (valid ≥ 6 months)",
+                    },
+                    {
+                      label: "Passport Size Photo",
+                      required: true,
+                      ref: photoRef,
+                      file: photoFile,
+                      clear: () => setPhotoFile(null),
+                      hint: "White background, digital copy (JPG/PNG)",
+                    },
+                    {
+                      label: "Confirmed Return Flight Ticket",
+                      required: false,
+                      ref: flightRef,
+                      file: flightFile,
+                      clear: () => setFlightFile(null),
+                      hint: "PDF or screenshot of round-trip reservation",
+                    },
+                    {
+                      label: "Hotel Reservation / Residency Proof",
+                      required: false,
+                      ref: hotelRef,
+                      file: hotelFile,
+                      clear: () => setHotelFile(null),
+                      hint: "Hotel booking confirmation or host address proof",
+                    },
+                  ] as Array<{
+                    label: string;
+                    required: boolean;
+                    ref: React.RefObject<HTMLInputElement>;
+                    file: File | null;
+                    clear: () => void;
+                    hint: string;
+                  }>).map((field) => (
+                    <div
+                      key={field.label}
+                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
+                        field.file
+                          ? "bg-emerald-50/60 border-emerald-200"
+                          : field.required
+                          ? "bg-white border-gray-200 hover:border-[#E91E63]"
+                          : "bg-white border-gray-200 hover:border-purple-300"
+                      } transition-all`}
+                    >
+                      {/* Left: icon + label */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div
-                          key={idx}
-                          className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 shadow-2xs"
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            field.file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E91E63]"
+                          }`}
                         >
-                          <FileText size={12} className="text-[#E91E63] flex-shrink-0" />
-                          <span className="max-w-[140px] truncate">{file.name}</span>
-                          <span className="text-[10px] text-gray-400">
-                            ({(file.size / 1024).toFixed(0)} KB)
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveFile(idx);
-                            }}
-                            className="text-gray-400 hover:text-red-500 ml-1 cursor-pointer"
-                          >
-                            <Trash2 size={11} />
-                          </button>
+                          {field.file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
                         </div>
-                      ))}
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
+                            {field.label}
+                            {field.required ? (
+                              <span className="text-[#E91E63] font-black">*</span>
+                            ) : (
+                              <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                                Optional
+                              </span>
+                            )}
+                          </p>
+                          {field.file ? (
+                            <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">
+                              {field.file.name}{" "}
+                              <span className="text-emerald-500 font-normal">
+                                ({(field.file.size / 1024).toFixed(0)} KB)
+                              </span>
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-gray-400">{field.hint}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: attach / remove */}
+                      {field.file ? (
+                        <button
+                          type="button"
+                          onClick={field.clear}
+                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={11} />
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => field.ref.current?.click()}
+                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E91E63] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"
+                        >
+                          <UploadCloud size={12} />
+                          Attach
+                        </button>
+                      )}
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
               {/* ── ADDITIONAL NOTES ── */}

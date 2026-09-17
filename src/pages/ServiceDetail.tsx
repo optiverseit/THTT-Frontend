@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
 import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
 import {
@@ -42,7 +42,7 @@ import HotelBookingDetailContent from "../components/Service/HotelBookingDetailC
 import TravelInsuranceDetailContent from "../components/Service/TravelInsuranceDetailContent";
 import VehicleRentalDetailContent from "../components/Service/VehicleRentalDetailContent";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
-import VisaServicesDetailContent from "../components/Service/VisaServicesDetailContent";
+import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
 
 const ServiceDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -127,9 +127,20 @@ const ServiceDetail: React.FC = () => {
   const isHeliServices = service.slug === "heli-services";
   const isVisaServices = service.slug === "visa-services" || service.slug === "visa";
 
+  // Visa Search Bar State
+  const [visaSearchCountry, setVisaSearchCountry] = useState("");
+  const [visaSearchType, setVisaSearchType] = useState("all");
+  const [visaSearchEntry, setVisaSearchEntry] = useState("all");
+  const [appliedVisaFilter, setAppliedVisaFilter] = useState<VisaFilterCriteria | null>(null);
 
-
-  // 1. Banner Subtitle
+  const handleVisaSearch = () => {
+    setAppliedVisaFilter({
+      country: visaSearchCountry,
+      visaType: visaSearchType,
+      entryType: visaSearchEntry,
+    });
+    scrollToSection("section-services", "SERVICES");
+  };
   const getBannerHeading = () => {
     if (isAirTicket) return "DOMESTIC & INTERNATIONAL AIR TICKETING";
     if (isTours) return "UNESCO HERITAGE & SCENIC HOLIDAYS";
@@ -383,16 +394,38 @@ const ServiceDetail: React.FC = () => {
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                 DESTINATION COUNTRY
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="">Select Country</option>
-                <option value="uae">UAE (Dubai / Abu Dhabi)</option>
+              <select
+                value={visaSearchCountry}
+                onChange={(e) => setVisaSearchCountry(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="">All Countries</option>
                 <option value="thailand">Thailand</option>
+                <option value="uae">UAE (Dubai / Abu Dhabi)</option>
+                <option value="schengen">Schengen Europe</option>
                 <option value="singapore">Singapore</option>
                 <option value="malaysia">Malaysia</option>
                 <option value="japan">Japan</option>
-                <option value="schengen">Schengen Europe</option>
                 <option value="uk">United Kingdom</option>
                 <option value="usa">USA</option>
+                <option value="australia">Australia</option>
+                <option value="canada">Canada</option>
+                <option value="south korea">South Korea</option>
+                <option value="qatar">Qatar</option>
+                <option value="saudi arabia">Saudi Arabia</option>
+                <option value="indonesia">Indonesia (Bali)</option>
+                <option value="vietnam">Vietnam</option>
+                <option value="turkey">Turkey</option>
+                <option value="egypt">Egypt</option>
+                <option value="china">China</option>
+                <option value="new zealand">New Zealand</option>
+                <option value="oman">Oman</option>
+                <option value="bahrain">Bahrain</option>
+                <option value="kuwait">Kuwait</option>
+                <option value="sri lanka">Sri Lanka</option>
+                <option value="maldives">Maldives</option>
+                <option value="cambodia">Cambodia</option>
+                <option value="philippines">Philippines</option>
               </select>
             </div>
           </div>
@@ -403,7 +436,12 @@ const ServiceDetail: React.FC = () => {
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                 VISA TYPE
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+              <select
+                value={visaSearchType}
+                onChange={(e) => setVisaSearchType(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="all">All Visa Types</option>
                 <option value="tourist">Tourist Visa</option>
                 <option value="business">Business Visa</option>
                 <option value="transit">Transit Visa</option>
@@ -418,7 +456,12 @@ const ServiceDetail: React.FC = () => {
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                 ENTRY TYPE
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+              <select
+                value={visaSearchEntry}
+                onChange={(e) => setVisaSearchEntry(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="all">All Entry Types</option>
                 <option value="single">Single Entry</option>
                 <option value="multiple">Multiple Entry</option>
               </select>
@@ -426,8 +469,8 @@ const ServiceDetail: React.FC = () => {
           </div>
 
           <button
-            onClick={() => scrollToSection("section-services", "SERVICES")}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+            onClick={handleVisaSearch}
+            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
           >
             SEARCH
           </button>
@@ -932,7 +975,15 @@ const ServiceDetail: React.FC = () => {
             ) : isHeliServices ? (
               <HeliServicesDetailContent />
             ) : (
-              <VisaServicesDetailContent />
+              <VisaServicesDetailContent
+                filter={appliedVisaFilter}
+                onClearFilter={() => {
+                  setAppliedVisaFilter(null);
+                  setVisaSearchCountry("");
+                  setVisaSearchType("all");
+                  setVisaSearchEntry("all");
+                }}
+              />
             )}
           </div>
         </div>

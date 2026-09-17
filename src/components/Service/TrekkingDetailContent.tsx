@@ -106,7 +106,7 @@ export const TrekkingDetailContent: React.FC = () => {
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Trekking & Adventure Activity Team)! I am interested in trekking "${trekTitle}"${priceText}. Please share the day-by-day itinerary, dates, and package price.`
     );
-    window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://api.whatsapp.com/send?phone=9779851403761&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   const getDifficultyColor = (diff?: string) => {
@@ -168,7 +168,8 @@ export const TrekkingDetailContent: React.FC = () => {
           {visibleTreks.map((trek) => (
             <div
               key={trek.id}
-              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+              onClick={() => navigate(`/details/${trek.id}`)}
+              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
             >
               <div>
                 {/* Image, Badge & Timing */}
@@ -176,7 +177,7 @@ export const TrekkingDetailContent: React.FC = () => {
                   <img
                     src={trek.image}
                     alt={trek.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-3 left-3 flex gap-2">
                     <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
@@ -197,7 +198,7 @@ export const TrekkingDetailContent: React.FC = () => {
                 {/* Content */}
                 <div className="p-6">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug">
+                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] group-hover:text-[#E11D48] transition-colors leading-snug">
                       {trek.title}
                     </h4>
                     {trek.price && (
@@ -239,7 +240,10 @@ export const TrekkingDetailContent: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => handleInquiry(trek.title, trek.price)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleInquiry(trek.title, trek.price);
+                    }}
                     className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
                     title="WhatsApp Inquiry"
                   >
@@ -248,7 +252,10 @@ export const TrekkingDetailContent: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleBookTrek(trek)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBookTrek(trek);
+                    }}
                     className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
                   >
                     <CalendarCheck size={14} />
@@ -259,7 +266,10 @@ export const TrekkingDetailContent: React.FC = () => {
                 {/* Row 2: Full Details Centered */}
                 <button
                   type="button"
-                  onClick={() => navigate(`/details/${trek.id}`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/details/${trek.id}`);
+                  }}
                   className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                 >
                   <span>Full Details</span>

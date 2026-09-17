@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   X,
   FileText,
@@ -9,22 +9,13 @@ import {
   Mail,
   Phone,
   CreditCard,
-  ShieldCheck,
-  Plane,
-  AlertCircle,
-  Clock,
   Printer,
   MessageCircle,
   Copy,
   Check,
   Trash2,
   ArrowRight,
-  Sparkles,
   BadgeCheck,
-  Headphones,
-  CheckCheck,
-  Receipt,
-  FileCheck,
 } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
@@ -45,6 +36,30 @@ export interface VisaApplicationModalProps {
   numberOfGuests?: number;
 }
 
+export interface ApplicantData {
+  fullName: string;
+  nationality: string;
+  email: string;
+  phone: string;
+  passportNumber: string;
+  passportExpiry: string;
+  travelDate: string;
+  passportFile: File | null;
+  photoFile: File | null;
+}
+
+const createDefaultApplicant = (): ApplicantData => ({
+  fullName: "",
+  nationality: "",
+  email: "",
+  phone: "",
+  passportNumber: "",
+  passportExpiry: "",
+  travelDate: "",
+  passportFile: null,
+  photoFile: null,
+});
+
 export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   isOpen,
   onClose,
@@ -56,26 +71,36 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    gender: "male",
-    dob: "",
-    passportNumber: "",
-    passportExpiry: "",
-    nationality: "",
-    email: "",
-    phone: "",
-    travelDate: "",
-    applicantsCount: "1",
-    specialNotes: "",
-    termsAgreed: false,
-  });
+  const guests = numberOfGuests > 0 ? numberOfGuests : 1;
+  const totalNprPrice = selectedOption.nprPrice * guests;
 
-  // Per-field document attachments
-  const [passportFile, setPassportFile] = useState<File | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [applicants, setApplicants] = useState<ApplicantData[]>(() =>
+    Array.from({ length: guests }, createDefaultApplicant)
+  );
+  const [activeApplicantIndex, setActiveApplicantIndex] = useState(0);
+
+  // Sync applicants array whenever modal opens or guest count changes
+  useEffect(() => {
+    if (isOpen) {
+      setApplicants((prev) => {
+        if (prev.length === guests) return prev;
+        const next = [...prev];
+        while (next.length < guests) {
+          next.push(createDefaultApplicant());
+        }
+        return next.slice(0, guests);
+      });
+      setActiveApplicantIndex(0);
+    }
+  }, [guests, isOpen]);
+
+  // Shared booking documents & notes
   const [flightFile, setFlightFile] = useState<File | null>(null);
   const [hotelFile, setHotelFile] = useState<File | null>(null);
+  const [specialNotes, setSpecialNotes] = useState("");
+  const [termsAgreed, setTermsAgreed] = useState(false);
+
+  // File input refs
   const passportRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const flightRef = useRef<HTMLInputElement>(null);
@@ -87,9 +112,6 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
-
-  const guests = numberOfGuests > 0 ? numberOfGuests : 1;
-  const totalNprPrice = selectedOption.nprPrice * guests;
 
   const formattedPerPerson = displayPrice(
     selectedOption.nprPrice,
@@ -105,18 +127,103 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
     nprPerOneINR
   );
 
-  const makeSingleFileHandler = (
-    setter: React.Dispatch<React.SetStateAction<File | null>>
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const currentApplicant =
+    applicants[activeApplicantIndex] || applicants[0] || createDefaultApplicant();
+
+  const updateCurrentApplicant = (patch: Partial<ApplicantData>) => {
+    setApplicants((prev) => {
+      const updated = [...prev];
+      if (!updated[activeApplicantIndex]) return prev;
+      updated[activeApplicantIndex] = {
+        ...updated[activeApplicantIndex],
+        ...patch,
+      };
+      return updated;
+    });
+  };
+
+  const handlePassportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setter(e.target.files[0]);
+      updateCurrentApplicant({ passportFile: e.target.files[0] });
+    }
+    e.target.value = "";
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      updateCurrentApplicant({ photoFile: e.target.files[0] });
+    }
+    e.target.value = "";
+  };
+
+  const handleFlightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFlightFile(e.target.files[0]);
+    }
+    e.target.value = "";
+  };
+
+  const handleHotelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setHotelFile(e.target.files[0]);
     }
     e.target.value = "";
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.termsAgreed) {
+
+    // Validate details for every applicant
+    for (let i = 0; i < guests; i++) {
+      const app = applicants[i];
+      if (!app || !app.fullName.trim()) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter Full Name for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.nationality.trim()) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter Nationality for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.email.trim()) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter Email Address for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.phone.trim()) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter WhatsApp / Mobile Phone for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.passportNumber.trim()) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter Passport Number for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.passportExpiry) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter Passport Expiry Date for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.travelDate) {
+        setActiveApplicantIndex(i);
+        alert(`Please enter Intended Travel Date for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.passportFile) {
+        setActiveApplicantIndex(i);
+        alert(`Please attach Passport / National ID for Applicant ${i + 1}.`);
+        return;
+      }
+      if (!app.photoFile) {
+        setActiveApplicantIndex(i);
+        alert(`Please attach Passport Size Photo for Applicant ${i + 1}.`);
+        return;
+      }
+    }
+
+    if (!termsAgreed) {
       alert("Please accept the terms and conditions to proceed.");
       return;
     }
@@ -143,25 +250,41 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   };
 
   const handleWhatsAppShare = () => {
+    const lead = applicants[0] || createDefaultApplicant();
+    const applicantsList = applicants
+      .map(
+        (a, i) =>
+          `  ${i + 1}. *${a.fullName || `Applicant ${i + 1}`}* (${
+            a.nationality || "—"
+          }) — Pass: ${a.passportNumber || "—"}`
+      )
+      .join("\n");
+
     const msg = encodeURIComponent(
       `*Official Visa Application Confirmation*\n\n` +
-      `📌 *Submission Number:* ${submissionId}\n` +
-      `🌍 *Destination:* ${country} (${visaType})\n` +
-      `📋 *Option:* ${selectedOption.name} (${selectedOption.days})\n` +
-      `👥 *Number of Applicants:* ${guests}\n` +
-      `👤 *Lead Applicant Name:* ${formData.fullName}\n` +
-      `🛂 *Passport Number:* ${formData.passportNumber}\n` +
-      `📅 *Travel Date:* ${formData.travelDate}\n` +
-      `📞 *Contact:* ${formData.phone}\n` +
-      `✉️ *Email:* ${formData.email}\n` +
-      `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
-      `💰 *Total Processing Fee (${guests} applicant${guests > 1 ? 's' : ''}):* ${formattedFee}\n\n` +
-      `Hello Trip Himalaya (Visa & Documentation Team), I have submitted my visa application online. Please confirm document receipt and advise on embassy processing.`
+        `📌 *Submission Number:* ${submissionId}\n` +
+        `🌍 *Destination:* ${country} (${visaType})\n` +
+        `📋 *Option:* ${selectedOption.name} (${selectedOption.days})\n` +
+        `👥 *Number of Applicants:* ${guests}\n` +
+        `👤 *Applicant List:*\n${applicantsList}\n\n` +
+        `📅 *Travel Date:* ${lead.travelDate || "Flexible"}\n` +
+        `📞 *Lead Contact:* ${lead.phone || "—"}\n` +
+        `✉️ *Lead Email:* ${lead.email || "—"}\n` +
+        `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
+        `💰 *Total Processing Fee (${guests} applicant${
+          guests > 1 ? "s" : ""
+        }):* ${formattedFee}\n\n` +
+        `Hello Trip Himalaya (Visa & Documentation Team), I have submitted my visa application online. Please confirm document receipt and advise on embassy processing.`
     );
-    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(
+      `https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const handlePrintSlip = () => {
+    const lead = applicants[0] || createDefaultApplicant();
     const printContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -179,36 +302,32 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             background: #fff;
             color: #0f172a;
-            font-size: 11.5px;
-            line-height: 1.5;
+            font-size: 11px;
+            line-height: 1.45;
           }
-
-          /* ── PAGE WRAPPER ── */
           .page {
             width: 210mm;
             min-height: 297mm;
-            padding: 14mm 14mm 12mm 14mm;
+            padding: 12mm 12mm 10mm 12mm;
             display: flex;
             flex-direction: column;
             gap: 0;
           }
-
-          /* ── LETTERHEAD ── */
           .letterhead {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #000;
-            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2.5px solid #000;
+            margin-bottom: 10px;
           }
           .lh-left {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
           }
           .logo-img {
-            height: 80px;
+            height: 70px;
             width: auto;
             object-fit: contain;
             flex-shrink: 0;
@@ -219,23 +338,19 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             justify-content: center;
           }
           .company-name-main {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 900;
-            letter-spacing: -0.3px;
             line-height: 1.1;
             color: #000;
           }
-          .company-name-main .name-pink {
-            color: #000;
-          }
           .company-tagline {
-            font-size: 9.5px;
+            font-size: 9px;
             color: #000;
             font-weight: 600;
-            margin-top: 3px;
+            margin-top: 2px;
           }
           .company-contact-row {
-            font-size: 9px;
+            font-size: 8.5px;
             color: #222;
             margin-top: 2px;
             font-weight: 500;
@@ -245,265 +360,152 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 4px;
+            gap: 3px;
           }
           .official-badge {
             display: inline-block;
             border: 1.5px solid #000;
             color: #000;
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 3px 10px;
+            letter-spacing: 0.8px;
+            padding: 2px 8px;
             border-radius: 3px;
           }
           .slip-date {
-            font-size: 9.5px;
-            color: #000;
-            font-weight: 500;
+            font-size: 8.5px;
+            color: #444;
+            font-weight: 600;
           }
-
-          /* ── DOC TITLE BAND ── */
           .title-band {
             background: #000;
             color: #fff;
-            padding: 9px 14px;
-            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 10px;
           }
           .title-band h1 {
             font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.3px;
+            font-weight: 900;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #fff;
           }
           .title-band .destination {
             font-size: 10px;
-            color: #ccc;
-            font-weight: 600;
-          }
-          .title-band .doc-id {
-            text-align: right;
-          }
-          .title-band .doc-id-label {
-            font-size: 8px;
-            color: #aaa;
+            color: #ffb3d9;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            margin-top: 1px;
           }
-          .title-band .doc-id-val {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: 0.5px;
-          }
+          .doc-id { text-align: right; }
+          .doc-id-label { font-size: 8px; color: #aaa; text-transform: uppercase; letter-spacing: 0.8px; }
+          .doc-id-val { font-family: monospace; font-weight: 900; font-size: 13px; color: #fff; }
 
-          /* ── REFERENCE BOX ── */
-          .ref-box {
-            display: flex;
-            align-items: stretch;
-            border: 1px solid #000;
-            border-radius: 6px;
-            overflow: hidden;
-            margin-bottom: 14px;
-          }
-          .ref-accent {
-            width: 5px;
-            background: #000;
-            flex-shrink: 0;
-          }
-          .ref-content {
-            flex: 1;
-            padding: 8px 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fafafa;
-          }
-          .ref-label {
-            font-size: 8.5px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-          }
-          .ref-value {
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            font-weight: 700;
-            color: #000;
-            letter-spacing: 0.5px;
-          }
-
-          /* ── SECTION HEADING ── */
           .section-heading {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 7px;
-            margin-top: 12px;
+            gap: 6px;
+            margin: 10px 0 6px 0;
           }
-          .section-heading .sh-line {
+          .sh-text {
+            font-size: 9.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #000;
+            white-space: nowrap;
+          }
+          .sh-line {
             flex: 1;
             height: 1px;
             background: #000;
           }
-          .section-heading .sh-text {
-            font-size: 9px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            white-space: nowrap;
-          }
-
-          /* ── DETAIL TABLE ── */
           .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 2px;
+            font-size: 9.5px;
           }
-          .detail-table td {
-            padding: 6px 10px;
-            border: 1px solid #999;
+          .detail-table th, .detail-table td {
+            border: 1px solid #cbd5e1;
+            padding: 4.5px 7px;
             vertical-align: top;
           }
-          .detail-table tr:nth-child(even) td {
-            background: #f5f5f5;
-          }
-          .detail-table tr:nth-child(odd) td {
-            background: #ffffff;
-          }
           .td-label {
-            font-size: 8.5px;
+            background: #f8fafc;
             font-weight: 700;
-            color: #333;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-            width: 35%;
+            color: #334155;
+            width: 22%;
           }
           .td-value {
-            font-size: 11.5px;
-            font-weight: 600;
-            color: #000;
+            color: #0f172a;
+            font-weight: 500;
+            width: 28%;
           }
-          .td-value.mono { font-family: 'Courier New', monospace; }
-          .td-value.accent { color: #000; font-weight: 800; }
-          .td-value.fee {
-            color: #000;
-            font-size: 14px;
-            font-weight: 900;
-            font-family: 'Inter', sans-serif;
-          }
+          .td-value.accent { font-weight: 700; color: #000; }
+          .td-value.mono { font-family: monospace; font-weight: 700; }
+          .td-value.fee { font-size: 11px; font-weight: 900; color: #be185d; }
 
-          /* ── NOTICE BOX ── */
           .notice-box {
-            border: 1px solid #999;
-            background: #f9f9f9;
-            border-radius: 6px;
-            padding: 9px 12px;
-            margin-top: 12px;
-            font-size: 10px;
-            color: #000;
-            line-height: 1.5;
-          }
-          .notice-box strong { color: #000; }
-
-          /* ── CHECKLIST ── */
-          .checklist-box {
-            border: 1px solid #999;
-            border-radius: 6px;
-            padding: 9px 12px;
-            margin-top: 10px;
-            background: #f9f9f9;
-          }
-          .checklist-title {
-            font-size: 8.5px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #999;
-            padding-bottom: 4px;
-          }
-          .checklist-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3px 20px;
-          }
-          .checklist-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 5px;
+            background: #fdf4ff;
+            border: 1px solid #f0abfc;
+            border-left: 4px solid #a855f7;
+            padding: 7px 10px;
+            border-radius: 4px;
             font-size: 9.5px;
-            color: #000;
+            color: #581c87;
+            margin-top: 8px;
             line-height: 1.4;
           }
-          .ci-icon {
-            color: #000;
-            font-weight: 900;
-            font-size: 10px;
-            flex-shrink: 0;
-            margin-top: 1px;
+
+          .checklist-box {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            padding: 7px 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 9px;
+            color: #14532d;
+          }
+          .checklist-title {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 9px;
+            margin-bottom: 4px;
+            color: #166534;
+          }
+          .checklist-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px 12px;
           }
 
-          /* ── FOOTER ── */
           .doc-footer {
             margin-top: auto;
-            padding-top: 10px;
+            padding-top: 8px;
             border-top: 1.5px solid #000000;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 8.5px;
-            color: #000;
-          }
-          .watermark-wrapper {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            user-select: none;
-            z-index: 999;
-          }
-          .watermark {
-            transform: rotate(-28deg);
-            font-size: 38px;
-            font-weight: 900;
-            color: rgba(45, 19, 71, 0.06);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            line-height: 2.2;
-            white-space: nowrap;
-            text-align: center;
-            mix-blend-mode: multiply;
+            font-size: 8px;
+            color: #444;
           }
         </style>
       </head>
       <body>
         <div class="page">
-          <div class="watermark-wrapper"><div class="watermark">Trip Himalaya Tours and Travels</div></div>
-
           <!-- LETTERHEAD -->
           <div class="letterhead">
             <div class="lh-left">
               <img src="${THTTLogo}" class="logo-img" alt="Trip Himalaya Tours and Travels" />
               <div class="company-name-block">
-                <div class="company-name-main">Trip Himalaya <span class="name-pink">Tours &amp; Travels Pvt. Ltd.</span></div>
-                <div class="company-tagline" style="margin-top:4px;">Govt. Approved Travel &amp; Visa Counseling Agency</div>
-                <div class="company-contact-row" style="margin-top:3px;">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; +977 9851420882 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np</div>
+                <div class="company-name-main">Trip Himalaya Tours &amp; Travels Pvt. Ltd.</div>
+                <div class="company-tagline">Govt. Approved Travel &amp; Visa Counseling Agency</div>
+                <div class="company-contact-row">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; +977 9851420882 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com</div>
               </div>
             </div>
             <div class="lh-right">
@@ -519,47 +521,111 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <div class="destination">Destination: ${country} &nbsp;/&nbsp; ${visaType}</div>
             </div>
             <div class="doc-id">
-              <div class="doc-id-label">Document ID</div>
+              <div class="doc-id-label">Submission ID</div>
               <div class="doc-id-val">${submissionId}</div>
             </div>
           </div>
 
-          <!-- SUBMISSION REFERENCE -->
-          <div class="ref-box">
-            <div class="ref-accent"></div>
-            <div class="ref-content">
-              <div>
-                <div class="ref-label">Official Submission Reference Number</div>
-                <div class="ref-value">${submissionId}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- APPLICANT DETAILS -->
+          <!-- APPLICANT DETAILS SECTION -->
           <div class="section-heading">
-            <div class="sh-text">Applicant &amp; Passport Details</div>
+            <div class="sh-text">${
+              guests > 1
+                ? `Applicant Details (${guests} Applicants Registered)`
+                : "Applicant &amp; Passport Details"
+            }</div>
             <div class="sh-line"></div>
           </div>
+
+          ${
+            guests === 1
+              ? `
           <table class="detail-table">
             <tr>
               <td class="td-label">Full Name</td>
-              <td class="td-value accent">${formData.fullName || "—"}</td>
+              <td class="td-value accent">${lead.fullName || "—"}</td>
               <td class="td-label">Passport Number</td>
-              <td class="td-value mono">${formData.passportNumber || "—"}</td>
+              <td class="td-value mono">${lead.passportNumber || "—"}</td>
             </tr>
             <tr>
               <td class="td-label">Nationality</td>
-              <td class="td-value">${formData.nationality || "—"}</td>
+              <td class="td-value">${lead.nationality || "—"}</td>
               <td class="td-label">Passport Expiry</td>
-              <td class="td-value">${formData.passportExpiry || "—"}</td>
+              <td class="td-value">${lead.passportExpiry || "—"}</td>
             </tr>
             <tr>
               <td class="td-label">Contact / WhatsApp</td>
-              <td class="td-value">${formData.phone || "—"}</td>
+              <td class="td-value">${lead.phone || "—"}</td>
               <td class="td-label">Email Address</td>
-              <td class="td-value">${formData.email || "—"}</td>
+              <td class="td-value">${lead.email || "—"}</td>
+            </tr>
+            <tr>
+              <td class="td-label">Intended Travel Date</td>
+              <td class="td-value">${lead.travelDate || "—"}</td>
+              <td class="td-label">Documents Submitted</td>
+              <td class="td-value" style="font-size:8.5px; color:#15803d; font-weight:600;">
+                ✓ Passport / National ID &nbsp;|&nbsp; ✓ Photo
+                ${flightFile ? '<br/>✓ Return Flight Ticket' : ''}
+                ${hotelFile ? '<br/>✓ Hotel Reservation' : ''}
+              </td>
             </tr>
           </table>
+          `
+              : `
+          <table class="detail-table">
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th style="width:26px; text-align:center; font-size:8.5px;">#</th>
+                <th style="font-size:8.5px; text-align:left;">Full Name</th>
+                <th style="font-size:8.5px; text-align:left;">Passport No.</th>
+                <th style="font-size:8.5px; text-align:left;">Nationality</th>
+                <th style="font-size:8.5px; text-align:left;">Expiry Date</th>
+                <th style="font-size:8.5px; text-align:left;">Travel Date</th>
+                <th style="font-size:8.5px; text-align:left;">Phone / Email</th>
+                <th style="font-size:8.5px; text-align:left;">Documents</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${applicants
+                .map(
+                  (a, i) => `
+                <tr>
+                  <td style="text-align:center; font-weight:800; font-size:8.5px;">
+                    ${i + 1}
+                  </td>
+                  <td style="font-weight:700; color:#0f172a; font-size:8.5px;">${
+                    a.fullName || "—"
+                  }</td>
+                  <td style="font-family:monospace; font-weight:700; font-size:8.5px;">${
+                    a.passportNumber || "—"
+                  }</td>
+                  <td style="font-size:8.5px;">${a.nationality || "—"}</td>
+                  <td style="font-size:8.5px;">${a.passportExpiry || "—"}</td>
+                  <td style="font-size:8.5px;">${a.travelDate || "—"}</td>
+                  <td style="font-size:8px;">${a.phone || "—"}<br/><span style="color:#64748b;">${
+                    a.email || "—"
+                  }</span></td>
+                  <td style="font-size:8px; color:#15803d; font-weight:600;">
+                    ✓ Passport<br/>✓ Photo
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+          ${
+            flightFile || hotelFile
+              ? `
+          <div style="margin-top:6px; font-size:8.5px; color:#334155; background:#f8fafc; padding:5px 8px; border:1px solid #e2e8f0; border-radius:4px;">
+            <strong>Booking Proofs:</strong> 
+            ${flightFile ? `• Return Flight Ticket (${flightFile.name}) &nbsp; ` : ""}
+            ${hotelFile ? `• Hotel/Residency Proof (${hotelFile.name})` : ""}
+          </div>
+          `
+              : ""
+          }
+          `
+          }
 
           <!-- VISA SERVICE DETAILS -->
           <div class="section-heading">
@@ -577,17 +643,23 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <td class="td-label">Entry Type</td>
               <td class="td-value">${selectedOption.entryType || "Single Entry"}</td>
               <td class="td-label">Intended Travel Date</td>
-              <td class="td-value">${formData.travelDate || "Flexible"}</td>
+              <td class="td-value">${lead.travelDate || "Flexible"}</td>
             </tr>
             <tr>
               <td class="td-label">Number of Applicants</td>
-              <td class="td-value">${guests} ${guests === 1 ? "Applicant" : "Applicants"}</td>
+              <td class="td-value">${guests} ${
+      guests === 1 ? "Applicant" : "Applicants"
+    }</td>
               <td class="td-label">Fee Per Person</td>
               <td class="td-value">${formattedPerPerson}</td>
             </tr>
             <tr>
               <td class="td-label" style="background:#fdf2f8; border-color:#f9a8d4;">Total Processing Fee</td>
-              <td class="td-value fee" colspan="3" style="background:#fdf2f8; border-color:#f9a8d4;">${formattedFee} &nbsp;<span style="font-size:9px;font-weight:600;color:#9D174D;">(${guests} applicant${guests > 1 ? 's' : ''} × ${formattedPerPerson}/person, inclusive of all service charges)</span></td>
+              <td class="td-value fee" colspan="3" style="background:#fdf2f8; border-color:#f9a8d4;">
+                ${formattedFee} &nbsp;<span style="font-size:8.5px;font-weight:600;color:#9D174D;">(${guests} applicant${
+      guests > 1 ? "s" : ""
+    } × ${formattedPerPerson}/person, inclusive of all service charges)</span>
+              </td>
             </tr>
           </table>
 
@@ -598,27 +670,20 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
           <!-- CHECKLIST -->
           <div class="checklist-box">
-            <div class="checklist-title">Embassy Filing Checklist</div>
-            <div class="checklist-grid">
-              <div class="checklist-item"><span class="ci-icon">✓</span> Original Passport (min. 6 months validity)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> 2 passport-size photos (white bg, 35×45mm)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Bank statement (sufficient closing balance)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Confirmed round-trip ticket &amp; hotel vouchers</div>
+            <div class="checklist-title">Document Checklist for Embassy Submission:</div>
+            <div class="checklist-items">
+              <div>✓ Original Passport (min 6 months validity)</div>
+              <div>✓ 2 Passport Size Photos (white background)</div>
+              <div>✓ Round-trip Flight &amp; Hotel Itinerary</div>
+              <div>✓ Proof of Funds / Bank Statement (if required)</div>
             </div>
           </div>
 
           <!-- FOOTER -->
           <div class="doc-footer">
-            <div class="footer-left">
-              This is a system-generated confirmation slip. No physical signature is required.<br>
-              For queries: +977 9851420882 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np
-            </div>
-            <div class="footer-right">
-              Trip Himalaya Tours &amp; Travels<br>
-              Ref: ${submissionId} &nbsp;|&nbsp; ${submittedAt}
-            </div>
+            <span>Official Visa Acknowledgement &nbsp;|&nbsp; Trip Himalaya Tours &amp; Travels Pvt. Ltd.</span>
+            <span>System Generated &nbsp;•&nbsp; Ref: ${submissionId}</span>
           </div>
-
         </div>
       </body>
       </html>
@@ -655,6 +720,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   const handleResetAndClose = () => {
     setSubmitted(false);
     setSubmissionId("");
+    setActiveApplicantIndex(0);
     onClose();
   };
 
@@ -739,10 +805,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         <div className="p-4 sm:p-5 overflow-y-auto">
           {submitted ? (
             /* =======================================================================
-               CONFIRMATION & RECEIPT VIEW — ULTRA-CLEAN, HARMONIOUS & COMPACT
-               1. "Thank you [Name]"
-               2. "after submit our visa officer contact you soon"
-               3. "every submission number need to generate"
+               CONFIRMATION & RECEIPT VIEW
                ======================================================================= */
             <div className="space-y-3 text-center animate-in fade-in zoom-in-95 duration-200">
               
@@ -753,12 +816,16 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                 </div>
                 <div className="flex items-center justify-center gap-1.5">
                   <h4 className="text-base sm:text-lg font-black text-[#1A0B2E] tracking-tight">
-                    Thank you, {formData.fullName || "Valued Applicant"}!
+                    Thank you, {applicants[0]?.fullName || "Valued Applicant"}!
                   </h4>
                   <BadgeCheck size={18} className="text-emerald-600 flex-shrink-0" />
                 </div>
                 <p className="text-xs text-slate-500">
-                  Your visa request for <strong className="text-slate-800 font-semibold">{country} ({visaType})</strong> has been registered.
+                  Your visa request for{" "}
+                  <strong className="text-slate-800 font-semibold">
+                    {country} ({visaType})
+                  </strong>{" "}
+                  has been registered for {guests} applicant{guests > 1 ? "s" : ""}.
                 </p>
               </div>
 
@@ -770,7 +837,9 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-snug">
-                  A visa specialist will reach out on <strong className="text-slate-800">WhatsApp &amp; Phone</strong> ({formData.phone || "your number"}) to coordinate next steps.
+                  A visa specialist will reach out on{" "}
+                  <strong className="text-slate-800">WhatsApp &amp; Phone</strong> (
+                  {applicants[0]?.phone || "your number"}) to coordinate next steps.
                 </p>
               </div>
 
@@ -778,28 +847,42 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
                 
                 {/* Submission Reference ID Header Strip */}
-                <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70">
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block leading-none">
-                    OFFICIAL SUBMISSION NUMBER
-                  </span>
-                  <span className="font-mono font-black text-sm sm:text-base text-[#1A0B2E] tracking-wider mt-0.5 block">
-                    {submissionId}
-                  </span>
+                <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70 flex items-center justify-between">
+                  <div>
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block leading-none">
+                      OFFICIAL SUBMISSION NUMBER
+                    </span>
+                    <span className="font-mono font-black text-sm sm:text-base text-[#1A0B2E] tracking-wider mt-0.5 block">
+                      {submissionId}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    className="flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100/70 hover:bg-purple-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copied ? "Copied" : "Copy"}</span>
+                  </button>
                 </div>
 
-                {/* 6 Key Details Grid */}
+                {/* Key Details Grid */}
                 <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-white">
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Applicant</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                      {guests > 1 ? "Primary Contact" : "Applicant"}
+                    </span>
                     <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
-                      {formData.fullName || "—"}
+                      {applicants[0]?.fullName || "—"}
                     </span>
                   </div>
 
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Passport No.</span>
-                    <span className="font-mono font-bold text-[#1A0B2E] uppercase truncate block text-xs mt-0.5">
-                      {formData.passportNumber || "—"}
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Total Applicants
+                    </span>
+                    <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
+                      {guests} {guests > 1 ? "Persons" : "Person"}
                     </span>
                   </div>
 
@@ -827,7 +910,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Travel Date</span>
                     <span className="font-medium text-slate-700 text-xs truncate block mt-0.5">
-                      {formData.travelDate || "Flexible"}
+                      {applicants[0]?.travelDate || "Flexible"}
                     </span>
                   </div>
 
@@ -839,12 +922,72 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </div>
                 </div>
 
+                {/* Multiple applicants list breakdown if guests > 1 */}
+                {guests > 1 && (
+                  <div className="p-3 bg-slate-50/80 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">
+                        All Registered Applicants ({guests})
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                        Details &amp; Documents Verified
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-52 overflow-y-auto">
+                      {applicants.map((app, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white p-2.5 rounded-xl border border-slate-200/80 text-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-[#200B3B] text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span className="font-black text-[#1A0B2E] text-xs">
+                                {app.fullName || `Applicant ${idx + 1}`}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                              {app.nationality || "—"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px] text-slate-600 bg-slate-50/70 p-1.5 rounded-lg border border-slate-100">
+                            <div>
+                              <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Passport No.</span>
+                              <span className="font-mono font-bold text-slate-800">{app.passportNumber || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Expiry Date</span>
+                              <span className="font-semibold text-slate-700">{app.passportExpiry || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Travel Date</span>
+                              <span className="font-semibold text-slate-700">{app.travelDate || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Contact</span>
+                              <span className="truncate block font-semibold text-slate-700">{app.phone || app.email || "—"}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-0.5 text-[9.5px] text-emerald-700 font-semibold">
+                            <span>✓ Passport: {app.passportFile ? app.passportFile.name : "Attached"}</span>
+                            <span>•</span>
+                            <span>✓ Photo: {app.photoFile ? app.photoFile.name : "Attached"}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Desk Status Footer */}
                 <div className="px-3.5 py-1.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-emerald-900">Desk Status: Document Verification in Progress</span>
-                  </div>
-
+                  <span className="font-bold text-emerald-900">
+                    Desk Status: Document Verification in Progress
+                  </span>
                 </div>
               </div>
 
@@ -881,19 +1024,84 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             </div>
           ) : (
             /* =======================================================================
-               VISA APPLICATION FORM — CLEAN, READABLE & PROPORTIONATE
+               VISA APPLICATION FORM — WITH APPLICANT TABS AT THE TOP
                ======================================================================= */
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
+
+              {/* ── APPLICANT SELECTOR TABS (Shown prominently at the top where marked in image 2) ── */}
+              {guests > 1 && (
+                <div className="bg-gradient-to-r from-purple-50/90 via-pink-50/40 to-purple-50/90 p-3 rounded-2xl border border-purple-200/80 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap px-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-md bg-[#200B3B] text-white flex items-center justify-center text-[10px] font-black">
+                        {guests}
+                      </div>
+                      <h4 className="text-xs font-black text-[#200B3B] uppercase tracking-wider">
+                        Applicants ({guests})
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#E91E63] bg-pink-100/80 px-2.5 py-0.5 rounded-full border border-pink-200">
+                      Editing: Applicant {activeApplicantIndex + 1} of {guests}
+                    </span>
+                  </div>
+
+                  {/* Scrollable Tabs for Applicants */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                    {applicants.map((app, idx) => {
+                      const isActive = idx === activeApplicantIndex;
+                      const isFilled =
+                        app.fullName.trim() !== "" &&
+                        app.passportNumber.trim() !== "" &&
+                        app.nationality.trim() !== "";
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveApplicantIndex(idx)}
+                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 border ${
+                            isActive
+                              ? "bg-gradient-to-r from-[#200B3B] to-[#E91E63] text-white border-transparent shadow-sm shadow-pink-500/25"
+                              : isFilled
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                              : "bg-white text-gray-700 border-gray-200 hover:bg-purple-50 hover:border-purple-300"
+                          }`}
+                        >
+                          <span
+                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                              isActive
+                                ? "bg-white/20 text-white"
+                                : isFilled
+                                ? "bg-emerald-200 text-emerald-800"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {idx + 1}
+                          </span>
+                          <span className="whitespace-nowrap font-extrabold">
+                            Applicant {idx + 1}
+                          </span>
+                          {isFilled && !isActive && (
+                            <Check size={12} className="text-emerald-600 stroke-[3]" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* ── SECTION 1: APPLICANT PERSONAL DETAILS ── */}
               <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
-                <div className="flex items-center gap-2 text-[#200B3B] pb-2 border-b border-gray-200/60">
-                  <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
-                    <User size={13} />
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/60">
+                  <div className="flex items-center gap-2 text-[#200B3B]">
+                    <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
+                      <User size={13} />
+                    </div>
+                    <h4 className="text-xs font-black uppercase tracking-wider">
+                      1. Personal Details{" "}
+                      {guests > 1 ? `— Applicant ${activeApplicantIndex + 1}` : ""}
+                    </h4>
                   </div>
-                  <h4 className="text-xs font-black uppercase tracking-wider">
-                    1. Applicant Personal Details
-                  </h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -905,8 +1113,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="text"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      value={currentApplicant.fullName}
+                      onChange={(e) =>
+                        updateCurrentApplicant({ fullName: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -919,8 +1129,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="text"
-                      value={formData.nationality}
-                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                      value={currentApplicant.nationality}
+                      onChange={(e) =>
+                        updateCurrentApplicant({ nationality: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -933,8 +1145,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      value={currentApplicant.email}
+                      onChange={(e) =>
+                        updateCurrentApplicant({ email: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -947,8 +1161,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      value={currentApplicant.phone}
+                      onChange={(e) =>
+                        updateCurrentApplicant({ phone: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -957,13 +1173,18 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
               {/* ── SECTION 2: PASSPORT & TRAVEL PLANS ── */}
               <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
-                <div className="flex items-center gap-2 text-[#200B3B] pb-2 border-b border-gray-200/60">
-                  <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
-                    <CreditCard size={13} />
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/60">
+                  <div className="flex items-center gap-2 text-[#200B3B]">
+                    <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
+                      <CreditCard size={13} />
+                    </div>
+                    <h4 className="text-xs font-black uppercase tracking-wider">
+                      2. Passport &amp; Travel Plans{" "}
+                      {guests > 1
+                        ? `— Applicant ${activeApplicantIndex + 1}`
+                        : ""}
+                    </h4>
                   </div>
-                  <h4 className="text-xs font-black uppercase tracking-wider">
-                    2. Passport &amp; Travel Plans
-                  </h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -975,8 +1196,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="text"
-                      value={formData.passportNumber}
-                      onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })}
+                      value={currentApplicant.passportNumber}
+                      onChange={(e) =>
+                        updateCurrentApplicant({
+                          passportNumber: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-mono font-bold text-[#200B3B] uppercase focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -989,8 +1214,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="date"
-                      value={formData.passportExpiry}
-                      onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
+                      value={currentApplicant.passportExpiry}
+                      onChange={(e) =>
+                        updateCurrentApplicant({
+                          passportExpiry: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -1003,8 +1232,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <input
                       required
                       type="date"
-                      value={formData.travelDate}
-                      onChange={(e) => setFormData({ ...formData, travelDate: e.target.value })}
+                      value={currentApplicant.travelDate}
+                      onChange={(e) =>
+                        updateCurrentApplicant({ travelDate: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                     />
                   </div>
@@ -1013,43 +1244,86 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
               {/* ── SECTION 3: DOCUMENT ATTACHMENTS ── */}
               <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
-                <div className="flex items-center gap-2 text-[#200B3B] pb-2 border-b border-gray-200/60">
-                  <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
-                    <UploadCloud size={13} />
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/60">
+                  <div className="flex items-center gap-2 text-[#200B3B]">
+                    <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
+                      <UploadCloud size={13} />
+                    </div>
+                    <h4 className="text-xs font-black uppercase tracking-wider">
+                      3. Document Attachments{" "}
+                      {guests > 1
+                        ? `— Applicant ${activeApplicantIndex + 1}`
+                        : ""}
+                    </h4>
                   </div>
-                  <h4 className="text-xs font-black uppercase tracking-wider">
-                    3. Document Attachments
-                  </h4>
                 </div>
 
                 <p className="text-[11px] text-gray-400 -mt-1">
-                  Attach files here or send later via WhatsApp. Accepted: PDF, JPG, PNG (max 10 MB each).
+                  Attach files for Applicant {activeApplicantIndex + 1} or send later via WhatsApp. Accepted: PDF, JPG, PNG (max 10 MB each).
                 </p>
 
-                {/* Hidden inputs */}
-                <input ref={passportRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={makeSingleFileHandler(setPassportFile)} className="hidden" />
-                <input ref={photoRef}    type="file" accept=".jpg,.jpeg,.png"       onChange={makeSingleFileHandler(setPhotoFile)}    className="hidden" />
-                <input ref={flightRef}   type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={makeSingleFileHandler(setFlightFile)}   className="hidden" />
-                <input ref={hotelRef}    type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={makeSingleFileHandler(setHotelFile)}    className="hidden" />
+                {/* Hidden file inputs */}
+                <input
+                  ref={passportRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handlePassportChange}
+                  className="hidden"
+                />
+                <input
+                  ref={photoRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                <input
+                  ref={flightRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFlightChange}
+                  className="hidden"
+                />
+                <input
+                  ref={hotelRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleHotelChange}
+                  className="hidden"
+                />
 
                 <div className="space-y-2.5">
-                  {/* 1. Passport / National ID — REQUIRED */}
                   {([
                     {
-                      label: "Passport / National ID",
+                      label:
+                        guests > 1
+                          ? `Passport / National ID (Applicant ${
+                              activeApplicantIndex + 1
+                            })`
+                          : "Passport / National ID",
                       required: true,
                       ref: passportRef,
-                      file: passportFile,
-                      clear: () => setPassportFile(null),
-                      hint: "Clear color copy of Passport (valid ≥ 6 months)",
+                      file: currentApplicant.passportFile,
+                      clear: () =>
+                        updateCurrentApplicant({ passportFile: null }),
+                      hint: `Clear color copy of Applicant ${
+                        activeApplicantIndex + 1
+                      }'s passport (valid ≥ 6 months)`,
                     },
                     {
-                      label: "Passport Size Photo",
+                      label:
+                        guests > 1
+                          ? `Passport Size Photo (Applicant ${
+                              activeApplicantIndex + 1
+                            })`
+                          : "Passport Size Photo",
                       required: true,
                       ref: photoRef,
-                      file: photoFile,
-                      clear: () => setPhotoFile(null),
-                      hint: "White background, digital copy (JPG/PNG)",
+                      file: currentApplicant.photoFile,
+                      clear: () => updateCurrentApplicant({ photoFile: null }),
+                      hint: `White background, digital copy for Applicant ${
+                        activeApplicantIndex + 1
+                      }`,
                     },
                     {
                       label: "Confirmed Return Flight Ticket",
@@ -1089,10 +1363,16 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            field.file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E91E63]"
+                            field.file
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-pink-50 text-[#E91E63]"
                           }`}
                         >
-                          {field.file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
+                          {field.file ? (
+                            <CheckCircle2 size={16} />
+                          ) : (
+                            <FileText size={15} />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
@@ -1150,8 +1430,8 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                 </label>
                 <textarea
                   rows={2}
-                  value={formData.specialNotes}
-                  onChange={(e) => setFormData({ ...formData, specialNotes: e.target.value })}
+                  value={specialNotes}
+                  onChange={(e) => setSpecialNotes(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
                 />
               </div>
@@ -1162,12 +1442,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   <input
                     required
                     type="checkbox"
-                    checked={formData.termsAgreed}
-                    onChange={(e) => setFormData({ ...formData, termsAgreed: e.target.checked })}
+                    checked={termsAgreed}
+                    onChange={(e) => setTermsAgreed(e.target.checked)}
                     className="mt-0.5 w-4 h-4 rounded text-[#E91E63] focus:ring-[#E91E63] border-gray-300 cursor-pointer flex-shrink-0"
                   />
                   <span className="text-xs text-gray-600 leading-relaxed">
-                    I understand that embassy visa processing fees and confirmed tickets are non-refundable as per embassy rules. All information provided above is authentic and accurate.
+                    I understand that embassy visa processing fees and confirmed tickets are non-refundable as per embassy rules. All information provided above for all {guests} applicant{guests > 1 ? "s" : ""} is authentic and accurate.
                   </span>
                 </label>
               </div>
@@ -1186,7 +1466,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   type="submit"
                   className="px-7 py-2.5 bg-gradient-to-r from-[#200B3B] to-[#E91E63] hover:from-[#2D1347] hover:to-pink-600 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 active:scale-98 transition-all cursor-pointer flex items-center gap-2"
                 >
-                  <span>Submit Application</span>
+                  <span>Submit Application ({guests} Pax)</span>
                   <ArrowRight size={14} />
                 </button>
               </div>

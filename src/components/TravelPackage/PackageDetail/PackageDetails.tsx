@@ -24,7 +24,7 @@ const PackageDetails: React.FC = () => {
   if (matchedVisa) {
     return (
       <div className="w-full min-h-screen bg-[#FBFBFE] font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 print:max-w-none print:p-0 print:m-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8 sm:pt-14 sm:pb-12 print:max-w-none print:p-0 print:m-0">
           <VisaCountryDetailView
             plan={matchedVisa}
             allPlans={VISA_PLANS}

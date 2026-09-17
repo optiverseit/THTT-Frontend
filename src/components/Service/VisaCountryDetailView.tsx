@@ -222,7 +222,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Visa & Documentation Team)! I am inquiring about visa counseling for "${plan.country}" (${plan.visaType}). Option: ${selectedCostOption.name} (${selectedCostOption.days}) for ${numberOfGuests} applicant(s). Estimated Total: ${totalFormatted} (${currencyText}). Please guide me through document submission and next steps.`
     );
-    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   // Share helpers
@@ -640,7 +640,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
 
         {/* Content */}
-        <div className="relative z-10 p-4 sm:p-6 md:p-8">
+        <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
               {/* Flag in a glassy circle */}
@@ -674,7 +674,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             </div>
 
             {/* Action buttons on the right */}
-            <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-0">
+            <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-12">
               <button
                 onClick={handleWhatsAppInquiry}
                 className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
@@ -713,10 +713,10 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         </div>
 
         {/* ── SHARE BUTTON — top-right of hero ── */}
-        <div ref={shareRef} className="print:hidden absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+        <div ref={shareRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-20">
           {/* Share popup — appears below on mobile, to the LEFT on desktop */}
           {isShareOpen && (
-            <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-wrap sm:flex-nowrap min-w-[200px] sm:min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
+            <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
               {shareButtons.map((item) => (
                 <button
                   key={item.name}

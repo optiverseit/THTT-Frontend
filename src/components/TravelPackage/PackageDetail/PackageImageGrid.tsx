@@ -515,7 +515,7 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
 
       {/* HERO HEADER — visa-page style */}
       <div
-        className="print:hidden relative overflow-hidden shadow-lg min-h-[220px] sm:min-h-[280px] flex flex-col justify-end"
+        className="print:hidden relative overflow-hidden shadow-lg min-h-[250px] sm:min-h-[280px] flex flex-col justify-end"
         style={{
           backgroundImage: `url('${galleryImages[0]}')`,
           backgroundSize: "cover",
@@ -582,7 +582,7 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         </div>
 
         {/* Share button — top-right corner of hero */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+        <div className="absolute top-14 right-4 sm:top-6 sm:right-6 z-20">
           {isShareOpen && (
             <div className="absolute top-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30">
               {/* Facebook */}

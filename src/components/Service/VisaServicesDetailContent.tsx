@@ -697,7 +697,120 @@ const VISA_FAQS = [
   },
 ];
 
-export const VisaServicesDetailContent: React.FC = () => {
+export interface VisaFilterCriteria {
+  country: string;
+  visaType: string;
+  entryType: string;
+}
+
+export interface VisaServicesDetailContentProps {
+  filter?: VisaFilterCriteria | null;
+  onClearFilter?: () => void;
+}
+
+const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
+  if (!countryFilter || countryFilter.trim() === "" || countryFilter === "all") return true;
+  const c = countryFilter.trim().toLowerCase();
+  const planCountry = (plan.country || "").toLowerCase();
+  const planId = (plan.id || "").toLowerCase();
+  const planCode = (plan.countryCode || "").toLowerCase();
+
+  if (planCountry.includes(c) || planId.includes(c) || planCode === c) return true;
+  if (c === "uae" && (planCountry.includes("uae") || planCountry.includes("dubai") || planCountry.includes("emirates"))) return true;
+  if (c === "usa" && (planCountry.includes("usa") || planCountry.includes("united states"))) return true;
+  if (c === "uk" && (planCountry.includes("uk") || planCountry.includes("united kingdom"))) return true;
+  if (c === "schengen" && (planCountry.includes("schengen") || planCountry.includes("europe"))) return true;
+  if (c.includes("bali") && planCountry.includes("indonesia")) return true;
+  if (c.includes("indonesia") && planCountry.includes("indonesia")) return true;
+
+  return false;
+};
+
+const matchesVisaType = (plan: VisaDetailPlan, typeFilter?: string) => {
+  if (!typeFilter || typeFilter === "all" || typeFilter.trim() === "") return true;
+  const f = typeFilter.toLowerCase();
+  const planType = (plan.visaType || "").toLowerCase();
+  const planAbout = (plan.aboutText || "").toLowerCase();
+  const inclusions = (plan.inclusions || []).join(" ").toLowerCase();
+
+  if (f === "tourist") {
+    return (
+      planType.includes("tourist") ||
+      planType.includes("visit") ||
+      planType.includes("visitor") ||
+      planType.includes("evisa") ||
+      planType.includes("e-visa") ||
+      planType.includes("eta") ||
+      planAbout.includes("tourist") ||
+      planAbout.includes("visitor")
+    );
+  }
+
+  if (f === "business") {
+    return (
+      planType.includes("business") ||
+      planAbout.includes("business") ||
+      inclusions.includes("business")
+    );
+  }
+
+  if (f === "transit") {
+    return (
+      planType.includes("transit") ||
+      planType.includes("entry") ||
+      planAbout.includes("transit") ||
+      inclusions.includes("transit")
+    );
+  }
+
+  if (f === "express") {
+    const proc = (plan.processingTime || "").toLowerCase();
+    return (
+      proc.includes("1 –") ||
+      proc.includes("2 –") ||
+      proc.includes("instant") ||
+      proc.includes("same day") ||
+      inclusions.includes("fast-track") ||
+      inclusions.includes("express") ||
+      inclusions.includes("instant") ||
+      Boolean(plan.popular)
+    );
+  }
+
+  return planType.includes(f);
+};
+
+const matchesEntryType = (plan: VisaDetailPlan, entryFilter?: string) => {
+  if (!entryFilter || entryFilter === "all" || entryFilter.trim() === "") return true;
+  const f = entryFilter.toLowerCase();
+  const planEntry = (plan.entryType || "").toLowerCase();
+
+  if (f === "single") {
+    if (planEntry.includes("single")) return true;
+    if (plan.costOptions?.some((c) => (c.entryType || "").toLowerCase().includes("single"))) return true;
+    return false;
+  }
+
+  if (f === "multiple") {
+    if (planEntry.includes("multiple") || planEntry.includes("double")) return true;
+    if (
+      plan.costOptions?.some((c) => {
+        const ce = (c.entryType || "").toLowerCase();
+        return ce.includes("multiple") || ce.includes("double");
+      })
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  return planEntry.includes(f);
+};
+
+export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps> = ({
+  filter,
+  onClearFilter,
+}) => {
   const navigate = useNavigate();
   const INITIAL_COUNT = 9;
   const LOAD_MORE_STEP = 15;
@@ -709,13 +822,33 @@ export const VisaServicesDetailContent: React.FC = () => {
 
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
+  const isExternalFilterActive = Boolean(
+    filter &&
+      (Boolean(filter.country && filter.country.trim() !== "" && filter.country !== "all") ||
+        (filter.visaType && filter.visaType !== "all") ||
+        (filter.entryType && filter.entryType !== "all"))
+  );
+
   // Reset to initial 9 cards whenever filters or search change
   useEffect(() => {
+    if (isExternalFilterActive) {
+      setActiveTab("all");
+    }
     setVisibleCount(INITIAL_COUNT);
-  }, [activeTab, searchQuery]);
+  }, [filter, activeTab, searchQuery, isExternalFilterActive]);
 
   const filteredPlans = VISA_PLANS.filter((plan) => {
+    // 1. External hero search criteria
+    if (filter) {
+      if (!matchesCountry(plan, filter.country)) return false;
+      if (!matchesVisaType(plan, filter.visaType)) return false;
+      if (!matchesEntryType(plan, filter.entryType)) return false;
+    }
+
+    // 2. Region tab filter
     if (activeTab !== "all" && plan.region !== activeTab) return false;
+
+    // 3. Inner text search query
     if (searchQuery && !plan.country.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
@@ -727,6 +860,12 @@ export const VisaServicesDetailContent: React.FC = () => {
 
   const handleSeeMore = () => {
     setVisibleCount((prev) => prev + LOAD_MORE_STEP);
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchQuery("");
+    setActiveTab("all");
+    onClearFilter?.();
   };
 
   const handleSelectPlan = (plan: VisaDetailPlan) => {
@@ -743,7 +882,7 @@ export const VisaServicesDetailContent: React.FC = () => {
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Visa & Documentation Team)! I would like to inquire about visa assistance for "${plan.country}" (${plan.visaType}, fee starting around ${formattedPrice}). Please guide me with requirements and next steps.`
     );
-    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
 
@@ -801,8 +940,63 @@ export const VisaServicesDetailContent: React.FC = () => {
           </div>
         </div>
 
-        {/* ── 3 COLUMNS & 3 ROWS GRID (Total 9 initially, as requested) ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Active Hero Filter Banner */}
+        {isExternalFilterActive && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
+              <span className="text-gray-500 font-semibold">Active Filter:</span>
+              {filter?.country && filter.country.trim() !== "" && filter.country !== "all" && (
+                <span className="px-2.5 py-1 bg-white border border-pink-200 rounded-lg text-pink-600 font-bold capitalize shadow-2xs">
+                  {filter.country}
+                </span>
+              )}
+              {filter?.visaType && filter.visaType !== "all" && (
+                <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
+                  {filter.visaType} Visa
+                </span>
+              )}
+              {filter?.entryType && filter.entryType !== "all" && (
+                <span className="px-2.5 py-1 bg-white border border-emerald-200 rounded-lg text-emerald-700 font-bold capitalize shadow-2xs">
+                  {filter.entryType} Entry
+                </span>
+              )}
+              <span className="text-xs text-gray-500 font-medium ml-1">
+                ({filteredPlans.length} {filteredPlans.length === 1 ? "destination" : "destinations"} found)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-xl border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              <X size={14} />
+              <span>Clear Filter</span>
+            </button>
+          </div>
+        )}
+
+        {filteredPlans.length === 0 ? (
+          <div className="bg-white rounded-3xl p-10 sm:p-14 border border-gray-200/80 text-center space-y-4 shadow-sm my-4">
+            <div className="w-16 h-16 bg-purple-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <Search size={30} />
+            </div>
+            <h4 className="text-xl sm:text-2xl font-black text-[#2D1347]">
+              No Matching Visa Destinations Found
+            </h4>
+            <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+              We couldn't find any visa packages matching your criteria. Try clearing or adjusting your search filters.
+            </p>
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="px-6 py-2.5 bg-[#2D1347] hover:bg-pink-600 text-white font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow-md active:scale-95"
+            >
+              Show All Visa Destinations
+            </button>
+          </div>
+        ) : (
+          /* ── 3 COLUMNS & 3 ROWS GRID (Total 9 initially, as requested) ── */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedPlans.map((plan) => {
             const formattedPrice = displayPrice(
               plan.baseNPRPrice,
@@ -814,7 +1008,8 @@ export const VisaServicesDetailContent: React.FC = () => {
             return (
               <div
                 key={plan.id}
-                className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between relative group"
+                onClick={() => handleSelectPlan(plan)}
+                className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E91E63]/40 transition-all duration-300 flex flex-col justify-between relative group cursor-pointer"
               >
                 {plan.popular && (
                   <span className="absolute top-4 right-4 bg-gradient-to-r from-[#E91E63] to-pink-500 text-white text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full shadow-xs">
@@ -837,7 +1032,7 @@ export const VisaServicesDetailContent: React.FC = () => {
                       )}
                     </div>
                     <div className="min-w-0 pr-14">
-                      <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug tracking-tight truncate">
+                      <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug tracking-tight truncate group-hover:text-[#E91E63] transition-colors">
                         {plan.country}
                       </h4>
                       <p className="text-xs sm:text-sm font-bold text-[#E91E63] mt-0.5 truncate">
@@ -885,7 +1080,11 @@ export const VisaServicesDetailContent: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2.5 mt-1">
                     <button
-                      onClick={() => handleSelectPlan(plan)}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectPlan(plan);
+                      }}
                       className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-purple-50 hover:bg-purple-100 text-[#2D1347] font-bold text-xs sm:text-sm rounded-xl border border-purple-200/80 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <Eye size={15} className="text-[#E91E63]" />
@@ -893,7 +1092,11 @@ export const VisaServicesDetailContent: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleWhatsAppInquiry(plan)}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleWhatsAppInquiry(plan);
+                      }}
                       className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-[#E91E63] to-pink-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <MessageCircle size={15} />
@@ -905,25 +1108,28 @@ export const VisaServicesDetailContent: React.FC = () => {
             );
           })}
         </div>
+        )}
 
         {/* ── SEE MORE BUTTON (Loads 15 more cards when clicked, matched to Tours page) ── */}
-        {hasMore ? (
-          <div className="flex flex-col items-center justify-center pt-8">
-            <button
-              onClick={handleSeeMore}
-              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
-            >
-              <span>See More</span>
-              <ChevronDown size={16} />
-            </button>
-          </div>
-        ) : filteredPlans.length > INITIAL_COUNT ? (
-          <div className="text-center pt-6">
-            <span className="inline-block px-5 py-2 rounded-full bg-purple-50 text-[#2D1347] text-xs sm:text-sm font-bold border border-purple-100 shadow-xs">
-              ✓ Showing all {filteredPlans.length} visa destinations
-            </span>
-          </div>
-        ) : null}
+        {filteredPlans.length > 0 && (
+          hasMore ? (
+            <div className="flex flex-col items-center justify-center pt-8">
+              <button
+                onClick={handleSeeMore}
+                className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
+              >
+                <span>See More</span>
+                <ChevronDown size={16} />
+              </button>
+            </div>
+          ) : filteredPlans.length > INITIAL_COUNT ? (
+            <div className="text-center pt-6">
+              <span className="inline-block px-5 py-2 rounded-full bg-purple-50 text-[#2D1347] text-xs sm:text-sm font-bold border border-purple-100 shadow-xs">
+                ✓ Showing all {filteredPlans.length} visa destinations
+              </span>
+            </div>
+          ) : null
+        )}
       </div>
 
       {/* ── 4. HOW IT WORKS (Preserved as requested) ── */}

@@ -20,6 +20,8 @@ import {
 import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import THTTLogo from "../../assets/images/THTTLogo.png";
+import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
+export { COUNTRY_CODES, isoToFlag };
 
 export interface VisaApplicationModalProps {
   isOpen: boolean;
@@ -40,6 +42,7 @@ export interface ApplicantData {
   fullName: string;
   nationality: string;
   email: string;
+  phoneCode: string;
   phone: string;
   passportNumber: string;
   passportExpiry: string;
@@ -52,6 +55,7 @@ const createDefaultApplicant = (): ApplicantData => ({
   fullName: "",
   nationality: "",
   email: "",
+  phoneCode: "+977",
   phone: "",
   passportNumber: "",
   passportExpiry: "",
@@ -268,7 +272,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         `👥 *Number of Applicants:* ${guests}\n` +
         `👤 *Applicant List:*\n${applicantsList}\n\n` +
         `📅 *Travel Date:* ${lead.travelDate || "Flexible"}\n` +
-        `📞 *Lead Contact:* ${lead.phone || "—"}\n` +
+        `📞 *Lead Contact:* ${lead.phone ? `${lead.phoneCode} ${lead.phone}` : "—"}\n` +
         `✉️ *Lead Email:* ${lead.email || "—"}\n` +
         `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
         `💰 *Total Processing Fee (${guests} applicant${
@@ -554,7 +558,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             </tr>
             <tr>
               <td class="td-label">Contact / WhatsApp</td>
-              <td class="td-value">${lead.phone || "—"}</td>
+              <td class="td-value">${lead.phone ? `${lead.phoneCode} ${lead.phone}` : "—"}</td>
               <td class="td-label">Email Address</td>
               <td class="td-value">${lead.email || "—"}</td>
             </tr>
@@ -601,7 +605,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   <td style="font-size:8.5px;">${a.nationality || "—"}</td>
                   <td style="font-size:8.5px;">${a.passportExpiry || "—"}</td>
                   <td style="font-size:8.5px;">${a.travelDate || "—"}</td>
-                  <td style="font-size:8px;">${a.phone || "—"}<br/><span style="color:#64748b;">${
+                  <td style="font-size:8px;">${a.phone ? `${a.phoneCode} ${a.phone}` : "—"}<br/><span style="color:#64748b;">${
                     a.email || "—"
                   }</span></td>
                   <td style="font-size:8px; color:#15803d; font-weight:600;">
@@ -839,7 +843,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                 <p className="text-[11px] text-slate-600 leading-snug">
                   A visa specialist will reach out on{" "}
                   <strong className="text-slate-800">WhatsApp &amp; Phone</strong> (
-                  {applicants[0]?.phone || "your number"}) to coordinate next steps.
+                  {applicants[0]?.phone
+                    ? `${applicants[0].phoneCode} ${applicants[0].phone}`
+                    : "your number"}
+                  ) to coordinate next steps.
                 </p>
               </div>
 
@@ -968,7 +975,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                             </div>
                             <div>
                               <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Contact</span>
-                              <span className="truncate block font-semibold text-slate-700">{app.phone || app.email || "—"}</span>
+                              <span className="truncate block font-semibold text-slate-700">{app.phone ? `${app.phoneCode} ${app.phone}` : app.email || "—"}</span>
                             </div>
                           </div>
 
@@ -1153,20 +1160,39 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     />
                   </div>
 
-                  {/* WhatsApp Phone */}
+                  {/* WhatsApp Phone with Country Code */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
                       WhatsApp / Mobile Phone <span className="text-[#E91E63]">*</span>
                     </label>
-                    <input
-                      required
-                      type="tel"
-                      value={currentApplicant.phone}
-                      onChange={(e) =>
-                        updateCurrentApplicant({ phone: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
-                    />
+                    <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#E91E63] focus-within:ring-2 focus-within:ring-pink-100 transition-all overflow-hidden">
+                      {/* Country Code Selector */}
+                      <select
+                        value={currentApplicant.phoneCode}
+                        onChange={(e) =>
+                          updateCurrentApplicant({ phoneCode: e.target.value })
+                        }
+                        className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 py-2 text-xs font-bold text-[#200B3B] focus:outline-none cursor-pointer"
+                        style={{ maxWidth: "110px" }}
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.iso} value={c.code}>
+                            {isoToFlag(c.iso)} {c.code}
+                          </option>
+                        ))}
+                      </select>
+                      {/* Phone Number Input */}
+                      <input
+                        required
+                        type="tel"
+                        placeholder="9800000000"
+                        value={currentApplicant.phone}
+                        onChange={(e) =>
+                          updateCurrentApplicant({ phone: e.target.value })
+                        }
+                        className="flex-1 min-w-0 px-3 py-2 bg-white text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

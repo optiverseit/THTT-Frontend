@@ -23,6 +23,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
+import DynamicFaqSection from "../reusable/DynamicFaqSection";
 
 const POPULAR_ROUTES = [
   {
@@ -65,21 +66,15 @@ const POPULAR_ROUTES = [
 const VEHICLE_FAQS = [
   {
     q: "Is a professional chauffeur included in the rental price?",
-    qNp: "के भाडा मूल्यमा पेशेवर चालक समावेश छ?",
     a: "Yes! All our vehicle rentals include a courteous, government-licensed professional chauffeur with extensive experience in Nepal's mountain highways. Chauffeur daily salary, meals, and overnight lodging allowance are 100% included with no hidden extras.",
-    aNp: "हो! हाम्रा सबै सवारीसाधन भाडामा नेपालका पहाडी राजमार्गमा व्यापक अनुभव भएका सरकार-लाइसेन्सप्राप्त पेशेवर चालक समावेश हुन्छ। चालकको दैनिक तलब, खाना, र राति बसाइको भत्ता १००% समावेश छ — कुनै लुकावाटो शुल्क छैन।",
   },
   {
     q: "Are fuel, road tolls, and driver allowances included in the price?",
-    qNp: "के इन्धन, सडक दस्तुर, र चालक भत्ता मूल्यमा समावेश छन्?",
     a: "Yes, 100%! All our quoted rental rates are completely all-inclusive: vehicle rental, experienced mountain chauffeur, all fuel costs, interstate highway tolls, parking charges, and complete driver lodging/meals.",
-    aNp: "हो, १००%! हाम्रा सबै उद्धृत भाडा दरहरू पूर्ण रूपमा सबै-समावेशी छन्: सवारी साधन, अनुभवी पहाडी चालक, सबै इन्धन खर्च, राजमार्ग कर, पार्किङ शुल्क, र चालकको सम्पूर्ण खाना/बसोबास।",
   },
   {
     q: "Can I rent a vehicle for self-drive in Nepal without a driver?",
-    qNp: "के मैले नेपालमा चालक बिना स्वयं-चालन कार भाडामा लिन सक्छु?",
     a: "Due to road conditions, steep mountain passes, and local regulations in Nepal, we strongly recommend and exclusively provide chauffeur-driven vehicles to guarantee maximum safety, smooth navigation, and zero liability for damages.",
-    aNp: "नेपालको सडक अवस्था, खडा पहाडी घाटी, र स्थानीय नियमहरूका कारणले, हामी उच्चतम सुरक्षा, सहज नाभिकरण, र क्षतिको शून्य दायित्व सुनिश्चित गर्न चालक-चालित सवारी मात्र प्रदान गर्छौं।",
   },
 ];
 
@@ -88,7 +83,6 @@ export const VehicleRentalDetailContent: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number>(5000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   // Booking Modal State
@@ -299,51 +293,13 @@ export const VehicleRentalDetailContent: React.FC = () => {
       </div>
 
       {/* ── 5. FLEET VEHICLE FAQS ── */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-10 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-4 sm:mb-6">
-          <div className="p-2.5 rounded-xl bg-pink-50 text-[#E11D48] flex-shrink-0">
-            <HelpCircle size={22} />
-          </div>
-          <div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-black text-[#2D1347] tracking-tight">
-              Vehicle Rental FAQ
-            </h3>
-            <p className="text-xs text-gray-500 font-medium">Important details regarding chauffeur services and highway routes</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {VEHICLE_FAQS.map((faq, index) => {
-            const isOpen = openFaq === index;
-            return (
-              <div key={index} className="border border-gray-100 rounded-2xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setOpenFaq(isOpen ? null : index)}
-                  className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span>{faq.q}</span>
-                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
-                      isOpen ? "rotate-180 text-[#E11D48]" : ""
-                    }`}
-                  />
-                </button>
-                {isOpen && (
-                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
-                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
-                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <DynamicFaqSection
+        targetType="service"
+        targetId="vehicle-rental"
+        defaultFaqs={VEHICLE_FAQS}
+        title="Vehicle Rental FAQ"
+        subtitle="Important details regarding chauffeur services and highway routes"
+      />
 
       {/* ── BOOKING MODAL POPUP ── */}
       <BookingModal

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { DynamicFaqItem } from "../assets/data/types";
+import { translateToNepali } from "../utils/translator";
 
 interface FaqContextType {
   isAdminMode: boolean;
@@ -21,9 +22,18 @@ interface FaqContextType {
     targetId: string,
     question: string,
     answer: string,
-    category?: string
+    category?: string,
+    questionNp?: string,
+    answerNp?: string
   ) => DynamicFaqItem;
-  updateFaq: (id: string, question: string, answer: string, category?: string) => void;
+  updateFaq: (
+    id: string,
+    question: string,
+    answer: string,
+    category?: string,
+    questionNp?: string,
+    answerNp?: string
+  ) => void;
   deleteFaq: (id: string) => void;
   resetFaqs: (targetType: string, targetId: string) => void;
 }
@@ -47,7 +57,18 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Overridden/edited FAQs (mapped by id)
-  const [editedFaqs, setEditedFaqs] = useState<Record<string, { question: string; answer: string; category?: string }>>(() => {
+  const [editedFaqs, setEditedFaqs] = useState<
+    Record<
+      string,
+      {
+        question: string;
+        questionNp?: string;
+        answer: string;
+        answerNp?: string;
+        category?: string;
+      }
+    >
+  >(() => {
     try {
       const saved = localStorage.getItem(STORAGE_EDITED_KEY);
       return saved ? JSON.parse(saved) : {};
@@ -159,7 +180,9 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return {
               ...f,
               question: editedFaqs[f.id].question,
+              questionNp: editedFaqs[f.id].questionNp ?? f.questionNp,
               answer: editedFaqs[f.id].answer,
+              answerNp: editedFaqs[f.id].answerNp ?? f.answerNp,
               category: editedFaqs[f.id].category || f.category,
             };
           }
@@ -178,19 +201,46 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetId: string,
       question: string,
       answer: string,
-      category = "General"
+      category = "General",
+      questionNp = "",
+      answerNp = ""
     ): DynamicFaqItem => {
       const newFaq: DynamicFaqItem = {
         id: `dyn_${targetType}_${targetId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         targetType,
         targetId,
         question: question.trim(),
+        questionNp: questionNp.trim(),
         answer: answer.trim(),
+        answerNp: answerNp.trim(),
         category: category.trim(),
         createdAt: new Date().toISOString(),
       };
 
       setCustomFaqs((prev) => [newFaq, ...prev]);
+
+      // If Nepali text was not manually entered, automatically translate in background
+      if (!newFaq.questionNp || !newFaq.answerNp) {
+        Promise.all([
+          !newFaq.questionNp ? translateToNepali(newFaq.question) : Promise.resolve(newFaq.questionNp),
+          !newFaq.answerNp ? translateToNepali(newFaq.answer) : Promise.resolve(newFaq.answerNp),
+        ]).then(([qNp, aNp]) => {
+          if (qNp || aNp) {
+            setCustomFaqs((prev) =>
+              prev.map((item) =>
+                item.id === newFaq.id
+                  ? {
+                      ...item,
+                      questionNp: qNp || item.questionNp,
+                      answerNp: aNp || item.answerNp,
+                    }
+                  : item
+              )
+            );
+          }
+        });
+      }
+
       return newFaq;
     },
     []
@@ -199,18 +249,72 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   /**
    * Update an existing FAQ
    */
-  const updateFaq = useCallback((id: string, question: string, answer: string, category?: string) => {
-    // If it is in customFaqs, update directly
-    setCustomFaqs((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, question, answer, category: category || f.category } : f))
-    );
+  const updateFaq = useCallback(
+    (
+      id: string,
+      question: string,
+      answer: string,
+      category?: string,
+      questionNp?: string,
+      answerNp?: string
+    ) => {
+      // If it is in customFaqs, update directly
+      setCustomFaqs((prev) =>
+        prev.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                question,
+                answer,
+                category: category || f.category,
+                questionNp: questionNp !== undefined ? questionNp : f.questionNp,
+                answerNp: answerNp !== undefined ? answerNp : f.answerNp,
+              }
+            : f
+        )
+      );
 
-    // Also record in editedFaqs so default mock items can be edited
-    setEditedFaqs((prev) => ({
-      ...prev,
-      [id]: { question, answer, category },
-    }));
-  }, []);
+      // Also record in editedFaqs so default mock items can be edited
+      setEditedFaqs((prev) => ({
+        ...prev,
+        [id]: { question, answer, category, questionNp, answerNp },
+      }));
+
+      // If no Nepali text provided, auto-translate
+      if (!questionNp || !answerNp) {
+        Promise.all([
+          !questionNp ? translateToNepali(question) : Promise.resolve(questionNp),
+          !answerNp ? translateToNepali(answer) : Promise.resolve(answerNp),
+        ]).then(([qNp, aNp]) => {
+          if (qNp || aNp) {
+            setCustomFaqs((prev) =>
+              prev.map((f) =>
+                f.id === id
+                  ? {
+                      ...f,
+                      questionNp: qNp || f.questionNp,
+                      answerNp: aNp || f.answerNp,
+                    }
+                  : f
+              )
+            );
+            setEditedFaqs((prev) => {
+              if (!prev[id]) return prev;
+              return {
+                ...prev,
+                [id]: {
+                  ...prev[id],
+                  questionNp: qNp || prev[id].questionNp,
+                  answerNp: aNp || prev[id].answerNp,
+                },
+              };
+            });
+          }
+        });
+      }
+    },
+    []
+  );
 
   /**
    * Delete an FAQ

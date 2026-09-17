@@ -4,6 +4,7 @@ import { packages } from "../../assets/data/mockData";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reuseable/packages/BookingModal";
+import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import {
   MapPin,
   Clock,
@@ -24,41 +25,29 @@ import {
 const TOUR_FAQS = [
   {
     q: "Can our holiday tour itinerary be completely customized?",
-    qNp: "के हाम्रो हलिडे ट्यूर इटिनेरेरी पूर्णरूपमा अनुकूलन गर्न सकिन्छ?",
     a: "Yes! Every tour package can be customized to match your schedule, preferred hotel category (from budget to 5-star heritage resorts), private vehicle choice, and specific sightseeing interests.",
-    aNp: "हो! प्रत्येक ट्यूर प्याकेज तपाईंको तालिका, मनपर्ने होटल श्रेणी (बजेटदेखि ५-स्टार हेरिटेज रिसोर्टसम्म), निजी सवारी छनोट र विशेष दर्शनीय स्थानको रुचि अनुसार अनुकूलन गर्न सकिन्छ।",
   },
   {
     q: "What is included in the private transport during tours?",
-    qNp: "ट्यूरको क्रममा निजी यातायातमा के-के समावेश छ?",
     a: "We provide clean, air-conditioned private vehicles (Sedans, Scorpio 4x4 SUVs, Toyota Hiace vans, or luxury tourist coasters) with experienced, courteous chauffeurs covering all fuel, toll, and parking fees.",
-    aNp: "हामी अनुभवी र विनम्र चालकसहित सफा, एयर-कन्डिसन निजी सवारीसाधन (सेडान, स्कर्पियो ४x४ SUV, टोयोटा हाइस भ्यान, वा लक्जरी ट्यूरिस्ट कोस्टर) प्रदान गर्छौं — सबै इन्धन, टोल र पार्किङ शुल्क समावेश।",
   },
   {
     q: "Are monument entry fees and government permits covered?",
-    qNp: "स्मारक प्रवेश शुल्क र सरकारी अनुमति समावेश छन्?",
     a: "In all our full-board packages, entrance fees to UNESCO Heritage monuments, National Park entry tickets, and local permits are organized and included in advance so you can skip queues.",
-    aNp: "हाम्रा सबै फुल-बोर्ड प्याकेजमा युनेस्को हेरिटेज स्मारकहरूको प्रवेश शुल्क, राष्ट्रिय निकुञ्जको टिकट र स्थानीय अनुमति अग्रिम व्यवस्था गरिन्छ, ताकि तपाईंले लाइनमा पर्खन नपरोस्।",
   },
   {
     q: "Do you offer multi-lingual professional tour guides?",
-    qNp: "के तपाईंहरू बहु-भाषिक पेशेवर ट्यूर गाइड प्रदान गर्नुहुन्छ?",
     a: "Yes, our certified government-licensed tour guides speak English, Hindi, Nepali, French, German, Spanish, Japanese, and Chinese upon request for guided city excursions.",
-    aNp: "हो, हाम्रा सरकार-प्रमाणित ट्यूर गाइडहरू अनुरोधमा अंग्रेजी, हिन्दी, नेपाली, फ्रान्सेली, जर्मन, स्पेनिश, जापानी र चिनियाँ भाषामा निर्देशित सहर भ्रमण प्रदान गर्छन्।",
   },
   {
     q: "How do we confirm our booking and what payment options are accepted?",
-    qNp: "हामी बुकिङ कसरी पुष्टि गर्ने र कुन भुक्तानी विकल्पहरू स्वीकार्य छन्?",
     a: "You can reserve your tour with a 20% advance deposit via bank transfer, eSewa, Khalti, or credit card. The balance can be paid prior to departure or upon arrival in Kathmandu.",
-    aNp: "तपाईं बैंक ट्रान्सफर, eSewa, Khalti, वा क्रेडिट कार्डबाट २०% अग्रिम जम्मा गरेर ट्यूर आरक्षण गर्न सक्नुहुन्छ। बाँकी रकम काठमाडौं प्रस्थान गर्नुअघि वा आइपुगेपछि भुक्तान गर्न सकिन्छ।",
   },
 ];
-
 
 export const ToursDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [visibleCount, setVisibleCount] = useState<number>(9);
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const navigate = useNavigate();
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const [selectedBookingTour, setSelectedBookingTour] = useState<Package | null>(null);
@@ -369,52 +358,13 @@ export const ToursDetailContent: React.FC = () => {
       </div>
 
       {/* ── 5. CURATED TOURS FAQS ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 rounded-xl bg-pink-50 text-[#E11D48]">
-            <HelpCircle size={22} />
-          </div>
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              Tours &amp; Holiday FAQ
-            </h3>
-            <p className="text-xs text-gray-500 font-medium">Common questions answered by our holiday specialists</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {TOUR_FAQS.map((faq, index) => {
-            const isOpen = openFaq === index;
-            return (
-              <div key={index} className="border border-gray-100 rounded-2xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setOpenFaq(isOpen ? null : index)}
-                  className="w-full p-4 sm:p-4.5 text-left flex items-center justify-between gap-3.5 font-bold text-xs sm:text-[13px] text-[#2D1347] hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span>{faq.q}</span>
-                    <span className="text-[11px] font-medium text-gray-400">{faq.qNp}</span>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
-                      isOpen ? "rotate-180 text-[#E11D48]" : ""
-                    }`}
-                  />
-                </button>
-                {isOpen && (
-                  <div className="px-4.5 pb-4 bg-gray-50/50 border-t border-gray-100 pt-2.5 space-y-2">
-                    <p className="text-xs sm:text-[12.5px] text-gray-600 font-medium leading-relaxed">{faq.a}</p>
-                    <p className="text-xs sm:text-[12px] text-gray-400 font-medium leading-relaxed border-t border-gray-100 pt-2">{faq.aNp}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-        </div>
-      </div>
+      <DynamicFaqSection
+        targetType="service"
+        targetId="holiday-tours"
+        defaultFaqs={TOUR_FAQS}
+        title="Tours & Holiday FAQ"
+        subtitle="Common questions answered by our holiday specialists"
+      />
 
       {/* ── BOOKING MODAL POPUP ── */}
       <BookingModal

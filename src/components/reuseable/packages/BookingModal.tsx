@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useGlobalCurrency, displayPrice, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 import THTTLogo from "../../../assets/images/THTTLogo.png";
+import { COUNTRY_CODES, isoToFlag } from "../../../utils/countrycodes";
 
 export interface BookingItem {
   id?: string;
@@ -152,6 +153,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     fullName: "",
     nationality: "",
     email: "",
+    phoneCode: "+977",
     phone: "",
     travelDate: "",
     pickupAddress: "",
@@ -289,6 +291,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       fullName: "",
       nationality: "",
       email: "",
+      phoneCode: "+977",
       phone: "",
       travelDate: "",
       pickupAddress: "",
@@ -317,7 +320,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       `📅 *Preferred Travel Date:* ${formData.travelDate || "Immediate"}\n` +
       `👤 *Lead Traveler:* ${formData.fullName}\n` +
       (formData.nationality ? `🌍 *Nationality:* ${formData.nationality}\n` : "") +
-      `📞 *Phone / WhatsApp:* ${formData.phone}\n` +
+      `📞 *Phone / WhatsApp:* ${formData.phone ? `${formData.phoneCode} ${formData.phone}` : "—"}\n` +
       `✉️ *Email:* ${formData.email}\n` +
       (formData.pickupAddress ? `📍 *Pickup / Hotel:* ${formData.pickupAddress}\n` : "") +
       (formData.specialNotes ? `📝 *Special Requests:* ${formData.specialNotes}\n` : "") +
@@ -720,7 +723,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </tr>
             <tr>
               <td class="td-label">Contact / WhatsApp</td>
-              <td class="td-value">${formData.phone || "—"}</td>
+              <td class="td-value">${formData.phone ? `${formData.phoneCode} ${formData.phone}` : "—"}</td>
               <td class="td-label">Email Address</td>
               <td class="td-value">${formData.email || "—"}</td>
             </tr>
@@ -918,7 +921,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-snug">
-                  A trip specialist will reach out on <strong className="text-slate-800">WhatsApp &amp; Phone</strong> ({formData.phone || "your number"}) to coordinate next steps.
+                  A trip specialist will reach out on <strong className="text-slate-800">WhatsApp &amp; Phone</strong> ({formData.phone ? `${formData.phoneCode} ${formData.phone}` : "your number"}) to coordinate next steps.
                 </p>
               </div>
 
@@ -1126,16 +1129,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Phone / WhatsApp <span className="text-[#E11D48]">*</span>
                   </label>
-                  <div className="relative">
-                    <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#2D1347] focus-within:ring-2 focus-within:ring-purple-100 transition-all overflow-hidden h-10">
+                    {/* Country Code Selector */}
+                    <select
+                      name="phoneCode"
+                      value={formData.phoneCode}
+                      onChange={handleChange}
+                      className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 text-xs font-bold text-[#2D1347] focus:outline-none cursor-pointer"
+                      style={{ maxWidth: "110px" }}
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.iso} value={c.code}>
+                          {isoToFlag(c.iso)} {c.code}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Phone Number Input */}
                     <input
                       type="tel"
                       name="phone"
                       required
-                      placeholder="+977-9851400000"
+                      placeholder="9851400000"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                      className="flex-1 min-w-0 px-3 bg-white text-xs text-gray-800 focus:outline-none"
                     />
                   </div>
                 </div>

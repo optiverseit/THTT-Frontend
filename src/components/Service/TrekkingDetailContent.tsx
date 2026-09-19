@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { packages } from "../../assets/data/mockData";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
-import BookingModal from "../reuseable/packages/BookingModal";
+import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import {
   Mountain,

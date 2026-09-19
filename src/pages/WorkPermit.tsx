@@ -1,14 +1,14 @@
-import BannerSection from "./../components/reuseable/BannerSection";
+import BannerSection from "../components/reusable/BannerSection";
 import { FileText, Globe, Shield, ShieldCheck, Clock, Zap, Heart } from "lucide-react";
 import { useState } from "react";
 import PermitServices from "../components/work-permit/PermitServices";
-import HeroSection from "../components/reuseable/HeroSection";
-import Testimonials from "../components/reuseable/Testimonials";
+import HeroSection from "../components/reusable/HeroSection";
+import Testimonials from "../components/reusable/Testimonials";
 import { workPermitTestimonials } from "../assets/data/mockData";
 import WorkPermitProcess from "../components/work-permit/WorkPermitProcess";
 import WorkPermitFaq from "../components/work-permit/WorkPermitFaq";
 import WorkPermitOverview from "../components/work-permit/WorkPermitOverview";
-import PreFooter from "../components/reuseable/PreFooter";
+import PreFooter from "../components/reusable/PreFooter";
 
 const WorkPermit = () => {
   const [activeTab, setActiveTab] = useState("overview");

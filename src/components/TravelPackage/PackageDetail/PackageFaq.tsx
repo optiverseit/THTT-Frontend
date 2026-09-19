@@ -2,7 +2,7 @@ import React from "react";
 import type { Package } from "../../../assets/data/types";
 import { useOutletContext } from "react-router-dom";
 import PackagePricing from "./PackagePricing";
-import DynamicFaqSection from "../../reuseable/DynamicFaqSection";
+import DynamicFaqSection from "../../reusable/DynamicFaqSection";
 
 interface FaqContextType {
   allfaqs?: Package["faqs"];

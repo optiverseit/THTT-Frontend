@@ -4,8 +4,8 @@ import {
   Plane, Map, Activity, Mountain, Bed, Shield, ShieldCheck,
   Heart, Car, Wind, FileText, ArrowRight, MessageCircle,
 } from "lucide-react";
-import BannerSection from "../components/reuseable/BannerSection";
-import PreFooter from "../components/reuseable/PreFooter";
+import BannerSection from "../components/reusable/BannerSection";
+import PreFooter from "../components/reusable/PreFooter";
 import { services as mockServices } from "../assets/data/mockData";
 import type { Service } from "../assets/data/types";
 

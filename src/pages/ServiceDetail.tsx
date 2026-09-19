@@ -32,9 +32,9 @@ import {
   Fuel,
   CheckCircle2,
 } from "lucide-react";
-import BannerSection from "../components/reuseable/BannerSection";
-import Testimonials from "../components/reuseable/Testimonials";
-import PreFooter from "../components/reuseable/PreFooter";
+import BannerSection from "../components/reusable/BannerSection";
+import Testimonials from "../components/reusable/Testimonials";
+import PreFooter from "../components/reusable/PreFooter";
 import ToursDetailContent from "../components/Service/ToursDetailContent";
 import ActivitiesDetailContent from "../components/Service/ActivitiesDetailContent";
 import TrekkingDetailContent from "../components/Service/TrekkingDetailContent";

@@ -4,7 +4,7 @@ import { Outlet, useParams, Link, useNavigate } from "react-router-dom";
 import { packages, hotels, vehicles } from "../../../assets/data/mockData";
 import { VISA_PLANS } from "../../Service/VisaServicesDetailContent";
 import VisaCountryDetailView from "../../Service/VisaCountryDetailView";
-import PreFooter from "../../reuseable/PreFooter";
+import PreFooter from "../../reusable/PreFooter";
 import { Compass } from "lucide-react";
 
 const PackageDetails: React.FC = () => {

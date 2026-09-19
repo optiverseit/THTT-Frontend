@@ -15,7 +15,7 @@ import {
   Stethoscope,
   CalendarCheck,
 } from "lucide-react";
-import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
+import BookingModal, { BookingItem } from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 
 interface InsurancePlan {

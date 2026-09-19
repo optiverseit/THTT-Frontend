@@ -1,6 +1,6 @@
 import React from "react";
 import { Shield, Clock, Users, Award } from "lucide-react";
-import HeroSection from "../reuseable/HeroSection";
+import HeroSection from "../reusable/HeroSection";
 
 const HomeHero: React.FC = () => {
   return (

@@ -14,7 +14,7 @@ import {
 import { useNavigate, useParams, Link } from "react-router-dom";
 import PreFooter from "../components/reusable/PreFooter";
 import { blogPosts } from "../assets/data/mockData";
-import ShareModal from "../components/reuseable/ShareModal";
+import ShareModal from "../components/reusable/ShareModal";
 import { shareToPlatform } from "../utils/shareUtils";
 
 const BlogDetailMore: React.FC = () => {

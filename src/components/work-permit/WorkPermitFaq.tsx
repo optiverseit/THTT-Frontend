@@ -1,6 +1,6 @@
 
 import React from "react";
-import DynamicFaqSection from "../reuseable/DynamicFaqSection";
+import DynamicFaqSection from "../reusable/DynamicFaqSection";
 
 const defaultWorkPermitFaqs = [
   {

@@ -4,7 +4,7 @@ import type { Hotel, Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import FilterSideBar from "../TravelPackage/FilterSiderBar";
 import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
-import BookingModal, { BookingItem } from "../reuseable/packages/BookingModal";
+import BookingModal, { BookingItem } from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import {
   Star,

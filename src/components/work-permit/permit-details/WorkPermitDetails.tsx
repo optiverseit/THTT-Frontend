@@ -5,7 +5,7 @@ import AboutPermit from "./AboutPermit";
 import CostDetails from "./CostDetails";
 import PermitService from "./PermitService";
 import { services } from "../../../assets/data/mockData";
-import WorkPermitModal from "../../reuseable/modal/WorkPermitModal";
+import WorkPermitModal from "../WorkPermitModal";
 import { Globe, ArrowLeft } from "lucide-react";
 
 const WorkPermitDetails = () => {

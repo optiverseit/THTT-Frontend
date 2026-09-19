@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import BannerSection from "../components/reuseable/BannerSection";
+import BannerSection from "../components/reusable/BannerSection";
 import { Search, MapPin, Star, ShieldCheck, Users } from "lucide-react";
 import FilterSideBar from "../components/TravelPackage/FilterSiderBar";
 import { packages } from "../assets/data/mockData";
 import type { Package } from "../assets/data/types";
 import PackageDetailsSection from "../components/TravelPackage/PackageDetailsSection";
-import BookingModal from "../components/reuseable/packages/BookingModal";
-import Testimonials from "../components/reuseable/Testimonials";
-import PreFooter from "../components/reuseable/PreFooter";
+import BookingModal from "../components/reusable/packages/BookingModal";
+import Testimonials from "../components/reusable/Testimonials";
+import PreFooter from "../components/reusable/PreFooter";
 
 const Packages: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");

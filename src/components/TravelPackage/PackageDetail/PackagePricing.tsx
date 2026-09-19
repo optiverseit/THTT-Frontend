@@ -18,7 +18,7 @@
 import React, { useState } from "react";
 import type { Package } from "../../../assets/data/types";
 import VerificationCard from "./VerificationCard";
-import BookingModal from "../../reuseable/packages/BookingModal";
+import BookingModal from "../../reusable/packages/BookingModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 

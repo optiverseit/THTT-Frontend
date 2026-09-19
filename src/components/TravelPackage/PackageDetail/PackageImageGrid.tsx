@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer } from "lucide-react";
 import type { Package } from "../../../assets/data/types";
 import { useGlobalCurrency } from "../../../context/CurrencyContext";
-import ShareModal from "../../reuseable/ShareModal";
+import ShareModal from "../../reusable/ShareModal";
 import Logo from "../../../assets/images/Logo.png";
 
 interface PackageProp {

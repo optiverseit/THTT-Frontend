@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { videoPosts } from "../../assets/data/mockData";
 import YouTubePlayer from "./YouTubePlayer";
-import ShareModal from "../reuseable/ShareModal";
+import ShareModal from "../reusable/ShareModal";
 import { shareToPlatform } from "../../utils/shareUtils";
 import {
   ChevronLeft,

@@ -1,5 +1,5 @@
 import React from "react";
-import PackageSection from "../reuseable/packages/PackageSection";
+import PackageSection from "../reusable/packages/PackageSection";
 
 const Packages: React.FC = () => {
   return (

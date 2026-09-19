@@ -4,7 +4,7 @@ import {
   Car, Mountain, Briefcase, CreditCard, MapPin, Heart, Globe,
   Zap, Activity, History,
 } from "lucide-react";
-import BannerSection from "../components/reuseable/BannerSection";
+import BannerSection from "../components/reusable/BannerSection";
 
 const About: React.FC = () => {
   return (

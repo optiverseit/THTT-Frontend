@@ -4,7 +4,7 @@ import PremiumTravel from "../components/Home/PremiumTravel";
 import HomeHero from "../components/Home/HomeHero";
 import CustomerTestimonial from "../components/Home/CustomerTestimonial";
 import Packages from "../components/Home/Package";
-import PreFooter from "../components/reuseable/PreFooter";
+import PreFooter from "../components/reusable/PreFooter";
 
 const Home = () => {
   return (

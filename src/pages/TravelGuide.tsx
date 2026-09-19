@@ -1,5 +1,5 @@
-import BannerSection from "../components/reuseable/BannerSection";
-import PreFooter from "../components/reuseable/PreFooter";
+import BannerSection from "../components/reusable/BannerSection";
+import PreFooter from "../components/reusable/PreFooter";
 import React, { useState } from "react";
 import { ChevronRight, Plane, Phone } from "lucide-react";
 

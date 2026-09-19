@@ -6,7 +6,8 @@ import CostDetails from "./CostDetails";
 import PermitService from "./PermitService";
 import { services } from "../../../assets/data/mockData";
 import WorkPermitModal from "../WorkPermitModal";
-import { Globe, ArrowLeft } from "lucide-react";
+import WorkPermitPrintDossier from "./WorkPermitPrintDossier";
+import { Globe } from "lucide-react";
 
 const WorkPermitDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,24 +30,30 @@ const WorkPermitDetails = () => {
           to="/work-permit"
           className="mt-6 flex items-center gap-2 px-6 py-3 bg-[#E91E63] hover:bg-pink-600 text-white rounded-full font-bold text-xs uppercase tracking-wider shadow-md transition-all"
         >
-          <ArrowLeft size={15} />
-          <span>Back to Work Permits</span>
+          Back to Work Permits
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="w-full mt-10 flex justify-center items-center bg-gray-100 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl w-full">
+    <div className="w-full min-h-screen bg-gray-100 font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
+      {/* ── PRINT-ONLY OFFICIAL DOSSIER (Matches Package Details PDF Exactly) ── */}
+      <WorkPermitPrintDossier id={id} country={selectedCountry} />
+
+      {/* ── ON-SCREEN INTERACTIVE UI (Hidden on Print) ── */}
+      <div className="print:hidden w-full flex flex-col items-center">
+        {/* Full width header banner touching both sides of browser */}
         <PermitBanner id={id} country={selectedCountry} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-8 sm:mt-12 mb-8 sm:mb-10">
-          <AboutPermit id={id} country={selectedCountry} />
-          <CostDetails />
+        <div className="max-w-7xl w-full px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-8 sm:mt-12 mb-8 sm:mb-10">
+            <AboutPermit id={id} country={selectedCountry} />
+            <CostDetails country={selectedCountry} />
+          </div>
+          <PermitService service={services} />
+          <WorkPermitModal country={workPermitCountries} defaultCountry={selectedCountry?.name} />
         </div>
-        <PermitService service={services} />
-        <WorkPermitModal country={workPermitCountries} />
       </div>
     </div>
   );

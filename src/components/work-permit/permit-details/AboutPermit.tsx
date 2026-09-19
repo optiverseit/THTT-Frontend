@@ -22,7 +22,7 @@ interface PermitBannerProps {
 const AboutPermit = ({ country }: PermitBannerProps) => {
   const reqDocs = [
     "Original Passport (Scan Copy)",
-    " Valid Job Offer Letter/Visa Copy",
+    "Valid Job Offer Letter/Visa Copy",
     "Experience Certificates (if applicable)",
     "MRP Size Photo (Recent)",
     "Police Clearance Report (if required)",
@@ -37,9 +37,17 @@ const AboutPermit = ({ country }: PermitBannerProps) => {
   ];
 
   const policies = [
-    "NON-REFUNDABLE GOVT. FEE",
-    "VERIFIATION REQUIRED",
-    "SELF-DECLARATION MANDATORY",
+    "Non-Refundable Govt. & Welfare Fees (Once deposited into FEIMS portal)",
+    "FEO & Embassy Document Verification Mandatory",
+    "Self-Declaration of Overseas Contract & Job Terms Required",
+    "Biometric Verification in DOFE National Database",
+  ];
+
+  const terms = [
+    "Applicant must be minimum 18 years of age with valid passport",
+    "Passport must have at least 6 months validity from departure date",
+    "GAMCA / DOFE approved medical fitness report required",
+    "Pre-departure orientation certificate required for first-time workers",
   ];
 
 
@@ -120,10 +128,10 @@ const AboutPermit = ({ country }: PermitBannerProps) => {
             Terms &amp; Conditions
           </h1>
           <ul className="list-disc marker:text-gray-400 list-inside mt-2">
-            {policies.map((item, index) => (
+            {terms.map((item, index) => (
               <li
                 key={index}
-                className="text-gray-400 font-semibold text-xs sm:text-sm mb-1"
+                className="text-gray-600 font-semibold text-xs sm:text-sm mb-1.5 leading-relaxed"
               >
                 {item}
               </li>

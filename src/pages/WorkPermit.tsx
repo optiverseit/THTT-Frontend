@@ -1,35 +1,29 @@
-import BannerSection from "../components/reusable/BannerSection";
-import { FileText, Globe, Shield, ShieldCheck, Clock, Zap, Heart } from "lucide-react";
 import { useState } from "react";
+import { Globe, ShieldCheck, Clock, Zap, FileText } from "lucide-react";
 import PermitServices from "../components/work-permit/PermitServices";
-import HeroSection from "../components/reusable/HeroSection";
 import Testimonials from "../components/reusable/Testimonials";
 import { workPermitTestimonials } from "../assets/data/mockData";
 import WorkPermitProcess from "../components/work-permit/WorkPermitProcess";
 import WorkPermitFaq from "../components/work-permit/WorkPermitFaq";
-import WorkPermitOverview from "../components/work-permit/WorkPermitOverview";
 import PreFooter from "../components/reusable/PreFooter";
 
 const WorkPermit = () => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [appliedCountry, setAppliedCountry] = useState("");
+  const [selectedPermitType, setSelectedPermitType] = useState("new");
 
-  const tabs = [
-    { name: "OVERVIEW", id: "section-overview" },
-    { name: "SERVICES", id: "section-services" },
-    { name: "WHY US", id: "section-whyus" },
-    { name: "TESTIMONIES", id: "section-testimonies" },
-    { name: "PROCESS", id: "section-process" },
-    { name: "FAQS", id: "section-faqs" },
-  ];
-
-  const scrollToSection = (id: string, tabName: string) => {
-    setActiveTab(tabName);
+  const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      const offset = 120; // account for sticky header
+      const offset = 100;
       const top = el.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
+  };
+
+  const handleSearch = () => {
+    setAppliedCountry(selectedCountry);
+    scrollToSection("section-services");
   };
 
   return (
@@ -62,13 +56,17 @@ const WorkPermit = () => {
                     <Globe size={18} className="text-pink-500 flex-shrink-0" />
                     <div className="flex flex-col w-full text-left">
                       <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">SELECT COUNTRY</label>
-                      <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+                      <select
+                        className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+                        value={selectedCountry}
+                        onChange={(e) => setSelectedCountry(e.target.value)}
+                      >
                         <option value="">All Countries</option>
                         <option value="uae">UAE (Dubai)</option>
                         <option value="qatar">Qatar</option>
                         <option value="saudi">Saudi Arabia</option>
-                        <option value="kuwait">Kuwait</option>
                         <option value="malaysia">Malaysia</option>
+                        <option value="other">Other Countries</option>
                       </select>
                     </div>
                   </div>
@@ -76,7 +74,11 @@ const WorkPermit = () => {
                     <FileText size={18} className="text-pink-500 flex-shrink-0" />
                     <div className="flex flex-col w-full text-left">
                       <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">PERMIT TYPE</label>
-                      <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
+                      <select
+                        className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+                        value={selectedPermitType}
+                        onChange={(e) => setSelectedPermitType(e.target.value)}
+                      >
                         <option value="new">New Work Permit</option>
                         <option value="renew">Renewal Permit</option>
                         <option value="individual">Individual Permit</option>
@@ -84,7 +86,7 @@ const WorkPermit = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => scrollToSection("section-services", "SERVICES")}
+                    onClick={handleSearch}
                     className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
                   >
                     SEARCH
@@ -120,64 +122,22 @@ const WorkPermit = () => {
               </div>
             </div>
           </section>
-
-          {/* Sub-navigation Tabs — scroll to section */}
-          <div className="flex justify-center items-center px-4 overflow-x-auto py-3 border-b border-gray-200/90 shadow-xs">
-            <div className="flex gap-4 sm:gap-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => scrollToSection(tab.id, tab.name)}
-                  className={`py-1 font-bold tracking-widest text-xs transition-colors whitespace-nowrap ${
-                    activeTab === tab.name
-                      ? "border-b-2 border-pink-600 text-pink-600"
-                      : "text-purple-950 hover:text-pink-500"
-                  }`}
-                >
-                  {tab.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          </div>
-
-
-        {/* OVERVIEW Section */}
-        <div id="section-overview" className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mt-8">
-          <WorkPermitOverview />
         </div>
       </div>
 
       {/* SERVICES Section */}
       <div id="section-services">
-        <PermitServices />
+        <PermitServices filterCountryId={appliedCountry} onClearFilter={() => { setAppliedCountry(""); setSelectedCountry(""); }} />
       </div>
 
-      {/* WHY US Section */}
-      <div id="section-whyus">
-        <HeroSection
-          title="WHY CHOOSE US"
-          subject="Why Choose Trip Himalaya?"
-          description="Reliable support, transparent process, and a team that takes responsibility from start to finish."
-          backgroundImage="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
-          services={[
-            { name: "EXPERIENCED PROCESSING TEAM", icon: Shield },
-            { name: "TRANSPARENT PRICING SYSTEM", icon: Zap },
-            { name: "FAST & TIMELY RESPONSE", icon: Clock },
-            { name: "GOVERNMENT COMPLIANT PROCESS", icon: FileText },
-            { name: "TRUSTED BY HUNDREDS OF CLIENTS", icon: Heart },
-          ]}
-        />
+      {/* PROCESS / WORKFLOW Section (below DESTINATIONS) */}
+      <div id="section-process">
+        <WorkPermitProcess />
       </div>
 
       {/* TESTIMONIES Section */}
       <div id="section-testimonies">
         <Testimonials workTest={workPermitTestimonials} />
-      </div>
-
-      {/* PROCESS Section */}
-      <div id="section-process">
-        <WorkPermitProcess />
       </div>
 
       {/* FAQS Section */}

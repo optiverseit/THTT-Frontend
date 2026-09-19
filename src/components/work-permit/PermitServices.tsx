@@ -1,63 +1,100 @@
 import { workPermitCountries } from "../../assets/data/mockData";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useNavigate } from "react-router-dom";
 
-const PermitServices = () => {
+interface PermitServicesProps {
+  filterCountryId?: string;
+  onClearFilter?: () => void;
+}
+
+const PermitServices = ({ filterCountryId = "", onClearFilter }: PermitServicesProps) => {
   const navigate = useNavigate();
+
+  const isFiltered = filterCountryId !== "";
+  const visibleCountries = isFiltered
+    ? workPermitCountries.filter((c) => c.id === filterCountryId)
+    : workPermitCountries;
 
   return (
     <div className="w-full py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/50 via-blue-50/50 to-pink-50">
       <div className="max-w-7xl mx-auto">
         <header className="text-center mb-8">
-          <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
-            DESTINATIONS
-          </h2>
           <h1 className="text-2xl sm:text-3xl md:text-4xl text-purple-950 font-extrabold">
             Our Work Permit Services
           </h1>
-        </header>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-          {workPermitCountries.map((c, index) => (
-            <div
-              key={index}
-              className="rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-gray-100"
-            >
-              <div className="p-2 mb-2">
-                {c.id === "other" ? (
-                  <p className="text-4xl sm:text-5xl">{c.flag}</p>
-                ) : (
-                  <ReactCountryFlag
-                    svg
-                    countryCode={c.flag}
-                    className="rounded-lg shadow-sm text-4xl sm:text-5xl"
-                    style={{
-                      width: "2.5em",
-                      height: "2.5em",
-                    }}
-                  />
-                )}
-              </div>
-
-              <h3 className="text-purple-950 font-extrabold text-base sm:text-lg mb-1">
-                {c.name}
-              </h3>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3">
-                {c.desc}
-              </p>
-
+          {isFiltered && (
+            <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-xs font-bold">
+              <span>Showing results for: {visibleCountries[0]?.name ?? filterCountryId}</span>
               <button
-                onClick={() => navigate(`/permit-details/${c.id}`)}
-                className="rounded-full tracking-wider bg-purple-50 hover:bg-pink-600 hover:text-white transition-colors text-purple-950 text-xs font-bold w-full py-2"
+                onClick={onClearFilter}
+                className="ml-1 hover:text-pink-900 transition-colors"
+                title="Clear filter"
               >
-                View Details
+                <X size={13} />
               </button>
             </div>
-          ))}
+          )}
+        </header>
 
-          {/* See All Card */}
-          <div className="rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col justify-center items-center text-center border border-gray-100 cursor-pointer group">
+        {visibleCountries.length > 0 ? (
+          <div className={`grid gap-4 sm:gap-6 ${
+            isFiltered
+              ? "grid-cols-1 place-items-center"
+              : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          }`}>
+            {visibleCountries.map((c, index) => (
+              <div
+                key={index}
+                onClick={() => navigate(`/permit-details/${c.id}`)}
+                className={`rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col items-center justify-between text-center border cursor-pointer group ${
+                  isFiltered
+                    ? "border-pink-400 ring-2 ring-pink-300 shadow-lg w-56 sm:w-64"
+                    : "border-gray-100 hover:border-pink-300"
+                }`}
+              >
+                <div className="p-2 mb-2">
+                  {c.id === "other" ? (
+                    <p className="text-4xl sm:text-5xl">{c.flag}</p>
+                  ) : (
+                    <ReactCountryFlag
+                      svg
+                      countryCode={c.flag}
+                      className="rounded-lg shadow-sm text-4xl sm:text-5xl"
+                      style={{
+                        width: "2.5em",
+                        height: "2.5em",
+                      }}
+                    />
+                  )}
+                </div>
+
+                <h3 className="text-purple-950 font-extrabold text-base sm:text-lg mb-1 group-hover:text-pink-600 transition-colors">
+                  {c.name}
+                </h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3">
+                  {c.desc}
+                </p>
+
+                <span className="rounded-full tracking-wider bg-purple-50 group-hover:bg-pink-600 group-hover:text-white transition-colors text-purple-950 text-xs font-bold w-full py-2 block">
+                  View Details
+                </span>
+              </div>
+            ))}
+
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-400 text-sm font-semibold">
+            No results found for the selected country.
+          </div>
+        )}
+
+        {/* See All — centered below the grid */}
+        <div className="flex justify-center mt-4 sm:mt-6">
+          <div
+            onClick={onClearFilter}
+            className="rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col justify-center items-center text-center border border-gray-100 cursor-pointer group w-40 sm:w-48"
+          >
             <div className="p-3 sm:p-4 bg-pink-600 group-hover:bg-pink-700 transition-colors flex items-center rounded-2xl justify-center text-white mb-3">
               <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
             </div>

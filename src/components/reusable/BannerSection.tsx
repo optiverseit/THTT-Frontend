@@ -1,5 +1,4 @@
 import React from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface Props {
   background: string;
@@ -69,18 +68,6 @@ const BannerSection: React.FC<Props> = ({
             "{description}"
           </p>
         )}
-      </div>
-
-      {/* Floating Page Widget on Right */}
-      <div className="hidden lg:flex absolute right-6 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-md rounded-2xl p-2.5 flex-col items-center gap-1 shadow-xl border border-gray-100 z-10 text-[9px] font-bold text-gray-500">
-        <button className="text-gray-400 hover:text-[#E91E63] transition-colors cursor-pointer">
-          <ChevronUp size={14} />
-        </button>
-        <span className="text-[8px] tracking-widest uppercase text-gray-400">PAGE</span>
-        <span className="font-black text-xs text-[#2D1347]">1/2</span>
-        <button className="w-5 h-5 rounded-full bg-[#E91E63] text-white flex items-center justify-center shadow-sm hover:scale-105 transition-transform cursor-pointer">
-          <ChevronDown size={12} />
-        </button>
       </div>
 
       {/* Bottom Transition */}

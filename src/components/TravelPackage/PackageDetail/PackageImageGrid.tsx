@@ -557,7 +557,7 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
             </div>
 
             {/* CTA Buttons — bottom on mobile, right on desktop */}
-            <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-0">
+            <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-0 md:mr-3 lg:mr-6 xl:mr-8">
               <button
                 onClick={handleWhatsAppInquiry}
                 className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
@@ -582,7 +582,7 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         </div>
 
         {/* Share button — top-right corner of hero */}
-        <div className="absolute top-14 right-4 sm:top-6 sm:right-6 z-20">
+        <div className="absolute top-16 right-4 sm:top-20 sm:right-8 md:right-11 lg:right-14 xl:right-16 z-20">
           {isShareOpen && (
             <div className="absolute top-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30">
               {/* Facebook */}

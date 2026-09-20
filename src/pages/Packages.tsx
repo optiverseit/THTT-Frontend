@@ -8,6 +8,7 @@ import PackageDetailsSection from "../components/TravelPackage/PackageDetailsSec
 import BookingModal from "../components/reusable/packages/BookingModal";
 import Testimonials from "../components/reusable/Testimonials";
 import PreFooter from "../components/reusable/PreFooter";
+import { getPackages } from "../api/BackendApi";
 
 const Packages: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -83,6 +84,15 @@ const Packages: React.FC = () => {
     selectedKeywords,
   ]);
 
+  const fetchPackages = async () => {
+    try {
+      const response = await getPackages();
+      console.log("Fetched packages:", response.data);
+
+    } catch (error) {
+      console.error("Error fetching packages:", error);
+    }
+  };
   const pkg = packages.find((p) => p.id === "p1");
   const testimonies = pkg?.testimonies ?? [];
 

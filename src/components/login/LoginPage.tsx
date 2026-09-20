@@ -1,31 +1,21 @@
-import { useState } from "react";
 import mountain from "../../assets/images/mountain.jpg";
 import { CircleCheck } from "lucide-react";
-import { Outlet, useNavigate } from "react-router-dom";
-
-interface LoginPageHeaderProp {
-  title: string;
-  description?: string;
-}
+import { Outlet, useLocation } from "react-router-dom";
 
 const LoginPage = () => {
-  const tabs = [
-    { name: "login", path: "" },
-    { name: "otp", path: "otp" },
-    { name: "details", path: "details" },
-    { name: "forgot", path: "forgot-password" },
-  ];
+  const location = useLocation();
 
-  const headers: Record<string, LoginPageHeaderProp> = {
-    login: { title: "Login", description: "" },
-    otp: { title: "Verify OTP", description: "First-time login requires verification." },
-    forgot: { title: "Forgot Password", description: "Enter your email or phone to receive OTP" },
-    details: { title: "Complete Details", description: "Please fill the missing information." },
+  const getHeader = () => {
+    if (location.pathname.includes("otp")) {
+      return { title: "Verify OTP", description: "First-time login requires verification." };
+    }
+    if (location.pathname.includes("forgot")) {
+      return { title: "Forgot Password", description: "Enter your email to receive a password reset link" };
+    }
+    return { title: "Login", description: "" };
   };
 
-  const [activeTab, setActiveTab] = useState<"login" | "otp" | "details" | "forgot">("login");
-  const navigate = useNavigate();
-  const currentHeader = headers[activeTab];
+  const currentHeader = getHeader();
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
@@ -66,26 +56,6 @@ const LoginPage = () => {
             {currentHeader.description && (
               <p className="text-gray-400 text-sm mt-1">{currentHeader.description}</p>
             )}
-
-            {/* Tabs */}
-            <div className="text-gray-100 flex flex-wrap gap-2 mt-6">
-              {tabs.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    navigate(item.path);
-                    setActiveTab(item.name as "login" | "otp" | "details" | "forgot");
-                  }}
-                  className={`cursor-pointer backdrop-blur-xl border border-gray-500 rounded-full px-3 py-1 text-[10px] tracking-widest transition-colors ${
-                    activeTab === item.name
-                      ? "bg-pink-500 text-white border-pink-500"
-                      : "bg-gray-600/40 hover:bg-gray-600/60"
-                  }`}
-                >
-                  {item.name.toUpperCase()}
-                </button>
-              ))}
-            </div>
 
             <div className="mt-6">
               <Outlet />

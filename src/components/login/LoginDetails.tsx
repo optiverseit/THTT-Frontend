@@ -1,10 +1,15 @@
 
-const LoginDetails = () => {
-  return (
-    <div>
-      <h1>detaiks</h1>
-    </div>
-  );
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+const LoginDetails: React.FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    navigate("/register", { replace: true });
+  }, [navigate]);
+
+  return null;
 };
 
 export default LoginDetails;

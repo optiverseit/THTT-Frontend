@@ -1,7 +1,9 @@
 import { ArrowRight, Key } from "lucide-react";
 import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const LoginOtp = () => {
+  const navigate = useNavigate();
   const length = 6;
   const [otp, setOtp] = useState<string[]>(Array(length).fill(""));
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -90,6 +92,7 @@ const LoginOtp = () => {
       <div className="mt-8 flex justify-between w-full text-[10px] ">
         {["back to login", "create account"].map((i) => (
           <div
+            onClick={() => navigate(i === "create account" ? "/register" : "/login")}
             className={`text-gray-300 hover:text-pink-500 font-bold cursor-pointer`}
             key={i}
           >

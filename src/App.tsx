@@ -17,6 +17,8 @@ import VideoVlog from "./pages/VideoVlog";
 import NotFound from "./pages/NotFound";
 import Packages from "./pages/Packages";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
 import WorkPermit from "./pages/WorkPermit";
 
 // Page-level detail views (moved from deep component paths to pages/)
@@ -68,6 +70,13 @@ const MainLayout = () => {
           <Route path="details" element={<LoginDetails />} />
           <Route path="forgot-password" element={<LoginForgotPass />} />
         </Route>
+
+        {/* ── REGISTRATION ── */}
+        <Route path="/register" element={<Register />} />
+        <Route path="/signup" element={<Register />} />
+
+        {/* ── USER DASHBOARD ── */}
+        <Route path="/dashboard" element={<Dashboard />} />
 
         {/* ── ABOUT ── */}
         <Route path="/about" element={<About />} />

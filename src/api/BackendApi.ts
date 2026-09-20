@@ -6,5 +6,5 @@ export const registerUser = (userData:any) => {
 };
 
 export const getPackages = () => {
-  return axiosInstance.get("/packages");
+  return axiosInstance.get("api/packages");
 };

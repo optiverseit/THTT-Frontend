@@ -948,7 +948,7 @@ const ServiceDetail: React.FC = () => {
           className="w-full pt-8 sm:pt-9 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-3 sm:mt-4"
         >
           <div className="max-w-7xl mx-auto">
-            {!isTours && !isActivities && !isTrekking && !isHotelBooking && !isVehicleRental && !isVisaServices && (
+            {!isTours && !isActivities && !isTrekking && !isHotelBooking && !isVehicleRental && !isVisaServices && !isTravelInsurance && (
               <header className="text-center mb-8">
                 <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
                   {getServicesSectionBadge()}

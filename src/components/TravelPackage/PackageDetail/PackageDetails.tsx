@@ -4,6 +4,8 @@ import { Outlet, useParams, Link, useNavigate } from "react-router-dom";
 import { packages, hotels, vehicles } from "../../../assets/data/mockData";
 import { VISA_PLANS } from "../../Service/VisaServicesDetailContent";
 import VisaCountryDetailView from "../../Service/VisaCountryDetailView";
+import { INSURANCE_PLANS } from "../../Service/insuranceData";
+import InsurancePlanDetailView from "../../Service/InsurancePlanDetailView";
 import PreFooter from "../../reusable/PreFooter";
 import { Compass } from "lucide-react";
 
@@ -30,6 +32,28 @@ const PackageDetails: React.FC = () => {
             allPlans={VISA_PLANS}
             onSelectPlan={(newPlan) => navigate(`/details/${newPlan.id}`)}
             onBack={() => navigate("/service/visa-services")}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Check if this route is for an Insurance Plan (e.g. /details/plan-trek-standard)
+  const matchedInsurance = INSURANCE_PLANS.find(
+    (ins) =>
+      ins.id.toLowerCase() === packageId?.toLowerCase() ||
+      packageId?.toLowerCase().includes(ins.id.toLowerCase())
+  );
+
+  if (matchedInsurance) {
+    return (
+      <div className="w-full min-h-screen bg-[#FBFBFE] font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8 sm:pt-14 sm:pb-12 print:max-w-none print:p-0 print:m-0">
+          <InsurancePlanDetailView
+            plan={matchedInsurance}
+            allPlans={INSURANCE_PLANS}
+            onSelectPlan={(newPlan) => navigate(`/details/${newPlan.id}`)}
+            onBack={() => navigate("/service/travel-insurance")}
           />
         </div>
       </div>

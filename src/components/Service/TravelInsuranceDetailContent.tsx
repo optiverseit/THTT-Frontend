@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import {
   Shield,
@@ -15,115 +16,10 @@ import {
   Stethoscope,
   CalendarCheck,
 } from "lucide-react";
-import BookingModal, { BookingItem } from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { INSURANCE_PLANS, InsurancePlan } from "./insuranceData";
+import { InsuranceApplicationModal } from "./InsuranceApplicationModal";
 
-interface InsurancePlan {
-  id: string;
-  name: string;
-  badge: string;
-  badgeColor: string;
-  maxAltitude: string;
-  priceUSD: number;
-  durationCovered: string;
-  isPopular?: boolean;
-  coverageLimit: string;
-  highlights: string[];
-  inclusions: string[];
-}
-
-const INSURANCE_PLANS: InsurancePlan[] = [
-  {
-    id: "plan-trek-standard",
-    name: "Standard Cultural & Foothill Plan",
-    badge: "Low Altitude",
-    badgeColor: "bg-blue-100 text-blue-800",
-    maxAltitude: "Up to 3,000 Meters",
-    priceUSD: 28,
-    durationCovered: "Up to 10 Days",
-    coverageLimit: "$50,000 Medical Sum",
-    highlights: [
-      "Kathmandu, Pokhara, Chitwan & Short Hikes",
-      "Poon Hill & Nagarkot Trails",
-      "Emergency Road Ambulance",
-      "Lost Luggage & Passport Cover",
-    ],
-    inclusions: [
-      "Outpatient & Inpatient Hospitalization",
-      "Luggage delay and personal effects loss",
-      "Trip cancellation & flight delay allowance",
-      "24/7 Global emergency assistance hotline",
-    ],
-  },
-  {
-    id: "plan-high-altitude",
-    name: "High-Altitude Alpine & Heli Rescue",
-    badge: "Most Popular in Nepal",
-    badgeColor: "bg-[#E11D48] text-white",
-    maxAltitude: "Up to 6,000 Meters",
-    priceUSD: 75,
-    durationCovered: "Up to 15 Days",
-    isPopular: true,
-    coverageLimit: "$100,000 + Unlimited Heli Rescue",
-    highlights: [
-      "Everest Base Camp, Gokyo & Annapurna Circuit",
-      "Immediate 45-Min Helicopter Evacuation",
-      "Cashless Admission in Kathmandu Hospitals",
-      "Altitude Sickness (AMS) & Frostbite",
-    ],
-    inclusions: [
-      "Direct helicopter search, rescue & airlift",
-      "Hyperbaric chamber & oxygen therapy",
-      "Direct billing with CIWEC & Swacon clinics",
-      "Trekking guide & porter liability cover",
-      "Lukla / Jomsom weather delay compensation",
-    ],
-  },
-  {
-    id: "plan-extreme-expedition",
-    name: "Extreme Mountaineering & Peak Climbing",
-    badge: "Technical Climbing",
-    badgeColor: "bg-purple-100 text-purple-800",
-    maxAltitude: "Above 6,000 Meters (Uncapped)",
-    priceUSD: 160,
-    durationCovered: "Up to 30 Days",
-    coverageLimit: "$250,000 Comprehensive",
-    highlights: [
-      "Island Peak, Mera Peak, Lobuche & 8000m Peaks",
-      "Rope, Ice Axe & Crampons Climbing",
-      "Advanced High-Altitude Medical Resuscitation",
-      "Emergency International Medical Repatriation",
-    ],
-    inclusions: [
-      "All technical peak climbing & mountaineering",
-      "Long-line alpine helicopter rescue extraction",
-      "Specialist trauma surgeon and ICU hospital care",
-      "Full international air-ambulance repatriation",
-    ],
-  },
-  {
-    id: "plan-international",
-    name: "Global Outbound & Schengen Compliant",
-    badge: "Schengen Visa Approved",
-    badgeColor: "bg-emerald-100 text-emerald-800",
-    maxAltitude: "Worldwide Coverage",
-    priceUSD: 40,
-    durationCovered: "Per Trip (Up to 30 Days)",
-    coverageLimit: "€30,000 / $50,000 Minimum",
-    highlights: [
-      "Europe (Schengen), Dubai, Thailand & Worldwide",
-      "Meets 100% Embassy Visa Requirements",
-      "Instant Embassy-Certified Policy Letter",
-      "Trip Interruption & Hijack Cover",
-    ],
-    inclusions: [
-      "Emergency dental and COVID medical care",
-      "Loss of travel documents and flight missed",
-      "Accidental death & permanent disability",
-      "Instant digital certificate for visa appointment",
-    ],
-  },
-];
 
 const INSURANCE_FAQS = [
   {
@@ -149,16 +45,9 @@ const INSURANCE_FAQS = [
 ];
 
 export const TravelInsuranceDetailContent: React.FC = () => {
+  const navigate = useNavigate();
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-
-  // Booking Modal State
-  const [selectedBookingItem, setSelectedBookingItem] = useState<BookingItem | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-
-  // Quick quote state
-  const [altitudeZone, setAltitudeZone] = useState("Up to 6,000m (High Altitude Trekking)");
-  const [tripDays, setTripDays] = useState("10 - 15 Days");
-  const [travelerCount, setTravelerCount] = useState("1 Person");
+  const [selectedPlanForModal, setSelectedPlanForModal] = useState<InsurancePlan | null>(null);
 
   const formatPrice = (usdAmount: number) => {
     const nprAmount = usdAmount * nprPerOneDollar;
@@ -170,222 +59,119 @@ export const TravelInsuranceDetailContent: React.FC = () => {
     const msg = encodeURIComponent(
       `Hello Trip Himalaya! I would like to inquire about the "${planName}" (${priceFormatted}). Please share policy details, altitude coverage verification, and issuance steps.`
     );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
-  const handleBookPlan = (plan: InsurancePlan) => {
-    setSelectedBookingItem({
-      id: plan.id,
-      title: plan.name,
-      location: plan.maxAltitude,
-      duration: plan.durationCovered,
-      price: `$${plan.priceUSD}`,
-    });
-    setIsBookingModalOpen(true);
-  };
-
-  const handleQuickQuote = (e: React.FormEvent) => {
-    e.preventDefault();
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I need a Travel & Trekking Insurance Quote. ` +
-        `Altitude Range: ${altitudeZone}, Duration: ${tripDays}, Travelers: ${travelerCount}. ` +
-        `Please share policy options and instant pricing.`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+  // Navigate to the insurance plan detail page
+  const handleViewPlan = (planId: string) => {
+    navigate(`/details/${planId}`);
   };
 
   return (
     <div className="space-y-12">
-
-      {/* ── 2. QUICK POLICY QUOTE CALCULATOR ── */}
-      <div className="bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] rounded-3xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="max-w-2xl mb-6">
-          <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-            INSTANT POLICY CALCULATOR
-          </span>
-          <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Get an Altitude-Verified Trekking &amp; Travel Policy
-          </h3>
-          <p className="text-gray-300 text-xs mt-1 font-medium">
-            Certified insurance coverage issued in under 45 minutes with emergency helicopter clearance.
-          </p>
-        </div>
-
-        <form onSubmit={handleQuickQuote} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Altitude */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Max Altitude / Route
-            </label>
-            <div className="flex items-center gap-2">
-              <Activity size={15} className="text-pink-400 flex-shrink-0" />
-              <select
-                value={altitudeZone}
-                onChange={(e) => setAltitudeZone(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer [&>option]:text-gray-800"
-              >
-                <option>Up to 3,000m (Tours & Short Hikes)</option>
-                <option>Up to 6,000m (High Altitude Trekking)</option>
-                <option>6,000m+ (Mountaineering Peak Climbing)</option>
-                <option>International Outbound / Schengen</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Days */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Duration of Trip
-            </label>
-            <div className="flex items-center gap-2">
-              <Clock size={15} className="text-pink-400 flex-shrink-0" />
-              <select
-                value={tripDays}
-                onChange={(e) => setTripDays(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer [&>option]:text-gray-800"
-              >
-                <option>1 - 7 Days</option>
-                <option>8 - 14 Days</option>
-                <option>15 - 21 Days</option>
-                <option>22 - 30 Days (Extended)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Travelers */}
-          <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-            <label className="block text-[10px] font-black text-pink-300 uppercase tracking-widest mb-1">
-              Number of Insured
-            </label>
-            <div className="flex items-center gap-2">
-              <Shield size={15} className="text-pink-400 flex-shrink-0" />
-              <select
-                value={travelerCount}
-                onChange={(e) => setTravelerCount(e.target.value)}
-                className="w-full bg-transparent text-white font-bold text-xs outline-none cursor-pointer [&>option]:text-gray-800"
-              >
-                <option>1 Person</option>
-                <option>2 People (Couple / Pair)</option>
-                <option>3 - 5 People (Small Group)</option>
-                <option>6+ People (Group Discount)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="w-full h-full min-h-[46px] bg-[#E11D48] hover:bg-[#BE123C] text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <FileCheck2 size={15} />
-              <span>GET POLICY QUOTE</span>
-            </button>
-          </div>
-        </form>
+      {/* ── INSURANCE PLANS COMPARISON GRID ── */}
+      <div className="mb-8 text-center max-w-3xl mx-auto">
+        <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#2D1347] tracking-tight">
+          Tailored Plans for Trekking, Expeditions &amp; Holidays
+        </h3>
+        <p className="text-gray-500 text-xs sm:text-sm mt-1.5 font-medium">
+          Select the exact altitude and trip profile required for full medical peace of mind.
+        </p>
       </div>
 
-      {/* ── 3. INSURANCE PLANS COMPARISON GRID ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <div className="mb-8">
-          <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-            CERTIFIED COVERAGE TIERS
-          </span>
-          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
-            Tailored Plans for Trekking, Expeditions &amp; Holidays
-          </h3>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1 font-medium">
-            Select the exact altitude and trip profile required for full medical peace of mind.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {INSURANCE_PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={`rounded-3xl border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between ${
-                plan.isPopular
-                  ? "bg-gradient-to-b from-pink-50/50 to-white border-[#E11D48] ring-2 ring-[#E11D48]/20"
-                  : "bg-[#FBFBFE] border-gray-200/80"
-              }`}
-            >
-              <div className="p-6 sm:p-7">
-                {/* Plan Header */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-block mb-2 ${plan.badgeColor}`}>
-                      {plan.badge}
-                    </span>
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug">
-                      {plan.name}
-                    </h4>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="font-extrabold text-base sm:text-lg text-[#E11D48] whitespace-nowrap bg-pink-50 px-3 py-1.5 rounded-2xl block shadow-2xs">
-                      {formatPrice(plan.priceUSD)}
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">{plan.durationCovered}</span>
-                  </div>
-                </div>
-
-                {/* Altitude Limit & Coverage Tag */}
-                <div className="flex flex-wrap gap-2 mb-5">
-                  <span className="bg-purple-100 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
-                    <Activity size={13} className="text-[#E11D48]" />
-                    {plan.maxAltitude}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        {INSURANCE_PLANS.slice(0, 3).map((plan) => (
+          <div
+            key={plan.id}
+            onClick={() => handleViewPlan(plan.id)}
+            className={`rounded-3xl border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1 ${
+              plan.isPopular
+                ? "bg-gradient-to-b from-pink-50/50 to-white border-[#E11D48] ring-2 ring-[#E11D48]/20"
+                : "bg-[#FBFBFE] border-gray-200/80 hover:border-[#E11D48]/50"
+            }`}
+          >
+            <div className="p-6 sm:p-7">
+              {/* Plan Header */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-block mb-2 ${plan.badgeColor}`}>
+                    {plan.badge}
                   </span>
-                  <span className="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
-                    <ShieldCheck size={13} className="text-emerald-600" />
-                    {plan.coverageLimit}
-                  </span>
+                  <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
+                    {plan.name}
+                  </h4>
                 </div>
-
-                {/* Key Highlights */}
-                <div className="space-y-2 mb-6">
-                  {plan.highlights.map((hl, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-gray-700 font-bold">
-                      <CheckCircle2 size={14} className="text-[#E11D48] mt-0.5 flex-shrink-0" />
-                      <span className="leading-tight">{hl}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Full Inclusions List */}
-                <div className="border-t border-gray-100 pt-4 space-y-1.5">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-2">
-                    POLICY INCLUSIONS
+                <div className="text-right flex-shrink-0">
+                  <span className="font-extrabold text-base sm:text-lg text-[#E11D48] whitespace-nowrap bg-pink-50 px-3 py-1.5 rounded-2xl block shadow-2xs">
+                    {formatPrice(plan.priceUSD)}
                   </span>
-                  {plan.inclusions.map((inc, i) => (
-                    <div key={i} className="flex items-start gap-2 text-[11px] text-gray-500 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-1.5 flex-shrink-0" />
-                      <span>{inc}</span>
-                    </div>
-                  ))}
+                  <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">{plan.durationCovered}</span>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="p-6 pt-0 border-t border-gray-100 flex items-center justify-between gap-2.5 mt-auto">
-                <button
-                  type="button"
-                  onClick={() => handleInquiry(plan.name, plan.priceUSD)}
-                  className="flex-1 bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-pink-900/20 whitespace-nowrap"
-                >
-                  <MessageCircle size={15} />
-                  <span>Inquiry</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBookPlan(plan)}
-                  className="flex-1 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap"
-                >
-                  <CalendarCheck size={14} className="text-pink-400" />
-                  <span>Book Now</span>
-                </button>
+              {/* Altitude Limit & Coverage Tag */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                <span className="bg-purple-100 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
+                  <Activity size={13} className="text-[#E11D48]" />
+                  {plan.maxAltitude}
+                </span>
+                <span className="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                  <ShieldCheck size={13} className="text-emerald-600" />
+                  {plan.coverageLimit}
+                </span>
+              </div>
+
+              {/* Key Highlights */}
+              <div className="space-y-2 mb-6">
+                {plan.highlights.map((hl, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-gray-700 font-bold">
+                    <CheckCircle2 size={14} className="text-[#E11D48] mt-0.5 flex-shrink-0" />
+                    <span className="leading-tight">{hl}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Full Inclusions List */}
+              <div className="border-t border-gray-100 pt-4 space-y-1.5">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-2">
+                  POLICY INCLUSIONS
+                </span>
+                {plan.inclusions.map((inc, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px] text-gray-500 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-1.5 flex-shrink-0" />
+                    <span>{inc}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Action Buttons */}
+            <div className="p-5 sm:p-6 pt-0 border-t border-gray-100 flex items-center justify-between gap-2 mt-auto">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleInquiry(plan.name, plan.priceUSD);
+                }}
+                className="flex-1 bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-[11px] sm:text-xs py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-pink-900/20 whitespace-nowrap"
+              >
+                <MessageCircle size={15} />
+                <span>Inquiry</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPlanForModal(plan);
+                }}
+                className="flex-1 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-[11px] sm:text-xs py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap"
+              >
+                <CalendarCheck size={14} className="text-pink-400" />
+                <span>Apply for Insurance</span>
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── 4. EMERGENCY HELICOPTER EVACUATION PROTOCOL ── */}
@@ -444,12 +230,16 @@ export const TravelInsuranceDetailContent: React.FC = () => {
         subtitle="Critical information for high-altitude trekking safety"
       />
 
-      {/* ── BOOKING MODAL POPUP ── */}
-      <BookingModal
-        pkg={selectedBookingItem}
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-      />
+      {/* ── INSURANCE APPLICATION MODAL ── */}
+      {selectedPlanForModal && (
+        <InsuranceApplicationModal
+          isOpen={Boolean(selectedPlanForModal)}
+          onClose={() => setSelectedPlanForModal(null)}
+          plan={selectedPlanForModal}
+          selectedOption={selectedPlanForModal.costOptions[0]}
+          numberOfTravelers={1}
+        />
+      )}
     </div>
   );
 };

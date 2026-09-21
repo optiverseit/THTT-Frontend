@@ -84,6 +84,7 @@ const MainLayout = () => {
         {/* ── SERVICES ── */}
         <Route path="/service" element={<ServicesPage />} />
         <Route path="/service/:slug" element={<ServiceDetail />} />
+        <Route path="/service/:slug/:tourId" element={<ServiceDetail />} />
 
         {/* ── BLOG (Read Stories & Video Vlogs dual-mode) ── */}
         <Route path="/blog" element={<Blog />} />

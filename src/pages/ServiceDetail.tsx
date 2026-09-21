@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
+import { useParams, Link, useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
 import {
   Compass,
@@ -45,7 +45,8 @@ import HeliServicesDetailContent from "../components/Service/HeliServicesDetailC
 import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
 
 const ServiceDetail: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, tourId } = useParams<{ slug: string; tourId?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // If slug is work-permit, redirect to dedicated /work-permit route
@@ -125,6 +126,7 @@ const ServiceDetail: React.FC = () => {
   const isTravelInsurance = service.slug === "travel-insurance";
   const isVehicleRental = service.slug === "vehicle-rental";
   const isHeliServices = service.slug === "heli-services";
+  const isHeliTourDetailPage = isHeliServices && Boolean(tourId || searchParams.get("tour"));
   const isVisaServices = service.slug === "visa-services" || service.slug === "visa";
 
   // Visa Search Bar State
@@ -640,8 +642,10 @@ const ServiceDetail: React.FC = () => {
 
   return (
     <>
-      <div className="w-full flex flex-col items-center">
-        <div className="w-full relative shadow-md bg-white border-b border-gray-200">
+      {/* ── 1. TOP BANNER SECTION (Omitted on dedicated Heli Tour Details Page) ── */}
+      {!isHeliTourDetailPage && (
+        <div className="w-full flex flex-col items-center">
+          <div className="w-full relative shadow-md bg-white border-b border-gray-200">
           {/* ── 1. TOP BANNER SECTION (With 1. Title at top, 2. SearchBar in middle, 3. Quote below) ── */}
           {isTours ? (
             /* ── TOURS HERO BANNER (Exactly matching Adventure Activities) ── */
@@ -940,15 +944,20 @@ const ServiceDetail: React.FC = () => {
           <div className="w-full border-b border-gray-200/90 shadow-xs" />
         </div>
       </div>
+      )}
 
       {/* ── 5. SERVICES SECTION (Full width, soft gradient, dedicated interactive component) ── */}
       {!isAirTicket && (
         <div
           id="section-services"
-          className="w-full pt-8 sm:pt-9 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-3 sm:mt-4"
+          className={
+            isHeliTourDetailPage
+              ? "w-full pt-10 sm:pt-12 pb-12 px-4 sm:px-6 lg:px-8 bg-[#FBFBFE]"
+              : "w-full pt-8 sm:pt-9 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/30 via-blue-50/20 to-pink-50/40 mt-3 sm:mt-4"
+          }
         >
           <div className="max-w-7xl mx-auto">
-            {!isTours && !isActivities && !isTrekking && !isHotelBooking && !isVehicleRental && !isVisaServices && !isTravelInsurance && (
+            {!isTours && !isActivities && !isTrekking && !isHotelBooking && !isVehicleRental && !isVisaServices && !isTravelInsurance && !isHeliServices && (
               <header className="text-center mb-8">
                 <h2 className="text-xs text-pink-500 tracking-widest font-bold mb-2 uppercase">
                   {getServicesSectionBadge()}
@@ -989,17 +998,27 @@ const ServiceDetail: React.FC = () => {
         </div>
       )}
 
-      {/* ── 7. TESTIMONIES SECTION (Exact Testimonials carousel) ── */}
-      <div id="section-testimonies">
-        <Testimonials workTest={workPermitTestimonials} />
-      </div>
+      {/* ── 7. TESTIMONIES SECTION (Omitted on Heli Tour Details Page as it has dedicated testimonies) ── */}
+      {!isHeliTourDetailPage && (
+        <div id="section-testimonies">
+          <Testimonials workTest={workPermitTestimonials} />
+        </div>
+      )}
 
       {/* ── 10. PREFOOTER CTA ── */}
       <PreFooter
-        title={`Ready to Book Your ${service.name}?`}
-        description="Search options or connect with our specialist team for personalized guidance."
-        btn1="Call Hotline"
-        btn2="WhatsApp Inquiry"
+        title={
+          isHeliTourDetailPage
+            ? "Ready to Experience This Adventure?"
+            : `Ready to Book Your ${service.name}?`
+        }
+        description={
+          isHeliTourDetailPage
+            ? "Connect with our Himalayan travel specialists for tailored dates, group discounts, and custom arrangements."
+            : "Search options or connect with our specialist team for personalized guidance."
+        }
+        btn1={isHeliTourDetailPage ? "Call Us Now" : "Call Hotline"}
+        btn2={isHeliTourDetailPage ? "Request Custom Quote" : "WhatsApp Inquiry"}
       />
     </>
   );

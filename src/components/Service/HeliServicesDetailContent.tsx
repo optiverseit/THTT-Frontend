@@ -13,6 +13,8 @@ import {
   HeartPulse,
 } from "lucide-react";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import PackageHeliService from "./packageheliservice";
+import { useParams, useSearchParams } from "react-router-dom";
 
 // ── FAQ DATA ──────────────────────────────────────────────────────────────────
 const HELI_FAQS = [
@@ -78,27 +80,21 @@ const WHY_CHOOSE = [
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 export const HeliServicesDetailContent: React.FC = () => {
+  const { tourId } = useParams<{ tourId?: string }>();
+  const [searchParams] = useSearchParams();
+  const isDetailPage = Boolean(tourId || searchParams.get("tour"));
+
+  // If on a dedicated Heli Tour Details Page, display only PackageHeliService
+  if (isDetailPage) {
+    return <PackageHeliService />;
+  }
 
   return (
-    <div className="space-y-10">
-      {/* ── OVERVIEW BANNER ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100">
-        <span className="text-[#E91E63] font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
-          HELICOPTER SERVICES
-        </span>
-        <h2 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-4">
-          Nepal's Premier Helicopter Tour & Charter Service
-        </h2>
-        <p className="text-gray-600 text-base leading-relaxed font-medium">
-          Experience the Himalayas from a perspective that few ever witness — hovering at eye level with the world's
-          highest peaks. From the iconic Everest Base Camp to the sacred Muktinath Temple, our helicopter services
-          deliver breathtaking aerial adventures, spiritual pilgrimages, and emergency rescue solutions across Nepal.
-        </p>
+    <div className="space-y-12">
+      {/* ── 1. HELI TOURS & PACKAGES (packageheliservice) ── */}
+      <PackageHeliService />
 
-      </div>
-
-
-      {/* ── WHY CHOOSE US ────────────────────────────────────────────────── */}
+      {/* ── 2. WHY CHOOSE US ────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-8 sm:p-12 rounded-3xl shadow-xl">
         <span className="text-pink-400 font-black uppercase tracking-[0.25em] text-[10px] mb-2 block">
           OUR GUARANTEE

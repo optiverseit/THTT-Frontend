@@ -85,7 +85,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
   // "charter" or "sharing"
   const [flightOption, setFlightOption] = useState<"charter" | "sharing">("charter");
   const [sharingSeats, setSharingSeats] = useState<number>(1);
-  const [charterSeats, setCharterSeats] = useState<number>(2);
+  const [charterSeats, setCharterSeats] = useState<number>(1);
 
   // Price calculations
   const charterPrice = tour.charterPriceNPR || 696800;
@@ -106,7 +106,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
   const handleBookClick = () => {
     onBookNow({
       flightType: flightOption,
-      seatCount: flightOption === "charter" ? charterSeats : sharingSeats,
+      seatCount: flightOption === "charter" ? 1 : sharingSeats,
       totalPriceNPR: currentTotalNPR,
       formattedPrice: formattedTotalPrice,
     });

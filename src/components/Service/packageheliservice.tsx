@@ -53,6 +53,8 @@ import {
   Filter,
   ArrowLeft,
   Share2,
+  Copy,
+  BadgeCheck,
 } from "lucide-react";
 import {
   useGlobalCurrency,
@@ -1040,7 +1042,7 @@ export const PackageHeliService: React.FC = () => {
     totalPriceNPR: number;
   }) => {
     if (!selectedTour) return;
-    const seatCount = Math.max(1, details.seatCount || 1);
+    const seatCount = details.flightType === "charter" ? 1 : Math.max(1, details.seatCount || 1);
     setBookingTour(selectedTour);
     setBookingFlightOption(details.flightType);
     setBookingSeatCount(seatCount);
@@ -1080,7 +1082,7 @@ export const PackageHeliService: React.FC = () => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const paxCount = Math.max(1, bookingSeatCount || 1);
+    const paxCount = bookingFlightOption === "charter" ? 1 : Math.max(1, bookingSeatCount || 1);
     const errors: Record<string, string | undefined> = {};
     const allTouched: Record<string, boolean> = { ...touchedFields };
 
@@ -1166,14 +1168,722 @@ export const PackageHeliService: React.FC = () => {
     }, 2000);
   };
 
-  // Print booking receipt / slip from Modal
+  // Print booking receipt / slip from Modal (Matches Tour Package PDF/Print Slip exactly)
   const handlePrintBookingSlip = () => {
-    const originalTitle = document.title;
-    document.title = `Booking Voucher - ${submissionId} - Trip Himalaya`;
-    window.print();
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 2000);
+    const formattedTotal = displayPrice(
+      bookingTotalPriceNPR,
+      selectedCurrency,
+      nprPerOneDollar,
+      nprPerOneINR
+    );
+
+    const flightTypeLabel =
+      bookingFlightOption === "charter" ? "Private Charter" : "Sharing Heli Service";
+
+    const paxCount = Math.max(1, bookingSeatCount || 1);
+
+    const applicantRows = Array.from({ length: paxCount }, (_, idx) => {
+      const app = bookingFormData.applicants?.[idx] || {
+        fullName: bookingFormData.fullName,
+        nationality: bookingFormData.nationality,
+        idNumber: bookingFormData.idNumber,
+        bodyWeightKg: bookingFormData.bodyWeightKg,
+        luggageKg: bookingFormData.luggageKg,
+      };
+      const isLead = idx === 0;
+      return `
+        <tr>
+          <td style="font-size:8.5px; font-weight:700; text-align:center; color:#475569; background:#ffffff; border:1px solid #cbd5e1; padding:5px 6px;">${idx + 1}</td>
+          <td style="font-size:9.5px; font-weight:700; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">
+            ${app.fullName || (isLead ? bookingFormData.fullName : `Passenger ${idx + 1}`)}
+            ${isLead ? '<span style="font-size:7.5px; font-weight:800; text-transform:uppercase; background:#fdf2f8; color:#be185d; border:1px solid #fbcfe8; padding:1px 5px; border-radius:3px; margin-left:5px;">Lead Pax</span>' : ''}
+          </td>
+          <td style="font-size:9px; color:#334155; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.nationality || bookingFormData.nationality || "Nepali / International"}</td>
+          <td style="font-size:9px; font-family:'Courier New', monospace; font-weight:600; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.idNumber || bookingFormData.idNumber || "—"}</td>
+          <td style="font-size:9px; font-weight:700; text-align:center; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.bodyWeightKg || bookingFormData.bodyWeightKg || "—"} kg</td>
+          <td style="font-size:9px; font-weight:600; text-align:center; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.luggageKg ? `${app.luggageKg} kg` : "0 kg"}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Heli_Flight_Booking_Slip_${submissionId}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #fff;
+            color: #0f172a;
+            font-size: 11.5px;
+            line-height: 1.5;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* ── PAGE WRAPPER ── */
+          .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 12mm 14mm 10mm 14mm;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+            background: #fff;
+          }
+
+          /* ── WATERMARK ── */
+          .watermark-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            user-select: none;
+            z-index: 999;
+          }
+          .watermark {
+            transform: rotate(-28deg);
+            font-size: 38px;
+            font-weight: 900;
+            color: rgba(45, 19, 71, 0.06);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 2.2;
+            white-space: nowrap;
+            text-align: center;
+            mix-blend-mode: multiply;
+          }
+
+          /* ── LETTERHEAD ── */
+          .letterhead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 9px;
+            border-bottom: 2.5px solid #0f172a;
+            margin-bottom: 10px;
+          }
+          .lh-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+          }
+          .logo-img {
+            height: 75px;
+            width: auto;
+            object-fit: contain;
+            flex-shrink: 0;
+          }
+          .company-name-block {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .company-name-main {
+            font-size: 15.5px;
+            font-weight: 900;
+            letter-spacing: -0.3px;
+            line-height: 1.1;
+            color: #0f172a;
+          }
+          .company-name-main .name-pink {
+            color: #0f172a;
+          }
+          .company-tagline {
+            font-size: 9px;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 3px;
+          }
+          .company-contact-row {
+            font-size: 8.5px;
+            color: #475569;
+            margin-top: 2px;
+            font-weight: 500;
+          }
+          .lh-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+          }
+          .official-badge {
+            display: inline-block;
+            border: 1.5px solid #0f172a;
+            color: #0f172a;
+            font-size: 8.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 3px 9px;
+            border-radius: 4px;
+          }
+          .slip-date {
+            font-size: 9px;
+            color: #64748b;
+            font-weight: 600;
+          }
+
+          /* ── DOC TITLE BAND ── */
+          .title-band {
+            background: #0f172a;
+            color: #fff;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .title-band h1 {
+            font-size: 12.5px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+          }
+          .title-band .destination {
+            font-size: 9.5px;
+            color: #e2e8f0;
+            font-weight: 600;
+            margin-top: 1px;
+          }
+          .title-band .doc-id {
+            text-align: right;
+          }
+          .title-band .doc-id-label {
+            font-size: 7.5px;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .title-band .doc-id-val {
+            font-family: 'Courier New', monospace;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+          }
+
+          /* ── REFERENCE BOX ── */
+          .ref-box {
+            display: flex;
+            align-items: stretch;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            background: #f8fafc;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .ref-accent {
+            width: 5px;
+            background: #0f172a;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .ref-content {
+            flex: 1;
+            padding: 7px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .ref-label {
+            font-size: 8px;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            margin-bottom: 2px;
+          }
+          .ref-value {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: 0.8px;
+          }
+          .ref-meta-block {
+            text-align: right;
+          }
+          .ref-status-tag {
+            display: inline-block;
+            font-size: 8px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #065f46;
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .ref-meta-sub {
+            font-size: 8px;
+            color: #64748b;
+            margin-top: 2px;
+            font-weight: 600;
+          }
+
+          /* ── SECTION HEADING ── */
+          .section-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            margin-top: 9px;
+          }
+          .section-heading .sh-line {
+            flex: 1;
+            height: 1px;
+            background: #cbd5e1;
+          }
+          .section-heading .sh-text {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+          }
+
+          /* ── DETAIL TABLE ── */
+          .detail-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 3px;
+          }
+          .detail-table th, .detail-table td {
+            padding: 5px 9px;
+            border: 1px solid #cbd5e1;
+            vertical-align: middle;
+            word-wrap: break-word;
+          }
+          .td-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            width: 22%;
+            background: #f8fafc !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .td-value {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #0f172a;
+            width: 28%;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            line-height: 1.35;
+          }
+          .td-value.mono { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; }
+          .td-value.accent { color: #0f172a; font-weight: 800; font-size: 10px; }
+          .td-value.fee {
+            color: #831843;
+            background: #fff5f7 !important;
+            border-color: #f472b6 !important;
+          }
+
+          /* ── NOTICE BOX ── */
+          .notice-box {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            border-radius: 5px;
+            padding: 8px 11px;
+            margin-top: 9px;
+            font-size: 9.5px;
+            color: #1e293b;
+            line-height: 1.45;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .notice-box strong { color: #0f172a; }
+
+          /* ── CHECKLIST ── */
+          .checklist-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            padding: 8px 11px;
+            margin-top: 8px;
+            background: #f8fafc;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .checklist-title {
+            font-size: 8px;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 3px;
+          }
+          .checklist-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px 18px;
+          }
+          .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 5px;
+            font-size: 9px;
+            color: #334155;
+            line-height: 1.4;
+          }
+          .ci-icon {
+            color: #0f172a;
+            font-weight: 900;
+            font-size: 9.5px;
+            flex-shrink: 0;
+            margin-top: 1px;
+          }
+
+          /* ── INFO CARD GRID ── */
+          .info-card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-bottom: 4px;
+          }
+          .info-card-grid.cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          .info-card-grid.cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .info-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 5px 7px 6px 7px;
+            background: #f8fafc;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            min-width: 0;
+          }
+          .info-card.span2 {
+            grid-column: span 2;
+          }
+          .ic-label {
+            font-size: 7.5px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .ic-value {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.3;
+            word-break: break-word;
+          }
+          .ic-value.mono {
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            font-weight: 700;
+          }
+          .ic-value.accent {
+            font-size: 10px;
+            font-weight: 800;
+            color: #0f172a;
+          }
+          .ic-value.pink {
+            color: #be185d;
+            font-weight: 800;
+            display: inline-block;
+            background: #fdf2f8;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid #fbcfe8;
+            font-size: 9px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* ── FARE HIGHLIGHT BOX ── */
+          .fare-box {
+            border: 1.5px solid #f9a8d4;
+            border-radius: 6px;
+            background: #fdf2f8;
+            padding: 7px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 5px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .fare-label {
+            font-size: 8px;
+            font-weight: 800;
+            color: #9d174d;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 2px;
+          }
+          .fare-amount {
+            font-size: 15px;
+            font-weight: 900;
+            color: #831843;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.3px;
+          }
+          .fare-note {
+            font-size: 7.5px;
+            color: #be185d;
+            font-weight: 600;
+            text-align: right;
+            max-width: 180px;
+            line-height: 1.4;
+          }
+
+          /* ── FOOTER ── */
+          .doc-footer {
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1.5px solid #0f172a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8px;
+            color: #475569;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="watermark-wrapper"><div class="watermark">Trip Himalaya Tours and Travels</div></div>
+
+          <!-- LETTERHEAD -->
+          <div class="letterhead">
+            <div class="lh-left">
+              <img src="${THTTLogo}" class="logo-img" alt="Trip Himalaya Tours and Travels" />
+              <div class="company-name-block">
+                <div class="company-name-main">Trip Himalaya <span class="name-pink">Tours &amp; Travels Pvt. Ltd.</span></div>
+                <div class="company-tagline">Govt. Approved Travel &amp; Tour Counseling Agency</div>
+                <div class="company-contact-row">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; 977-9851403761 &nbsp;|&nbsp; pradip.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np</div>
+              </div>
+            </div>
+            <div class="lh-right">
+              <div class="official-badge">Official Document</div>
+              <div class="slip-date">Issued: ${submittedAt}</div>
+            </div>
+          </div>
+
+          <!-- DOC TITLE BAND -->
+          <div class="title-band">
+            <div>
+              <h1>Heli Flight Booking Confirmation Slip</h1>
+              <div class="destination">Flight Sector: ${bookingTour?.title || "Heli Service"} &nbsp;/&nbsp; ${flightTypeLabel}</div>
+            </div>
+            <div class="doc-id">
+              <div class="doc-id-label">Document ID</div>
+              <div class="doc-id-val">${submissionId}</div>
+            </div>
+          </div>
+
+          <!-- SUBMISSION REFERENCE -->
+          <div class="ref-box">
+            <div class="ref-accent"></div>
+            <div class="ref-content">
+              <div>
+                <div class="ref-label">Official Submission Reference Number</div>
+                <div class="ref-value">${submissionId}</div>
+              </div>
+              <div class="ref-meta-block">
+                <div class="ref-status-tag">Verified System Submission</div>
+                <div class="ref-meta-sub">${flightTypeLabel} &bull; Issued ${submittedAt}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- APPLICANT DETAILS -->
+          <div class="section-heading">
+            <div class="sh-text">Lead Passenger &amp; Contact Details</div>
+            <div class="sh-line"></div>
+          </div>
+          <div class="info-card-grid">
+            <div class="info-card">
+              <div class="ic-label">Lead Passenger</div>
+              <div class="ic-value accent">${bookingFormData.fullName || "—"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Nationality</div>
+              <div class="ic-value">${bookingFormData.nationality || "Nepali / International"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Total Passengers</div>
+              <div class="ic-value mono">${paxCount} Passenger(s)</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Preferred Flight Date</div>
+              <div class="ic-value accent">${bookingFormData.preferredDate || "Immediate"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Contact / WhatsApp</div>
+              <div class="ic-value mono">${bookingFormData.phone ? `${bookingFormData.phoneCode} ${bookingFormData.phone}` : "—"}</div>
+            </div>
+            <div class="info-card span2">
+              <div class="ic-label">Email Address</div>
+              <div class="ic-value">${bookingFormData.email || "—"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Passport / ID Number</div>
+              <div class="ic-value mono">${bookingFormData.idNumber || "—"}</div>
+            </div>
+            <div class="info-card span2">
+              <div class="ic-label">Pickup Hotel / Location</div>
+              <div class="ic-value">${bookingFormData.pickupHotel || "Kathmandu Valley / Airport"}</div>
+            </div>
+          </div>
+
+          <!-- HELI SERVICE DETAILS -->
+          <div class="section-heading">
+            <div class="sh-text">Heli Flight Service &amp; Fare Details</div>
+            <div class="sh-line"></div>
+          </div>
+          <div class="info-card-grid cols-3">
+            <div class="info-card span2">
+              <div class="ic-label">Tour / Heli Package</div>
+              <div class="ic-value accent">${bookingTour?.title || "Heli Tour"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Flight Option</div>
+              <div class="ic-value"><span class="ic-value pink">${flightTypeLabel}</span></div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Duration</div>
+              <div class="ic-value">${bookingTour?.duration || "Standard"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Max Altitude</div>
+              <div class="ic-value">${bookingTour?.maxAltitude || "Himalayan Base"}</div>
+            </div>
+            <div class="info-card">
+              <div class="ic-label">Heli Route / Base</div>
+              <div class="ic-value">${bookingTour?.location || "Nepal Himalayas"}</div>
+            </div>
+          </div>
+          <div class="fare-box">
+            <div>
+              <div class="fare-label">Total Estimated Fare</div>
+              <div class="fare-amount">${formattedTotal}</div>
+            </div>
+            <div class="fare-note">All-inclusive<br>CAAN passenger fee, airport charges &amp; aviation taxes</div>
+          </div>
+
+          <!-- CAAN PASSENGER MANIFEST & WEIGHT DETAILS -->
+          <div class="section-heading">
+            <div class="sh-text">CAAN Flight &amp; Passenger Manifest</div>
+            <div class="sh-line"></div>
+          </div>
+          <table class="detail-table">
+            <thead>
+              <tr style="background:#0f172a; color:#fff;">
+                <th style="font-size:8px; font-weight:800; text-transform:uppercase; color:#fff; padding:4.5px 6px; width:30px; text-align:center;">#</th>
+                <th style="font-size:8px; font-weight:800; text-transform:uppercase; color:#fff; padding:4.5px 8px; text-align:left; width:32%;">Passenger Full Name</th>
+                <th style="font-size:8px; font-weight:800; text-transform:uppercase; color:#fff; padding:4.5px 8px; text-align:left; width:20%;">Nationality</th>
+                <th style="font-size:8px; font-weight:800; text-transform:uppercase; color:#fff; padding:4.5px 8px; text-align:left; width:22%;">ID / Passport</th>
+                <th style="font-size:8px; font-weight:800; text-transform:uppercase; color:#fff; padding:4.5px 8px; text-align:center; width:13%;">Body Wt.</th>
+                <th style="font-size:8px; font-weight:800; text-transform:uppercase; color:#fff; padding:4.5px 8px; text-align:center; width:13%;">Luggage</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${applicantRows}
+            </tbody>
+          </table>
+
+          <!-- OFFICER NOTICE -->
+          <div class="notice-box">
+            <strong>Next Step:</strong> Our dedicated <strong>Heli Flight Operations Officer</strong> will contact you within <strong>15–30 minutes</strong> via WhatsApp or phone call to verify passenger manifests, coordinate Tribhuvan International Airport (TIA) domestic VIP helipad terminal entry, and confirm CAAN flight slot clearance.
+          </div>
+
+          <!-- CHECKLIST -->
+          <div class="checklist-box">
+            <div class="checklist-title">Heli Flight Preparation Checklist</div>
+            <div class="checklist-grid">
+              <div class="checklist-item"><span class="ci-icon">✓</span> Original Passport or National ID Card (Mandatory for airport security check)</div>
+              <div class="checklist-item"><span class="ci-icon">✓</span> Flight booking confirmation slip (printed / digital copy)</div>
+              <div class="checklist-item"><span class="ci-icon">✓</span> High-altitude windproof down jacket &amp; 100% UV sunglasses</div>
+              <div class="checklist-item"><span class="ci-icon">✓</span> Accurate payload declaration (Luggage limited to max 20 kg per passenger)</div>
+            </div>
+          </div>
+
+          <!-- FOOTER -->
+          <div class="doc-footer">
+            <div class="footer-left">
+              This is a system-generated confirmation slip. No physical signature is required.<br>
+              24/7 Heli Operations Desk: 977-9851403761 &nbsp;|&nbsp; pradip.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np
+            </div>
+            <div class="footer-right">
+              Trip Himalaya Tours &amp; Travels<br>
+              Ref: ${submissionId} &nbsp;|&nbsp; ${submittedAt}
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(printContent);
+      doc.close();
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1200);
+      }, 350);
+    } else {
+      window.print();
+    }
   };
 
   // Instant WhatsApp Inquiry
@@ -2402,63 +3112,90 @@ export const PackageHeliService: React.FC = () => {
       {isBookingModalOpen && bookingTour && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm print:p-0 print:bg-white print:static">
           <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 print:border-none print:shadow-none print:max-w-none print:max-h-none">
-            {/* Modal Header (Fixed at top with Selected Flight Option & Total Estimate) */}
-            <div className="bg-gradient-to-r from-[#200B3B] via-[#3B145C] to-[#200B3B] text-white p-4 sm:p-5 flex-shrink-0 border-b border-white/10 print:hidden space-y-3">
-              <div className="flex items-center justify-between">
+            {/* Modal Header */}
+            {isSubmitted ? (
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-[#200B3B] via-[#3B145C] to-[#200B3B] text-white flex items-center justify-between border-b border-white/10 flex-shrink-0 print:hidden">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-pink-500/20 text-pink-300 flex items-center justify-center flex-shrink-0 shadow-inner">
-                    <Plane size={20} />
+                  <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0 shadow-inner">
+                    <Plane size={20} className="text-pink-300" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-black leading-tight">
-                      Helicopter Service Reservation
-                    </h3>
-                    <p className="text-xs text-pink-200/80 font-medium line-clamp-1">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF4FA3] block">
+                      SUBMISSION CONFIRMED
+                    </span>
+                    <h3 className="text-sm sm:text-base font-black tracking-tight leading-tight text-white">
                       {bookingTour.title}
-                    </p>
+                    </h3>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setIsBookingModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-all"
-                  title="Close"
+                  aria-label="Close modal"
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer hover:rotate-90"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
+            ) : (
+              <div className="bg-gradient-to-r from-[#200B3B] via-[#3B145C] to-[#200B3B] text-white p-4 sm:p-5 flex-shrink-0 border-b border-white/10 print:hidden space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-pink-500/20 text-pink-300 flex items-center justify-center flex-shrink-0 shadow-inner">
+                      <Plane size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-black leading-tight">
+                        Helicopter Service Reservation
+                      </h3>
+                      <p className="text-xs text-pink-200/80 font-medium line-clamp-1">
+                        {bookingTour.title}
+                      </p>
+                    </div>
+                  </div>
 
-              {/* Header Summary Strip: Flight Option & Total Estimate */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/15">
-                <div>
-                  <span className="text-[9px] font-black uppercase text-pink-200/90 block tracking-wider">
-                    SELECTED FLIGHT OPTION
-                  </span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs sm:text-sm font-black text-white">
-                      {bookingFlightOption === "charter"
-                        ? "Private Charter"
-                        : "Sharing Heli Service"}
+                  <button
+                    type="button"
+                    onClick={() => setIsBookingModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-all"
+                    title="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Header Summary Strip: Flight Option & Total Estimate */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/15">
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-pink-200/90 block tracking-wider">
+                      SELECTED FLIGHT OPTION
+                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs sm:text-sm font-black text-white">
+                        {bookingFlightOption === "charter"
+                          ? "Private Charter"
+                          : "Sharing Heli Service"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-left sm:text-right">
+                    <span className="text-[9px] font-black uppercase text-pink-200/90 block tracking-wider">
+                      TOTAL ESTIMATE
+                    </span>
+                    <span className="text-sm sm:text-base font-black text-[#FF69B4] tracking-tight block mt-0.5">
+                      {displayPrice(
+                        bookingTotalPriceNPR,
+                        selectedCurrency,
+                        nprPerOneDollar,
+                        nprPerOneINR
+                      )}
                     </span>
                   </div>
                 </div>
-
-                <div className="text-left sm:text-right">
-                  <span className="text-[9px] font-black uppercase text-pink-200/90 block tracking-wider">
-                    TOTAL ESTIMATE
-                  </span>
-                  <span className="text-sm sm:text-base font-black text-[#FF69B4] tracking-tight block mt-0.5">
-                    {displayPrice(
-                      bookingTotalPriceNPR,
-                      selectedCurrency,
-                      nprPerOneDollar,
-                      nprPerOneINR
-                    )}
-                  </span>
-                </div>
               </div>
-            </div>
+            )}
 
             {/* Modal Content (Scrollable to fit any screen height) */}
             <div className="p-5 sm:p-7 overflow-y-auto flex-1 overscroll-contain">
@@ -3120,215 +3857,151 @@ export const PackageHeliService: React.FC = () => {
                   </button>
                 </form>
               ) : (
-                /* ── STEP 2: SUBMISSION CONFIRMATION & PRINT SLIP ── */
-                <div className="space-y-6">
-                  {/* Success Banner */}
-                  <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2 print:hidden">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-sm">
-                      <CheckCircle2 size={24} />
+                /* ── STEP 2: DIGITAL CONFIRMATION & RECEIPT VIEW (Matches Tour Package Modal Exactly) ── */
+                <div className="space-y-3.5 text-center animate-in fade-in zoom-in-95 duration-200">
+                  {/* Top Greeting & Status */}
+                  <div className="space-y-1 pt-0.5">
+                    <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white mb-0.5 shadow-md shadow-emerald-500/20 ring-4 ring-emerald-50">
+                      <CheckCircle2 size={24} className="stroke-[2.5]" />
                     </div>
-                    <h4 className="text-lg font-black text-emerald-900">
-                      Heli Flight Reservation Submitted!
-                    </h4>
-                    <p className="text-xs text-emerald-700 font-medium max-w-md mx-auto">
-                      Thank you, <strong className="font-bold">{bookingFormData.fullName}</strong>. Our Flight Operations Desk has received your request and is verifying CAAN runway slots for your requested date.
+                    <div className="flex items-center justify-center gap-1.5">
+                      <h4 className="text-base sm:text-lg font-black text-[#1A0B2E] tracking-tight">
+                        Thank you, {bookingFormData.fullName || "Valued Traveler"}!
+                      </h4>
+                      <BadgeCheck size={18} className="text-emerald-600 flex-shrink-0" />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Your heli flight reservation for <strong className="text-slate-800 font-semibold">{bookingTour.title}</strong> has been registered.
                     </p>
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-300 text-xs font-black text-emerald-900 mt-1">
-                      <span>Booking Reference: {submissionId}</span>
-                    </div>
                   </div>
 
-                  {/* ── PRINTABLE VOUCHER / BOOKING SLIP ── */}
-                  <div className="p-6 rounded-3xl bg-white border border-gray-200 space-y-5 shadow-xs text-left">
-                    {/* Header */}
-                    <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <img src={THTTLogo} alt="Trip Himalaya" className="h-10 object-contain" />
-                        <div>
-                          <h4 className="text-xs font-black uppercase text-[#200B3B]">
-                            TRIP HIMALAYA TOURS &amp; TRAVELS
-                          </h4>
-                          <p className="text-[9.5px] text-gray-500">
-                            Authorized Heli Charter &amp; Himalayan Expeditions Operator
-                          </p>
-                        </div>
-                      </div>
+                  {/* Specialist Contact Reassurance Card */}
+                  <div className="bg-gradient-to-r from-purple-50/70 via-white to-purple-50/50 border border-purple-100 rounded-xl px-3.5 py-2.5 text-left shadow-2xs">
+                    <div className="flex items-center justify-between gap-1.5 flex-wrap mb-0.5">
+                      <span className="text-xs font-black text-[#1A0B2E]">
+                        Our Heli Flight Operations Desk will contact you soon
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      Our operations officer will reach out on <strong className="text-slate-800">WhatsApp &amp; Phone</strong> ({bookingFormData.phone ? `${bookingFormData.phoneCode} ${bookingFormData.phone}` : "your number"}) to verify CAAN flight clearances and coordinate helipad boarding.
+                    </p>
+                  </div>
 
-                      <div className="text-right">
-                        <span className="text-[9px] font-bold text-gray-400 block uppercase">
-                          STATUS
+                  {/* Official Digital E-Receipt Voucher Card */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
+                    {/* Submission Reference ID Header Strip */}
+                    <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block leading-none">
+                          OFFICIAL SUBMISSION NUMBER
                         </span>
-                        <span className="text-[11px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-block">
-                          SLOT RESERVED
+                        <span className="font-mono font-black text-sm sm:text-base text-[#1A0B2E] tracking-wider mt-0.5 block">
+                          {submissionId}
                         </span>
                       </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(submissionId);
+                          setCopiedId(true);
+                          setTimeout(() => setCopiedId(false), 2000);
+                        }}
+                        type="button"
+                        className="flex items-center gap-1 text-[11px] font-bold text-[#E91E63] hover:underline cursor-pointer"
+                      >
+                        {copiedId ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{copiedId ? "Copied!" : "Copy Code"}</span>
+                      </button>
                     </div>
 
-                    {/* Booking Reference & Flight Info */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-gray-50 p-4 rounded-2xl">
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-gray-400 block">
-                          BOOKING ID
-                        </span>
-                        <span className="font-black text-[#200B3B]">{submissionId}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-gray-400 block">
-                          DATE ISSUED
-                        </span>
-                        <span className="font-semibold text-gray-800">{submittedAt}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-gray-400 block">
-                          FLIGHT OPTION
-                        </span>
-                        <span className="font-black text-[#E91E63] uppercase">
-                          {bookingFlightOption}
+                    {/* 6 Key Details Grid */}
+                    <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-white">
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Lead Passenger</span>
+                        <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
+                          {bookingFormData.fullName || "—"}
                         </span>
                       </div>
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-gray-400 block">
-                          DEPARTURE DATE
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Flight Option</span>
+                        <span className="font-bold text-[#E91E63] truncate block text-xs mt-0.5">
+                          {bookingFlightOption === "charter" ? "Private Charter" : "Sharing Heli Service"}
                         </span>
-                        <span className="font-semibold text-gray-800">
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Passengers</span>
+                        <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
+                          {bookingFlightOption === "charter" ? "Exclusive Aircraft" : `${bookingSeatCount} Passenger(s)`}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Estimated Fare</span>
+                        <span className="font-black text-[#1A0B2E] text-xs mt-0.5 block">
+                          {displayPrice(
+                            bookingTotalPriceNPR,
+                            selectedCurrency,
+                            nprPerOneDollar,
+                            nprPerOneINR
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Flight Date</span>
+                        <span className="font-medium text-slate-700 text-xs truncate block mt-0.5">
                           {bookingFormData.preferredDate || "Immediate"}
                         </span>
                       </div>
-                    </div>
 
-                    {/* Passenger Manifest & Weight Details */}
-                    <div className="space-y-3 text-xs">
-                      <h5 className="text-[10px] font-black uppercase text-[#200B3B] tracking-wider flex items-center justify-between">
-                        <span>
-                          PASSENGER &amp; FLIGHT MANIFEST (
-                          {bookingSeatCount} PASSENGER
-                          {bookingSeatCount > 1 ? "S" : ""}
-                          )
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Submitted At</span>
+                        <span className="font-medium text-slate-700 text-[10.5px] truncate block mt-0.5">
+                          {submittedAt}
                         </span>
-                        <span className="text-[9px] text-gray-400 font-bold">
-                          CAAN HIGH-ALTITUDE MANIFEST
-                        </span>
-                      </h5>
-
-                      <div className="space-y-2">
-                        {Array.from(
-                          { length: Math.max(1, bookingSeatCount || 1) },
-                          (_, idx) => {
-                            const app = bookingFormData.applicants?.[idx] || {
-                              fullName: bookingFormData.fullName,
-                              nationality: bookingFormData.nationality,
-                              idNumber: bookingFormData.idNumber,
-                              bodyWeightKg: bookingFormData.bodyWeightKg,
-                              luggageKg: bookingFormData.luggageKg,
-                            };
-                            return (
-                              <div
-                                key={idx}
-                                className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-gray-700 text-xs"
-                              >
-                                <div className="flex items-center justify-between font-bold text-[#200B3B] mb-1.5">
-                                  <span>
-                                    Applicant {idx + 1}: {app.fullName || (idx === 0 ? bookingFormData.fullName : `Passenger ${idx + 1}`)}
-                                  </span>
-                                  <span className="text-[9px] uppercase px-2 py-0.5 rounded-full bg-pink-50 text-[#E91E63] font-black">
-                                    {idx === 0 ? "Lead Traveler" : `Pax ${idx + 1}`}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-gray-600">
-                                  <div>
-                                    <strong>Nationality:</strong> {app.nationality || bookingFormData.nationality}
-                                  </div>
-                                  <div>
-                                    <strong>Weight:</strong> {app.bodyWeightKg || bookingFormData.bodyWeightKg} kg
-                                  </div>
-                                  <div>
-                                    <strong>Luggage:</strong>{" "}
-                                    {app.luggageKg ? `${app.luggageKg} kg` : "0 kg"}
-                                  </div>
-                                  <div>
-                                    <strong>ID / Passport:</strong> {app.idNumber || bookingFormData.idNumber}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-700 pt-2 border-t border-gray-100">
-                        <div>
-                          <strong>Pickup Hotel:</strong> {bookingFormData.pickupHotel}
-                        </div>
-                        <div>
-                          <strong>WhatsApp:</strong> {bookingFormData.phoneCode} {bookingFormData.phone}
-                        </div>
-                        <div>
-                          <strong>Email:</strong> {bookingFormData.email}
-                        </div>
-                        <div>
-                          <strong>Departure Date:</strong> {bookingFormData.preferredDate || "Immediate"}
-                        </div>
                       </div>
                     </div>
 
-                    {/* Price Breakdown */}
-                    <div className="pt-3 border-t border-gray-200 flex items-center justify-between text-xs">
-                      <span className="font-bold text-gray-600">
-                        Estimated Flight Package Total:
-                      </span>
-                      <span className="text-base font-black text-[#E91E63]">
-                        {displayPrice(
-                          bookingTotalPriceNPR,
-                          selectedCurrency,
-                          nprPerOneDollar,
-                          nprPerOneINR
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Operational Contacts */}
-                    <div className="p-3 bg-gray-50 rounded-xl text-[9.5px] text-gray-500 space-y-1">
-                      <div>
-                        <strong className="text-gray-800">24/7 Heli Flight Operations Desk:</strong>{" "}
-                        +977 9851403761 | info@triphimalaya.com
-                      </div>
-                      <div>
-                        <strong className="text-gray-800">Helipad Ground Dispatch:</strong> Tribhuvan International Airport, Domestic Terminal, VIP Helipad Section.
+                    {/* Desk Status Footer */}
+                    <div className="px-3.5 py-1.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-emerald-900">Desk Status: CAAN Flight Manifest Clearance in Progress</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions: Print Slip, WhatsApp, Close */}
-                  <div className="flex flex-col sm:flex-row items-center gap-3 print:hidden">
-                    <button
-                      type="button"
-                      onClick={handlePrintBookingSlip}
-                      className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-[#200B3B] hover:bg-[#2D1347] text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      <Printer size={15} />
-                      <span>PRINT BOOKING SLIP</span>
-                    </button>
-
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => {
                         const msg = encodeURIComponent(
-                          `Hello Trip Himalaya! I just booked "${bookingTour.title}" with Reference ID: ${submissionId}. Lead Passenger: ${bookingFormData.fullName}. Preferred Date: ${bookingFormData.preferredDate}. Please confirm my heli flight slot.`
+                          `Hello Trip Himalaya! I just booked "${bookingTour.title}" with Reference ID: ${submissionId}. Lead Passenger: ${bookingFormData.fullName}. Flight Date: ${bookingFormData.preferredDate || "Immediate"}. Please confirm my heli flight slot.`
                         );
                         window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
                       }}
-                      className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-[#25D366] hover:bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer truncate"
                     >
                       <MessageCircle size={15} />
-                      <span>CONFIRM ON WHATSAPP</span>
+                      <span>Chat on WhatsApp</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePrintBookingSlip}
+                      className="py-2.5 px-3.5 bg-white hover:bg-purple-50/70 border border-purple-200 text-[#1A0B2E] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer hover:border-purple-300"
+                    >
+                      <Printer size={13} className="text-purple-700" />
+                      <span>Print Slip</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setIsBookingModalOpen(false)}
-                      className="w-full sm:w-auto px-5 py-3 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 cursor-pointer"
+                      className="py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                     >
-                      Close
+                      Done
                     </button>
                   </div>
                 </div>

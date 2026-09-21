@@ -546,6 +546,10 @@ export const PackageHeliService: React.FC = () => {
   const [searchParams] = useSearchParams();
   const routeTourId = tourId || searchParams.get("tour");
 
+  // Read URL search params for heli route/flightType filtering
+  const urlRoute = searchParams.get("route") || "";
+  const urlFlightType = searchParams.get("flightType") || "";
+
   // Determine active tour from URL (dedicated Details Page route: /service/heli-services/:tourId)
   const selectedTour = routeTourId
     ? HELI_PACKAGES.find(
@@ -1186,9 +1190,11 @@ export const PackageHeliService: React.FC = () => {
     window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
-  // Filter logic
-  const filteredTours = HELI_PACKAGES.filter((tour) => {
-    // Search query
+  // Filter logic — exclude rescue category from listing
+  const LISTING_PACKAGES = HELI_PACKAGES.filter((t) => t.category !== "rescue");
+
+  const filteredTours = LISTING_PACKAGES.filter((tour) => {
+    // Inline search query
     const query = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
@@ -1196,6 +1202,31 @@ export const PackageHeliService: React.FC = () => {
       tour.location.toLowerCase().includes(query) ||
       tour.description.toLowerCase().includes(query) ||
       tour.tripHighlights.some((h) => h.toLowerCase().includes(query));
+
+    // Route filter (from header search bar)
+    const routeMap: Record<string, string> = {
+      everest: "ebc",
+      annapurna: "abc",
+      langtang: "langtang",
+      muktinath: "pilgrimage",
+      gosaikunda: "pilgrimage",
+    };
+    const mappedCategory = urlRoute ? routeMap[urlRoute] : "";
+    const matchesRoute =
+      !urlRoute ||
+      (mappedCategory
+        ? tour.category === mappedCategory
+        : tour.location.toLowerCase().includes(urlRoute.toLowerCase()) ||
+          tour.title.toLowerCase().includes(urlRoute.toLowerCase()));
+
+    // Flight type filter (from header search bar)
+    const matchesFlightType =
+      !urlFlightType ||
+      (urlFlightType === "charter"
+        ? tour.charterPriceNPR > 0
+        : urlFlightType === "sharing"
+        ? tour.sharingPriceNPR > 0
+        : true);
 
     // Price range (compare sharing price or charter)
     const matchesPrice = tour.sharingPriceNPR <= priceRange;
@@ -1216,7 +1247,7 @@ export const PackageHeliService: React.FC = () => {
         );
       });
 
-    return matchesSearch && matchesPrice && matchesRating && matchesKeywords;
+    return matchesSearch && matchesRoute && matchesFlightType && matchesPrice && matchesRating && matchesKeywords;
   });
 
   const availableKeywords = [
@@ -1227,8 +1258,6 @@ export const PackageHeliService: React.FC = () => {
     "MUKTINATH",
     "CHARTER",
     "SHARING",
-    "VIP HELI",
-    "RESCUE",
     "LUXURY",
   ];
 
@@ -2103,6 +2132,7 @@ export const PackageHeliService: React.FC = () => {
                     setPriceRange(800000);
                     setSelectedRating(0);
                     setSelectedKeywords([]);
+                    navigate("/service/heli-services");
                   }}
                   className="text-[10px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
                 >
@@ -2224,10 +2254,12 @@ export const PackageHeliService: React.FC = () => {
                       setPriceRange(800000);
                       setSelectedRating(0);
                       setSelectedKeywords([]);
+                      setSearchQuery("");
+                      navigate("/service/heli-services");
                     }}
-                    className="mt-2 px-5 py-2 rounded-full bg-[#E91E63] text-white text-xs font-bold uppercase tracking-wider"
+                    className="mt-2 px-5 py-2 rounded-full bg-[#E91E63] text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
                   >
-                    Reset Filters
+                    Reset All Filters
                   </button>
                 </div>
               ) : (

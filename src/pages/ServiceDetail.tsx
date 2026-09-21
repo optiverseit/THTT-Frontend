@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
 import {
@@ -134,6 +134,24 @@ const ServiceDetail: React.FC = () => {
   const [visaSearchType, setVisaSearchType] = useState("all");
   const [visaSearchEntry, setVisaSearchEntry] = useState("all");
   const [appliedVisaFilter, setAppliedVisaFilter] = useState<VisaFilterCriteria | null>(null);
+
+  // Heli Search Bar State
+  const [heliRouteSearch, setHeliRouteSearch] = useState(searchParams.get("route") || "");
+  const [heliFlightType, setHeliFlightType] = useState(searchParams.get("flightType") || "");
+
+  useEffect(() => {
+    setHeliRouteSearch(searchParams.get("route") || "");
+    setHeliFlightType(searchParams.get("flightType") || "");
+  }, [searchParams]);
+
+  const handleHeliSearch = () => {
+    const params = new URLSearchParams();
+    if (heliRouteSearch) params.set("route", heliRouteSearch);
+    if (heliFlightType) params.set("flightType", heliFlightType);
+    const queryString = params.toString();
+    navigate(`/service/heli-services${queryString ? `?${queryString}` : ""}`);
+    setTimeout(() => scrollToSection("section-services", "SERVICES"), 100);
+  };
 
   const handleVisaSearch = () => {
     setAppliedVisaFilter({
@@ -575,9 +593,15 @@ const ServiceDetail: React.FC = () => {
             <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
               HELI ROUTE
             </label>
-            <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-              <option value="ebc">Everest Base Camp &amp; Kalapathar</option>
-              <option value="abc">Annapurna Base Camp</option>
+            <select
+              id="heli-route-select"
+              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              onChange={(e) => setHeliRouteSearch(e.target.value)}
+              value={heliRouteSearch}
+            >
+              <option value="">All Routes</option>
+              <option value="everest">Everest Base Camp &amp; Kalapathar</option>
+              <option value="annapurna">Annapurna Base Camp</option>
               <option value="langtang">Langtang Valley &amp; Kyanjin</option>
               <option value="muktinath">Muktinath Pilgrimage</option>
               <option value="gosaikunda">Gosaikunda Holy Lake</option>
@@ -591,17 +615,22 @@ const ServiceDetail: React.FC = () => {
             <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
               FLIGHT TYPE
             </label>
-            <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-              <option value="charter">Private VIP Charter</option>
-              <option value="sharing">Group Sharing Seat</option>
-              <option value="rescue">Emergency Medical Standby</option>
+            <select
+              id="heli-flight-type-select"
+              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              onChange={(e) => setHeliFlightType(e.target.value)}
+              value={heliFlightType}
+            >
+              <option value="">All Types</option>
+              <option value="charter">Private Charter</option>
+              <option value="sharing">Sharing Heli Service</option>
             </select>
           </div>
         </div>
 
         <button
-          onClick={() => scrollToSection("section-services", "SERVICES")}
-          className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+          onClick={handleHeliSearch}
+          className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
         >
           SEARCH
         </button>

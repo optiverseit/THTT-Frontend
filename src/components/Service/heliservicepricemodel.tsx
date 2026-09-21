@@ -120,7 +120,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
 
     const typeLabel =
       flightOption === "charter"
-        ? "Private VIP Charter (Exclusive Aircraft)"
+        ? "Private Charter (Exclusive Aircraft)"
         : `Sharing Heli Service (${sharingSeats} Seat${sharingSeats > 1 ? "s" : ""})`;
 
     const msg = encodeURIComponent(

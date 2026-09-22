@@ -25,6 +25,11 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   const token = localStorage.getItem("token");
   const isLoggedIn = !!token;
 
+  const handleSignOut = () => {
+    localStorage.clear();
+    navigate("/login", { replace: true });
+  };
+
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "About", path: "/about" },
@@ -89,7 +94,15 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
               </button>
 
               {/* Login Pill with Icon */}
-              {!isLoggedIn && (
+              {isLoggedIn ? (
+                <button
+                  onClick={handleSignOut}
+                  className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+                >
+                  <LogIn size={13.5} />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
                 <button
                   onClick={() => navigate("/login")}
                   className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
@@ -113,7 +126,15 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
             </button>
 
             {/* Login Pill with Icon */}
-            {!isLoggedIn && (
+            {isLoggedIn ? (
+              <button
+                onClick={handleSignOut}
+                className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+              >
+                <LogIn size={13.5} />
+                <span>Sign Out</span>
+              </button>
+            ) : (
               <button
                 onClick={() => navigate("/login")}
                 className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
@@ -168,7 +189,19 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
           {/* Actions in mobile drawer */}
           <div className="pt-3 border-t border-white/10 space-y-2.5">
-            {!isLoggedIn && (
+
+            {isLoggedIn ? (
+              <button
+                onClick={() => {
+                  handleSignOut();
+                  setMobileOpen(false);
+                }}
+                className="w-full bg-white/10 border border-white/20 text-white font-semibold text-sm rounded-2xl py-2.5 flex items-center justify-center gap-2"
+              >
+                <LogIn size={16} />
+                <span>Sign Out</span>
+              </button>
+            ) : (
               <button
                 onClick={() => {
                   navigate("/login");

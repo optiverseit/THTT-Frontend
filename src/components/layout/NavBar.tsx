@@ -22,6 +22,8 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const isLoggedIn = !!token;
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -54,7 +56,7 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
     <nav className="w-full bg-gradient-to-r from-[#2D1347] via-[#3B145C] to-[#2D1347] border-b border-white/10 text-white relative z-20">
       <div className="w-full pl-3 pr-2 sm:pr-4 lg:px-10">
         <div className="h-[48px] sm:h-[52px] flex items-center justify-between pl-[114px] sm:pl-[155px] md:pl-[168px] lg:pl-[178px]">
-          
+
           {/* Mobile view brand — placeholder to maintain justify-between spacing */}
           <div className="md:hidden flex items-center">
             <span className="sr-only">Menu</span>
@@ -66,11 +68,10 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
               <Link
                 key={item.name}
                 to={item.path}
-                className={`transition-colors whitespace-nowrap py-0.5 ${
-                  isActive(item.path)
-                    ? "text-[#FF4FA3] font-bold"
-                    : "text-white/90 hover:text-[#FF4FA3]"
-                }`}
+                className={`transition-colors whitespace-nowrap py-0.5 ${isActive(item.path)
+                  ? "text-[#FF4FA3] font-bold"
+                  : "text-white/90 hover:text-[#FF4FA3]"
+                  }`}
               >
                 {item.name}
               </Link>
@@ -88,13 +89,15 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
               </button>
 
               {/* Login Pill with Icon */}
-              <button
-                onClick={() => navigate("/login")}
-                className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
-              >
-                <LogIn size={13.5} />
-                <span>Login</span>
-              </button>
+              {!isLoggedIn && (
+                <button
+                  onClick={() => navigate("/login")}
+                  className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+                >
+                  <LogIn size={13.5} />
+                  <span>Login</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -110,13 +113,15 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
             </button>
 
             {/* Login Pill with Icon */}
-            <button
-              onClick={() => navigate("/login")}
-              className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
-            >
-              <LogIn size={13.5} />
-              <span>Login</span>
-            </button>
+            {!isLoggedIn && (
+              <button
+                onClick={() => navigate("/login")}
+                className="bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full px-3 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+              >
+                <LogIn size={13.5} />
+                <span>Login</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Action buttons & Hamburger toggle */}
@@ -128,7 +133,7 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
               <MessageCircle size={11} />
               <span>Quote</span>
             </button>
-            
+
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle navigation menu"
@@ -151,11 +156,10 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
                 key={item.name}
                 to={item.path}
                 onClick={() => setMobileOpen(false)}
-                className={`block px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                  isActive(item.path)
-                    ? "bg-white/10 text-[#FF4FA3] font-bold"
-                    : "text-white/90 hover:bg-white/5 hover:text-[#FF4FA3]"
-                }`}
+                className={`block px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive(item.path)
+                  ? "bg-white/10 text-[#FF4FA3] font-bold"
+                  : "text-white/90 hover:bg-white/5 hover:text-[#FF4FA3]"
+                  }`}
               >
                 {item.name}
               </Link>
@@ -164,16 +168,18 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
           {/* Actions in mobile drawer */}
           <div className="pt-3 border-t border-white/10 space-y-2.5">
-            <button
-              onClick={() => {
-                navigate("/login");
-                setMobileOpen(false);
-              }}
-              className="w-full bg-white/10 border border-white/20 text-white font-semibold text-sm rounded-2xl py-2.5 flex items-center justify-center gap-2"
-            >
-              <LogIn size={16} />
-              <span>Login to Account</span>
-            </button>
+            {!isLoggedIn && (
+              <button
+                onClick={() => {
+                  navigate("/login");
+                  setMobileOpen(false);
+                }}
+                className="w-full bg-white/10 border border-white/20 text-white font-semibold text-sm rounded-2xl py-2.5 flex items-center justify-center gap-2"
+              >
+                <LogIn size={16} />
+                <span>Login to Account</span>
+              </button>
+            )}
 
             <button
               onClick={() => {

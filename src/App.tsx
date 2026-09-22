@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import ScrollToTop from "./components/layout/ScrollToTop";
+import ProtectedRoute from "./components/ProtectedRoutes/ProtecteRoutes";
 
 // Pages
 import Home from "./pages/Home";
@@ -76,7 +77,14 @@ const MainLayout = () => {
         <Route path="/signup" element={<Register />} />
 
         {/* ── USER DASHBOARD ── */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ── ABOUT ── */}
         <Route path="/about" element={<About />} />

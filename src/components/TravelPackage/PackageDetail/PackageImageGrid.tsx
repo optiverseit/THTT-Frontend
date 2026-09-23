@@ -131,13 +131,43 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
   /* ── Comprehensive data fallback lists for complete PDF / Print dossier ── */
-  const printingTable = pkg.pricingTable && pkg.pricingTable.length > 0
+ const printingTable =
+  pkg.pricingTable && pkg.pricingTable.length > 0
     ? pkg.pricingTable
     : [
-      { service: "Standard Experience", ageGroup: "Adult (16+)", priceNepali: `NPR ${Math.round(calculatedNPRPrice).toLocaleString("en-IN")}`, priceForeigner: pkg.price || `$${basePackagePriceInUSD}` },
-      { service: "VIP Tandem + Media Pack", ageGroup: "All Ages", priceNepali: `NPR ${Math.round(calculatedNPRPrice * 1.3).toLocaleString("en-IN")}`, priceForeigner: `$${Math.round(basePackagePriceInUSD * 1.3)}` },
-      { service: "Student / Youth Special", ageGroup: "Youth (12-15)", priceNepali: `NPR ${Math.round(calculatedNPRPrice * 0.85).toLocaleString("en-IN")}`, priceForeigner: `$${Math.round(basePackagePriceInUSD * 0.85)}` },
-    ];
+        {
+          service: "Standard Experience",
+          ageGroup: "Adult (16+)",
+          priceNepali: `NPR ${Math.round(
+            basePackagePriceNPR
+          ).toLocaleString("en-IN")}`,
+          priceForeigner: `$${(
+            basePackagePriceNPR / nprPerOneDollar
+          ).toFixed(2)}`,
+        },
+        {
+          service: "VIP Tandem + Media Pack",
+          ageGroup: "All Ages",
+          priceNepali: `NPR ${Math.round(
+            basePackagePriceNPR * 1.3
+          ).toLocaleString("en-IN")}`,
+          priceForeigner: `$${(
+            (basePackagePriceNPR * 1.3) /
+            nprPerOneDollar
+          ).toFixed(2)}`,
+        },
+        {
+          service: "Student / Youth Special",
+          ageGroup: "Youth (12-15)",
+          priceNepali: `NPR ${Math.round(
+            basePackagePriceNPR * 0.85
+          ).toLocaleString("en-IN")}`,
+          priceForeigner: `$${(
+            (basePackagePriceNPR * 0.85) /
+            nprPerOneDollar
+          ).toFixed(2)}`,
+        },
+      ];
 
   const itineraryList = pkg.allItenary && pkg.allItenary.length > 0 ? pkg.allItenary : [
     { day: "1", title: "Hotel Pickup & Base Station Transfer", desc: "Enjoy comfortable private pickup directly from your hotel with scenic transfer to our activity briefing lounge." },

@@ -14,7 +14,6 @@ if (!rootElement) {
 }
 
 ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
     <ErrorBoundary>
       <GoogleOAuthProvider
         clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
@@ -23,6 +22,5 @@ ReactDOM.createRoot(rootElement).render(
           <App />
         </BrowserRouter>
       </GoogleOAuthProvider>
-    </ErrorBoundary>
-  </React.StrictMode>,
+    </ErrorBoundary>,
 );

@@ -15,6 +15,129 @@ export const googleLogin = (idToken:any) => {
     });
 };
 
+
+// ==============================
+// PUBLIC CATEGORIES
+// ==============================
+
+export const getCategories = () => {
+    return axiosInstance.get("/categories");
+};
+
+
+// ==============================
+// PUBLIC PACKAGES
+// ==============================
+
 export const getPackages = () => {
-  return axiosInstance.get("api/packages");
+    return axiosInstance.get("/packages");
+};
+
+export const getPackageById = (id: number | string) => {
+    return axiosInstance.get(`/packages/${id}`);
+};
+
+
+
+// ==========================================
+// PACKAGE INCLUSIONS
+// ==========================================
+
+export const getPackageInclusions = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/inclusions`
+  );
+};
+
+
+// ==========================================
+// PACKAGE EXCLUSIONS
+// ==========================================
+
+export const getPackageExclusions = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/exclusions`
+  );
+};
+
+
+// ==========================================
+// PACKAGE RESTRICTIONS
+// ==========================================
+
+export const getPackageRestrictions = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/restrictions`
+  );
+};
+
+
+// ==========================================
+// WHAT TO BRING
+// ==========================================
+
+export const getPackageWhatToBring = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/what-to-bring`
+  );
+};
+
+
+// ==========================================
+// FAQS
+// ==========================================
+
+export const getPackageFaqs = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/faqs`
+  );
+};
+
+
+// ==========================================
+// PRICING TIERS
+// ==========================================
+
+export const getPackagePricingTiers = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/pricing-tiers`
+  );
+};
+
+
+// ==========================================
+// ITINERARIES
+// ==========================================
+
+export const getPackageItineraries = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/itineraries`
+  );
+};
+
+
+// ==========================================
+// HIGHLIGHTS
+// ==========================================
+
+export const getPackageHighlights = (
+  packageId: number | string
+) => {
+  return axiosInstance.get(
+    `/packages/${packageId}/highlights`
+  );
 };

@@ -59,6 +59,10 @@ interface BookingModalProps {
   onClose: () => void;
   initialTierIndex?: number;
   initialGuests?: number;
+
+  // package = use pkg.price
+  // tier = use pkg.pricingTable
+  pricingSource?: "package" | "tier";
 }
 
 // WhatsApp business numbers
@@ -70,7 +74,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   onClose,
   initialTierIndex = 0,
   initialGuests = 1,
-}) => {
+  pricingSource = "package",
+})  => {
   const {
     selectedCurrency,
     nprPerOneDollar,
@@ -81,7 +86,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const getPackageCategory = (): "Tour" | "Trekking" | "Adventure Activity" => {
     if (!pkg) return "Tour";
     const titleLower = (pkg.title || "").toLowerCase();
-    const typeLower = ((pkg as any).type || (pkg as any).category || "").toLowerCase();
+    const rawCategory = (pkg as any).type || (pkg as any).category || "";
+
+    const typeLower =
+      typeof rawCategory === "string"
+        ? rawCategory.toLowerCase()
+        : String(
+          rawCategory?.title ||
+          rawCategory?.name ||
+          rawCategory?.slug ||
+          ""
+        ).toLowerCase();
 
     if (
       typeLower.includes("trek") ||
@@ -113,38 +128,41 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       : "Trekking & Adventure Activity Team";
 
   // Build Pricing Tiers
-  const pricingTiers: BookingTier[] = React.useMemo(() => {
-    if (!pkg) return [];
-    if (pkg.pricingTable && pkg.pricingTable.length > 0) {
-      return pkg.pricingTable.map((row) => ({
-        name: row.service,
-        ageGroup: row.ageGroup,
-        nprPrice: Number(row.priceNepali.replace(/[^0-9]/g, "")) || 9500,
-      }));
-    }
+const pricingTiers: BookingTier[] = React.useMemo(() => {
+  if (!pkg) return [];
 
-    // Default 3 standard experience tiers as requested
-    const baseDigits = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
-    const baseNpr = baseDigits > 0 ? baseDigits * nprPerOneDollar : 9500;
+  // =====================================================
+  // DETAIL PAGE
+  // Use pricing tier selected from pricingTable
+  // =====================================================
+  if (
+    pricingSource === "tier" &&
+    pkg.pricingTable &&
+    pkg.pricingTable.length > 0
+  ) {
+    return pkg.pricingTable.map((row) => ({
+      name: row.service,
+      ageGroup: row.ageGroup,
+      nprPrice: Number(row.priceNepali ?? 0),
+    }));
+  }
 
-    return [
-      {
-        name: "Standard Experience",
-        ageGroup: "Adult (16+)",
-        nprPrice: baseNpr > 0 ? baseNpr : 9500,
-      },
-      {
-        name: "VIP Tandem + Media Pack",
-        ageGroup: "All Ages",
-        nprPrice: baseNpr > 0 ? Math.round(baseNpr * 1.315) : 12500,
-      },
-      {
-        name: "Student / Youth Special",
-        ageGroup: "Youth (12-15)",
-        nprPrice: baseNpr > 0 ? Math.round(baseNpr * 0.842) : 8000,
-      },
-    ];
-  }, [pkg, nprPerOneDollar]);
+  // =====================================================
+  // PACKAGE LIST PAGE
+  // Use package.price directly
+  // =====================================================
+  const rawPackagePrice = Number(
+    String(pkg.price ?? "0").replace(/[^0-9.]/g, "")
+  );
+
+  return [
+    {
+      name: "Package Price",
+      ageGroup: "Per Person",
+      nprPrice: rawPackagePrice,
+    },
+  ];
+}, [pkg, pricingSource]);
 
   const [selectedTierIndex, setSelectedTierIndex] = useState<number>(initialTierIndex);
   const [guestsCount, setGuestsCount] = useState<number>(initialGuests);
@@ -896,7 +914,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                CONFIRMATION & RECEIPT VIEW — MATCHING VISA PROCESSING SUBMISSION
                ======================================================================= */
             <div className="space-y-3 text-center animate-in fade-in zoom-in-95 duration-200">
-              
+
               {/* Top Greeting & Status */}
               <div className="space-y-1 pt-0.5">
                 <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white mb-0.5 shadow-md shadow-emerald-500/20 ring-4 ring-emerald-50">
@@ -927,7 +945,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
               {/* Official Digital E-Receipt Voucher Card */}
               <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
-                
+
                 {/* Submission Reference ID Header Strip */}
                 <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70 flex items-center justify-between">
                   <div>

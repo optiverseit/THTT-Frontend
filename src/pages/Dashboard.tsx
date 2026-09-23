@@ -23,6 +23,11 @@ const Dashboard: React.FC = () => {
     navigate("/login");
   };
 
+    const handleSignOut = () => {
+    localStorage.clear();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <div className="w-full min-h-screen bg-[#0d0519] text-white pt-24 sm:pt-28 md:pt-32 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -58,7 +63,7 @@ const Dashboard: React.FC = () => {
                 <ArrowRight size={14} />
               </Link>
               <button
-                onClick={handleLogout}
+                onClick={handleSignOut}
                 className="bg-white/10 hover:bg-white/20 text-purple-200 hover:text-white border border-white/15 px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <LogOut size={14} />

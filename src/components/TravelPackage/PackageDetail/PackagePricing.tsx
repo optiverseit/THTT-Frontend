@@ -112,29 +112,31 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   const pricingRows: PricingRow[] =
     pkg.pricingTable && pkg.pricingTable.length > 0
       ? pkg.pricingTable.map((dataRow) => ({
-          serviceName: dataRow.service,
-          targetAgeGroup: dataRow.ageGroup,
-          priceInNPR:
-            Number(dataRow.priceNepali.replace(/[^0-9]/g, "")) ||
-            basePackagePriceInUSD * nprPerOneDollar,
-        }))
+        serviceName: dataRow.service,
+
+        targetAgeGroup: dataRow.ageGroup,
+
+        priceInNPR:
+          Number(dataRow.priceNepali) ||
+          basePackagePriceInUSD * nprPerOneDollar,
+      }))
       : [
-          {
-            serviceName: "Standard Experience",
-            targetAgeGroup: "Adult (16+)",
-            priceInNPR: 9500,
-          },
-          {
-            serviceName: "VIP Tandem + Media Pack",
-            targetAgeGroup: "All Ages",
-            priceInNPR: 12500,
-          },
-          {
-            serviceName: "Student / Youth Special",
-            targetAgeGroup: "Youth (12-15)",
-            priceInNPR: 8000,
-          },
-        ];
+        {
+          serviceName: "Standard Experience",
+          targetAgeGroup: "Adult (16+)",
+          priceInNPR: 9500,
+        },
+        {
+          serviceName: "VIP Tandem + Media Pack",
+          targetAgeGroup: "All Ages",
+          priceInNPR: 12500,
+        },
+        {
+          serviceName: "Student / Youth Special",
+          targetAgeGroup: "Youth (12-15)",
+          priceInNPR: 8000,
+        },
+      ];
 
   // ---------------------------------------------------------------------------
   // Estimated Total Calculation
@@ -149,8 +151,8 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
     selectedCurrency === "nepali"
       ? selectedRow.priceInNPR
       : selectedCurrency === "inr"
-      ? Math.round(selectedRow.priceInNPR / nprPerOneINR)
-      : Math.round(selectedRow.priceInNPR / nprPerOneDollar);
+        ? Math.round(selectedRow.priceInNPR / nprPerOneINR)
+        : Math.round(selectedRow.priceInNPR / nprPerOneDollar);
 
   /** Final estimated total = unit price * guest count */
   const estimatedTotalPrice: number = unitPriceForEstimatedTotal * numberOfGuests;
@@ -224,251 +226,246 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
 
   return (
     <>
-    <div className="space-y-4">
+      <div className="space-y-4">
 
-      {/* =======================================================================
+        {/* =======================================================================
           MAIN PRICING CARD
           ======================================================================= */}
-      <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
-        {/* Card Header: Title left, Currency Toggle right */}
-        <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
+          {/* Card Header: Title left, Currency Toggle right */}
+          <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
 
-          <div>
-            <h2 className="text-sm font-black">Pricing Options</h2>
-            <p className="text-[9px] text-gray-300 font-medium">Standard rates &amp; inclusions</p>
-          </div>
+            <div>
+              <h2 className="text-sm font-black">Pricing Options</h2>
+              <p className="text-[9px] text-gray-300 font-medium">Standard rates &amp; inclusions</p>
+            </div>
 
-          {/* NEPALI / USD / INR currency toggle buttons (syncs site-wide) */}
-          <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
-            <button
-              onClick={() => setSelectedCurrency("nepali")}
-              aria-label="Show prices in Nepali Rupees (NPR)"
-              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                selectedCurrency === "nepali"
+            {/* NEPALI / USD / INR currency toggle buttons (syncs site-wide) */}
+            <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
+              <button
+                onClick={() => setSelectedCurrency("nepali")}
+                aria-label="Show prices in Nepali Rupees (NPR)"
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "nepali"
                   ? "bg-white text-[#200B3B] shadow-xs"
                   : "text-white/80 hover:text-white"
-              }`}
-            >
-              NEPALI
-            </button>
-            <button
-              onClick={() => setSelectedCurrency("foreigner")}
-              aria-label="Show prices in US Dollars (USD)"
-              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                selectedCurrency === "foreigner"
+                  }`}
+              >
+                NEPALI
+              </button>
+              <button
+                onClick={() => setSelectedCurrency("foreigner")}
+                aria-label="Show prices in US Dollars (USD)"
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "foreigner"
                   ? "bg-[#E91E63] text-white shadow-xs"
                   : "text-white/80 hover:text-white"
-              }`}
-            >
-              USD ($)
-            </button>
-            <button
-              onClick={() => setSelectedCurrency("inr")}
-              aria-label="Show prices in Indian Rupees (INR)"
-              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                selectedCurrency === "inr"
+                  }`}
+              >
+                USD ($)
+              </button>
+              <button
+                onClick={() => setSelectedCurrency("inr")}
+                aria-label="Show prices in Indian Rupees (INR)"
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "inr"
                   ? "bg-[#FF5722] text-white shadow-xs"
                   : "text-white/80 hover:text-white"
-              }`}
-            >
-              INR (₹)
-            </button>
+                  }`}
+              >
+                INR (₹)
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Exchange Rate Status Banner — shown when USD or INR mode is active */}
-        {selectedCurrency !== "nepali" && (
-          <div
-            className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${
-              rateLoadFailed
+          {/* Exchange Rate Status Banner — shown when USD or INR mode is active */}
+          {selectedCurrency !== "nepali" && (
+            <div
+              className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed
                 ? "bg-amber-50 text-amber-700"
                 : "bg-emerald-50 text-emerald-700"
-            }`}
-          >
-            <div className="flex items-center gap-1">
-              {isRateLoading ? (
-                <RefreshCw size={10} className="animate-spin" />
-              ) : rateLoadFailed ? (
-                <AlertCircle size={10} />
-              ) : (
-                <Zap size={10} />
+                }`}
+            >
+              <div className="flex items-center gap-1">
+                {isRateLoading ? (
+                  <RefreshCw size={10} className="animate-spin" />
+                ) : rateLoadFailed ? (
+                  <AlertCircle size={10} />
+                ) : (
+                  <Zap size={10} />
+                )}
+                <span>
+                  {isRateLoading
+                    ? "Fetching live exchange rate..."
+                    : rateLoadFailed
+                      ? selectedCurrency === "inr"
+                        ? `Offline estimate — 1 INR = NPR 1.60`
+                        : `Offline estimate — 1 USD = NPR 151.09`
+                      : selectedCurrency === "inr"
+                        ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)} (100 INR = NPR ${(nprPerOneINR * 100).toFixed(1)})`
+                        : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
+                </span>
+              </div>
+              {!isRateLoading && (
+                <span className="text-[8px] opacity-60">
+                  {rateLoadFailed ? "Fallback rate" : "Live Exchange Rate"}
+                </span>
               )}
-              <span>
-                {isRateLoading
-                  ? "Fetching live exchange rate..."
-                  : rateLoadFailed
-                  ? selectedCurrency === "inr"
-                    ? `Offline estimate — 1 INR = NPR 1.60`
-                    : `Offline estimate — 1 USD = NPR 151.09`
-                  : selectedCurrency === "inr"
-                  ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)} (100 INR = NPR ${(nprPerOneINR * 100).toFixed(1)})`
-                  : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
-              </span>
             </div>
-            {!isRateLoading && (
-              <span className="text-[8px] opacity-60">
-                {rateLoadFailed ? "Fallback rate" : "Live Exchange Rate"}
-              </span>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* Pricing Table + Controls body */}
-        <div className="p-3 sm:p-3.5 space-y-2.5">
+          {/* Pricing Table + Controls body */}
+          <div className="p-3 sm:p-3.5 space-y-2.5">
 
-          {/* Pricing Table — proper HTML table for guaranteed column alignment */}
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/2">
-                  Option / Tier
-                </th>
-                <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">
-                  Age Group
-                </th>
-                <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-right">
-                  Price
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pricingRows.map((pricingRow, rowIndex) => {
-                const isSelected = selectedTierIndex === rowIndex;
-                return (
-                  <tr
-                    key={rowIndex}
-                    onClick={() => setSelectedTierIndex(rowIndex)}
-                    className="cursor-pointer hover:bg-gray-50/60 transition-colors"
-                  >
-                    {/* Radio + service name */}
-                    <td className="py-2.5 pr-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${
-                            isSelected
+            {/* Pricing Table — proper HTML table for guaranteed column alignment */}
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/2">
+                    Option / Tier
+                  </th>
+                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">
+                    Age Group
+                  </th>
+                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-right">
+                    Price
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {pricingRows.map((pricingRow, rowIndex) => {
+                  const isSelected = selectedTierIndex === rowIndex;
+                  return (
+                    <tr
+                      key={rowIndex}
+                      onClick={() => setSelectedTierIndex(rowIndex)}
+                      className="cursor-pointer hover:bg-gray-50/60 transition-colors"
+                    >
+                      {/* Radio + service name */}
+                      <td className="py-2.5 pr-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
                               ? "border-[#E91E63] bg-[#E91E63]"
                               : "border-gray-300 bg-white"
-                          }`}
-                        >
-                          {isSelected && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-white block" />
-                          )}
-                        </span>
-                        <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
-                          {pricingRow.serviceName}
-                        </span>
-                      </div>
-                    </td>
+                              }`}
+                          >
+                            {isSelected && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                            )}
+                          </span>
+                          <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
+                            {pricingRow.serviceName}
+                          </span>
+                        </div>
+                      </td>
 
-                    {/* Age Group */}
-                    <td className="py-2.5 text-[10px] text-gray-500">
-                      {pricingRow.targetAgeGroup}
-                    </td>
+                      {/* Age Group */}
+                      <td className="py-2.5 text-[10px] text-gray-500">
+                        {pricingRow.targetAgeGroup}
+                      </td>
 
-                    {/* Price */}
-                    <td className={`py-2.5 text-xs font-black text-right whitespace-nowrap ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
-                      {getRowDisplayPrice(pricingRow)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* Price */}
+                      <td className={`py-2.5 text-xs font-black text-right whitespace-nowrap ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
+                        {getRowDisplayPrice(pricingRow)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-          {/* Guest Count Selector */}
-          <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Users size={13} className="text-[#E91E63]" />
-              <div>
-                <span className="block text-[11px] font-bold text-[#200B3B]">
-                  Number of Guests
+            {/* Guest Count Selector */}
+            <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Users size={13} className="text-[#E91E63]" />
+                <div>
+                  <span className="block text-[11px] font-bold text-[#200B3B]">
+                    Number of Guests
+                  </span>
+                  <span className="text-[9px] text-gray-400">Select traveler count</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleDecreaseGuestCount}
+                  disabled={numberOfGuests <= 1}
+                  aria-label="Remove one guest"
+                  className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
+                >
+                  −
+                </button>
+                <span className="font-black text-xs text-[#200B3B] w-4 text-center">
+                  {numberOfGuests}
                 </span>
-                <span className="text-[9px] text-gray-400">Select traveler count</span>
+                <button
+                  onClick={handleIncreaseGuestCount}
+                  aria-label="Add one more guest"
+                  className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                >
+                  +
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={handleDecreaseGuestCount}
-                disabled={numberOfGuests <= 1}
-                aria-label="Remove one guest"
-                className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
-              >
-                −
-              </button>
-              <span className="font-black text-xs text-[#200B3B] w-4 text-center">
-                {numberOfGuests}
+            {/* Estimated Total */}
+            <div className="pt-0.5">
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+                Estimated Total
               </span>
+              <span className="text-lg font-black text-[#200B3B]">
+                {getFormattedEstimatedTotal()}
+              </span>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="space-y-1.5 pt-0.5">
               <button
-                onClick={handleIncreaseGuestCount}
-                aria-label="Add one more guest"
-                className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                onClick={handleBookNow}
+                aria-label="Book this trip"
+                className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${isBookingConfirmed
+                  ? "bg-emerald-600 text-white"
+                  : "bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
+                  }`}
               >
-                +
+                {isBookingConfirmed ? (
+                  <>
+                    <Check size={14} />
+                    <span>Reservation Requested!</span>
+                  </>
+                ) : (
+                  <span>Book This Trip Now</span>
+                )}
+              </button>
+
+              <button
+                onClick={handleWhatsAppInquiry}
+                aria-label="Send a WhatsApp inquiry"
+                className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <MessageCircle size={14} />
+                <span>WhatsApp Instant Inquiry</span>
               </button>
             </div>
           </div>
-
-          {/* Estimated Total */}
-          <div className="pt-0.5">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-              Estimated Total
-            </span>
-            <span className="text-lg font-black text-[#200B3B]">
-              {getFormattedEstimatedTotal()}
-            </span>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="space-y-1.5 pt-0.5">
-            <button
-              onClick={handleBookNow}
-              aria-label="Book this trip"
-              className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
-                isBookingConfirmed
-                  ? "bg-emerald-600 text-white"
-                  : "bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
-              }`}
-            >
-              {isBookingConfirmed ? (
-                <>
-                  <Check size={14} />
-                  <span>Reservation Requested!</span>
-                </>
-              ) : (
-                <span>Book This Trip Now</span>
-              )}
-            </button>
-
-            <button
-              onClick={handleWhatsAppInquiry}
-              aria-label="Send a WhatsApp inquiry"
-              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <MessageCircle size={14} />
-              <span>WhatsApp Instant Inquiry</span>
-            </button>
-          </div>
         </div>
+
+        {/* =======================================================================
+          VERIFICATION & TRUST CARD
+          ======================================================================= */}
+        <VerificationCard />
       </div>
 
       {/* =======================================================================
-          VERIFICATION & TRUST CARD
-          ======================================================================= */}
-      <VerificationCard />
-    </div>
-
-    {/* =======================================================================
         BOOKING MODAL — opens when user clicks "Book This Trip Now"
         ======================================================================= */}
-    <BookingModal
-      pkg={pkg}
-      isOpen={isBookingModalOpen}
-      onClose={() => setIsBookingModalOpen(false)}
-      initialTierIndex={selectedTierIndex}
-      initialGuests={numberOfGuests}
-    />
+      <BookingModal
+        pkg={pkg}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        initialTierIndex={selectedTierIndex}
+        initialGuests={numberOfGuests}
+        pricingSource="tier"
+      />
     </>
   );
 };

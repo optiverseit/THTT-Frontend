@@ -1,5 +1,5 @@
 import "./App.css";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import ScrollToTop from "./components/layout/ScrollToTop";
@@ -45,6 +45,10 @@ import { FaqProvider } from "./context/FaqContext";
 
 const MainLayout = () => {
   const { isLoggedIn } = useAuth();
+  const location = useLocation();
+
+  /* Pages where the global footer should NOT appear */
+  const hideFooter = location.pathname.startsWith("/dashboard");
 
   return (
     <>
@@ -52,13 +56,10 @@ const MainLayout = () => {
       <ScrollToTop />
 
       {/* ── 3-TIER HEADER (TopBar, NavBar, ServicesStrip) ──
-          Rendered across all pages when user is NOT logged in.
-          If logged in, the header is hidden. */}
-      {!isLoggedIn && (
-        <div className="sticky top-0 z-50 print:hidden">
-          <Header />
-        </div>
-      )}
+          Rendered across all pages including the dashboard, exactly matching the home page. */}
+      <div className="sticky top-0 z-50 print:hidden">
+        <Header />
+      </div>
 
       <Routes>
         {/* ── HOME ── */}
@@ -125,10 +126,12 @@ const MainLayout = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      {/* Global Footer */}
-      <div className="print:hidden">
-        <Footer />
-      </div>
+      {/* Global Footer — hidden on /dashboard */}
+      {!hideFooter && (
+        <div className="print:hidden">
+          <Footer />
+        </div>
+      )}
     </>
   );
 };

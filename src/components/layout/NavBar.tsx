@@ -23,7 +23,7 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-  const isLoggedIn = !!token;
+  const isLoggedIn = !!token || localStorage.getItem("isLoggedIn") === "true";
 
   const handleSignOut = () => {
     localStorage.clear();

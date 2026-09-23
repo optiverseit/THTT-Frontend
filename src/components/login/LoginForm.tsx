@@ -214,18 +214,32 @@ const LoginForm = () => {
       );
     }
 
-    if (user?.avatar) {
-      localStorage.setItem(
-        "avatar",
-        user.avatar
-      );
+    if (user?.phone) {
+      localStorage.setItem("phone", user.phone);
+    }
+
+    if (user?.gender) {
+      localStorage.setItem("gender", user.gender);
+    }
+
+    if (user?.address) {
+      localStorage.setItem("address", user.address);
+    }
+
+    if (user?.nationality) {
+      localStorage.setItem("nationality", user.nationality);
     }
 
     login({
+      name: fullName || user?.name,
       email:
         user?.email ||
         data.email ||
         data.phone,
+      phone: user?.phone,
+      gender: user?.gender,
+      address: user?.address,
+      nationality: user?.nationality,
     });
   };
 

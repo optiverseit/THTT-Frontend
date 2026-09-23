@@ -534,9 +534,9 @@ const PackageDetails: React.FC = () => {
     typeof pkg.category === "string"
       ? pkg.category
       : pkg.category?.name ||
-        pkg.category?.title ||
-        pkg.category?.slug ||
-        "";
+      pkg.category?.title ||
+      pkg.category?.slug ||
+      "";
 
 
   // ============================================================
@@ -556,7 +556,7 @@ const PackageDetails: React.FC = () => {
 
   const packagePrice =
     pkg.price !== undefined &&
-    pkg.price !== null
+      pkg.price !== null
       ? String(pkg.price)
       : "";
 
@@ -568,19 +568,19 @@ const PackageDetails: React.FC = () => {
   const backendGallery =
     Array.isArray(pkg.gallery)
       ? pkg.gallery
-          .map((item: any) => {
-            if (typeof item === "string") {
-              return item;
-            }
+        .map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
 
-            return (
-              item.image ||
-              item.image_url ||
-              item.url ||
-              ""
-            );
-          })
-          .filter(Boolean)
+          return (
+            item.image ||
+            item.image_url ||
+            item.url ||
+            ""
+          );
+        })
+        .filter(Boolean)
       : [];
 
 
@@ -601,36 +601,36 @@ const PackageDetails: React.FC = () => {
   const normalizedItinerary =
     Array.isArray(pkg.itineraries)
       ? [...pkg.itineraries]
-          .sort(
-            (a: any, b: any) =>
-              Number(a.display_order ?? 0) -
-              Number(b.display_order ?? 0)
-          )
-          .map((item: any) => ({
-            id:
-              item.id,
+        .sort(
+          (a: any, b: any) =>
+            Number(a.display_order ?? 0) -
+            Number(b.display_order ?? 0)
+        )
+        .map((item: any) => ({
+          id:
+            item.id,
 
-            package_id:
-              item.package_id,
+          package_id:
+            item.package_id,
 
-            day:
-              item.day ?? "",
+          day:
+            item.day ?? "",
 
-            title:
-              item.title ?? "",
+          title:
+            item.title ?? "",
 
-            description:
-              item.description ?? "",
+          description:
+            item.description ?? "",
 
-            desc:
-              item.description ?? "",
+          desc:
+            item.description ?? "",
 
-            display_order:
-              item.display_order ?? 0,
+          display_order:
+            item.display_order ?? 0,
 
-            status:
-              item.status,
-          }))
+          status:
+            item.status,
+        }))
       : [];
 
 
@@ -651,19 +651,19 @@ const PackageDetails: React.FC = () => {
   const normalizedIncludes =
     Array.isArray(pkg.inclusions)
       ? [...pkg.inclusions]
-          .sort(
-            (a: any, b: any) =>
-              Number(a.display_order ?? 0) -
-              Number(b.display_order ?? 0)
-          )
-          .map((item: any) => {
-            if (typeof item === "string") {
-              return item;
-            }
+        .sort(
+          (a: any, b: any) =>
+            Number(a.display_order ?? 0) -
+            Number(b.display_order ?? 0)
+        )
+        .map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
 
-            return item.item ?? "";
-          })
-          .filter(Boolean)
+          return item.item ?? "";
+        })
+        .filter(Boolean)
       : [];
 
 
@@ -674,19 +674,19 @@ const PackageDetails: React.FC = () => {
   const normalizedExcludes =
     Array.isArray(pkg.exclusions)
       ? [...pkg.exclusions]
-          .sort(
-            (a: any, b: any) =>
-              Number(a.display_order ?? 0) -
-              Number(b.display_order ?? 0)
-          )
-          .map((item: any) => {
-            if (typeof item === "string") {
-              return item;
-            }
+        .sort(
+          (a: any, b: any) =>
+            Number(a.display_order ?? 0) -
+            Number(b.display_order ?? 0)
+        )
+        .map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
 
-            return item.item ?? "";
-          })
-          .filter(Boolean)
+          return item.item ?? "";
+        })
+        .filter(Boolean)
       : [];
 
 
@@ -703,18 +703,18 @@ const PackageDetails: React.FC = () => {
   const normalizedRestrictions =
     Array.isArray(pkg.restrictions)
       ? pkg.restrictions
-          .map((item: any) => {
-            if (typeof item === "string") {
-              return item;
-            }
+        .map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
 
-            return (
-              item.restriction ||
-              item.item ||
-              ""
-            );
-          })
-          .filter(Boolean)
+          return (
+            item.restriction ||
+            item.item ||
+            ""
+          );
+        })
+        .filter(Boolean)
       : [];
 
 
@@ -731,14 +731,14 @@ const PackageDetails: React.FC = () => {
   const normalizedWhatToBring =
     Array.isArray(pkg.what_to_bring)
       ? pkg.what_to_bring
-          .map((item: any) => {
-            if (typeof item === "string") {
-              return item;
-            }
+        .map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
 
-            return item.item ?? "";
-          })
-          .filter(Boolean)
+          return item.item ?? "";
+        })
+        .filter(Boolean)
       : [];
 
 
@@ -749,27 +749,27 @@ const PackageDetails: React.FC = () => {
   const normalizedFaqs =
     Array.isArray(pkg.faqs)
       ? [...pkg.faqs]
-          .sort(
-            (a: any, b: any) =>
-              Number(a.display_order ?? 0) -
-              Number(b.display_order ?? 0)
-          )
-          .map((faq: any) => ({
-            id:
-              faq.id,
+        .sort(
+          (a: any, b: any) =>
+            Number(a.display_order ?? 0) -
+            Number(b.display_order ?? 0)
+        )
+        .map((faq: any) => ({
+          id:
+            faq.id,
 
-            question:
-              faq.question ?? "",
+          question:
+            faq.question ?? "",
 
-            answer:
-              faq.answer ?? "",
+          answer:
+            faq.answer ?? "",
 
-            display_order:
-              faq.display_order ?? 0,
+          display_order:
+            faq.display_order ?? 0,
 
-            displayOrder:
-              faq.display_order ?? 0,
-          }))
+          displayOrder:
+            faq.display_order ?? 0,
+        }))
       : [];
 
 
@@ -789,9 +789,9 @@ const PackageDetails: React.FC = () => {
   // priceForeigner
   // ============================================================
 
- const normalizedPricingTable =
-  Array.isArray(pkg.pricing_tiers)
-    ? pkg.pricing_tiers.map((row: any) => ({
+  const normalizedPricingTable =
+    Array.isArray(pkg.pricing_tiers)
+      ? pkg.pricing_tiers.map((row: any) => ({
         id: row.id,
 
         service: row.service ?? "",
@@ -811,7 +811,7 @@ const PackageDetails: React.FC = () => {
 
         price_usd: Number(row.price_usd ?? 0),
       }))
-    : [];
+      : [];
 
 
   // ============================================================
@@ -829,33 +829,33 @@ const PackageDetails: React.FC = () => {
   const highlightDetails =
     Array.isArray(pkg.highlights)
       ? [...pkg.highlights]
-          .sort(
-            (a: any, b: any) =>
-              Number(a.display_order ?? 0) -
-              Number(b.display_order ?? 0)
-          )
-          .map((item: any) => ({
-            id:
-              item.id,
+        .sort(
+          (a: any, b: any) =>
+            Number(a.display_order ?? 0) -
+            Number(b.display_order ?? 0)
+        )
+        .map((item: any) => ({
+          id:
+            item.id,
 
-            package_id:
-              item.package_id,
+          package_id:
+            item.package_id,
 
-            highlight:
-              item.highlight ?? "",
+          highlight:
+            item.highlight ?? "",
 
-            image:
-              item.image ?? "",
+          image:
+            item.image ?? "",
 
-            display_order:
-              item.display_order ?? 0,
+          display_order:
+            item.display_order ?? 0,
 
-            status:
-              item.status ?? "ACTIVE",
+          status:
+            item.status ?? "ACTIVE",
 
-            image_public_id:
-              item.image_public_id ?? null,
-          }))
+          image_public_id:
+            item.image_public_id ?? null,
+        }))
       : [];
 
 
@@ -932,7 +932,7 @@ const PackageDetails: React.FC = () => {
 
   const defaultGallery = [
     normalizedPkg.image ||
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+    "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
 
     "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
 

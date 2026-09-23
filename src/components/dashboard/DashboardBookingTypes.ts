@@ -18,6 +18,8 @@ import {
   Plane,
 } from "lucide-react";
 
+import { BookingDocument } from "./dashboardDocumentUtils";
+
 // ─── Service Type ──────────────────────────────────────────────────────────────
 
 export type ServiceType =
@@ -52,10 +54,19 @@ export interface ServiceBooking {
   paymentStatus: PaymentStatus;
   bookingStatus: BookingStatus;
 
+  /* ── Documents (JPG, PNG, JPEG, PDF) ── */
+  documents?: BookingDocument[];
+
   /* ── Payment receipt ── */
   paymentMethod?: string;
   receiptNumber?: string;
   paymentDate?: string;
+  /** URL/path of receipt image uploaded by admin (JPG/PNG/WebP) */
+  receiptImageUrl?: string;
+
+  /* ── Admin-set fields ── */
+  /** Total number of days for this booking/service — set by admin */
+  numberOfDays?: number;
 
   /* ── Package Booking ── */
   packageName?: string;
@@ -209,6 +220,18 @@ export const BOOKING_CLS: Record<BookingStatus, string> = {
   Cancelled: "bg-rose-50 text-rose-600 border-rose-200",
 };
 
+// ─── Dynamic Year & Submission Number Generator ───────────────────────────────
+export const CURRENT_YEAR = new Date().getFullYear();
+
+/**
+ * Standard format: THTT-[SERVICE_CODE] [YEAR]-[SEQUENCE]
+ * Example: "THTT-HLI 2026-0001" (Year updates automatically)
+ */
+export function formatSubmissionNumber(serviceCode: string, sequence: number, year = CURRENT_YEAR): string {
+  const padded = String(sequence).padStart(4, "0");
+  return `THTT-${serviceCode.toUpperCase()} ${year}-${padded}`;
+}
+
 // ─── Demo Bookings ─────────────────────────────────────────────────────────────
 // Simulates submissions received from service pages.
 // Replace with API call when backend is ready.
@@ -217,20 +240,22 @@ export const DEMO_BOOKINGS: ServiceBooking[] = [
   /* ── Package Booking ─────────────────────────────────────── */
   {
     id: "pkg-1",
-    submissionNumber: "THTT-PKG-2026-0001",
+    submissionNumber: formatSubmissionNumber("PKG", 1),
     serviceType: "package-booking",
-    submittedAt: "2026-09-20T14:30:00",
+    submittedAt: `${CURRENT_YEAR}-09-20T14:30:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 12, 2026",
+    travelDate: `Oct 12, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 285,000",
     paymentStatus: "Paid",
     bookingStatus: "Confirmed",
-    paymentMethod: "Bank Transfer",
-    receiptNumber: "RCP-2026-PKG-0001",
-    paymentDate: "Sep 20, 2026",
+    paymentMethod: "eSewa",
+    receiptNumber: `RCP-${CURRENT_YEAR}-PKG-0001`,
+    paymentDate: `Sep 20, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/1a1a2e/ffffff?text=Payment+Receipt+PKG-0001",
+    numberOfDays: 14,
     packageName: "Everest Base Camp Trek & Kala Patthar",
     destination: "Khumbu Region, Nepal",
     travelers: 2,
@@ -238,136 +263,170 @@ export const DEMO_BOOKINGS: ServiceBooking[] = [
   },
   {
     id: "pkg-2",
-    submissionNumber: "THTT-PKG-2026-0002",
+    submissionNumber: formatSubmissionNumber("PKG", 2),
     serviceType: "package-booking",
-    submittedAt: "2026-09-18T09:15:00",
+    submittedAt: `${CURRENT_YEAR}-09-18T09:15:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Dec 5, 2026",
+    travelDate: `Dec 5, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 175,000",
     paymentStatus: "Partial",
     bookingStatus: "Processing",
-    paymentMethod: "Online Payment",
-    receiptNumber: "RCP-2026-PKG-0002",
-    paymentDate: "Sep 18, 2026",
+    paymentMethod: "eSewa",
+    receiptNumber: `RCP-${CURRENT_YEAR}-PKG-0002`,
+    paymentDate: `Sep 18, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/1a1a2e/ffffff?text=Partial+Payment+Receipt+PKG-0002",
+    numberOfDays: 18,
     packageName: "Annapurna Circuit & Thorong La Pass",
     destination: "Annapurna Region, Nepal",
     travelers: 1,
     specialRequests: "",
   },
+  {
+    id: "pkg-3",
+    submissionNumber: formatSubmissionNumber("PKG", 3),
+    serviceType: "package-booking",
+    submittedAt: `${CURRENT_YEAR}-09-21T16:00:00`,
+    name: "Aniket Mandal",
+    email: "aniket@gmail.com",
+    nationality: "Indian",
+    travelDate: `Nov 15, ${CURRENT_YEAR}`,
+    contact: "+977 9801234567",
+    price: "NPR 115,000",
+    paymentStatus: "Paid",
+    bookingStatus: "Confirmed",
+    paymentMethod: "eSewa",
+    receiptNumber: `RCP-${CURRENT_YEAR}-PKG-0003`,
+    paymentDate: `Sep 21, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/1a1a2e/ffffff?text=Payment+Receipt+PKG-0003",
+    numberOfDays: 7,
+    packageName: "Pokhara & Chitwan Tour",
+    destination: "Pokhara & Chitwan, Nepal",
+    travelers: 2,
+    specialRequests: "Jungle safari & lake view hotel included",
+  },
 
   /* ── Visa Service ────────────────────────────────────────── */
   {
     id: "visa-1",
-    submissionNumber: "THTT-VIS-2026-0001",
+    submissionNumber: formatSubmissionNumber("VIS", 1),
     serviceType: "visa-service",
-    submittedAt: "2026-09-15T11:00:00",
+    submittedAt: `${CURRENT_YEAR}-09-15T11:00:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 10, 2026",
+    travelDate: `Oct 10, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 12,500",
     paymentStatus: "Paid",
     bookingStatus: "Confirmed",
-    paymentMethod: "Online Payment",
-    receiptNumber: "RCP-2026-VIS-0001",
-    paymentDate: "Sep 15, 2026",
+    paymentMethod: "FonePay",
+    receiptNumber: `RCP-${CURRENT_YEAR}-VIS-0001`,
+    paymentDate: `Sep 15, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/0f172a/ffffff?text=Payment+Receipt+VIS-0001",
+    numberOfDays: 16,
     visaType: "Tourist Visa",
     destinationCountry: "Nepal",
     passportNo: "A1234567",
-    returnDate: "Oct 26, 2026",
+    returnDate: `Oct 26, ${CURRENT_YEAR}`,
     additionalNotes: "First time visiting Nepal",
   },
 
   /* ── Travel Insurance ────────────────────────────────────── */
   {
     id: "ins-1",
-    submissionNumber: "THTT-INS-2026-0001",
+    submissionNumber: formatSubmissionNumber("INS", 1),
     serviceType: "travel-insurance",
-    submittedAt: "2026-09-19T16:45:00",
+    submittedAt: `${CURRENT_YEAR}-09-19T16:45:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 12, 2026",
+    travelDate: `Oct 12, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 8,500",
     paymentStatus: "Paid",
     bookingStatus: "Confirmed",
-    paymentMethod: "Bank Transfer",
-    receiptNumber: "RCP-2026-INS-0001",
-    paymentDate: "Sep 19, 2026",
+    paymentMethod: "FonePay",
+    receiptNumber: `RCP-${CURRENT_YEAR}-INS-0001`,
+    paymentDate: `Sep 19, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/0f172a/ffffff?text=Payment+Receipt+INS-0001",
+    numberOfDays: 14,
     coverageType: "Comprehensive Trek Coverage",
-    returnDate: "Oct 26, 2026",
+    returnDate: `Oct 26, ${CURRENT_YEAR}`,
     preExistingConditions: "None",
   },
 
   /* ── Work Permit ─────────────────────────────────────────── */
   {
     id: "wp-1",
-    submissionNumber: "THTT-WP-2026-0001",
+    submissionNumber: formatSubmissionNumber("WP", 1),
     serviceType: "work-permit",
-    submittedAt: "2026-09-10T08:30:00",
+    submittedAt: `${CURRENT_YEAR}-09-10T08:30:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 1, 2026",
+    travelDate: `Oct 1, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 25,000",
     paymentStatus: "Paid",
     bookingStatus: "Processing",
-    paymentMethod: "Bank Transfer",
-    receiptNumber: "RCP-2026-WP-0001",
-    paymentDate: "Sep 10, 2026",
+    paymentMethod: "FonePay",
+    receiptNumber: `RCP-${CURRENT_YEAR}-WP-0001`,
+    paymentDate: `Sep 10, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/0f172a/ffffff?text=Payment+Receipt+WP-0001",
+    numberOfDays: 365,
     employerName: "Himalayan Adventures Pvt. Ltd.",
     jobTitle: "Mountain Guide",
-    workStartDate: "Oct 1, 2026",
+    workStartDate: `Oct 1, ${CURRENT_YEAR}`,
     passportNo: "A1234567",
   },
 
   /* ── Vehicle Rental ──────────────────────────────────────── */
   {
     id: "veh-1",
-    submissionNumber: "THTT-VEH-2026-0001",
+    submissionNumber: formatSubmissionNumber("VEH", 1),
     serviceType: "vehicle-rental",
-    submittedAt: "2026-09-21T13:00:00",
+    submittedAt: `${CURRENT_YEAR}-09-21T13:00:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 11, 2026",
+    travelDate: `Oct 11, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 15,000",
     paymentStatus: "Pending",
     bookingStatus: "Processing",
-    paymentMethod: "Cash on Pickup",
+    paymentMethod: "Cash",
     receiptNumber: "",
     paymentDate: "—",
+    numberOfDays: 16,
     vehicleType: "4WD SUV (Toyota Land Cruiser)",
-    pickupDate: "Oct 11, 2026",
+    pickupDate: `Oct 11, ${CURRENT_YEAR}`,
     pickupLocation: "Tribhuvan International Airport, Kathmandu",
     dropoffLocation: "Lukla Airport",
-    returnDate: "Oct 27, 2026",
+    returnDate: `Oct 27, ${CURRENT_YEAR}`,
   },
 
   /* ── Heli Service ────────────────────────────────────────── */
   {
     id: "heli-1",
-    submissionNumber: "THTT-HLI-2026-0001",
+    submissionNumber: formatSubmissionNumber("HLI", 1),
     serviceType: "heli-service",
-    submittedAt: "2026-09-22T10:00:00",
+    submittedAt: `${CURRENT_YEAR}-09-22T10:00:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 12, 2026",
+    travelDate: `Oct 12, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 95,000",
     paymentStatus: "Paid",
     bookingStatus: "Confirmed",
-    paymentMethod: "Bank Transfer",
-    receiptNumber: "RCP-2026-HLI-0001",
-    paymentDate: "Sep 22, 2026",
+    paymentMethod: "FonePay",
+    receiptNumber: `RCP-${CURRENT_YEAR}-HLI-0001`,
+    paymentDate: `Sep 22, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/1a1a2e/ffffff?text=Payment+Receipt+HLI-0001",
+    numberOfDays: 1,
     from: "Kathmandu (Tribhuvan Airport)",
     to: "Lukla Airport",
     passengers: 2,
@@ -377,23 +436,25 @@ export const DEMO_BOOKINGS: ServiceBooking[] = [
   /* ── Hotel Booking ───────────────────────────────────────── */
   {
     id: "htl-1",
-    submissionNumber: "THTT-HTL-2026-0001",
+    submissionNumber: formatSubmissionNumber("HTL", 1),
     serviceType: "hotel-booking",
-    submittedAt: "2026-09-17T15:20:00",
+    submittedAt: `${CURRENT_YEAR}-09-17T15:20:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 11, 2026",
+    travelDate: `Oct 11, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 45,000",
     paymentStatus: "Paid",
     bookingStatus: "Confirmed",
-    paymentMethod: "Online Payment",
-    receiptNumber: "RCP-2026-HTL-0001",
-    paymentDate: "Sep 17, 2026",
+    paymentMethod: "FonePay",
+    receiptNumber: `RCP-${CURRENT_YEAR}-HTL-0001`,
+    paymentDate: `Sep 17, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/0f172a/ffffff?text=Payment+Receipt+HTL-0001",
+    numberOfDays: 16,
     hotelLocation: "Hotel Yak & Yeti, Kathmandu",
-    checkinDate: "Oct 11, 2026",
-    checkoutDate: "Oct 27, 2026",
+    checkinDate: `Oct 11, ${CURRENT_YEAR}`,
+    checkoutDate: `Oct 27, ${CURRENT_YEAR}`,
     roomType: "Deluxe Double Room",
     guests: 2,
     specialRequests: "Early check-in if possible",
@@ -402,22 +463,24 @@ export const DEMO_BOOKINGS: ServiceBooking[] = [
   /* ── Air Ticket ──────────────────────────────────────────── */
   {
     id: "air-1",
-    submissionNumber: "THTT-AIR-2026-0001",
+    submissionNumber: formatSubmissionNumber("AIR", 1),
     serviceType: "air-ticket",
-    submittedAt: "2026-09-16T12:00:00",
+    submittedAt: `${CURRENT_YEAR}-09-16T12:00:00`,
     name: "Aniket Mandal",
     email: "aniket@gmail.com",
     nationality: "Indian",
-    travelDate: "Oct 12, 2026",
+    travelDate: `Oct 12, ${CURRENT_YEAR}`,
     contact: "+977 9801234567",
     price: "NPR 35,000",
     paymentStatus: "Paid",
     bookingStatus: "Confirmed",
-    paymentMethod: "Credit Card",
-    receiptNumber: "RCP-2026-AIR-0001",
-    paymentDate: "Sep 16, 2026",
-    departureDate: "Oct 12, 2026",
-    returnDate: "Oct 27, 2026",
+    paymentMethod: "Cash",
+    receiptNumber: `RCP-${CURRENT_YEAR}-AIR-0001`,
+    paymentDate: `Sep 16, ${CURRENT_YEAR}`,
+    receiptImageUrl: "https://placehold.co/800x500/0f172a/ffffff?text=Payment+Receipt+AIR-0001",
+    numberOfDays: 15,
+    departureDate: `Oct 12, ${CURRENT_YEAR}`,
+    returnDate: `Oct 27, ${CURRENT_YEAR}`,
     fromCity: "New Delhi (IGI Airport)",
     toCity: "Kathmandu (TIA)",
     travelClass: "Economy",
@@ -425,3 +488,62 @@ export const DEMO_BOOKINGS: ServiceBooking[] = [
     mealPreference: "Vegetarian",
   },
 ];
+
+// ─── Helper: Get Booked Item Title & Subtitle ──────────────────────────────────
+export interface BookedItemInfo {
+  label: string;
+  sub?: string;
+}
+
+export function getBookedItemDetails(booking: ServiceBooking): BookedItemInfo {
+  switch (booking.serviceType) {
+    case "package-booking":
+      return {
+        label: booking.packageName || "Tour Package",
+        sub: booking.destination,
+      };
+    case "visa-service":
+      return {
+        label: booking.visaType || "Visa Application",
+        sub: booking.destinationCountry ? `Country: ${booking.destinationCountry}` : undefined,
+      };
+    case "travel-insurance":
+      return {
+        label: booking.coverageType || "Travel Insurance",
+        sub: booking.preExistingConditions ? `Pre-existing: ${booking.preExistingConditions}` : undefined,
+      };
+    case "work-permit":
+      return {
+        label: booking.jobTitle || "Work Permit",
+        sub: booking.employerName ? `Employer: ${booking.employerName}` : undefined,
+      };
+    case "vehicle-rental":
+      return {
+        label: booking.vehicleType || "Vehicle Rental",
+        sub: booking.pickupLocation && booking.dropoffLocation
+          ? `${booking.pickupLocation.split(",")[0]} → ${booking.dropoffLocation.split(",")[0]}`
+          : booking.pickupLocation,
+      };
+    case "heli-service":
+      return {
+        label: booking.from && booking.to
+          ? `${booking.from.split("(")[0].trim()} → ${booking.to.split("(")[0].trim()}`
+          : "Helicopter Charter",
+        sub: booking.specialRequirements,
+      };
+    case "hotel-booking":
+      return {
+        label: booking.roomType || "Hotel Room",
+        sub: booking.hotelLocation,
+      };
+    case "air-ticket":
+      return {
+        label: booking.fromCity && booking.toCity
+          ? `${booking.fromCity.split("(")[0].trim()} → ${booking.toCity.split("(")[0].trim()}`
+          : "Flight Ticket",
+        sub: booking.travelClass ? `Class: ${booking.travelClass}` : undefined,
+      };
+    default:
+      return { label: "Standard Booking" };
+  }
+}

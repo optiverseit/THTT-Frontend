@@ -18,7 +18,13 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { X, ShieldCheck, Check, Luggage, MapPin, Calendar, Users } from "lucide-react";
+import { X, ShieldCheck, Check, Luggage, MapPin, Calendar, Users, FileText, Download, CheckCircle2 } from "lucide-react";
+import {
+  getRequiredDocumentsForBooking,
+  downloadSingleDocument,
+  FORMAT_BADGE_CONFIG,
+  DOCUMENT_STATUS_CONFIG,
+} from "./dashboardDocumentUtils";
 
 // ─── UPDATE DETAILS MODAL ─────────────────────────────────────────────────────
 
@@ -382,6 +388,64 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           <div className="bg-purple-50/50 rounded-2xl p-3.5 border border-purple-100">
             <span className="text-[10px] font-bold text-[#8B2CFF] uppercase tracking-wider block">Special Instructions & Remarks</span>
             <p className="text-slate-700 font-semibold mt-1 leading-snug">{remarks}</p>
+          </div>
+
+          {/* Required Documents in Modal */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Required Documents (JPG, PNG, JPEG, PDF)
+              </span>
+              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Verified Formats
+              </span>
+            </div>
+            <div className="space-y-2">
+              {getRequiredDocumentsForBooking({
+                id: bookingRef || "pkg-demo",
+                serviceType: "package-booking",
+                submissionNumber: bookingRef,
+                name: "Traveler",
+              }).slice(0, 3).map((d) => {
+                const statusCfg = DOCUMENT_STATUS_CONFIG[d.status];
+                const formatCfg = FORMAT_BADGE_CONFIG[d.fileType];
+                return (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8F9FC] border border-slate-100 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase ${formatCfg.bg} ${formatCfg.text} ${formatCfg.border}`}>
+                        {formatCfg.label}
+                      </span>
+                      <div className="truncate">
+                        <p className="font-bold text-slate-800 truncate">{d.title}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{d.fileSize} • {d.stage}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase ${statusCfg.badgeCls}`}>
+                        {statusCfg.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadSingleDocument(d, {
+                            name: "Traveler",
+                            submissionNumber: bookingRef,
+                            serviceName: packageName,
+                          })
+                        }
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                        title="Download Document"
+                      >
+                        <Download size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 

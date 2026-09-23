@@ -23,7 +23,6 @@ import {
   LayoutDashboard,
   User,
   Luggage,
-  CreditCard,
   LogOut,
 } from "lucide-react";
 
@@ -34,7 +33,7 @@ import {
  *  md/lg+  : All 3 tiers ≈ 128px (+28px = 156px)
  */
 
-export type DashboardTab = "dashboard" | "user-details" | "booking" | "payments";
+export type DashboardTab = "dashboard" | "user-details" | "booking";
 
 interface NavItem {
   id: DashboardTab;
@@ -57,11 +56,6 @@ const NAV_ITEMS: NavItem[] = [
     id: "booking",
     label: "Booking",
     icon: <Luggage size={18} className="shrink-0" />,
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    icon: <CreditCard size={18} className="shrink-0" />,
   },
 ];
 

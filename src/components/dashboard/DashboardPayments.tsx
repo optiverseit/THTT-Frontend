@@ -11,8 +11,13 @@
  * an API call when the payment endpoint is available.
  */
 
-import React from "react";
-import { CreditCard, CheckCircle2, Download, ShieldCheck } from "lucide-react";
+import React, { useState } from "react";
+import DashboardHeaderBanner from "./DashboardHeaderBanner";
+import { CreditCard, CheckCircle2, Download, ShieldCheck, Loader2 } from "lucide-react";
+import {
+  downloadReceiptImage,
+  transactionToReceiptData,
+} from "../../utils/receiptDownloader";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,32 +65,57 @@ const txStatusCls: Record<PaymentTransaction["status"], string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const DashboardPayments: React.FC = () => {
+  const [downloadingTxId, setDownloadingTxId] = useState<string | null>(null);
+  const [downloadedTxId, setDownloadedTxId] = useState<string | null>(null);
+
+  const handleDownloadTxReceipt = async (tx: PaymentTransaction) => {
+    setDownloadingTxId(tx.id);
+    try {
+      const receiptData = transactionToReceiptData(tx);
+      const fileName = `Receipt-${tx.invoiceId}.png`;
+      await downloadReceiptImage(undefined, fileName, receiptData);
+      setDownloadedTxId(tx.id);
+      setTimeout(() => {
+        setDownloadedTxId((prev) => (prev === tx.id ? null : prev));
+      }, 2500);
+    } catch (err) {
+      console.error("Failed to download transaction receipt:", err);
+    } finally {
+      setDownloadingTxId(null);
+    }
+  };
+
   return (
-    <section id="dashboard-payments" aria-label="Payments and receipts" className="space-y-6">
+    <div className="w-full">
+      {/* ── Top Purple Header Banner (replaces generic welcome) ── */}
+      <DashboardHeaderBanner>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center text-emerald-400">
+                <CreditCard size={22} />
+              </span>
+              <span>Payments & Receipts</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1">
+              View transaction history, tax invoices, and verified payment clearances.
+            </p>
+          </div>
 
-      {/* Header */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <CreditCard size={24} className="text-[#10B981]" />
-            <span>Payments & Receipts</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            View transaction history, tax invoices, and verified payment clearances.
-          </p>
+          <span
+            id="payment-cleared-badge"
+            className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 backdrop-blur-sm text-xs font-black px-4 py-2 rounded-full flex items-center gap-1.5 uppercase tracking-wider self-start sm:self-auto shadow-sm"
+          >
+            <CheckCircle2 size={15} />
+            All Dues Paid
+          </span>
         </div>
+      </DashboardHeaderBanner>
 
-        <span
-          id="payment-cleared-badge"
-          className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-black px-4 py-2 rounded-full flex items-center gap-1.5 uppercase tracking-wider self-start sm:self-auto"
-        >
-          <CheckCircle2 size={15} />
-          All Dues Paid
-        </span>
-      </div>
-
-      {/* Summary cards — 1 col on mobile, 3 on sm+ */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      {/* ── Scrollable Body Content ── */}
+      <div className="p-3 sm:p-5 md:p-6 lg:p-8 space-y-6 w-full max-w-[1400px]">
+        {/* Summary cards — 1 col on mobile, 3 on sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div id="payment-total-paid" className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             Total Paid
@@ -135,7 +165,7 @@ const DashboardPayments: React.FC = () => {
           >
             <thead className="bg-[#F8F9FC] text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-100">
               <tr>
-                <th scope="col" className="px-5 py-4">Invoice #</th>
+                <th scope="col" className="px-5 py-4">Invoice No.</th>
                 <th scope="col" className="px-5 py-4">Date</th>
                 <th scope="col" className="px-5 py-4">Description</th>
                 <th scope="col" className="px-5 py-4">Payment Method</th>
@@ -165,11 +195,18 @@ const DashboardPayments: React.FC = () => {
                     <button
                       type="button"
                       id={`download-receipt-${tx.id}`}
-                      onClick={() => alert(`Downloading receipt for ${tx.invoiceId}`)}
+                      onClick={() => handleDownloadTxReceipt(tx)}
+                      disabled={downloadingTxId === tx.id}
                       title={`Download receipt for ${tx.invoiceId}`}
-                      className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer inline-flex items-center"
+                      className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-75"
                     >
-                      <Download size={14} />
+                      {downloadingTxId === tx.id ? (
+                        <Loader2 size={14} className="animate-spin text-[#8B2CFF]" />
+                      ) : downloadedTxId === tx.id ? (
+                        <CheckCircle2 size={14} className="text-emerald-600" />
+                      ) : (
+                        <Download size={14} />
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -197,18 +234,26 @@ const DashboardPayments: React.FC = () => {
                 <button
                   type="button"
                   id={`download-receipt-mobile-${tx.id}`}
-                  onClick={() => alert(`Downloading receipt for ${tx.invoiceId}`)}
+                  onClick={() => handleDownloadTxReceipt(tx)}
+                  disabled={downloadingTxId === tx.id}
                   title={`Download receipt for ${tx.invoiceId}`}
-                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer inline-flex items-center"
+                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-75"
                 >
-                  <Download size={14} />
+                  {downloadingTxId === tx.id ? (
+                    <Loader2 size={14} className="animate-spin text-[#8B2CFF]" />
+                  ) : downloadedTxId === tx.id ? (
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                  ) : (
+                    <Download size={14} />
+                  )}
                 </button>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </section>
+      </div>
+    </div>
   );
 };
 

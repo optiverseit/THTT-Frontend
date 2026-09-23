@@ -12,8 +12,7 @@
  * │  ─────────────    │  [Welcome Banner]                    │
  * │  Dashboard ●      │  [Tab Content: stat cards /          │
  * │  User Details     │   booking card / activity /          │
- * │  Booking          │   user form / bookings / payments]   │
- * │  Payments         │                                       │
+ * │  Booking          │   user form / bookings]              │
  * │  ─────────────    │                                       │
  * │  Logout           │                                       │
  * └───────────────────┴──────────────────────────────────────┘
@@ -31,13 +30,9 @@ import { Menu } from "lucide-react";
 /* ── Dashboard sub-components ── */
 import DashboardSidebar, { type DashboardTab } from "../components/dashboard/DashboardSidebar";
 import DashboardHeaderBanner from "../components/dashboard/DashboardHeaderBanner";
-import DashboardStatCards from "../components/dashboard/DashboardStatCards";
-import DashboardBookingCard from "../components/dashboard/DashboardBookingCard";
-import DashboardRecentActivity from "../components/dashboard/DashboardRecentActivity";
 import DashboardUserDetails from "../components/dashboard/DashboardUserDetails";
 import DashboardBookingStatus from "../components/dashboard/DashboardBookingStatus";
-import DashboardPayments from "../components/dashboard/DashboardPayments";
-import { UpdateDetailsModal, BookingDetailsModal } from "../components/dashboard/DashboardModals";
+import { UpdateDetailsModal } from "../components/dashboard/DashboardModals";
 
 
 const Dashboard: React.FC = () => {
@@ -48,7 +43,6 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   /* ── User data — merges AuthContext + localStorage keys from LoginForm ── */
   const [userData, setUserData] = useState(() => {
@@ -67,8 +61,10 @@ const Dashboard: React.FC = () => {
       gender: user?.gender || localStorage.getItem("gender") || "Male",
       address: user?.address || localStorage.getItem("address") || "Kathmandu, Bagmati Province, Nepal",
       nationality: user?.nationality || localStorage.getItem("nationality") || "Nepali",
-      emergencyContact: user?.emergencyContact || localStorage.getItem("emergencyContact") || "+977 9851000000 (Family)",
+      additionalNumber: (user as any)?.additionalNumber || user?.emergencyContact || localStorage.getItem("additionalNumber") || localStorage.getItem("emergencyContact") || "+977 9851000000",
+      emergencyContact: user?.emergencyContact || localStorage.getItem("emergencyContact") || "+977 9851000000",
       avatar: user?.avatar || localStorage.getItem("avatar") || "",
+      phoneVerified: localStorage.getItem("phoneVerified") === "true",
     };
   });
 
@@ -85,8 +81,10 @@ const Dashboard: React.FC = () => {
     gender?: string;
     address?: string;
     nationality?: string;
+    additionalNumber?: string;
     emergencyContact?: string;
     avatar?: string;
+    phoneVerified?: boolean;
   }) => {
     setUserData((prev) => ({ ...prev, ...updated }));
     try {
@@ -96,7 +94,16 @@ const Dashboard: React.FC = () => {
       if (updated.gender) localStorage.setItem("gender", updated.gender);
       if (updated.address) localStorage.setItem("address", updated.address);
       if (updated.nationality) localStorage.setItem("nationality", updated.nationality);
-      if (updated.emergencyContact) localStorage.setItem("emergencyContact", updated.emergencyContact);
+      if (updated.additionalNumber) {
+        localStorage.setItem("additionalNumber", updated.additionalNumber);
+        localStorage.setItem("emergencyContact", updated.additionalNumber);
+      } else if (updated.emergencyContact) {
+        localStorage.setItem("additionalNumber", updated.emergencyContact);
+        localStorage.setItem("emergencyContact", updated.emergencyContact);
+      }
+      if (updated.phoneVerified !== undefined) {
+        localStorage.setItem("phoneVerified", String(updated.phoneVerified));
+      }
       if (updated.avatar !== undefined) {
         if (updated.avatar) {
           localStorage.setItem("avatar", updated.avatar);
@@ -117,7 +124,6 @@ const Dashboard: React.FC = () => {
     "dashboard":    "Dashboard",
     "user-details": "User Details",
     "booking":      "Booking",
-    "payments":     "Payments",
   };
 
   return (
@@ -162,69 +168,27 @@ const Dashboard: React.FC = () => {
           </span>
         </div>
 
-        {/* ── WELCOME BANNER (touches top below header, left to sidebar, right to browser edge) ── */}
-        <DashboardHeaderBanner
-          name={userData.name}
-          email={userData.email}
-          phone={userData.phone}
-          avatarUrl={userData.avatar}
-        />
+        {/* ════════════════════════════════════════════════════
+            TAB CONTENT — each tab renders its own full-width header banner
+           ════════════════════════════════════════════════════ */}
 
-        {/* ── Scrollable inner content ── */}
-        <div className="p-3 sm:p-5 md:p-6 lg:p-8 space-y-3 sm:space-y-5 md:space-y-6 w-full max-w-[1400px]">
+        {/* ── DASHBOARD TAB (All 8 Service Cards with Welcome Banner) ── */}
+        {activeTab === "dashboard" && (
+          <DashboardBookingStatus userData={userData} />
+        )}
 
-          {/* ════════════════════════════════════════════════════
-              TAB CONTENT — rendered based on activeTab
-             ════════════════════════════════════════════════════ */}
+        {/* ── USER DETAILS TAB (Header with Edit Action + Details Form) ── */}
+        {activeTab === "user-details" && (
+          <DashboardUserDetails
+            user={userData}
+            onUpdateUser={handleUpdateUser}
+          />
+        )}
 
-          {/* ── DASHBOARD TAB ── */}
-          {activeTab === "dashboard" && (
-            <div className="space-y-6">
-              {/* 4 KPI cards */}
-              <DashboardStatCards
-                bookingRequests={1}
-                bookingProgress="70%"
-                paymentStatus="Paid"
-                verificationStatus="Verified"
-              />
-
-              {/* Booking Card + Recent Activity */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
-                <DashboardBookingCard
-                  onView={() => setBookingModalOpen(true)}
-                  status="Confirmed"
-                  paymentBadge="PAID"
-                  progressPercent={70}
-                  requestStatus="Approved"
-                  paymentVerification="Verified"
-                  remarks="Bring passport, arrive 30 mins early."
-                />
-                <DashboardRecentActivity />
-              </div>
-            </div>
-          )}
-
-          {/* ── USER DETAILS TAB ── */}
-          {activeTab === "user-details" && (
-            <DashboardUserDetails
-              user={userData}
-              onUpdateUser={handleUpdateUser}
-            />
-          )}
-
-          {/* ── BOOKING TAB ── */}
-          {activeTab === "booking" && (
-            <DashboardBookingStatus
-              onViewBooking={() => setBookingModalOpen(true)}
-            />
-          )}
-
-          {/* ── PAYMENTS TAB ── */}
-          {activeTab === "payments" && (
-            <DashboardPayments />
-          )}
-
-        </div>
+        {/* ── BOOKING TAB (All Bookings Header + Filter Bar + Table) ── */}
+        {activeTab === "booking" && (
+          <DashboardBookingStatus mode="table-only" userData={userData} />
+        )}
       </main>
 
       {/* ════════════════════════════════════════════════════════
@@ -235,20 +199,6 @@ const Dashboard: React.FC = () => {
         onClose={() => setUpdateModalOpen(false)}
         initialData={userData}
         onSave={handleUpdateUser}
-      />
-
-      <BookingDetailsModal
-        isOpen={bookingModalOpen}
-        onClose={() => setBookingModalOpen(false)}
-        booking={{
-          bookingRef:  "THTT-2026-8941",
-          packageName: "Everest Base Camp Trek & Kala Patthar",
-          destination: "Khumbu Region, Nepal",
-          dates:       "Oct 12, 2026 – Oct 26, 2026 (14 Days)",
-          travelers:   2,
-          amount:      "NPR 285,000",
-          remarks:     "Bring passport, arrive 30 mins early at TIA Domestic Terminal for Lukla flight.",
-        }}
       />
     </div>
   );

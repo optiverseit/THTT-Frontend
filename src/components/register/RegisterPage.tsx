@@ -450,11 +450,25 @@ const RegisterPage: React.FC = () => {
           );
         }
 
-        if (user.avatar) {
-          localStorage.setItem(
-            "avatar",
-            user.avatar
-          );
+        const phoneVal =
+          user.phone ||
+          `${formData.countryCode} ${formData.phone.trim()}`;
+
+        localStorage.setItem("phone", phoneVal);
+
+        const genderVal = user.gender || formData.gender;
+        if (genderVal) {
+          localStorage.setItem("gender", genderVal);
+        }
+
+        const addressVal = user.address || formData.address.trim();
+        if (addressVal) {
+          localStorage.setItem("address", addressVal);
+        }
+
+        const nationalityVal = user.nationality || formData.nationality.trim();
+        if (nationalityVal) {
+          localStorage.setItem("nationality", nationalityVal);
         }
 
         // ==============================
@@ -464,15 +478,16 @@ const RegisterPage: React.FC = () => {
         login({
           name:
             fullName ||
-            formData.fullName,
+            formData.fullName.trim(),
 
           email:
             user.email ||
-            formData.email,
+            formData.email.trim(),
 
-          phone:
-            user.phone ||
-            `${formData.countryCode}${formData.phone}`,
+          phone: phoneVal,
+          gender: genderVal,
+          address: addressVal,
+          nationality: nationalityVal,
         });
 
         // ==============================

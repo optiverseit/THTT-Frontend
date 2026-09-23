@@ -4,6 +4,11 @@ interface User {
   name?: string;
   email?: string;
   phone?: string;
+  gender?: string;
+  address?: string;
+  nationality?: string;
+  emergencyContact?: string;
+  avatar?: string;
 }
 
 interface AuthContextType {
@@ -18,7 +23,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("isLoggedIn") === "true";
+      return (
+        localStorage.getItem("isLoggedIn") === "true" ||
+        !!localStorage.getItem("token")
+      );
     } catch {
       return false;
     }
@@ -27,19 +35,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem("user");
-      return saved ? JSON.parse(saved) : null;
+      if (saved) return JSON.parse(saved);
+      const name =
+        localStorage.getItem("name") ||
+        (localStorage.getItem("firstName")
+          ? `${localStorage.getItem("firstName")} ${localStorage.getItem("lastName") || ""}`.trim()
+          : "");
+      const email = localStorage.getItem("email") || "";
+      if (name || email) {
+        return { name: name || "Aniket Mandal", email };
+      }
+      return null;
     } catch {
       return null;
     }
   });
 
   const login = (userData?: User) => {
-    const defaultUser = userData || { name: "Traveler", email: "user@triphimalaya.com.np" };
+    const defaultUser = userData || { name: "Aniket Mandal", email: "aniket@gmail.com" };
     setIsLoggedIn(true);
     setUser(defaultUser);
     try {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("user", JSON.stringify(defaultUser));
+      if (!localStorage.getItem("token")) {
+        localStorage.setItem("token", "dummy-demo-token");
+      }
+      if (defaultUser.name) {
+        localStorage.setItem("name", defaultUser.name);
+      }
+      if (defaultUser.email) {
+        localStorage.setItem("email", defaultUser.email);
+      }
     } catch (e) {
       console.warn("[AuthContext] Unable to persist auth to localStorage", e);
     }
@@ -51,6 +78,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.removeItem("isLoggedIn");
       localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("name");
+      localStorage.removeItem("firstName");
+      localStorage.removeItem("lastName");
+      localStorage.removeItem("email");
+      localStorage.removeItem("phone");
+      localStorage.removeItem("avatar");
+      localStorage.removeItem("gender");
+      localStorage.removeItem("address");
+      localStorage.removeItem("nationality");
+      localStorage.removeItem("emergencyContact");
+      localStorage.removeItem("role");
     } catch (e) {
       console.warn("[AuthContext] Unable to remove auth from localStorage", e);
     }

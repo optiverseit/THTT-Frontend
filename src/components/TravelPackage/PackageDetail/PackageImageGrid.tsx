@@ -35,15 +35,14 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     }, 2000);
   };
 
-  const basePackagePriceInUSD = Number(pkg.price?.replace(/[^0-9]/g, "") || 85);
-  const calculatedNPRPrice = basePackagePriceInUSD * nprPerOneDollar;
+  const basePackagePriceNPR = Number(pkg.price || 0);
 
-  const startsFromDisplayPrice =
-    selectedCurrency === "nepali"
-      ? `NPR ${Math.round(calculatedNPRPrice).toLocaleString("en-IN")}`
-      : selectedCurrency === "inr"
-      ? `RS ${Math.round(calculatedNPRPrice / nprPerOneINR).toLocaleString("en-IN")}`
-      : pkg.price || `$${basePackagePriceInUSD}`;
+  const startsFromDisplayPrice = `NPR ${basePackagePriceNPR.toLocaleString(
+    "en-IN",
+    {
+      maximumFractionDigits: 0,
+    }
+  )}`;
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,12 +51,12 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     pkg.gallery && pkg.gallery.length >= 5
       ? pkg.gallery
       : [
-          pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
-          "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
-          "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-          "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
-          "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
-        ];
+        pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
+        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
+        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
+        "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
+      ];
 
   const outletItems = [
     { name: "OVERVIEW", path: `/details/${pkg.id}` },
@@ -96,8 +95,8 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const contactTeam = isTour
     ? "Tours & Holidays Team"
     : isActivity
-    ? "Adventure Activity Team"
-    : "Trekking & Adventure Activity Team";
+      ? "Adventure Activity Team"
+      : "Trekking & Adventure Activity Team";
 
   const contactPhone = "+977 9851403761";
   const contactEmail = "pradip.triphimalayatt@gmail.com";
@@ -115,19 +114,19 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
 
   const categoryLabel =
     pkg.type === "trekking" ? "Trekking" :
-    pkg.type === "tour" ? "Tour Package" :
-    pkg.type === "activity" ? "Adventure Activity" :
-    pkg.category === "international" ? "International" : "Experience";
+      pkg.type === "tour" ? "Tour Package" :
+        pkg.type === "activity" ? "Adventure Activity" :
+          pkg.category === "international" ? "International" : "Experience";
 
   const categoryColor =
     pkg.type === "trekking" ? "bg-emerald-500" :
-    pkg.type === "tour" ? "bg-blue-500" :
-    pkg.type === "activity" ? "bg-[#E91E63]" : "bg-purple-500";
+      pkg.type === "tour" ? "bg-blue-500" :
+        pkg.type === "activity" ? "bg-[#E91E63]" : "bg-purple-500";
 
   const packageIconText =
     pkg.type === "trekking" ? "T" :
-    pkg.type === "tour" ? "T" :
-    pkg.type === "activity" ? "A" : "P";
+      pkg.type === "tour" ? "T" :
+        pkg.type === "activity" ? "A" : "P";
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
@@ -135,10 +134,10 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const printingTable = pkg.pricingTable && pkg.pricingTable.length > 0
     ? pkg.pricingTable
     : [
-        { service: "Standard Experience", ageGroup: "Adult (16+)", priceNepali: `NPR ${Math.round(calculatedNPRPrice).toLocaleString("en-IN")}`, priceForeigner: pkg.price || `$${basePackagePriceInUSD}` },
-        { service: "VIP Tandem + Media Pack", ageGroup: "All Ages", priceNepali: `NPR ${Math.round(calculatedNPRPrice * 1.3).toLocaleString("en-IN")}`, priceForeigner: `$${Math.round(basePackagePriceInUSD * 1.3)}` },
-        { service: "Student / Youth Special", ageGroup: "Youth (12-15)", priceNepali: `NPR ${Math.round(calculatedNPRPrice * 0.85).toLocaleString("en-IN")}`, priceForeigner: `$${Math.round(basePackagePriceInUSD * 0.85)}` },
-      ];
+      { service: "Standard Experience", ageGroup: "Adult (16+)", priceNepali: `NPR ${Math.round(calculatedNPRPrice).toLocaleString("en-IN")}`, priceForeigner: pkg.price || `$${basePackagePriceInUSD}` },
+      { service: "VIP Tandem + Media Pack", ageGroup: "All Ages", priceNepali: `NPR ${Math.round(calculatedNPRPrice * 1.3).toLocaleString("en-IN")}`, priceForeigner: `$${Math.round(basePackagePriceInUSD * 1.3)}` },
+      { service: "Student / Youth Special", ageGroup: "Youth (12-15)", priceNepali: `NPR ${Math.round(calculatedNPRPrice * 0.85).toLocaleString("en-IN")}`, priceForeigner: `$${Math.round(basePackagePriceInUSD * 0.85)}` },
+    ];
 
   const itineraryList = pkg.allItenary && pkg.allItenary.length > 0 ? pkg.allItenary : [
     { day: "1", title: "Hotel Pickup & Base Station Transfer", desc: "Enjoy comfortable private pickup directly from your hotel with scenic transfer to our activity briefing lounge." },
@@ -563,8 +562,8 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
                 className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
               >
                 <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                  <path d="M11.999 2C6.479 2 2 6.479 2 12c0 1.789.47 3.467 1.29 4.93L2 22l5.232-1.267A9.966 9.966 0 0012 22c5.521 0 10-4.479 10-10S17.521 2 12 2z"/>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M11.999 2C6.479 2 2 6.479 2 12c0 1.789.47 3.467 1.29 4.93L2 22l5.232-1.267A9.966 9.966 0 0012 22c5.521 0 10-4.479 10-10S17.521 2 12 2z" />
                 </svg>
                 <span>Ask on WhatsApp</span>
               </button>
@@ -595,12 +594,12 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
                 style={{ background: "#1877F2" }}
               >
-                <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+                <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" /></svg>
               </button>
               {/* Instagram */}
               <button
                 onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl).catch(() => {});
+                  await navigator.clipboard.writeText(shareUrl).catch(() => { });
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                   window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
@@ -611,15 +610,15 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
                 style={{ background: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}
               >
                 <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2"/>
-                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white"/>
-                  <circle cx="17.5" cy="6.5" r="1.5" fill="white"/>
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2" />
+                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white" />
+                  <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
                 </svg>
               </button>
               {/* TikTok */}
               <button
                 onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl).catch(() => {});
+                  await navigator.clipboard.writeText(shareUrl).catch(() => { });
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                   window.open("https://www.tiktok.com/@trip.himalaya", "_blank", "noopener,noreferrer");
@@ -644,8 +643,8 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
                 style={{ background: "#0A66C2" }}
               >
                 <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                  <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
-                  <circle cx="4" cy="4" r="2" fill="white"/>
+                  <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+                  <circle cx="4" cy="4" r="2" fill="white" />
                 </svg>
               </button>
               {/* Twitter/X */}
@@ -659,13 +658,13 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
                 style={{ background: "#000000" }}
               >
                 <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </button>
               {/* Copy Link */}
               <button
                 onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl).catch(() => {});
+                  await navigator.clipboard.writeText(shareUrl).catch(() => { });
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                   setIsShareOpen(false);
@@ -675,8 +674,8 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
               >
                 {copied ? <Check size={13} color="white" /> : (
                   <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="13" height="13">
-                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
-                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
                   </svg>
                 )}
               </button>

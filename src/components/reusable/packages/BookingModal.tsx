@@ -29,6 +29,7 @@ import {
 import { useGlobalCurrency, displayPrice, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 import THTTLogo from "../../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../../utils/countrycodes";
+import { createBooking } from "../../../api/BackendApi";
 
 export interface BookingItem {
   id?: string;
@@ -40,6 +41,7 @@ export interface BookingItem {
   type?: "tour" | "trek" | "trekking" | "adventure" | "activity" | "package" | string;
   category?: string;
   pricingTable?: Array<{
+    id?: number;
     service: string;
     ageGroup: string;
     priceNepali: string;
@@ -48,6 +50,7 @@ export interface BookingItem {
 }
 
 export interface BookingTier {
+  id: number | null;
   name: string;
   ageGroup: string;
   nprPrice: number;
@@ -75,7 +78,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   initialTierIndex = 0,
   initialGuests = 1,
   pricingSource = "package",
-})  => {
+}) => {
   const {
     selectedCurrency,
     nprPerOneDollar,
@@ -128,41 +131,43 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       : "Trekking & Adventure Activity Team";
 
   // Build Pricing Tiers
-const pricingTiers: BookingTier[] = React.useMemo(() => {
-  if (!pkg) return [];
+  const pricingTiers: BookingTier[] = React.useMemo(() => {
+    if (!pkg) return [];
 
-  // =====================================================
-  // DETAIL PAGE
-  // Use pricing tier selected from pricingTable
-  // =====================================================
-  if (
-    pricingSource === "tier" &&
-    pkg.pricingTable &&
-    pkg.pricingTable.length > 0
-  ) {
-    return pkg.pricingTable.map((row) => ({
-      name: row.service,
-      ageGroup: row.ageGroup,
-      nprPrice: Number(row.priceNepali ?? 0),
-    }));
-  }
+    // =====================================================
+    // DETAIL PAGE
+    // Use pricing tier selected from pricingTable
+    // =====================================================
+    if (
+      pricingSource === "tier" &&
+      pkg.pricingTable &&
+      pkg.pricingTable.length > 0
+    ) {
+      return pkg.pricingTable.map((row) => ({
+        id: row.id ?? null,
+        name: row.service,
+        ageGroup: row.ageGroup,
+        nprPrice: Number(row.priceNepali ?? 0),
+      }));
+    }
 
-  // =====================================================
-  // PACKAGE LIST PAGE
-  // Use package.price directly
-  // =====================================================
-  const rawPackagePrice = Number(
-    String(pkg.price ?? "0").replace(/[^0-9.]/g, "")
-  );
+    // =====================================================
+    // PACKAGE LIST PAGE
+    // Use package.price directly
+    // =====================================================
+    const rawPackagePrice = Number(
+      String(pkg.price ?? "0").replace(/[^0-9.]/g, "")
+    );
 
-  return [
-    {
-      name: "Package Price",
-      ageGroup: "Per Person",
-      nprPrice: rawPackagePrice,
-    },
-  ];
-}, [pkg, pricingSource]);
+    return [
+      {
+        id: null,
+        name: "Package Price",
+        ageGroup: "Per Person",
+        nprPrice: rawPackagePrice,
+      },
+    ];
+  }, [pkg, pricingSource]);
 
   const [selectedTierIndex, setSelectedTierIndex] = useState<number>(initialTierIndex);
   const [guestsCount, setGuestsCount] = useState<number>(initialGuests);
@@ -184,6 +189,7 @@ const pricingTiers: BookingTier[] = React.useMemo(() => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState("");
   const [submittedAt, setSubmittedAt] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -270,36 +276,145 @@ const pricingTiers: BookingTier[] = React.useMemo(() => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Terms validation
     if (!formData.termsAgreed) {
-      alert("Please review and accept the booking terms and conditions to proceed.");
+      alert(
+        "Please review and accept the booking terms and conditions to proceed."
+      );
       return;
     }
 
-    setIsSubmitting(true);
+    // Package validation
+    if (!pkg?.id) {
+      setSubmitError("Package information is missing.");
+      return;
+    }
 
-    // Generate distinct Reference Number based on category:
-    // Tours: THTT-TOUR-XXXXXX
-    // Trekking: THTT-TREK-XXXXXX
-    // Adventure Activities: THTT-ADV-XXXXXX
-    const randomDigits = Math.floor(100000 + Math.random() * 900000);
-    let prefix = "THTT-TOUR";
-    if (category === "Trekking") prefix = "THTT-TREK";
-    if (category === "Adventure Activity") prefix = "THTT-ADV";
+    // Travel date validation
+    if (!formData.travelDate) {
+      setSubmitError("Please select a travel date.");
+      return;
+    }
 
-    const generatedRefId = `${prefix}-${randomDigits}`;
-    const now = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    try {
+      setIsSubmitting(true);
+      setSubmitError("");
 
-    setTimeout(() => {
-      setSubmissionId(generatedRefId);
-      setSubmittedAt(now);
-      setIsSubmitting(false);
+      // ==========================================
+      // PACKAGE BOOKING REQUEST
+      // ==========================================
+      const bookingData = {
+        booking_type: "PACKAGE" as const,
+
+        package_id: Number(pkg.id),
+
+        pricing_tier_id: currentTier.id ?? null,
+
+        number_of_people: guestsCount,
+
+        start_date: formData.travelDate,
+
+        // Currently package booking does not require end date
+        end_date: null,
+
+        // Backend will verify this amount itself
+        frontend_total_amount: totalNpr,
+      };
+
+      console.log("BOOKING REQUEST:", bookingData);
+
+      // ==========================================
+      // CALL BACKEND
+      // POST /bookings
+      // ==========================================
+      const response = await createBooking(bookingData);
+
+      console.log("BOOKING RESPONSE:", response.data);
+
+      // ==========================================
+      // CHECK BACKEND RESPONSE
+      // ==========================================
+      if (!response.data?.status) {
+        throw new Error(
+          response.data?.message || "Failed to create booking."
+        );
+      }
+
+      const booking = response.data?.data;
+
+      if (!booking) {
+        throw new Error(
+          "Booking was created but booking data was not returned."
+        );
+      }
+
+      // ==========================================
+      // GET BACKEND-GENERATED BOOKING REFERENCE
+      // ==========================================
+      if (!booking.booking_reference) {
+        throw new Error(
+          "Booking was created but no booking reference was returned."
+        );
+      }
+
+      // Example:
+      // THTT-PKG-000047
+      setSubmissionId(booking.booking_reference);
+
+      // Prefer backend created_at if returned
+      const receiptDate = booking.created_at
+        ? new Date(booking.created_at)
+        : new Date();
+
+      setSubmittedAt(
+        receiptDate.toLocaleString("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      );
+
+      // ==========================================
+      // SHOW RECEIPT ONLY AFTER SUCCESS
+      // ==========================================
       setIsSubmitted(true);
-    }, 600);
+
+    } catch (error: any) {
+      console.error("BOOKING FAILED:", error);
+
+      // Never display receipt after failed request
+      setIsSubmitted(false);
+
+      // ==========================================
+      // LARAVEL VALIDATION ERRORS - 422
+      // ==========================================
+      const validationErrors = error?.response?.data?.errors;
+
+      if (validationErrors) {
+        const validationMessage = Object.values(validationErrors)
+          .flat()
+          .join(", ");
+
+        setSubmitError(validationMessage);
+        return;
+      }
+
+      // ==========================================
+      // OTHER BACKEND ERRORS
+      // ==========================================
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to create booking. Please try again.";
+
+      setSubmitError(message);
+
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleResetAndClose = () => {

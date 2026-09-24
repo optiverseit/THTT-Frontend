@@ -66,9 +66,12 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   }, []);
 
   const handleSignOut = () => {
-    setUserDropdownOpen(false);
     logout();
+    localStorage.clear();
+    console.log("cleared log");
+    setUserDropdownOpen(false);
     navigate("/login", { replace: true });
+
   };
 
   const navLinks = [
@@ -163,8 +166,8 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
               type="button"
               id="nav-dropdown-dashboard-btn"
               onClick={() => {
-                setUserDropdownOpen(false);
                 navigate("/dashboard");
+                setUserDropdownOpen(false);
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-purple-50/80 transition-colors group cursor-pointer"
             >

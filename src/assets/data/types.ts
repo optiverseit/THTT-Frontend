@@ -47,6 +47,7 @@ export interface Package {
   whatToBring?: string[];
   faqs?: { question: string; answer: string }[];
   pricingTable?: {
+     id?: number;
     service: string;
     ageGroup: string;
     priceNepali: string;

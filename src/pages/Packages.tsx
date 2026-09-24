@@ -64,8 +64,7 @@ const Packages: React.FC = () => {
   const [selectedCategory, setSelectedCategory] =
     useState<string>("all");
 
-  const [priceRange, setPriceRange] =
-    useState<number>(5000);
+  const [priceRange, setPriceRange] = useState<number>(0);
 
   const [selectedRating, setSelectedRating] =
     useState<number>(0);
@@ -453,13 +452,10 @@ const Packages: React.FC = () => {
               );
           }
 
-
           const matchesPrice =
-
+            priceRange === 0 ||
             priceNum === 0 ||
-
-            priceNum <=
-            priceRange;
+            priceNum <= priceRange;
 
 
           // =====================================

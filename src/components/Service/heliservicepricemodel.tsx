@@ -57,21 +57,39 @@ export interface HeliTourData {
   sharingDesc?: string;
 }
 
+export interface PricingTierApi {
+  id: number;
+  package_id: number;
+  service: string;
+  age_group: string | null;
+  price_npr: string;
+  price_usd: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface HeliServicePriceModelProps {
   tour: HeliTourData;
+  pricingTiers: PricingTierApi[];
+  pricingLoading: boolean;
   onBookNow: (bookingDetails: {
     flightType: "charter" | "sharing";
     seatCount: number;
     totalPriceNPR: number;
     formattedPrice: string;
   }) => void;
-  onWhatsAppInquiry?: (flightType: "charter" | "sharing", formattedTotal: string) => void;
+  onWhatsAppInquiry?: (
+    flightType: "charter" | "sharing",
+    formattedTotal: string
+  ) => void;
 }
 
 const WHATSAPP_PHONE = "9779851403761";
 
 export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
   tour,
+  pricingTiers,
+  pricingLoading,
   onBookNow,
   onWhatsAppInquiry,
 }) => {
@@ -87,9 +105,18 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
   const [sharingSeats, setSharingSeats] = useState<number>(1);
   const [charterSeats, setCharterSeats] = useState<number>(1);
 
-  // Price calculations
-  const charterPrice = tour.charterPriceNPR || 696800;
-  const sharingPrice = tour.sharingPriceNPR || 180800;
+  // Pricing tiers come from GET /packages/{packageId}/pricing-tiers.
+  // No mock/fallback tier prices are used here.
+  const charterTier = pricingTiers.find((tier) =>
+    tier.service?.toLowerCase().includes("charter")
+  );
+
+  const sharingTier = pricingTiers.find((tier) =>
+    tier.service?.toLowerCase().includes("sharing")
+  );
+
+  const charterPrice = charterTier ? Number(charterTier.price_npr) : 0;
+  const sharingPrice = sharingTier ? Number(sharingTier.price_npr) : 0;
 
   const currentTotalNPR =
     flightOption === "charter" ? charterPrice : sharingPrice * sharingSeats;
@@ -191,7 +218,20 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             <div className="col-span-3 text-left">PRICE</div>
           </div>
 
+          {pricingLoading && (
+            <div className="py-4 text-center text-xs font-semibold text-gray-500">
+              Loading pricing options...
+            </div>
+          )}
+
+          {!pricingLoading && pricingTiers.length === 0 && (
+            <div className="py-4 text-center text-xs font-semibold text-gray-500">
+              No pricing tiers available for this package.
+            </div>
+          )}
+
           {/* Row 1: Private Charter */}
+          {!pricingLoading && charterTier && (
           <div
             onClick={() => setFlightOption("charter")}
             className={`grid grid-cols-12 items-start py-2.5 px-1 rounded-xl cursor-pointer transition-colors duration-150 ${
@@ -219,7 +259,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
                     flightOption === "charter" ? "text-[#E91E63]" : "text-[#200B3B]"
                   }`}
                 >
-                  Private Charter
+                  {charterTier?.service ?? "Private Charter"}
                 </h4>
               </div>
             </div>
@@ -227,7 +267,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             {/* Column 2: Age Group */}
             <div className="col-span-3 text-center pt-0.5">
               <span className="text-[10px] font-semibold text-gray-700 leading-tight block">
-                Exclusive Aircraft
+                {charterTier?.age_group ?? "-"}
               </span>
             </div>
 
@@ -243,7 +283,10 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             </div>
           </div>
 
+          )}
+
           {/* Row 2: Sharing Flight */}
+          {!pricingLoading && sharingTier && (
           <div
             onClick={() => setFlightOption("sharing")}
             className={`grid grid-cols-12 items-start py-2.5 px-1 rounded-xl cursor-pointer transition-colors duration-150 ${
@@ -271,7 +314,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
                     flightOption === "sharing" ? "text-[#E91E63]" : "text-[#200B3B]"
                   }`}
                 >
-                  Sharing Heli Service
+                  {sharingTier?.service ?? "Sharing Heli Service"}
                 </h4>
               </div>
             </div>
@@ -279,7 +322,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             {/* Column 2: Age Group */}
             <div className="col-span-3 text-center pt-0.5">
               <span className="text-[10px] font-semibold text-gray-700 leading-tight block">
-                Per Person Seat
+                {sharingTier?.age_group ?? "-"}
               </span>
             </div>
 
@@ -295,7 +338,9 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             </div>
           </div>
 
-          {flightOption === "charter" ? null : (
+          )}
+
+          {flightOption === "charter" || !sharingTier ? null : (
             <div className="p-3 rounded-xl bg-[#FDF2F7] border border-pink-100/90 flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
                 <Users size={14} />
@@ -337,6 +382,9 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
           )}
 
           {/* Total Cost Display (Matching image) */}
+          {!pricingLoading &&
+            ((flightOption === "charter" && charterTier) ||
+              (flightOption === "sharing" && sharingTier)) && (
           <div className="pt-2 text-left">
             <span className="text-[9.5px] font-black uppercase text-gray-400 tracking-wider block">
               {flightOption === "charter"
@@ -352,13 +400,15 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
                 : `Based on ${formattedSharingPrice} per seat`}
             </span>
           </div>
+          )}
 
           {/* Action CTAs (Matching image) */}
           <div className="space-y-2 pt-1">
             <button
               type="button"
               onClick={handleBookClick}
-              className="w-full py-3 px-4 rounded-xl bg-[#E91E63] hover:bg-pink-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={currentTotalNPR <= 0 || pricingLoading}
+              className="w-full disabled:opacity-50 disabled:cursor-not-allowed py-3 px-4 rounded-xl bg-[#E91E63] hover:bg-pink-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Plane size={15} />
               <span>BOOK THIS HELI SERVICE</span>
@@ -367,7 +417,8 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             <button
               type="button"
               onClick={handleWhatsAppClick}
-              className="w-full py-3 px-4 rounded-xl bg-[#00C853] hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={currentTotalNPR <= 0 || pricingLoading}
+              className="w-full disabled:opacity-50 disabled:cursor-not-allowed py-3 px-4 rounded-xl bg-[#00C853] hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageCircle size={15} />
               <span>WHATSAPP INSTANT INQUIRY</span>

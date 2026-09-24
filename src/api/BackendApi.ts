@@ -1,18 +1,18 @@
 import axiosInstance from "../services/axiosinstance";
 import axios from "axios";
 
-export const registerUser = (userData:any) => {
+export const registerUser = (userData: any) => {
   return axiosInstance.post("auth/register", userData);
 };
 
-export const loginUser = (loginData:any) => {
-    return axiosInstance.post("/auth/login", loginData);
+export const loginUser = (loginData: any) => {
+  return axiosInstance.post("/auth/login", loginData);
 };
 
-export const googleLogin = (idToken:any) => {
-    return axiosInstance.post("/auth/google", {
-        id_token: idToken,
-    });
+export const googleLogin = (idToken: any) => {
+  return axiosInstance.post("/auth/google", {
+    id_token: idToken,
+  });
 };
 
 
@@ -30,7 +30,7 @@ export const getPackagesByCategory = (category: string, page = 1) => {
 // ==============================
 
 export const getCategories = () => {
-    return axiosInstance.get("/categories");
+  return axiosInstance.get("/categories");
 };
 
 
@@ -39,11 +39,11 @@ export const getCategories = () => {
 // ==============================
 
 export const getPackages = () => {
-    return axiosInstance.get("/packages");
+  return axiosInstance.get("/packages");
 };
 
 export const getPackageById = (id: number | string) => {
-    return axiosInstance.get(`/packages/${id}`);
+  return axiosInstance.get(`/packages/${id}`);
 };
 
 
@@ -149,4 +149,14 @@ export const getPackageHighlights = (
   return axiosInstance.get(
     `/packages/${packageId}/highlights`
   );
+};
+
+// VEHICLES
+// PUBLIC - active vehicles for frontend
+export const getAllVehicles = () => {
+  return axiosInstance.get("/vehicles");
+};
+
+export const getVehicleById = (id) => {
+  return axiosInstance.get(`/vehicles/${id}`);
 };

@@ -157,6 +157,6 @@ export const getAllVehicles = () => {
   return axiosInstance.get("/vehicles");
 };
 
-export const getVehicleById = (id) => {
+export const getVehicleById = (id:number | string) => {
   return axiosInstance.get(`/vehicles/${id}`);
 };

@@ -67,469 +67,187 @@ import HeliServicePriceModel, { HeliTourData } from "./heliservicepricemodel";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import Logo from "../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
+import {
+  getPackagesByCategory,
+  getPackagePricingTiers,
+  getPackageFaqs,
+} from "../../api/BackendApi";
 
 // =============================================================================
 // Comprehensive Helicopter Tours Data
 // =============================================================================
 
+export interface PackageFaqApi {
+  id?: number | string;
+  package_id?: number | string;
+  question?: string;
+  answer?: string;
+  q?: string;
+  a?: string;
+}
+
 export interface HeliPackageItem extends HeliTourData {
+  id: string;
+  backendId: number;
+
+  title: string;
+  slug: string;
+  location: string;
+  duration: string;
+  maxAltitude: string;
+
+  // Actual package price from packages.price
+  packagePriceNPR: number;
+
+  // Prices from pricing tiers
+  charterPriceNPR: number;
+  sharingPriceNPR: number;
+
+  charterDesc: string;
+  sharingDesc: string;
+
   category: "ebc" | "abc" | "langtang" | "pilgrimage" | "rescue";
+
   tag: string;
   image: string;
   gallery: string[];
   description: string;
+
   rating: number;
   reviewsCount: number;
+
   tripHighlights: string[];
   whatsIncluded: string[];
   whatsExcluded: string[];
   restrictionsAndHealth: string[];
   whatToBring: string[];
   policies: string[];
-  faqs: Array<{ q: string; a: string }>;
-  testimonies: Array<{ name: string; country: string; rating: number; comment: string; date: string }>;
+
+  faqs: Array<{
+    q: string;
+    a: string;
+  }>;
+
+  testimonies: Array<{
+    name: string;
+    country: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }>;
+
+
+  package_helis?: any[];
+  package_vehicles?: any[];
+
+  min_people?: number | null;
+  max_people?: number | null;
 }
 
-export const HELI_PACKAGES: HeliPackageItem[] = [
-  {
-    id: "everest-base-camp-heli",
-    title: "Everest Base Camp Helicopter Tour",
-    slug: "everest-base-camp-heli",
-    tag: "AIR ADVENTURE",
-    location: "Kala Patthar / Everest Base Camp",
-    duration: "4-5 Hours",
-    maxAltitude: "5,545m (Kala Patthar)",
-    rating: 5,
-    reviewsCount: 342,
-    charterPriceNPR: 696800,
-    sharingPriceNPR: 184416,
-    charterDesc:
-      "Families, groups, creators, photographers, luxury travelers, and customized trips — Exclusive aircraft strictly for your group",
-    sharingDesc:
-      "Solo travelers, couples, and individual seats. Most cost-budget-friendly option — Per-person fare. Dates on seat availability",
-    image:
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
-    gallery: [
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=1200",
-    ],
-    description:
-      "The ultimate Himalayan experience — a VIP helicopter flight to the foot of Mount Everest. Hover beside the world's highest peak, land at Kala Patthar (5,545m), and enjoy a panoramic breakfast above the clouds.",
-    category: "ebc",
-    tripHighlights: [
-      "Aerial views of Mt. Everest (8,848m) & Lhotse",
-      "Landing at Kala Patthar (5,545m)",
-      "Namche Bazaar overflight",
-      "Breakfast at Hotel Everest View (3,880m)",
-      "CAAN-certified flight & oxygen onboard",
-    ],
-    whatsIncluded: [
-      "Hotel pickup and drop-off in Kathmandu (private AC vehicle)",
-      "Helicopter flight with CAAN certified high-altitude pilot",
-      "Kala Patthar / EBC landing permit fees",
-      "Sagarmatha National Park entry permit & local fees",
-      "Emergency oxygen cylinder and first-aid kits onboard",
-      "Breakfast at Hotel Everest View, Syangboche",
-      "All airport taxes and government levies",
-    ],
-    whatsExcluded: [
-      "Personal travel and high-altitude medical insurance",
-      "Personal expenses, drinks, and gratuities",
-    ],
-    restrictionsAndHealth: [
-      "Mandatory accurate body weight (kg) declaration at booking to comply with CAAN high-altitude weight & balance regulations",
-      "Kala Patthar (5,545m) landing weight limit strictly restricted to max 240kg-250kg total payload (shuttle flights arranged if exceeded)",
-      "Luggage allowance strictly limited to maximum 20 kg per passenger",
-      "Medical clearance advised for travelers with acute cardiac conditions, severe COPD, or late pregnancy",
-      "Passport copy or National ID must be submitted at least 24 hours in advance for flight security manifest",
-    ],
-    whatToBring: [
-      "Original Passport or National Identity Card (Mandatory for airport security check)",
-      "High-altitude travel insurance document with emergency helicopter evacuation coverage",
-      "Warm windproof down jacket, thermal fleece layers, and warm woolen cap/beanie",
-      "100% UV protection sunglasses (essential against Himalayan snow glare)",
-      "Sunscreen (SPF 50+), lip balm with moisturizer, and personal medications",
-      "Camera / smartphone with extra batteries (cold temperatures drain batteries quickly)",
-    ],
-    policies: [
-      "Weather Delay Policy: Himalayan alpine weather is unpredictable. If weather grounds the flight, you receive a 100% full refund or free priority reschedule for the next available morning.",
-      "Payload Safety Policy: In accordance with CAAN regulations, helicopters cannot land at 5,545m with more than 250kg payload. If group weight exceeds this threshold, a quick 2-shuttle hop from Pheriche is carried out at no extra surcharge to passengers.",
-      "Cancellation Terms: Free cancellation up to 48 hours prior to scheduled departure. Cancellations within 24 hours incur a 15% administrative preparation fee.",
-      "Health & Safety: All flights carry high-purity medical oxygen cylinders and pulse oximeters with HEMS-certified mountain pilots.",
-    ],
-    faqs: [
-      {
-        q: "How long do we stop at Kala Patthar?",
-        a: "We land at Kala Patthar (5,545m) for approximately 10 to 15 minutes. This window provides ample time for breathtaking photographs without risking acute altitude sickness (AMS).",
-      },
-      {
-        q: "Is breakfast at Hotel Everest View included?",
-        a: "Yes! After the Kala Patthar touchdown, we fly down to Syangboche (3,880m) where a hot breakfast with freshly brewed coffee/tea is served on the world's highest hotel balcony overlooking Everest.",
-      },
-      {
-        q: "What happens if the flight is delayed due to weather?",
-        a: "Safety is our number one priority. Our operations team monitors real-time Lukla and Syangboche meteorological feeds. If weather is unfavorable, we will either wait for the weather window or reschedule you at zero charge, or issue a 100% full refund.",
-      },
-      {
-        q: "Do I need prior mountain trekking experience?",
-        a: "No trekking experience is needed! This helicopter tour is suitable for travelers of all ages, from young children to seniors.",
-      },
-    ],
-    testimonies: [
-      {
-        name: "David Miller",
-        country: "United Kingdom",
-        rating: 5,
-        comment:
-          "Landing at Kala Patthar with Mount Everest right in front of us was the highlight of our entire Nepal holiday. The pilot was calm, courteous, and very experienced.",
-        date: "September 2026",
-      },
-      {
-        name: "Ananya Sharma",
-        country: "India",
-        rating: 5,
-        comment:
-          "Unbelievable experience! Breakfast at Hotel Everest View with clear blue skies and crisp mountain air. Highly recommended for families with elders.",
-        date: "August 2026",
-      },
-      {
-        name: "Elena Rostova",
-        country: "Germany",
-        rating: 5,
-        comment:
-          "Trip Himalaya managed everything smoothly — from the 5:30 AM hotel pickup in Kathmandu to the landing at Everest. Truly unforgettable!",
-        date: "July 2026",
-      },
-    ],
-  },
-  {
-    id: "annapurna-base-camp-heli",
-    title: "Annapurna Base Camp Helicopter Tour",
-    slug: "annapurna-base-camp-heli",
-    tag: "AIR ADVENTURE",
-    location: "Annapurna Sanctuary / Pokhara",
-    duration: "2 Hours",
-    maxAltitude: "4,130m (ABC)",
-    rating: 5,
-    reviewsCount: 218,
-    charterPriceNPR: 385000,
-    sharingPriceNPR: 85000,
-    charterDesc:
-      "Exclusive charter flight directly from Pokhara Airport into the heart of the 360-degree Annapurna mountain amphitheater.",
-    sharingDesc:
-      "Seat-in-helicopter shared departure from Pokhara. Daily morning flights during peak trekking seasons.",
-    image:
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-    gallery: [
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200",
-    ],
-    description:
-      "Fly from scenic Pokhara Valley directly into the Annapurna Sanctuary amphitheater. Land at ABC (4,130m) surrounded by Annapurna I, Machapuchare (Fishtail), and Hiunchuli.",
-    category: "abc",
-    tripHighlights: [
-      "Low-level flight over Phewa Lake and Pokhara Valley",
-      "30-minute ground landing at Annapurna Base Camp (4,130m)",
-      "Close-up views of Mount Machapuchare (Fishtail) and Annapurna South",
-      "Hot tea/coffee at base camp mountain lodge",
-      "CAAN-certified mountain pilot & onboard oxygen",
-    ],
-    whatsIncluded: [
-      "Pickup and drop-off from Pokhara lakeside hotels",
-      "Scenic helicopter flight to Annapurna Base Camp & return",
-      "Annapurna Conservation Area Project (ACAP) permit fees",
-      "Ground landing time at ABC (approx. 30 mins)",
-      "All airport taxes and handling fees",
-    ],
-    whatsExcluded: [
-      "Personal travel insurance with emergency heli rescue",
-      "Breakfast/meals at base camp",
-      "Personal expenses and tips",
-    ],
-    restrictionsAndHealth: [
-      "Accurate passenger weight declaration required at check-in",
-      "Warm down jacket and UV sunglasses recommended",
-      "Safe for all ages without extreme medical restrictions",
-    ],
-    whatToBring: [
-      "Original Passport / National ID card",
-      "Warm windbreaker or down jacket",
-      "Camera / phone with full battery",
-      "Sunglasses and sunscreen",
-    ],
-    policies: [
-      "100% refund in case of inclement weather cancellation in Pokhara.",
-      "Maximum 5 passengers per flight or 420kg total passenger payload.",
-    ],
-    faqs: [
-      {
-        q: "Where does this flight take off from?",
-        a: "This tour departs from Pokhara Airport. We provide complimentary pickup from your hotel in Lakeside Pokhara.",
-      },
-      {
-        q: "How long is the flight from Pokhara to ABC?",
-        a: "The flight takes approximately 18 to 20 minutes each way, with 30 minutes on the ground at the base camp.",
-      },
-    ],
-    testimonies: [
-      {
-        name: "Saurav Joshi",
-        country: "Nepal",
-        rating: 5,
-        comment:
-          "The views of Fishtail from the helicopter were breathtaking. Within 25 minutes of leaving Pokhara we were standing in snow at ABC!",
-        date: "September 2026",
-      },
-    ],
-  },
-  {
-    id: "langtang-valley-heli",
-    title: "Langtang Valley & Kyanjin Gompa Heli Tour",
-    slug: "langtang-valley-heli",
-    tag: "AIR ADVENTURE",
-    location: "Kyanjin Gompa / Langtang Valley",
-    duration: "2 Hours",
-    maxAltitude: "3,870m (Kyanjin)",
-    rating: 5,
-    reviewsCount: 164,
-    charterPriceNPR: 320000,
-    sharingPriceNPR: 75000,
-    charterDesc:
-      "Short, dramatic flight north of Kathmandu into the serene Langtang Himalayan valley and famous yak cheese factory village.",
-    sharingDesc:
-      "Cost-effective shared seat tour departing from Kathmandu Domestic Airport.",
-    image:
-      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200",
-    gallery: [
-      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
-    ],
-    description:
-      "The closest alpine helicopter escape from Kathmandu. Land at Kyanjin Gompa (3,870m) beneath Langtang Lirung, explore the ancient monastery, and sample fresh Himalayan yak cheese.",
-    category: "langtang",
-    tripHighlights: [
-      "Quick 25-minute flight from Kathmandu over pine valleys",
-      "45-minute landing at Kyanjin Gompa (3,870m)",
-      "Visit ancient Buddhist monastery & traditional Swiss-heritage Yak Cheese factory",
-      "Spectacular vistas of Langtang Lirung (7,227m) and Ganesh Himal",
-    ],
-    whatsIncluded: [
-      "Hotel pickup and drop-off in Kathmandu",
-      "Return helicopter flight Kathmandu - Kyanjin Gompa",
-      "Langtang National Park entry permit",
-      "Airport passenger tax",
-    ],
-    whatsExcluded: ["Food and beverages at Kyanjin", "Personal expenses"],
-    restrictionsAndHealth: [
-      "Standard CAAN weight declaration at booking",
-      "Warm layers recommended as temperatures at Kyanjin can be cold in mornings",
-    ],
-    whatToBring: ["ID card / passport copy", "Warm jacket", "Sunglasses", "Camera"],
-    policies: ["Free weather rescheduling or 100% full refund."],
-    faqs: [
-      {
-        q: "Can we visit the cheese factory?",
-        a: "Yes! The local government Yak Cheese production facility is a short 3-minute stroll from the helipad at Kyanjin.",
-      },
-    ],
-    testimonies: [
-      {
-        name: "Chloe Dupont",
-        country: "France",
-        rating: 5,
-        comment:
-          "Short and peaceful tour! We had breakfast in Kathmandu, flew to Kyanjin for coffee and cheese tasting with snow mountains all around, and were back by lunch.",
-        date: "August 2026",
-      },
-    ],
-  },
-  {
-    id: "gosaikunda-lake-heli",
-    title: "Gosaikunda Holy Lake Helicopter Tour",
-    slug: "gosaikunda-lake-heli",
-    tag: "PILGRIMAGE & SCENIC",
-    location: "Gosaikunda Sacred Lakes, Rasuwa",
-    duration: "1.5 Hours",
-    maxAltitude: "4,380m (Holy Lake)",
-    rating: 5,
-    reviewsCount: 185,
-    charterPriceNPR: 290000,
-    sharingPriceNPR: 65000,
-    charterDesc:
-      "Dedicated charter for sacred pooja, family holy darshan, and breathtaking alpine photography.",
-    sharingDesc:
-      "Shared seats available on auspicious Hindu & Buddhist festival dates and peak weekends.",
-    image:
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-    gallery: [
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
-    ],
-    description:
-      "A revered Hindu and Buddhist high-altitude pilgrimage. Fly from Kathmandu directly to the glacial alpine waters of Gosaikunda Lake (4,380m) dedicated to Lord Shiva.",
-    category: "pilgrimage",
-    tripHighlights: [
-      "Swift 15-minute flight from Kathmandu airport",
-      "30-minute sacred holy darshan and pooja at Gosaikunda Lake",
-      "Surrounded by snowy peaks of Ganesh Himal and Langtang range",
-      "Ideal for elderly devotees unable to undertake the 5-day strenuous trek",
-    ],
-    whatsIncluded: [
-      "Kathmandu hotel transfers",
-      "Return helicopter flight",
-      "Langtang National Park permit",
-      "Airport security and ground fees",
-    ],
-    whatsExcluded: ["Temple offerings and pooja materials", "Personal expenses"],
-    restrictionsAndHealth: [
-      "Mandatory body weight declaration",
-      "Warm woolen clothing required as lake altitude can reach near freezing in early morning",
-    ],
-    whatToBring: ["ID card/Passport", "Warm down jacket", "Pooja supplies (optional)"],
-    policies: ["Full refund for weather cancellations."],
-    faqs: [
-      {
-        q: "Is there time to perform a quick pooja and holy water dip?",
-        a: "Yes, the 30-minute ground stop provides ample time to offer prayers, take holy water, and capture photos.",
-      },
-    ],
-    testimonies: [
-      {
-        name: "Rameshwar Prasad",
-        country: "India",
-        rating: 5,
-        comment:
-          "Took my elderly parents for Gosaikunda darshan. The helicopter landed right beside the lake. Blessed experience!",
-        date: "July 2026",
-      },
-    ],
-  },
-  {
-    id: "muktinath-temple-heli",
-    title: "Muktinath VIP Helicopter Pilgrimage",
-    slug: "muktinath-temple-heli",
-    tag: "VIP PILGRIMAGE",
-    location: "Mustang / Muktinath (3,710m)",
-    duration: "3 Hours",
-    maxAltitude: "3,710m (Muktinath)",
-    rating: 5,
-    reviewsCount: 198,
-    charterPriceNPR: 520000,
-    sharingPriceNPR: 120000,
-    charterDesc:
-      "VIP private charter flight directly into Mustang valley with 1.5-hour priority ground stop for 108 water sprouts bath and Vishnu darshan.",
-    sharingDesc:
-      "Shared seat availability departing from Pokhara or Kathmandu for pilgrims.",
-    image:
-      "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&q=80&w=1200",
-    gallery: [
-      "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
-    ],
-    description:
-      "The sacred shrine of liberation (Moksha Kshetra). Fly past the Kali Gandaki gorge, Annapurna, and Dhaulagiri directly to Muktinath in Mustang.",
-    category: "pilgrimage",
-    tripHighlights: [
-      "Deep gorge flight between Dhaulagiri (8,167m) and Annapurna (8,091m)",
-      "1.5 hours ground time at Muktinath Temple for pooja and holy bath",
-      "Holy 108 water sprouts (Muktidhara) and sacred Jwala Mai eternal flame",
-      "Horse / pony ride or private jeep shuttle from helipad to temple",
-    ],
-    whatsIncluded: [
-      "Kathmandu or Pokhara airport transfers",
-      "Charter or shared seat helicopter flight",
-      "Annapurna Conservation Area Project & TIMS permits",
-      "Helipad to temple transfer coordination",
-    ],
-    whatsExcluded: ["Donations and pooja dakshina", "Personal shopping"],
-    restrictionsAndHealth: [
-      "Weight declaration required",
-      "Bring comfortable walking shoes or request horse ride at helipad",
-    ],
-    whatToBring: ["ID card/Passport", "Warm clothes", "Dry clothes if taking 108 sprouts bath"],
-    policies: ["100% weather guarantee policy."],
-    faqs: [
-      {
-        q: "Is it easy for senior citizens to reach the temple from the helipad?",
-        a: "Yes, horses/ponies and local jeeps are stationed right at the helipad to escort seniors directly to the temple gates.",
-      },
-    ],
-    testimonies: [
-      {
-        name: "Smt. K. Venkataraman",
-        country: "India",
-        rating: 5,
-        comment:
-          "Muktinath darshan was a lifelong dream accomplished in total comfort. Trip Himalaya arranged everything seamlessly.",
-        date: "September 2026",
-      },
-    ],
-  },
-  {
-    id: "medical-rescue-heli",
-    title: "24/7 Himalayan Emergency Medical Rescue",
-    slug: "medical-rescue-heli",
-    tag: "EMERGENCY STANDBY",
-    location: "All Nepal Mountain Regions (Up to 6,000m)",
-    duration: "Immediate Dispatch",
-    maxAltitude: "6,000m+ (Oxygen & Doctor)",
-    rating: 5,
-    reviewsCount: 450,
-    charterPriceNPR: 450000,
-    sharingPriceNPR: 450000,
-    charterDesc:
-      "Immediate VIP emergency dispatch with onboard HEMS flight doctor, medical oxygen, and direct ambulance handover to CIWEC / Mediciti hospital.",
-    sharingDesc:
-      "Immediate dedicated aircraft dispatch. Cashless insurance coordination handled.",
-    image:
-      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=1200",
-    gallery: [
-      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=1200",
-    ],
-    description:
-      "Round-the-clock emergency medical evacuation service across Everest, Annapurna, Manaslu, and remote trekking regions. Coordination with global travel insurance agencies.",
-    category: "rescue",
-    tripHighlights: [
-      "45-minute rapid takeoff from Kathmandu/Lukla/Pokhara upon notification",
-      "HEMS-certified pilots and high-altitude emergency medics",
-      "Continuous oxygen support, vital monitoring, and spinal stretchers onboard",
-      "Direct tarmac transfer to waiting ICU ambulance in Kathmandu",
-    ],
-    whatsIncluded: [
-      "Emergency helicopter flight dispatch",
-      "High-altitude oxygen cylinders & medical kit onboard",
-      "Insurance verification & hospital liaison",
-      "Kathmandu airport tarmac ambulance coordination",
-    ],
-    whatsExcluded: ["Hospital admission costs", "Medicine costs at hospital"],
-    restrictionsAndHealth: [
-      "Provide exact GPS coordinates or tea-house location and patient symptoms",
-    ],
-    whatToBring: ["Insurance policy number", "Passport copy", "Doctor fit to fly note (if available)"],
-    policies: [
-      "Immediate dispatch upon insurance guarantee of payment (GOP) or advance card guarantee.",
-    ],
-    faqs: [
-      {
-        q: "Do you coordinate with international insurance companies?",
-        a: "Yes, we work directly with Allianz, AXA, World Nomads, Bupa, Global Rescue, Ripcord, and all major global insurers.",
-      },
-    ],
-    testimonies: [
-      {
-        name: "Markus Weber",
-        country: "Switzerland",
-        rating: 5,
-        comment:
-          "Suffered from severe HAPE near Lobuche. Trip Himalaya had the helicopter on ground within 40 minutes and landed me directly at CIWEC hospital. They saved my life.",
-        date: "May 2026",
-      },
-    ],
-  },
-];
+export interface PricingTierApi {
+  id: number;
+  package_id: number;
+  service: string;
+  age_group: string | null;
+  price_npr: string;
+  price_usd: string;
+}
+
+const getCategoryFromPackage = (pkg: any): HeliPackageItem["category"] => {
+  const text = `${pkg?.title ?? ""} ${pkg?.location ?? ""}`.toLowerCase();
+  if (text.includes("annapurna")) return "abc";
+  if (text.includes("langtang")) return "langtang";
+  if (text.includes("muktinath") || text.includes("gosaikunda") || text.includes("pilgrim")) return "pilgrimage";
+  if (text.includes("rescue") || text.includes("evacuation")) return "rescue";
+  return "ebc";
+};
+
+const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
+
+  // Actual package price from packages.price
+  const basePrice = Number(pkg?.price ?? 0);
+
+  const heliCapacity =
+    pkg?.package_helis?.[0]?.heli?.capacity;
+
+  return {
+    id: String(pkg.id),
+    backendId: Number(pkg.id),
+
+    title: pkg.title ?? "Helicopter Package",
+    slug: pkg.slug ?? String(pkg.id),
+
+    tag: pkg.tag ?? pkg.adventure_category ?? "",
+
+    location: pkg.location ?? "Nepal",
+    duration: pkg.duration ?? "",
+    maxAltitude: "",
+
+    rating: Number(pkg.rating ?? 0),
+    reviewsCount: Number(pkg.reviews_count ?? pkg.reviewsCount ?? 0),
+
+    // Actual package price
+    packagePriceNPR: basePrice,
+
+    // Keep existing booking UI working without calling pricing-tier API.
+    // Both fallback to the actual package price.
+    charterPriceNPR: basePrice,
+    sharingPriceNPR: basePrice,
+
+    charterDesc: pkg.charter_description ?? pkg.charterDesc ?? "",
+    sharingDesc: pkg.sharing_description ?? pkg.sharingDesc ?? "",
+
+    image: pkg.image ?? "",
+    gallery: pkg.image ? [pkg.image] : [],
+
+    description: pkg.description ?? "",
+
+    category: getCategoryFromPackage(pkg),
+
+    tripHighlights: Array.isArray(pkg.highlights)
+      ? pkg.highlights.map((item: any) => item?.title ?? item?.item ?? item?.description ?? "").filter(Boolean)
+      : [],
+
+    whatsIncluded: Array.isArray(pkg.inclusions)
+      ? pkg.inclusions.map((item: any) => item?.item ?? item?.title ?? item?.description ?? "").filter(Boolean)
+      : [],
+
+    whatsExcluded: Array.isArray(pkg.exclusions)
+      ? pkg.exclusions.map((item: any) => item?.item ?? item?.title ?? item?.description ?? "").filter(Boolean)
+      : [],
+
+    restrictionsAndHealth: Array.isArray(pkg.restrictions_and_health)
+      ? pkg.restrictions_and_health.map((item: any) => typeof item === "string" ? item : item?.item ?? item?.description ?? "").filter(Boolean)
+      : [],
+
+    whatToBring: Array.isArray(pkg.what_to_bring)
+      ? pkg.what_to_bring.map((item: any) => typeof item === "string" ? item : item?.item ?? item?.description ?? "").filter(Boolean)
+      : [],
+
+    policies: Array.isArray(pkg.policies)
+      ? pkg.policies.map((item: any) => typeof item === "string" ? item : item?.item ?? item?.description ?? "").filter(Boolean)
+      : [],
+
+    faqs: [],
+
+    testimonies: Array.isArray(pkg.testimonies)
+      ? pkg.testimonies
+      : [],
+
+
+    package_helis:
+      pkg.package_helis ?? [],
+
+    package_vehicles:
+      pkg.package_vehicles ?? [],
+
+    min_people:
+      pkg.min_people ?? 1,
+
+    max_people:
+      pkg.max_people ?? heliCapacity ?? null,
+  };
+};
 
 // =============================================================================
 // Main PackageHeliService Component
@@ -548,31 +266,160 @@ export const PackageHeliService: React.FC = () => {
   const [searchParams] = useSearchParams();
   const routeTourId = tourId || searchParams.get("tour");
 
+  const [pricingTiers, setPricingTiers] = useState<PricingTierApi[]>([]);
+  const [pricingLoading, setPricingLoading] = useState(false);
+
+  const [heliPackages, setHeliPackages] = useState<HeliPackageItem[]>([]);
+  const [packageFaqs, setPackageFaqs] = useState<Array<{ q: string; a: string }>>([]);
+  const [packagesLoading, setPackagesLoading] = useState<boolean>(true);
+  const [packagesError, setPackagesError] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchHeliPackages = async () => {
+      try {
+        setPackagesLoading(true);
+        setPackagesError("");
+
+        const response = await getPackagesByCategory("Heli Services");
+        const rawPackages = Array.isArray(response.data?.data?.data)
+          ? response.data.data.data
+          : [];
+
+        const mappedPackages = rawPackages.map((pkg: any) =>
+          mapApiPackageToHeliPackage(pkg)
+        );
+
+        if (!cancelled) setHeliPackages(mappedPackages);
+      } catch (error) {
+        console.error("Failed to load Heli Services packages:", error);
+        if (!cancelled) {
+          setHeliPackages([]);
+          setPackagesError("Unable to load helicopter packages.");
+        }
+      } finally {
+        if (!cancelled) setPackagesLoading(false);
+      }
+    };
+
+    fetchHeliPackages();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Read URL search params for heli route/flightType filtering
   const urlRoute = searchParams.get("route") || "";
   const urlFlightType = searchParams.get("flightType") || "";
 
   // Determine active tour from URL (dedicated Details Page route: /service/heli-services/:tourId)
   const selectedTour = routeTourId
-    ? HELI_PACKAGES.find(
-        (t) =>
-          t.id.toLowerCase() === routeTourId.toLowerCase() ||
-          t.slug?.toLowerCase() === routeTourId.toLowerCase()
-      ) || HELI_PACKAGES[0]
+    ? heliPackages.find(
+      (t) =>
+        String(t.id).toLowerCase() === routeTourId.toLowerCase() ||
+        t.slug?.toLowerCase() === routeTourId.toLowerCase()
+    ) || null
     : null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedTour?.backendId) {
+      setPackageFaqs([]);
+      return;
+    }
+
+    const fetchFaqs = async () => {
+      try {
+        const response = await getPackageFaqs(selectedTour.backendId);
+        const rawFaqs: PackageFaqApi[] = Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
+
+        const mappedFaqs = rawFaqs
+          .map((faq) => ({
+            q: faq.question ?? faq.q ?? "",
+            a: faq.answer ?? faq.a ?? "",
+          }))
+          .filter((faq) => faq.q && faq.a);
+
+        if (!cancelled) setPackageFaqs(mappedFaqs);
+      } catch (error) {
+        console.error(`Failed to load FAQs for package ${selectedTour.backendId}:`, error);
+        if (!cancelled) setPackageFaqs([]);
+      }
+    };
+
+    fetchFaqs();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTour?.backendId]);
+
+  // =========================
+  // FETCH PRICING TIERS
+  // =========================
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedTour?.backendId) {
+      setPricingTiers([]);
+      return;
+    }
+
+    const fetchPricingTiers = async () => {
+      try {
+        setPricingLoading(true);
+
+        const response = await getPackagePricingTiers(
+          selectedTour.backendId
+        );
+
+        const tiers: PricingTierApi[] = Array.isArray(
+          response.data?.data
+        )
+          ? response.data.data
+          : [];
+
+        if (!cancelled) {
+          setPricingTiers(tiers);
+        }
+      } catch (error) {
+        console.error(
+          `Failed to load pricing tiers for package ${selectedTour.backendId}:`,
+          error
+        );
+
+        if (!cancelled) {
+          setPricingTiers([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setPricingLoading(false);
+        }
+      }
+    };
+
+    fetchPricingTiers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTour?.backendId]);
 
   const startsFromDisplayPrice = selectedTour
     ? displayPrice(
-        selectedTour.sharingPriceNPR,
-        selectedCurrency,
-        nprPerOneDollar,
-        nprPerOneINR
-      )
+      selectedTour.packagePriceNPR,
+      selectedCurrency,
+      nprPerOneDollar,
+      nprPerOneINR
+    )
     : "";
 
   const rateUSD = nprPerOneDollar || 133;
-  const printCharterPriceNPR = selectedTour?.charterPriceNPR || 385000;
-  const printSharingPriceNPR = selectedTour?.sharingPriceNPR || 85000;
+  const printCharterPriceNPR = selectedTour?.charterPriceNPR || 0;
+  const printSharingPriceNPR = selectedTour?.sharingPriceNPR || 0;
   const printCharterPriceUSD = Math.round(printCharterPriceNPR / rateUSD);
   const printSharingPriceUSD = Math.round(printSharingPriceNPR / rateUSD);
   const printVipPriceNPR = Math.round(printSharingPriceNPR * 1.15);
@@ -603,7 +450,7 @@ export const PackageHeliService: React.FC = () => {
   const [bookingFlightOption, setBookingFlightOption] = useState<"charter" | "sharing">("charter");
   const [bookingSeatCount, setBookingSeatCount] = useState<number>(1);
   const [activeApplicantIndex, setActiveApplicantIndex] = useState<number>(0);
-  const [bookingTotalPriceNPR, setBookingTotalPriceNPR] = useState<number>(696800);
+  const [bookingTotalPriceNPR, setBookingTotalPriceNPR] = useState<number>(0);
 
   // Submission / Print Slip State
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
@@ -1889,7 +1736,7 @@ export const PackageHeliService: React.FC = () => {
   // Instant WhatsApp Inquiry
   const handleWhatsAppInquiry = (tour: HeliPackageItem) => {
     const basePrice = displayPrice(
-      tour.sharingPriceNPR,
+      tour.packagePriceNPR,
       selectedCurrency,
       nprPerOneDollar,
       nprPerOneINR
@@ -1901,19 +1748,22 @@ export const PackageHeliService: React.FC = () => {
   };
 
   // Filter logic — exclude rescue category from listing
-  const LISTING_PACKAGES = HELI_PACKAGES.filter((t) => t.category !== "rescue");
+  const LISTING_PACKAGES = heliPackages;
 
   const filteredTours = LISTING_PACKAGES.filter((tour) => {
-    // Inline search query
+    // Search
     const query = searchQuery.toLowerCase();
+
     const matchesSearch =
       !searchQuery ||
       tour.title.toLowerCase().includes(query) ||
       tour.location.toLowerCase().includes(query) ||
       tour.description.toLowerCase().includes(query) ||
-      tour.tripHighlights.some((h) => h.toLowerCase().includes(query));
+      tour.tripHighlights.some((h) =>
+        h.toLowerCase().includes(query)
+      );
 
-    // Route filter (from header search bar)
+    // Route filter
     const routeMap: Record<string, string> = {
       everest: "ebc",
       annapurna: "abc",
@@ -1921,34 +1771,42 @@ export const PackageHeliService: React.FC = () => {
       muktinath: "pilgrimage",
       gosaikunda: "pilgrimage",
     };
-    const mappedCategory = urlRoute ? routeMap[urlRoute] : "";
+
+    const mappedCategory = urlRoute
+      ? routeMap[urlRoute.toLowerCase()]
+      : "";
+
     const matchesRoute =
       !urlRoute ||
       (mappedCategory
         ? tour.category === mappedCategory
-        : tour.location.toLowerCase().includes(urlRoute.toLowerCase()) ||
-          tour.title.toLowerCase().includes(urlRoute.toLowerCase()));
+        : tour.location
+          .toLowerCase()
+          .includes(urlRoute.toLowerCase()) ||
+        tour.title
+          .toLowerCase()
+          .includes(urlRoute.toLowerCase()));
 
-    // Flight type filter (from header search bar)
-    const matchesFlightType =
-      !urlFlightType ||
-      (urlFlightType === "charter"
-        ? tour.charterPriceNPR > 0
-        : urlFlightType === "sharing"
-        ? tour.sharingPriceNPR > 0
-        : true);
+    // Flight Type
+    // Pricing-tier API is intentionally not called here, so do not filter
+    // packages by pricing-tier service.
+    const matchesFlightType = true;
 
-    // Price range (compare sharing price or charter)
-    const matchesPrice = tour.sharingPriceNPR <= priceRange;
+    // Price
+    const matchesPrice =
+      tour.packagePriceNPR <= priceRange;
 
     // Rating
-    const matchesRating = selectedRating === 0 || tour.rating >= selectedRating;
+    const matchesRating =
+      selectedRating === 0 ||
+      tour.rating >= selectedRating;
 
     // Keywords
     const matchesKeywords =
       selectedKeywords.length === 0 ||
       selectedKeywords.some((kw) => {
         const kwLower = kw.toLowerCase();
+
         return (
           tour.title.toLowerCase().includes(kwLower) ||
           tour.location.toLowerCase().includes(kwLower) ||
@@ -1957,7 +1815,14 @@ export const PackageHeliService: React.FC = () => {
         );
       });
 
-    return matchesSearch && matchesRoute && matchesFlightType && matchesPrice && matchesRating && matchesKeywords;
+    return (
+      matchesSearch &&
+      matchesRoute &&
+      matchesFlightType &&
+      matchesPrice &&
+      matchesRating &&
+      matchesKeywords
+    );
   });
 
   const availableKeywords = [
@@ -1970,6 +1835,30 @@ export const PackageHeliService: React.FC = () => {
     "SHARING",
     "LUXURY",
   ];
+
+  if (packagesLoading) {
+    return (
+      <div className="w-full py-16 text-center text-sm font-bold text-gray-500">
+        Loading helicopter packages...
+      </div>
+    );
+  }
+
+  if (packagesError) {
+    return (
+      <div className="w-full py-16 text-center text-sm font-bold text-red-500">
+        {packagesError}
+      </div>
+    );
+  }
+
+  if (routeTourId && !selectedTour) {
+    return (
+      <div className="w-full py-16 text-center text-sm font-bold text-gray-500">
+        Helicopter package not found.
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -1986,344 +1875,344 @@ export const PackageHeliService: React.FC = () => {
           {!isBookingModalOpen && (
             <div
               id="heli-print-dossier"
-            className="hidden print:block relative"
-            style={{
-              fontFamily: "'Inter', Arial, sans-serif",
-              fontSize: "9.5px",
-              lineHeight: "1.45",
-              color: "#1e293b",
-              width: "100%",
-              position: "relative",
-              WebkitPrintColorAdjust: "exact",
-              printColorAdjust: "exact",
-            }}
-          >
-            {/* ── BACKGROUND WATERMARK ── */}
-            <div
-              aria-hidden="true"
+              className="hidden print:block relative"
               style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-                userSelect: "none",
-                zIndex: 999,
+                fontFamily: "'Inter', Arial, sans-serif",
+                fontSize: "9.5px",
+                lineHeight: "1.45",
+                color: "#1e293b",
+                width: "100%",
+                position: "relative",
+                WebkitPrintColorAdjust: "exact",
+                printColorAdjust: "exact",
               }}
             >
+              {/* ── BACKGROUND WATERMARK ── */}
               <div
+                aria-hidden="true"
                 style={{
-                  transform: "rotate(-28deg)",
-                  fontSize: "38px",
-                  fontWeight: 900,
-                  color: "rgba(45, 19, 71, 0.06)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  lineHeight: 2.2,
-                  whiteSpace: "nowrap",
-                  textAlign: "center",
-                  mixBlendMode: "multiply",
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  zIndex: 999,
                 }}
               >
-                Trip Himalaya Tours and Travels
-              </div>
-            </div>
-
-            {/* ── 1. CORPORATE LETTERHEAD ── */}
-            <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "10px 10px 0 0", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-                <div style={{ background: "#ffffff", borderRadius: "8px", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <img src={Logo} alt="Trip Himalaya" style={{ height: "68px", width: "auto", objectFit: "contain", display: "block" }} />
+                <div
+                  style={{
+                    transform: "rotate(-28deg)",
+                    fontSize: "38px",
+                    fontWeight: 900,
+                    color: "rgba(45, 19, 71, 0.06)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    lineHeight: 2.2,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                    mixBlendMode: "multiply",
+                  }}
+                >
+                  Trip Himalaya Tours and Travels
                 </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: "16px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0, whiteSpace: "nowrap" }}>
-                    Trip Himalaya Tours &amp; Travel Pvt. Ltd.
+              </div>
+
+              {/* ── 1. CORPORATE LETTERHEAD ── */}
+              <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "10px 10px 0 0", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
+                  <div style={{ background: "#ffffff", borderRadius: "8px", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <img src={Logo} alt="Trip Himalaya" style={{ height: "68px", width: "auto", objectFit: "contain", display: "block" }} />
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "2.5px",
-                      marginTop: "4px",
-                      fontSize: "8.5px",
-                      color: "#f3e8ff",
-                      lineHeight: "1.35",
-                    }}
-                  >
-                    {/* Row 1: Address */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                      <MapPin size={10} color="#f472b6" style={{ flexShrink: 0 }} />
-                      <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: "16px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0, whiteSpace: "nowrap" }}>
+                      Trip Himalaya Tours &amp; Travel Pvt. Ltd.
                     </div>
-                    {/* Row 2: Phone + Website */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                        <span style={{ color: "#f472b6" }}>📞</span>
-                        <span>+977 9851403761</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                        <span style={{ color: "#f472b6" }}>🌐</span>
-                        <span>www.triphimalaya.com.np</span>
-                      </div>
-                    </div>
-                    {/* Row 3: Email */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                      <span style={{ color: "#f472b6" }}>✉</span>
-                      <span>pradip.triphimalayatt@gmail.com</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", alignSelf: "flex-end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", paddingBottom: "2px" }}>
-                <div style={{ fontSize: "8.5px", background: "rgba(233, 30, 99, 0.25)", color: "#fbcfe8", padding: "2px 8px", borderRadius: "4px", fontWeight: 700, border: "1px solid rgba(233, 30, 99, 0.4)" }}>
-                  Helicopter Operations Team
-                </div>
-                <div style={{ fontSize: "9.5px", color: "#e9d5ff", whiteSpace: "nowrap" }}>
-                  Date: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-                </div>
-              </div>
-            </div>
-            {/* Project brand accent strip */}
-            <div style={{ height: "4px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "10px" }} />
-
-            {/* ── PACKAGE SUMMARY & OVERVIEW CARD ── */}
-            <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>{selectedTour.title}</div>
-                  <div style={{ fontSize: "8.5px", color: "#6b21a8", marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                    <span style={{ background: "#2D1347", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>Heli Services</span>
-                    {selectedTour.location && <span style={{ background: "#7c3aed", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>📍 {selectedTour.location}</span>}
-                    {selectedTour.duration && <span style={{ background: "#9333ea", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⏱ {selectedTour.duration}</span>}
-                    {selectedTour.maxAltitude && <span style={{ background: "#c026d3", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⚡ Max Alt: {selectedTour.maxAltitude}</span>}
-                    <span style={{ background: "#E91E63", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>★ {selectedTour.rating || 4.9} / 5.0 ({selectedTour.reviewsCount || 1} reviews)</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "8px", color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Starting From</div>
-                  <div style={{ fontSize: "16px", fontWeight: 900, color: "#2D1347" }}>{startsFromDisplayPrice}</div>
-                </div>
-              </div>
-              <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
-                <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
-                {selectedTour.description}
-              </div>
-            </div>
-
-            {/* ── SECTION 1: PRICING SCHEDULE ── */}
-            <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "5px" }}>
-                1. Pricing Schedule &amp; Package Tiers
-              </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px", border: "1px solid #e9d5ff" }}>
-                <thead>
-                  <tr style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", color: "#ffffff" }}>
-                    <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 800, width: "42%" }}>Service / Experience Tier</th>
-                    <th style={{ padding: "6px 8px", textAlign: "center", fontWeight: 800, width: "22%" }}>Group / Age Bracket</th>
-                    <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (NPR)</th>
-                    <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (USD)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
-                    <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Private Charter (Full Helicopter)</td>
-                    <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Up to 5 Pax (Private Flight)</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printCharterPriceNPR.toLocaleString("en-IN")}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printCharterPriceUSD.toLocaleString()}</td>
-                  </tr>
-                  <tr style={{ background: "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
-                    <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Group Joining (Per Seat Sharing)</td>
-                    <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Guaranteed Seat)</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printSharingPriceNPR.toLocaleString("en-IN")}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printSharingPriceUSD.toLocaleString()}</td>
-                  </tr>
-                  <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
-                    <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>VIP Priority (Front Window View)</td>
-                    <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Front Window Seat)</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printVipPriceNPR.toLocaleString("en-IN")}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printVipPriceUSD.toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div style={{ fontSize: "8px", color: "#7c3aed", marginTop: "3px", fontWeight: 500 }}>
-                * Rates include certified captain/pilot fees, aviation passenger insurance, landing permits, national park fees, and emergency ground support.
-              </div>
-            </div>
-
-            {/* ── SECTION 2: DAY-BY-DAY / STEP-BY-STEP ITINERARY ── */}
-            <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                2. Step-by-Step Experience Itinerary &amp; Timeline
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                {heliItineraryList.map((item, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      border: "1px solid #e9d5ff",
-                      borderRadius: "4px",
-                      padding: "6px 8px",
-                      background: "#faf5ff",
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "flex-start",
-                      pageBreakInside: "avoid",
-                      breakInside: "avoid",
-                    }}
-                  >
                     <div
                       style={{
-                        background: "#2D1347",
-                        color: "#ffffff",
-                        fontSize: "8px",
-                        fontWeight: 800,
-                        padding: "2px 6px",
-                        borderRadius: "3px",
-                        flexShrink: 0,
-                        textTransform: "uppercase",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2.5px",
+                        marginTop: "4px",
+                        fontSize: "8.5px",
+                        color: "#f3e8ff",
+                        lineHeight: "1.35",
                       }}
                     >
-                      {item.phase || `Phase ${i + 1}`}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "9.5px", fontWeight: 800, color: "#2D1347" }}>{item.title}</div>
-                      <div style={{ fontSize: "8.5px", color: "#581c87", marginTop: "1px", lineHeight: "1.35" }}>{item.desc}</div>
+                      {/* Row 1: Address */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                        <MapPin size={10} color="#f472b6" style={{ flexShrink: 0 }} />
+                        <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
+                      </div>
+                      {/* Row 2: Phone + Website */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                          <span style={{ color: "#f472b6" }}>📞</span>
+                          <span>+977 9851403761</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                          <span style={{ color: "#f472b6" }}>🌐</span>
+                          <span>www.triphimalaya.com.np</span>
+                        </div>
+                      </div>
+                      {/* Row 3: Email */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                        <span style={{ color: "#f472b6" }}>✉</span>
+                        <span>pradip.triphimalayatt@gmail.com</span>
+                      </div>
                     </div>
                   </div>
-                ))}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", alignSelf: "flex-end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", paddingBottom: "2px" }}>
+                  <div style={{ fontSize: "8.5px", background: "rgba(233, 30, 99, 0.25)", color: "#fbcfe8", padding: "2px 8px", borderRadius: "4px", fontWeight: 700, border: "1px solid rgba(233, 30, 99, 0.4)" }}>
+                    Helicopter Operations Team
+                  </div>
+                  <div style={{ fontSize: "9.5px", color: "#e9d5ff", whiteSpace: "nowrap" }}>
+                    Date: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  </div>
+                </div>
               </div>
-            </div>
+              {/* Project brand accent strip */}
+              <div style={{ height: "4px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "10px" }} />
 
-            {/* ── SECTION 3: TRIP HIGHLIGHTS ── */}
-            <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                3. Key Highlights &amp; Features
-              </div>
-              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
-                  {(selectedTour.tripHighlights || []).map((h: string, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "9px", color: "#4a154b" }}>
-                      <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
-                      <span style={{ lineHeight: "1.35" }}>{h}</span>
+              {/* ── PACKAGE SUMMARY & OVERVIEW CARD ── */}
+              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>{selectedTour.title}</div>
+                    <div style={{ fontSize: "8.5px", color: "#6b21a8", marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ background: "#2D1347", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>Heli Services</span>
+                      {selectedTour.location && <span style={{ background: "#7c3aed", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>📍 {selectedTour.location}</span>}
+                      {selectedTour.duration && <span style={{ background: "#9333ea", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⏱ {selectedTour.duration}</span>}
+                      {selectedTour.maxAltitude && <span style={{ background: "#c026d3", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⚡ Max Alt: {selectedTour.maxAltitude}</span>}
+                      <span style={{ background: "#E91E63", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>★ {selectedTour.rating || 4.9} / 5.0 ({selectedTour.reviewsCount || 1} reviews)</span>
                     </div>
-                  ))}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: "8px", color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Starting From</div>
+                    <div style={{ fontSize: "16px", fontWeight: 900, color: "#2D1347" }}>{startsFromDisplayPrice}</div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* ── SECTION 4: INCLUSIONS & EXCLUSIONS (2 columns) ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              {/* What's Included */}
-              <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
-                <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                  4. What&apos;s Included
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  {(selectedTour.whatsIncluded || []).map((inc: string, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
-                      <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
-                      <span style={{ lineHeight: "1.3" }}>{inc}</span>
-                    </div>
-                  ))}
+                <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
+                  <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
+                  {selectedTour.description}
                 </div>
               </div>
 
-              {/* What's Excluded */}
-              <div style={{ border: "1.5px solid #fecdd3", borderRadius: "6px", padding: "8px 10px", background: "#fff1f2" }}>
-                <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "3px", marginBottom: "5px" }}>
-                  5. What&apos;s Excluded / Not Included
+              {/* ── SECTION 1: PRICING SCHEDULE ── */}
+              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "5px" }}>
+                  1. Pricing Schedule &amp; Package Tiers
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  {(selectedTour.whatsExcluded || []).map((ex: string, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
-                      <span style={{ fontWeight: 900, color: "#be185d", flexShrink: 0 }}>✗</span>
-                      <span style={{ lineHeight: "1.3" }}>{ex}</span>
-                    </div>
-                  ))}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px", border: "1px solid #e9d5ff" }}>
+                  <thead>
+                    <tr style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", color: "#ffffff" }}>
+                      <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 800, width: "42%" }}>Service / Experience Tier</th>
+                      <th style={{ padding: "6px 8px", textAlign: "center", fontWeight: 800, width: "22%" }}>Group / Age Bracket</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (NPR)</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
+                      <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Private Charter (Full Helicopter)</td>
+                      <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Up to 5 Pax (Private Flight)</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printCharterPriceNPR.toLocaleString("en-IN")}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printCharterPriceUSD.toLocaleString()}</td>
+                    </tr>
+                    <tr style={{ background: "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
+                      <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Group Joining (Per Seat Sharing)</td>
+                      <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Guaranteed Seat)</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printSharingPriceNPR.toLocaleString("en-IN")}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printSharingPriceUSD.toLocaleString()}</td>
+                    </tr>
+                    <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
+                      <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>VIP Priority (Front Window View)</td>
+                      <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Front Window Seat)</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printVipPriceNPR.toLocaleString("en-IN")}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printVipPriceUSD.toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div style={{ fontSize: "8px", color: "#7c3aed", marginTop: "3px", fontWeight: 500 }}>
+                  * Rates include certified captain/pilot fees, aviation passenger insurance, landing permits, national park fees, and emergency ground support.
                 </div>
               </div>
-            </div>
 
-            {/* ── SECTION 5: SAFETY GUIDELINES, RESTRICTIONS & WHAT TO BRING (2 columns) ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              {/* Restrictions */}
-              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                  6. Safety Restrictions &amp; CAAN Flight Rules
+              {/* ── SECTION 2: DAY-BY-DAY / STEP-BY-STEP ITINERARY ── */}
+              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
+                  2. Step-by-Step Experience Itinerary &amp; Timeline
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  {(selectedTour.restrictionsAndHealth || []).map((r: string, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4a154b" }}>
-                      <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
-                      <span style={{ lineHeight: "1.3" }}>{r}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* What to Bring */}
-              <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
-                <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                  7. Passenger Checklist &amp; What to Bring
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  {(selectedTour.whatToBring || []).map((b: string, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
-                      <span style={{ fontWeight: 900, color: "#9333ea", flexShrink: 0 }}>&bull;</span>
-                      <span style={{ lineHeight: "1.3" }}>{b}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* ── SECTION 6: FREQUENTLY ASKED QUESTIONS ── */}
-            <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                8. Important FAQs &amp; Flight Information
-              </div>
-              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  {(selectedTour.faqs || []).map((faq, i) => (
-                    <div key={i} style={{ fontSize: "8.5px", color: "#4a154b", lineHeight: "1.35" }}>
-                      <div style={{ fontWeight: 800, color: "#2D1347" }}>Q: {faq.q}</div>
-                      <div style={{ color: "#581c87", marginTop: "1px" }}>A: {faq.a}</div>
+                  {heliItineraryList.map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        border: "1px solid #e9d5ff",
+                        borderRadius: "4px",
+                        padding: "6px 8px",
+                        background: "#faf5ff",
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "flex-start",
+                        pageBreakInside: "avoid",
+                        breakInside: "avoid",
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "#2D1347",
+                          color: "#ffffff",
+                          fontSize: "8px",
+                          fontWeight: 800,
+                          padding: "2px 6px",
+                          borderRadius: "3px",
+                          flexShrink: 0,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {item.phase || `Phase ${i + 1}`}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "9.5px", fontWeight: 800, color: "#2D1347" }}>{item.title}</div>
+                        <div style={{ fontSize: "8.5px", color: "#581c87", marginTop: "1px", lineHeight: "1.35" }}>{item.desc}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
 
-            {/* ── SECTION 7: BOOKING TERMS & CANCELLATION POLICIES ── */}
-            <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 10px", marginBottom: "10px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
-              <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                9. Booking Policies, Weather &amp; Cancellation Terms
+              {/* ── SECTION 3: TRIP HIGHLIGHTS ── */}
+              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
+                  3. Key Highlights &amp; Features
+                </div>
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                    {(selectedTour.tripHighlights || []).map((h: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "9px", color: "#4a154b" }}>
+                        <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
+                        <span style={{ lineHeight: "1.35" }}>{h}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", fontSize: "8px", color: "#4a154b", lineHeight: "1.4" }}>
-                <div><strong style={{ color: "#2D1347" }}>Weather Guarantee:</strong> 100% full refund or complimentary reschedule if flight is grounded due to mountain weather/air traffic control.</div>
-                <div><strong style={{ color: "#2D1347" }}>Weight &amp; Balance:</strong> Strictly max 5 passengers or total passenger weight per CAAN and aircraft flight manual specifications.</div>
-                <div><strong style={{ color: "#2D1347" }}>Reservation &amp; Confirmation:</strong> 30% advance deposit secures flight slot and permits; balance payable prior to boarding.</div>
-                <div><strong style={{ color: "#2D1347" }}>Permits &amp; Identification:</strong> Valid passport copy (or Nepali citizenship ID) required for domestic terminal clearance.</div>
-              </div>
-            </div>
 
-            {/* ── CORPORATE FOOTER ── */}
-            <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "8px 14px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8.5px", color: "#ffffff" }}>
-              <div>
-                <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> &bull; Registered in Nepal (Lic: 2490)
+              {/* ── SECTION 4: INCLUSIONS & EXCLUSIONS (2 columns) ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                {/* What's Included */}
+                <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                    4. What&apos;s Included
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {(selectedTour.whatsIncluded || []).map((inc: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
+                        <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
+                        <span style={{ lineHeight: "1.3" }}>{inc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* What's Excluded */}
+                <div style={{ border: "1.5px solid #fecdd3", borderRadius: "6px", padding: "8px 10px", background: "#fff1f2" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "3px", marginBottom: "5px" }}>
+                    5. What&apos;s Excluded / Not Included
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {(selectedTour.whatsExcluded || []).map((ex: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
+                        <span style={{ fontWeight: 900, color: "#be185d", flexShrink: 0 }}>✗</span>
+                        <span style={{ lineHeight: "1.3" }}>{ex}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{ color: "#fce7f3" }}>
-                Heli Operations Desk: +977 9851403761 &bull; pradip.triphimalayatt@gmail.com
+
+              {/* ── SECTION 5: SAFETY GUIDELINES, RESTRICTIONS & WHAT TO BRING (2 columns) ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                {/* Restrictions */}
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                    6. Safety Restrictions &amp; CAAN Flight Rules
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {(selectedTour.restrictionsAndHealth || []).map((r: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4a154b" }}>
+                        <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
+                        <span style={{ lineHeight: "1.3" }}>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* What to Bring */}
+                <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                    7. Passenger Checklist &amp; What to Bring
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {(selectedTour.whatToBring || []).map((b: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
+                        <span style={{ fontWeight: 900, color: "#9333ea", flexShrink: 0 }}>&bull;</span>
+                        <span style={{ lineHeight: "1.3" }}>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{ fontWeight: 700, color: "#f472b6" }}>
-                Official Computer-Generated Travel Dossier &bull; Page 1 of 1
+
+              {/* ── SECTION 6: FREQUENTLY ASKED QUESTIONS ── */}
+              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
+                  8. Important FAQs &amp; Flight Information
+                </div>
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    {packageFaqs.map((faq, i) => (
+                      <div key={i} style={{ fontSize: "8.5px", color: "#4a154b", lineHeight: "1.35" }}>
+                        <div style={{ fontWeight: 800, color: "#2D1347" }}>Q: {faq.q}</div>
+                        <div style={{ color: "#581c87", marginTop: "1px" }}>A: {faq.a}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── SECTION 7: BOOKING TERMS & CANCELLATION POLICIES ── */}
+              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 10px", marginBottom: "10px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                  9. Booking Policies, Weather &amp; Cancellation Terms
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", fontSize: "8px", color: "#4a154b", lineHeight: "1.4" }}>
+                  <div><strong style={{ color: "#2D1347" }}>Weather Guarantee:</strong> 100% full refund or complimentary reschedule if flight is grounded due to mountain weather/air traffic control.</div>
+                  <div><strong style={{ color: "#2D1347" }}>Weight &amp; Balance:</strong> Strictly max 5 passengers or total passenger weight per CAAN and aircraft flight manual specifications.</div>
+                  <div><strong style={{ color: "#2D1347" }}>Reservation &amp; Confirmation:</strong> 30% advance deposit secures flight slot and permits; balance payable prior to boarding.</div>
+                  <div><strong style={{ color: "#2D1347" }}>Permits &amp; Identification:</strong> Valid passport copy (or Nepali citizenship ID) required for domestic terminal clearance.</div>
+                </div>
+              </div>
+
+              {/* ── CORPORATE FOOTER ── */}
+              <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "8px 14px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8.5px", color: "#ffffff" }}>
+                <div>
+                  <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> &bull; Registered in Nepal (Lic: 2490)
+                </div>
+                <div style={{ color: "#fce7f3" }}>
+                  Heli Operations Desk: +977 9851403761 &bull; pradip.triphimalayatt@gmail.com
+                </div>
+                <div style={{ fontWeight: 700, color: "#f472b6" }}>
+                  Official Computer-Generated Travel Dossier &bull; Page 1 of 1
+                </div>
               </div>
             </div>
-          </div>
           )}
 
           {/* ── TOP HERO HEADER (From Image 2) ── */}
@@ -2375,7 +2264,7 @@ export const PackageHeliService: React.FC = () => {
                   <button
                     type="button"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(window.location.href).catch(() => {});
+                      await navigator.clipboard.writeText(window.location.href).catch(() => { });
                       setIsShareCopied(true);
                       setTimeout(() => setIsShareCopied(false), 2000);
                       window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
@@ -2399,7 +2288,7 @@ export const PackageHeliService: React.FC = () => {
                   <button
                     type="button"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(window.location.href).catch(() => {});
+                      await navigator.clipboard.writeText(window.location.href).catch(() => { });
                       setIsShareCopied(true);
                       setTimeout(() => setIsShareCopied(false), 2000);
                       window.open("https://www.tiktok.com/@trip.himalaya", "_blank", "noopener,noreferrer");
@@ -2483,15 +2372,14 @@ export const PackageHeliService: React.FC = () => {
                   <button
                     type="button"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(window.location.href).catch(() => {});
+                      await navigator.clipboard.writeText(window.location.href).catch(() => { });
                       setIsShareCopied(true);
                       setTimeout(() => setIsShareCopied(false), 2000);
                       setIsShareOpen(false);
                     }}
                     title={isShareCopied ? "Copied!" : "Copy Link"}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${
-                      isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
-                    }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
+                      }`}
                   >
                     {isShareCopied ? (
                       <Check size={13} color="white" />
@@ -2573,11 +2461,10 @@ export const PackageHeliService: React.FC = () => {
                   key={tab}
                   type="button"
                   onClick={() => setActiveDetailTab(tab)}
-                  className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                    activeDetailTab === tab
-                      ? "text-[#E91E63] bg-pink-50/70 border-b-2 border-[#E91E63]"
-                      : "text-gray-500 hover:text-gray-800"
-                  }`}
+                  className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${activeDetailTab === tab
+                    ? "text-[#E91E63] bg-pink-50/70 border-b-2 border-[#E91E63]"
+                    : "text-gray-500 hover:text-gray-800"
+                    }`}
                 >
                   {tab}
                 </button>
@@ -2592,7 +2479,7 @@ export const PackageHeliService: React.FC = () => {
                 </span>
                 <span className="text-base sm:text-lg font-black text-[#E91E63]">
                   {displayPrice(
-                    selectedTour.sharingPriceNPR,
+                    selectedTour.packagePriceNPR,
                     selectedCurrency,
                     nprPerOneDollar,
                     nprPerOneINR
@@ -2756,7 +2643,7 @@ export const PackageHeliService: React.FC = () => {
                     Frequently Asked Questions about {selectedTour.title}
                   </h3>
                   <div className="space-y-3">
-                    {selectedTour.faqs.map((faq, idx) => (
+                    {packageFaqs.map((faq, idx) => (
                       <div
                         key={idx}
                         className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2"
@@ -2805,17 +2692,30 @@ export const PackageHeliService: React.FC = () => {
             </div>
 
             {/* RIGHT COLUMN: STICKY PRICING MODEL SIDEBAR (Matching Visa Service Details Page) */}
-            <div id="pricing-section" className="lg:col-span-4 lg:sticky lg:top-[150px] self-start space-y-6">
+            <div
+              id="pricing-section"
+              className="lg:col-span-4 lg:sticky lg:top-[150px] self-start space-y-6"
+            >
               <HeliServicePriceModel
                 tour={selectedTour}
+                pricingTiers={pricingTiers}
+                pricingLoading={pricingLoading}
                 onBookNow={handlePriceModelBookNow}
                 onWhatsAppInquiry={(flightType, formattedTotal) => {
                   const typeLabel =
-                    flightType === "charter" ? "Private Charter" : "Sharing Heli Service";
+                    flightType === "charter"
+                      ? "Private Charter"
+                      : "Sharing Heli Service";
+
                   const msg = encodeURIComponent(
                     `Hello Trip Himalaya! Inquiring for "${selectedTour.title}". Selected: ${typeLabel}. Price: ${formattedTotal}. Please confirm next flight timing.`
                   );
-                  window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
+
+                  window.open(
+                    `https://wa.me/9779851403761?text=${msg}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
                 }}
               />
             </div>
@@ -2857,7 +2757,7 @@ export const PackageHeliService: React.FC = () => {
                 </label>
                 <input
                   type="range"
-                  min={50000}
+                  min={0}
                   max={800000}
                   step={10000}
                   value={priceRange}
@@ -2866,7 +2766,7 @@ export const PackageHeliService: React.FC = () => {
                 />
                 <div className="flex justify-between items-center text-xs font-bold">
                   <span className="text-gray-400">
-                    {displayPrice(50000, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                    {displayPrice(0, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
                   </span>
                   <span className="text-[#E91E63] font-black">
                     {displayPrice(priceRange, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
@@ -2887,22 +2787,20 @@ export const PackageHeliService: React.FC = () => {
                       onClick={() =>
                         setSelectedRating(selectedRating === starCount ? 0 : starCount)
                       }
-                      className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${
-                        selectedRating === starCount
-                          ? "bg-pink-50 border border-pink-200"
-                          : "hover:bg-gray-50"
-                      }`}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${selectedRating === starCount
+                        ? "bg-pink-50 border border-pink-200"
+                        : "hover:bg-gray-50"
+                        }`}
                     >
                       <div className="flex items-center gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
                             size={14}
-                            className={`${
-                              i < starCount
-                                ? "text-yellow-400 fill-yellow-400"
-                                : "text-gray-200"
-                            }`}
+                            className={`${i < starCount
+                              ? "text-yellow-400 fill-yellow-400"
+                              : "text-gray-200"
+                              }`}
                           />
                         ))}
                       </div>
@@ -2933,11 +2831,10 @@ export const PackageHeliService: React.FC = () => {
                             setSelectedKeywords((prev) => [...prev, kw]);
                           }
                         }}
-                        className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer uppercase ${
-                          isSelected
-                            ? "bg-[#200B3B] text-white border-[#200B3B]"
-                            : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer uppercase ${isSelected
+                          ? "bg-[#200B3B] text-white border-[#200B3B]"
+                          : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
+                          }`}
                       >
                         {kw}
                       </button>
@@ -2975,7 +2872,7 @@ export const PackageHeliService: React.FC = () => {
               ) : (
                 filteredTours.map((tour) => {
                   const formattedStartingPrice = displayPrice(
-                    tour.sharingPriceNPR,
+                    tour.packagePriceNPR,
                     selectedCurrency,
                     nprPerOneDollar,
                     nprPerOneINR
@@ -3264,26 +3161,24 @@ export const PackageHeliService: React.FC = () => {
                               key={idx}
                               type="button"
                               onClick={() => setActiveApplicantIndex(idx)}
-                              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 border ${
-                                isActive
-                                  ? "bg-gradient-to-r from-[#200B3B] to-[#E91E63] text-white border-transparent shadow-sm shadow-pink-500/25"
-                                  : hasError
+                              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 border ${isActive
+                                ? "bg-gradient-to-r from-[#200B3B] to-[#E91E63] text-white border-transparent shadow-sm shadow-pink-500/25"
+                                : hasError
                                   ? "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
                                   : isFilled
-                                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                                  : "bg-white text-gray-700 border-gray-200 hover:bg-purple-50 hover:border-purple-300"
-                              }`}
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                    : "bg-white text-gray-700 border-gray-200 hover:bg-purple-50 hover:border-purple-300"
+                                }`}
                             >
                               <span
-                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                                  isActive
-                                    ? "bg-white/20 text-white"
-                                    : hasError
+                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${isActive
+                                  ? "bg-white/20 text-white"
+                                  : hasError
                                     ? "bg-red-200 text-red-800"
                                     : isFilled
-                                    ? "bg-emerald-200 text-emerald-800"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
+                                      ? "bg-emerald-200 text-emerald-800"
+                                      : "bg-gray-100 text-gray-600"
+                                  }`}
                               >
                                 {idx + 1}
                               </span>
@@ -3359,12 +3254,11 @@ export const PackageHeliService: React.FC = () => {
                                   handleApplicantChange(activeApplicantIndex, "fullName", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "fullName")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${
-                                  formErrors[`applicant_${activeApplicantIndex}_fullName`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_fullName`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_fullName`]
-                                    ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                                    : "border-gray-200 focus:border-[#E91E63]"
-                                }`}
+                                  ? "border-red-400 bg-red-50/20 focus:border-red-500"
+                                  : "border-gray-200 focus:border-[#E91E63]"
+                                  }`}
                               />
                               {formErrors[`applicant_${activeApplicantIndex}_fullName`] &&
                                 touchedFields[`applicant_${activeApplicantIndex}_fullName`] && (
@@ -3386,12 +3280,11 @@ export const PackageHeliService: React.FC = () => {
                                   handleApplicantChange(activeApplicantIndex, "nationality", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "nationality")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${
-                                  formErrors[`applicant_${activeApplicantIndex}_nationality`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_nationality`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_nationality`]
-                                    ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                                    : "border-gray-200 focus:border-[#E91E63]"
-                                }`}
+                                  ? "border-red-400 bg-red-50/20 focus:border-red-500"
+                                  : "border-gray-200 focus:border-[#E91E63]"
+                                  }`}
                               />
                               {formErrors[`applicant_${activeApplicantIndex}_nationality`] &&
                                 touchedFields[`applicant_${activeApplicantIndex}_nationality`] && (
@@ -3415,12 +3308,11 @@ export const PackageHeliService: React.FC = () => {
                                 handleApplicantChange(activeApplicantIndex, "idNumber", e.target.value)
                               }
                               onBlur={() => handleApplicantBlur(activeApplicantIndex, "idNumber")}
-                              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${
-                                formErrors[`applicant_${activeApplicantIndex}_idNumber`] &&
+                              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_idNumber`] &&
                                 touchedFields[`applicant_${activeApplicantIndex}_idNumber`]
-                                  ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                                  : "border-gray-200 focus:border-[#E91E63]"
-                              }`}
+                                ? "border-red-400 bg-red-50/20 focus:border-red-500"
+                                : "border-gray-200 focus:border-[#E91E63]"
+                                }`}
                             />
                             {formErrors[`applicant_${activeApplicantIndex}_idNumber`] &&
                               touchedFields[`applicant_${activeApplicantIndex}_idNumber`] && (
@@ -3456,12 +3348,11 @@ export const PackageHeliService: React.FC = () => {
                                     handleApplicantChange(activeApplicantIndex, "bodyWeightKg", e.target.value)
                                   }
                                   onBlur={() => handleApplicantBlur(activeApplicantIndex, "bodyWeightKg")}
-                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 focus:outline-none transition-colors ${
-                                    formErrors[`applicant_${activeApplicantIndex}_bodyWeightKg`] &&
+                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_bodyWeightKg`] &&
                                     touchedFields[`applicant_${activeApplicantIndex}_bodyWeightKg`]
-                                      ? "border-red-500 bg-red-50/30"
-                                      : "border-amber-300 focus:border-amber-500"
-                                  }`}
+                                    ? "border-red-500 bg-red-50/30"
+                                    : "border-amber-300 focus:border-amber-500"
+                                    }`}
                                 />
                                 {formErrors[`applicant_${activeApplicantIndex}_bodyWeightKg`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_bodyWeightKg`] && (
@@ -3485,12 +3376,11 @@ export const PackageHeliService: React.FC = () => {
                                     handleApplicantChange(activeApplicantIndex, "luggageKg", e.target.value)
                                   }
                                   onBlur={() => handleApplicantBlur(activeApplicantIndex, "luggageKg")}
-                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 focus:outline-none transition-colors ${
-                                    formErrors[`applicant_${activeApplicantIndex}_luggageKg`] &&
+                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_luggageKg`] &&
                                     touchedFields[`applicant_${activeApplicantIndex}_luggageKg`]
-                                      ? "border-red-500 bg-red-50/30"
-                                      : "border-amber-300 focus:border-amber-500"
-                                  }`}
+                                    ? "border-red-500 bg-red-50/30"
+                                    : "border-amber-300 focus:border-amber-500"
+                                    }`}
                                 />
                                 {formErrors[`applicant_${activeApplicantIndex}_luggageKg`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_luggageKg`] && (
@@ -3531,12 +3421,11 @@ export const PackageHeliService: React.FC = () => {
                                   handleApplicantChange(activeApplicantIndex, "email", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "email")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${
-                                  formErrors[`applicant_${activeApplicantIndex}_email`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_email`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_email`]
-                                    ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                                    : "border-gray-200 focus:border-[#E91E63]"
-                                }`}
+                                  ? "border-red-400 bg-red-50/20 focus:border-red-500"
+                                  : "border-gray-200 focus:border-[#E91E63]"
+                                  }`}
                               />
                               {formErrors[`applicant_${activeApplicantIndex}_email`] &&
                                 touchedFields[`applicant_${activeApplicantIndex}_email`] && (
@@ -3552,12 +3441,11 @@ export const PackageHeliService: React.FC = () => {
                                 WHATSAPP PHONE NUMBER *
                               </label>
                               <div
-                                className={`flex rounded-xl border overflow-hidden transition-all ${
-                                  formErrors[`applicant_${activeApplicantIndex}_phone`] &&
+                                className={`flex rounded-xl border overflow-hidden transition-all ${formErrors[`applicant_${activeApplicantIndex}_phone`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_phone`]
-                                    ? "border-red-400 bg-red-50/20 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                                    : "border-gray-200 focus-within:border-[#E91E63] focus-within:ring-1 focus-within:ring-[#E91E63] bg-white"
-                                }`}
+                                  ? "border-red-400 bg-red-50/20 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
+                                  : "border-gray-200 focus-within:border-[#E91E63] focus-within:ring-1 focus-within:ring-[#E91E63] bg-white"
+                                  }`}
                               >
                                 <select
                                   value={currentApp.phoneCode || "+977"}
@@ -3607,12 +3495,11 @@ export const PackageHeliService: React.FC = () => {
                                   handleApplicantChange(activeApplicantIndex, "preferredDate", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "preferredDate")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${
-                                  formErrors[`applicant_${activeApplicantIndex}_preferredDate`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_preferredDate`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_preferredDate`]
-                                    ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                                    : "border-gray-200 focus:border-[#E91E63]"
-                                }`}
+                                  ? "border-red-400 bg-red-50/20 focus:border-red-500"
+                                  : "border-gray-200 focus:border-[#E91E63]"
+                                  }`}
                               />
                               {formErrors[`applicant_${activeApplicantIndex}_preferredDate`] &&
                                 touchedFields[`applicant_${activeApplicantIndex}_preferredDate`] && (
@@ -3751,20 +3638,18 @@ export const PackageHeliService: React.FC = () => {
                             ].map((field) => (
                               <div
                                 key={field.label}
-                                className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
-                                  field.file
-                                    ? "bg-emerald-50/60 border-emerald-200"
-                                    : "bg-white border-gray-200 hover:border-[#E91E63]"
-                                } transition-all`}
+                                className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${field.file
+                                  ? "bg-emerald-50/60 border-emerald-200"
+                                  : "bg-white border-gray-200 hover:border-[#E91E63]"
+                                  } transition-all`}
                               >
                                 {/* Left: icon + label */}
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                   <div
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                      field.file
-                                        ? "bg-emerald-100 text-emerald-600"
-                                        : "bg-pink-50 text-[#E91E63]"
-                                    }`}
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${field.file
+                                      ? "bg-emerald-100 text-emerald-600"
+                                      : "bg-pink-50 text-[#E91E63]"
+                                      }`}
                                   >
                                     {field.file ? (
                                       <CheckCircle2 size={16} />

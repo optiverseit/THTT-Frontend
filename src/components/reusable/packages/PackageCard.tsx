@@ -4,7 +4,6 @@ import type { Package } from "../../../assets/data/types";
 import {
   Clock,
   MapPin,
-  Tag,
   CheckCircle2,
   MessageCircle,
   CalendarCheck,
@@ -12,7 +11,6 @@ import {
 } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../../context/CurrencyContext";
 import BookingModal from "./BookingModal";
-import { getPackageCategoryName } from "../../../utils/categoryUtils";
 
 interface Props {
   pkg: Package;
@@ -121,20 +119,13 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
               )}
             </div>
 
-            {/* Location & Category */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500 mb-3.5">
-              {pkg.location && (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <MapPin size={13} className="text-[#E11D48] flex-shrink-0" />
-                  <span className="truncate">{pkg.location}</span>
-                </div>
-              )}
-
-              <span className="inline-flex items-center gap-1 bg-pink-50 text-[#E11D48] px-2 py-0.5 rounded-full text-[10px] font-bold border border-pink-100 flex-shrink-0">
-                <Tag size={10} className="flex-shrink-0" />
-                <span>{getPackageCategoryName(pkg)}</span>
-              </span>
-            </div>
+            {/* Location */}
+            {pkg.location && (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 mb-3.5">
+                <MapPin size={13} className="text-[#E11D48] flex-shrink-0" />
+                <span className="truncate">{pkg.location}</span>
+              </div>
+            )}
 
             {/* Highlights List */}
             {pkg.highlights && pkg.highlights.length > 0 && (

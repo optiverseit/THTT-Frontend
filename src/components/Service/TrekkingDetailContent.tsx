@@ -7,7 +7,6 @@ import {
 } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
-import { getPackageCategoryName } from "../../utils/categoryUtils";
 
 // Change only this path if your API file is located somewhere else
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -21,7 +20,6 @@ import {
   Backpack,
   MessageCircle,
   MapPin,
-  Tag,
   Activity,
   Layers,
   CalendarCheck,
@@ -477,24 +475,20 @@ export const TrekkingDetailContent: React.FC = () => {
 
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold text-gray-500 mb-4">
-                      {trek.location && (
-                        <div className="flex items-center gap-1 min-w-0">
-                          <MapPin
-                            size={14}
-                            className="text-[#E11D48] flex-shrink-0"
-                          />
-                          <span className="truncate">
-                            {trek.location}
-                          </span>
-                        </div>
-                      )}
+                    {trek.location && (
+                      <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 mb-4">
 
-                      <span className="inline-flex items-center gap-1 bg-pink-50 text-[#E11D48] px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-pink-100 flex-shrink-0">
-                        <Tag size={11} className="flex-shrink-0" />
-                        <span>{getPackageCategoryName(trek, "Trekking")}</span>
-                      </span>
-                    </div>
+                        <MapPin
+                          size={14}
+                          className="text-[#E11D48]"
+                        />
+
+                        <span>
+                          {trek.location}
+                        </span>
+
+                      </div>
+                    )}
 
                     {trek.description && (
                       <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3 mb-6">

@@ -1,8 +1,7 @@
 import React from "react";
 import { useOutletContext } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
-import { CheckCircle2, Clock, MapPin, Tag } from "lucide-react";
-import { getPackageCategoryName } from "../../../utils/categoryUtils";
+import { CheckCircle2, Clock, MapPin } from "lucide-react";
 import IncludesExclude from "./IncludesExclude";
 import PackagePricing from "./PackagePricing";
 import TripRoadmap, { type RoadmapStep } from "../../reusable/TripRoadmap";
@@ -81,11 +80,6 @@ const PackageOverview: React.FC = () => {
               <span className="flex items-center gap-1.5 text-[#E91E63]">
                 <Clock size={15} />
                 <span className="text-gray-700">{pkg.duration}</span>
-              </span>
-
-              <span className="inline-flex items-center gap-1.5 bg-pink-50 text-[#E91E63] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                <Tag size={12} />
-                <span>{getPackageCategoryName(pkg)}</span>
               </span>
 
               {pkg.difficulty && (

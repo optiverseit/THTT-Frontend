@@ -118,6 +118,7 @@ const Dashboard: React.FC = () => {
       /* storage may be unavailable */
     }
   };
+  
 
   /* ── Tab title for the top-bar of the content area ── */
   const TAB_TITLES: Record<DashboardTab, string> = {

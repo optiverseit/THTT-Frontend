@@ -16,6 +16,15 @@ export const googleLogin = (idToken:any) => {
 };
 
 
+export const getPackagesByCategory = (category: string, page = 1) => {
+  return axiosInstance.get("/packageByCategory", {
+    params: {
+      category,
+      page,
+    },
+  });
+};
+
 // ==============================
 // PUBLIC CATEGORIES
 // ==============================

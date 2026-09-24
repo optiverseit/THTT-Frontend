@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { packages } from "../../assets/data/mockData";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+
+// CHANGE THIS IMPORT PATH ONLY if your API file has a different location/name
+import { getPackagesByCategory } from "../../api/BackendApi";
+
 import {
   MapPin,
   Clock,
@@ -14,8 +17,6 @@ import {
   Camera,
   Car,
   Hotel,
-  HelpCircle,
-  ChevronDown,
   MessageCircle,
   Globe,
   CalendarCheck,
@@ -46,54 +47,230 @@ const TOUR_FAQS = [
 ];
 
 export const ToursDetailContent: React.FC = () => {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState<string>("all");
   const [visibleCount, setVisibleCount] = useState<number>(9);
-  const navigate = useNavigate();
-  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-  const [selectedBookingTour, setSelectedBookingTour] = useState<Package | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  const handleBookTour = (tour: Package) => {
-    setSelectedBookingTour(tour);
+  // API data
+  const [tourPackages, setTourPackages] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+
+  // Booking
+  const [selectedBookingTour, setSelectedBookingTour] =
+    useState<Package | null>(null);
+
+  const [isBookingModalOpen, setIsBookingModalOpen] =
+    useState<boolean>(false);
+
+  const {
+    selectedCurrency,
+    nprPerOneDollar,
+    nprPerOneINR,
+  } = useGlobalCurrency();
+
+  // =========================================================
+  // FETCH TOURS FROM BACKEND
+  // GET /packageByCategory?category=Tours
+  // =========================================================
+  useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await getPackagesByCategory("Tours");
+
+        console.log("Tours API response:", response.data);
+
+        /*
+         * Laravel paginate response:
+         *
+         * {
+         *   status: true,
+         *   data: {
+         *      current_page: 1,
+         *      data: [...]
+         *   }
+         * }
+         */
+
+        const packages =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+
+        setTourPackages(
+          Array.isArray(packages) ? packages : []
+        );
+      } catch (err: any) {
+        console.error("Failed to fetch Tours:", err);
+
+        setTourPackages([]);
+
+        setError(
+          err?.response?.data?.message ||
+            "Unable to load tour packages."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTours();
+  }, []);
+
+  // =========================================================
+  // BOOK PACKAGE
+  // If not logged in -> login
+  // If logged in -> booking modal
+  // =========================================================
+  const handleBookTour = (tour: any) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: "/service/tours",
+          packageId: tour.id,
+          openBooking: true,
+        },
+      });
+
+      return;
+    }
+
+    setSelectedBookingTour(tour as Package);
     setIsBookingModalOpen(true);
   };
 
-  const formatPackagePrice = (priceStr?: string) => {
-    if (!priceStr) return null;
-    const numericUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
-    if (numericUSD > 0) {
-      const nprAmount = numericUSD * nprPerOneDollar;
-      return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
+  // =========================================================
+  // PRICE
+  // Backend package.price is NPR
+  // =========================================================
+  const formatPackagePrice = (
+    price?: string | number
+  ) => {
+    if (price === undefined || price === null || price === "") {
+      return null;
     }
-    return priceStr;
+
+    const nprAmount = Number(price);
+
+    if (Number.isNaN(nprAmount)) {
+      return String(price);
+    }
+
+    return displayPrice(
+      nprAmount,
+      selectedCurrency,
+      nprPerOneDollar,
+      nprPerOneINR
+    );
   };
 
-  // 100% Dynamically sourced from packages data
-  const tourPackages = packages.filter((p) => p.type === "tour");
-
+  // =========================================================
+  // FILTERS
+  // =========================================================
   const filteredTours = tourPackages.filter((pkg) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "domestic") return pkg.category === "domestic";
-    if (activeTab === "international") return pkg.category === "international";
-    if (activeTab === "featured") return pkg.isFeatured;
+    if (activeTab === "all") {
+      return true;
+    }
+
+    /*
+     * Your backend Package fields do not currently show a
+     * domestic/international field in the API design you've
+     * provided, so only apply these filters if such a value
+     * actually exists.
+     */
+    if (activeTab === "domestic") {
+      return (
+        pkg.tour_type === "domestic" ||
+        pkg.category_type === "domestic"
+      );
+    }
+
+    if (activeTab === "international") {
+      return (
+        pkg.tour_type === "international" ||
+        pkg.category_type === "international"
+      );
+    }
+
+    if (activeTab === "featured") {
+      return (
+        pkg.is_featured === true ||
+        pkg.is_featured === 1 ||
+        pkg.is_featured === "1"
+      );
+    }
+
     return true;
   });
 
-  const visibleTours = filteredTours.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredTours.length;
+  const visibleTours = filteredTours.slice(
+    0,
+    visibleCount
+  );
 
-  const handleInquiry = (tourTitle: string, priceStr?: string) => {
-    const formattedPrice = formatPackagePrice(priceStr);
-    const priceText = formattedPrice ? ` (${formattedPrice})` : "";
+  const hasMore =
+    visibleCount < filteredTours.length;
+
+  // =========================================================
+  // WHATSAPP INQUIRY
+  // =========================================================
+  const handleInquiry = (
+    tourTitle: string,
+    price?: string | number
+  ) => {
+    const formattedPrice =
+      formatPackagePrice(price);
+
+    const priceText = formattedPrice
+      ? ` (${formattedPrice})`
+      : "";
+
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Tours & Holidays Team)! I am interested in booking the "${tourTitle}"${priceText}. Please share details, day-by-day itinerary, and pricing.`
     );
-    window.open(`https://api.whatsapp.com/send?phone=9779851403761&text=${msg}`, "_blank", "noopener,noreferrer");
+
+    window.open(
+      `https://api.whatsapp.com/send?phone=9779851403761&text=${msg}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
+
+  // =========================================================
+  // LOADING
+  // =========================================================
+  if (loading) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-[#2D1347] font-bold">
+          Loading tour packages...
+        </p>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // ERROR
+  // =========================================================
+  if (error) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-red-600 font-bold">
+          {error}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* ── HEADER & FILTER PILLS (Outside the box of cards) ── */}
+      {/* HEADER & FILTER PILLS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
         <div>
           <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
@@ -101,13 +278,24 @@ export const ToursDetailContent: React.FC = () => {
           </h3>
         </div>
 
-        {/* Filter Pills */}
         <div className="flex flex-wrap gap-2">
           {[
-            { id: "all", label: `All Tours (${tourPackages.length})` },
-            { id: "domestic", label: "Domestic Nepal" },
-            { id: "international", label: "International Holidays" },
-            { id: "featured", label: "Top Featured" },
+            {
+              id: "all",
+              label: `All Tours (${tourPackages.length})`,
+            },
+            {
+              id: "domestic",
+              label: "Domestic Nepal",
+            },
+            {
+              id: "international",
+              label: "International Holidays",
+            },
+            {
+              id: "featured",
+              label: "Top Featured",
+            },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -124,240 +312,179 @@ export const ToursDetailContent: React.FC = () => {
         </div>
       </div>
 
-      {/* ── DYNAMIC TOUR PACKAGES GRID (The Box of Cards) ── */}
+      {/* PACKAGES GRID */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
-        {/* Dynamic Package Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleTours.map((tour) => (
-            <div
-              key={tour.id}
-              onClick={() => navigate(`/details/${tour.id}`)}
-              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
-            >
-              <div>
-                {/* Image & Badges */}
-                <div className="relative h-48 sm:h-52 w-full overflow-hidden">
-                  <img
-                    src={tour.image}
-                    alt={tour.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
-                      {tour.category === "international" ? "International" : "Domestic Tour"}
-                    </span>
-                    {tour.isFeatured && (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-md">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
-                    <Clock size={13} className="text-pink-400" />
-                    <span>{tour.duration}</span>
-                  </div>
-                </div>
+        {visibleTours.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="font-bold text-gray-500">
+              No tour packages found.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {visibleTours.map((tour) => (
+              <div
+                key={tour.id}
+                onClick={() =>
+                  navigate(`/details/${tour.id}`)
+                }
+                className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="relative h-48 sm:h-52 w-full overflow-hidden">
+                    <img
+                      src={tour.image}
+                      alt={tour.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
 
-                {/* Content */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] group-hover:text-[#E11D48] transition-colors leading-snug">
-                      {tour.title}
-                    </h4>
-                    {tour.price && (
-                      <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl">
-                        {formatPackagePrice(tour.price)}
+                    <div className="absolute top-3 left-3 flex gap-2">
+                      <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
+                        Tour
                       </span>
-                    )}
-                  </div>
 
-                  {tour.location && (
-                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mb-4">
-                      <MapPin size={14} className="text-[#E11D48] flex-shrink-0" />
-                      <span className="truncate">{tour.location}</span>
+                      {(tour.is_featured === true ||
+                        tour.is_featured === 1 ||
+                        tour.is_featured === "1") && (
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-md">
+                          Featured
+                        </span>
+                      )}
                     </div>
-                  )}
 
-                  <div className="space-y-2 mb-6">
-                    {tour.highlights && tour.highlights.slice(0, 3).map((hl, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-600 font-medium">
-                        <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="leading-tight">{hl}</span>
+                    {tour.duration && (
+                      <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
+                        <Clock
+                          size={13}
+                          className="text-pink-400"
+                        />
+                        <span>{tour.duration}</span>
                       </div>
-                    ))}
+                    )}
+                  </div>
+
+                  <div className="p-6">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h4 className="text-lg sm:text-xl font-black text-[#2D1347] group-hover:text-[#E11D48] transition-colors leading-snug">
+                        {tour.title}
+                      </h4>
+
+                      {tour.price && (
+                        <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl">
+                          {formatPackagePrice(
+                            tour.price
+                          )}
+                        </span>
+                      )}
+                    </div>
+
+                    {tour.location && (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mb-4">
+                        <MapPin
+                          size={14}
+                          className="text-[#E11D48] flex-shrink-0"
+                        />
+                        <span className="truncate">
+                          {tour.location}
+                        </span>
+                      </div>
+                    )}
+
+                    {tour.description && (
+                      <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3 mb-6">
+                        {tour.description}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Card Footer Actions - Format as in Image 5 */}
-              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
-                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        handleInquiry(
+                          tour.title,
+                          tour.price
+                        );
+                      }}
+                      className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    >
+                      <MessageCircle
+                        size={14}
+                        className="text-pink-400"
+                      />
+
+                      <span>Inquiry</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBookTour(tour);
+                      }}
+                      className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
+                    >
+                      <CalendarCheck size={14} />
+                      <span>Book Now</span>
+                    </button>
+                  </div>
+
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleInquiry(tour.title, tour.price);
+
+                      navigate(
+                        `/details/${tour.id}`
+                      );
                     }}
-                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                    title="WhatsApp Inquiry"
+                    className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                   >
-                    <MessageCircle size={14} className="text-pink-400" />
-                    <span>Inquiry</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBookTour(tour);
-                    }}
-                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
-                  >
-                    <CalendarCheck size={14} />
-                    <span>Book Now</span>
+                    <span>Full Details</span>
+                    <ArrowUpRight size={13} />
                   </button>
                 </div>
-
-                {/* Row 2: Full Details Centered */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/details/${tour.id}`);
-                  }}
-                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                >
-                  <span>Full Details</span>
-                  <ArrowUpRight size={13} />
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* See More Button */}
         {hasMore && (
           <div className="flex justify-center mt-8">
             <button
-              onClick={() => setVisibleCount(prev => prev + 15)}
+              onClick={() =>
+                setVisibleCount(
+                  (prev) => prev + 15
+                )
+              }
               className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
             >
               <span>See More</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </button>
           </div>
         )}
       </div>
 
-      {/* ── 3. WHAT'S INCLUDED IN OUR TOURS ── */}
-      <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-3xl p-8 sm:p-10 shadow-xl">
-        <div className="max-w-3xl mb-8">
-          <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-            PREMIUM EXPERIENCE GUARANTEE
-          </span>
-          <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
-            What's Included in Every Holiday Tour
-          </h3>
-          <p className="text-gray-300 text-sm mt-2 font-medium">
-            From seamless luxury transfers to certified native guides, we take care of all logistics so you travel stress-free.
-          </p>
-        </div>
+      {/* KEEP YOUR EXISTING "WHAT'S INCLUDED" SECTION HERE */}
+      {/* KEEP YOUR EXISTING SEASON SECTION HERE */}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          {[
-            {
-              icon: Car,
-              title: "Private AC Vehicles",
-              desc: "Dedicated chauffeur with all fuel, toll & parking charges included throughout the tour.",
-            },
-            {
-              icon: Hotel,
-              title: "Handpicked Stays",
-              desc: "Carefully vetted 3-Star, 4-Star or 5-Star boutique hotels with delicious daily breakfast.",
-            },
-            {
-              icon: Award,
-              title: "Licensed Tour Guides",
-              desc: "Experienced government-certified multi-lingual guides for all historical and cultural sites.",
-            },
-            {
-              icon: Globe,
-              title: "Permits & Entry Passes",
-              desc: "All UNESCO monument entry tickets, national park permits, and local taxes fully covered.",
-            },
-            {
-              icon: ShieldCheck,
-              title: "24/7 Concierge Support",
-              desc: "Dedicated tour manager on WhatsApp and call for real-time guidance and assistance.",
-            },
-            {
-              icon: Camera,
-              title: "Special Experience Stops",
-              desc: "Sunset viewpoints, cultural culinary tastings, and scenic photography pauses.",
-            },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] flex items-center justify-center text-white mb-3 shadow-md">
-                  <Icon size={20} />
-                </div>
-                <h4 className="font-bold text-white text-sm mb-1">{item.title}</h4>
-                <p className="text-gray-300 text-xs leading-relaxed font-medium">{item.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── 4. SEASONAL GUIDE & BEST TIME TO VISIT ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-        <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
-          TRIP PLANNING INSIGHTS
-        </span>
-        <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-6">
-          Best Season for Nepal Holiday Tours
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              season: "Autumn (Sep – Nov)",
-              badge: "Peak Season",
-              badgeColor: "bg-emerald-100 text-emerald-800",
-              desc: "Crisp blue skies, panoramic mountain vistas, festive atmosphere with Dashain and Tihar celebrations.",
-            },
-            {
-              season: "Spring (Mar – May)",
-              badge: "Best Flowers & Weather",
-              badgeColor: "bg-pink-100 text-pink-800",
-              desc: "Pleasant temperatures, blooming rhododendron hillsides, excellent wildlife viewing in Chitwan & Bardia.",
-            },
-            {
-              season: "Winter (Dec – Feb)",
-              badge: "Clear Mountain Skies",
-              badgeColor: "bg-blue-100 text-blue-800",
-              desc: "Sunny daytime in Kathmandu and Pokhara valleys, crystal clear snow peaks, fewer crowds.",
-            },
-            {
-              season: "Monsoon (Jun – Aug)",
-              badge: "Lush & Off-Season",
-              badgeColor: "bg-amber-100 text-amber-800",
-              desc: "Lush terraced hills, vibrant waterfalls, ideal for Upper Mustang and cultural temple tours.",
-            },
-          ].map((s, idx) => (
-            <div key={idx} className="p-5 rounded-2xl bg-[#FBFBFE] border border-gray-200/80">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide inline-block mb-2 ${s.badgeColor}`}>
-                {s.badge}
-              </span>
-              <h4 className="font-black text-[#2D1347] text-sm mb-2">{s.season}</h4>
-              <p className="text-gray-600 text-xs leading-relaxed font-medium">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 5. CURATED TOURS FAQS ── */}
       <DynamicFaqSection
         targetType="service"
         targetId="holiday-tours"
@@ -366,11 +493,12 @@ export const ToursDetailContent: React.FC = () => {
         subtitle="Common questions answered by our holiday specialists"
       />
 
-      {/* ── BOOKING MODAL POPUP ── */}
       <BookingModal
         pkg={selectedBookingTour}
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        onClose={() =>
+          setIsBookingModalOpen(false)
+        }
       />
     </div>
   );

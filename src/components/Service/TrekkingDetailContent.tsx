@@ -1,26 +1,27 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { packages } from "../../assets/data/mockData";
 import type { Package } from "../../assets/data/types";
-import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
+import {
+  useGlobalCurrency,
+  displayPrice,
+} from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+
+// Change only this path if your API file is located somewhere else
+import { getPackagesByCategory } from "../../api/BackendApi";
+
 import {
-  Mountain,
   Clock,
   ShieldCheck,
   CheckCircle2,
   HeartPulse,
   Utensils,
   Backpack,
-  Sparkles,
-  HelpCircle,
-  ChevronDown,
   MessageCircle,
   MapPin,
   Activity,
   Layers,
-  Star,
   CalendarCheck,
   ArrowUpRight,
 } from "lucide-react";
@@ -51,73 +52,284 @@ const TREK_FAQS = [
 export const TrekkingDetailContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [visibleCount, setVisibleCount] = useState<number>(9);
-  const navigate = useNavigate();
-  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-  const [selectedBookingTrek, setSelectedBookingTrek] = useState<Package | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  const handleBookTrek = (trek: Package) => {
-    setSelectedBookingTrek(trek);
+  // Backend trekking packages
+  const [trekPackages, setTrekPackages] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+
+  const navigate = useNavigate();
+
+  const {
+    selectedCurrency,
+    nprPerOneDollar,
+    nprPerOneINR,
+  } = useGlobalCurrency();
+
+  const [selectedBookingTrek, setSelectedBookingTrek] =
+    useState<Package | null>(null);
+
+  const [isBookingModalOpen, setIsBookingModalOpen] =
+    useState<boolean>(false);
+
+  // =========================================================
+  // FETCH TREKKING PACKAGES
+  // GET /packageByCategory?category=Trekking
+  // =========================================================
+  useEffect(() => {
+    const fetchTrekkingPackages = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response =
+          await getPackagesByCategory("Trekking");
+
+        console.log(
+          "Trekking API response:",
+          response.data
+        );
+
+        /*
+         * Expected Laravel paginated response:
+         *
+         * {
+         *   status: true,
+         *   data: {
+         *     current_page: 1,
+         *     data: [...]
+         *   }
+         * }
+         */
+
+        const packages =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+
+        setTrekPackages(
+          Array.isArray(packages) ? packages : []
+        );
+      } catch (err: any) {
+        console.error(
+          "Failed to fetch Trekking packages:",
+          err
+        );
+
+        setTrekPackages([]);
+
+        setError(
+          err?.response?.data?.message ||
+            "Unable to load trekking packages."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrekkingPackages();
+  }, []);
+
+  // =========================================================
+  // BOOK TREK
+  // =========================================================
+  const handleBookTrek = (trek: any) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: "/service/trekking",
+          packageId: trek.id,
+          openBooking: true,
+        },
+      });
+
+      return;
+    }
+
+    setSelectedBookingTrek(trek as Package);
     setIsBookingModalOpen(true);
   };
 
-  const formatPackagePrice = (priceStr?: string) => {
-    if (!priceStr) return null;
-    const numericUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
-    if (numericUSD > 0) {
-      const nprAmount = numericUSD * nprPerOneDollar;
-      return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
+  // =========================================================
+  // PRICE
+  // Backend package.price is NPR
+  // =========================================================
+  const formatPackagePrice = (
+    price?: string | number
+  ) => {
+    if (
+      price === undefined ||
+      price === null ||
+      price === ""
+    ) {
+      return null;
     }
-    return priceStr;
+
+    const nprAmount = Number(price);
+
+    if (Number.isNaN(nprAmount)) {
+      return String(price);
+    }
+
+    return displayPrice(
+      nprAmount,
+      selectedCurrency,
+      nprPerOneDollar,
+      nprPerOneINR
+    );
   };
 
-  // 100% Dynamically sourced from packages data
-  const trekPackages = packages.filter((p) => p.type === "trek");
-
+  // =========================================================
+  // FILTER TREKKING PACKAGES
+  // =========================================================
   const filteredTreks = trekPackages.filter((pkg) => {
-    if (activeTab === "all") return true;
-    const titleLower = pkg.title.toLowerCase();
-    const locLower = (pkg.location || "").toLowerCase();
-    if (activeTab === "everest") return titleLower.includes("everest") || titleLower.includes("ebc") || locLower.includes("solukhumbu");
-    if (activeTab === "annapurna") return titleLower.includes("annapurna") || titleLower.includes("abc") || titleLower.includes("poon") || titleLower.includes("mardi");
-    if (activeTab === "langtang") return titleLower.includes("langtang") || titleLower.includes("gosaikunda");
-    if (activeTab === "remote") return titleLower.includes("mustang") || titleLower.includes("manaslu") || titleLower.includes("dolpo") || titleLower.includes("kanchenjunga");
-    if (activeTab === "featured") return pkg.isFeatured;
+    if (activeTab === "all") {
+      return true;
+    }
+
+    const titleLower =
+      pkg.title?.toLowerCase() || "";
+
+    const locLower =
+      pkg.location?.toLowerCase() || "";
+
+    if (activeTab === "everest") {
+      return (
+        titleLower.includes("everest") ||
+        titleLower.includes("ebc") ||
+        locLower.includes("solukhumbu") ||
+        locLower.includes("everest")
+      );
+    }
+
+    if (activeTab === "annapurna") {
+      return (
+        titleLower.includes("annapurna") ||
+        titleLower.includes("abc") ||
+        titleLower.includes("poon") ||
+        titleLower.includes("mardi") ||
+        locLower.includes("annapurna")
+      );
+    }
+
+    if (activeTab === "langtang") {
+      return (
+        titleLower.includes("langtang") ||
+        titleLower.includes("gosaikunda") ||
+        locLower.includes("langtang")
+      );
+    }
+
+    if (activeTab === "remote") {
+      return (
+        titleLower.includes("mustang") ||
+        titleLower.includes("manaslu") ||
+        titleLower.includes("dolpo") ||
+        titleLower.includes("kanchenjunga") ||
+        locLower.includes("mustang") ||
+        locLower.includes("manaslu") ||
+        locLower.includes("dolpo") ||
+        locLower.includes("kanchenjunga")
+      );
+    }
+
+    if (activeTab === "featured") {
+      return (
+        pkg.is_featured === true ||
+        pkg.is_featured === 1 ||
+        pkg.is_featured === "1"
+      );
+    }
+
     return true;
   });
 
-  const visibleTreks = filteredTreks.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredTreks.length;
+  const visibleTreks =
+    filteredTreks.slice(0, visibleCount);
 
-  const handleInquiry = (trekTitle: string, priceStr?: string) => {
-    const formattedPrice = formatPackagePrice(priceStr);
-    const priceText = formattedPrice ? ` (${formattedPrice})` : "";
+  const hasMore =
+    visibleCount < filteredTreks.length;
+
+  // =========================================================
+  // WHATSAPP INQUIRY
+  // =========================================================
+  const handleInquiry = (
+    trekTitle: string,
+    price?: string | number
+  ) => {
+    const formattedPrice =
+      formatPackagePrice(price);
+
+    const priceText = formattedPrice
+      ? ` (${formattedPrice})`
+      : "";
+
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Trekking & Adventure Activity Team)! I am interested in trekking "${trekTitle}"${priceText}. Please share the day-by-day itinerary, dates, and package price.`
     );
-    window.open(`https://api.whatsapp.com/send?phone=9779851403761&text=${msg}`, "_blank", "noopener,noreferrer");
+
+    window.open(
+      `https://api.whatsapp.com/send?phone=9779851403761&text=${msg}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
+  // =========================================================
+  // DIFFICULTY COLOR
+  // =========================================================
   const getDifficultyColor = (diff?: string) => {
     switch (diff) {
       case "Moderate":
         return "bg-blue-100 text-blue-800 border-blue-200";
+
       case "Hard":
       case "Strenuous":
         return "bg-amber-100 text-amber-800 border-amber-200";
+
       case "Challenging":
         return "bg-purple-100 text-purple-800 border-purple-200";
+
       case "Extreme":
         return "bg-rose-100 text-rose-800 border-rose-200";
+
       default:
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
     }
   };
 
+  // =========================================================
+  // LOADING
+  // =========================================================
+  if (loading) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-[#2D1347] font-bold">
+          Loading trekking packages...
+        </p>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // ERROR
+  // =========================================================
+  if (error) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-red-600 font-bold">
+          {error}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-12">
 
-      {/* ── HEADER & FILTER PILLS (Outside the box, matching Tours design) ── */}
+      {/* ── HEADER & FILTER PILLS ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
         <div>
           <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
@@ -128,16 +340,37 @@ export const TrekkingDetailContent: React.FC = () => {
         {/* Filter Pills */}
         <div className="flex flex-wrap gap-2">
           {[
-            { id: "all", label: `All Treks (${trekPackages.length})` },
-            { id: "everest", label: "Everest Region" },
-            { id: "annapurna", label: "Annapurna Region" },
-            { id: "langtang", label: "Langtang" },
-            { id: "remote", label: "Mustang & Manaslu" },
-            { id: "featured", label: "Top Featured" },
+            {
+              id: "all",
+              label: `All Treks (${trekPackages.length})`,
+            },
+            {
+              id: "everest",
+              label: "Everest Region",
+            },
+            {
+              id: "annapurna",
+              label: "Annapurna Region",
+            },
+            {
+              id: "langtang",
+              label: "Langtang",
+            },
+            {
+              id: "remote",
+              label: "Mustang & Manaslu",
+            },
+            {
+              id: "featured",
+              label: "Top Featured",
+            },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setVisibleCount(9);
+              }}
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-[#2D1347] text-white shadow-md"
@@ -150,154 +383,252 @@ export const TrekkingDetailContent: React.FC = () => {
         </div>
       </div>
 
-      {/* ── DYNAMIC TREK CIRCUITS (The Box of Cards, matching Tours design) ── */}
+      {/* ── DYNAMIC TREK CIRCUITS ── */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
-        {/* Dynamic Treks Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleTreks.map((trek) => (
-            <div
-              key={trek.id}
-              onClick={() => navigate(`/details/${trek.id}`)}
-              className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
-            >
-              <div>
-                {/* Image, Badge & Timing */}
-                <div className="relative h-48 sm:h-52 w-full overflow-hidden">
-                  <img
-                    src={trek.image}
-                    alt={trek.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
-                      {trek.category === "domestic" ? "Himalayan Trek" : "Trek"}
-                    </span>
-                    {trek.difficulty && (
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase border shadow-sm ${getDifficultyColor(trek.difficulty)}`}>
-                        {trek.difficulty}
-                      </span>
-                    )}
-                  </div>
-                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
-                    <Clock size={13} className="text-pink-400" />
-                    <span>{trek.duration}</span>
-                  </div>
-                </div>
 
-                {/* Content */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-lg sm:text-xl font-black text-[#2D1347] group-hover:text-[#E11D48] transition-colors leading-snug">
-                      {trek.title}
-                    </h4>
-                    {trek.price && (
-                      <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl">
-                        {formatPackagePrice(trek.price)}
+        {visibleTreks.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="font-bold text-gray-500">
+              No trekking packages found.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {visibleTreks.map((trek) => (
+              <div
+                key={trek.id}
+                onClick={() =>
+                  navigate(`/details/${trek.id}`)
+                }
+                className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+
+                  {/* Image, Badge & Timing */}
+                  <div className="relative h-48 sm:h-52 w-full overflow-hidden">
+                    <img
+                      src={trek.image}
+                      alt={trek.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+
+                    <div className="absolute top-3 left-3 flex gap-2">
+
+                      <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E11D48] text-white shadow-md">
+                        Himalayan Trek
                       </span>
+
+                      {trek.difficulty && (
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase border shadow-sm ${getDifficultyColor(
+                            trek.difficulty
+                          )}`}
+                        >
+                          {trek.difficulty}
+                        </span>
+                      )}
+
+                      {(trek.is_featured === true ||
+                        trek.is_featured === 1 ||
+                        trek.is_featured === "1") && (
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-md">
+                          Featured
+                        </span>
+                      )}
+
+                    </div>
+
+                    {trek.duration && (
+                      <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5">
+                        <Clock
+                          size={13}
+                          className="text-pink-400"
+                        />
+
+                        <span>
+                          {trek.duration}
+                        </span>
+                      </div>
                     )}
+
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs font-semibold text-gray-500 mb-4">
+                  {/* Content */}
+                  <div className="p-6">
+
+                    <div className="flex items-center justify-between gap-2 mb-2">
+
+                      <h4 className="text-lg sm:text-xl font-black text-[#2D1347] group-hover:text-[#E11D48] transition-colors leading-snug">
+                        {trek.title}
+                      </h4>
+
+                      {trek.price && (
+                        <span className="font-extrabold text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl">
+                          {formatPackagePrice(
+                            trek.price
+                          )}
+                        </span>
+                      )}
+
+                    </div>
+
                     {trek.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin size={14} className="text-[#E11D48]" />
-                        <span>{trek.location}</span>
-                      </div>
-                    )}
-                    {trek.rating && (
-                      <div className="flex items-center gap-1 text-amber-500">
-                        <Star size={13} className="fill-amber-500" />
-                        <span className="font-bold text-gray-700">{trek.rating} ({trek.reviewsCount || 5} reviews)</span>
-                      </div>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 mb-4">
 
-                  <div className="space-y-2 mb-6">
-                    {trek.highlights && trek.highlights.slice(0, 3).map((hl, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-600 font-medium">
-                        <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <span className="leading-tight">{hl}</span>
+                        <MapPin
+                          size={14}
+                          className="text-[#E11D48]"
+                        />
+
+                        <span>
+                          {trek.location}
+                        </span>
+
                       </div>
-                    ))}
+                    )}
+
+                    {trek.description && (
+                      <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3 mb-6">
+                        {trek.description}
+                      </p>
+                    )}
+
                   </div>
                 </div>
-              </div>
 
-              {/* Card Footer Actions - Format as in Image 5 */}
-              <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
-                {/* Row 1: Inquiry First (Dark Blue), Book Now (Pink) */}
-                <div className="grid grid-cols-2 gap-2.5">
+                {/* Card Footer Actions */}
+                <div className="p-6 pt-0 border-t border-gray-100 mt-auto space-y-2.5">
+
+                  {/* Inquiry + Book */}
+                  <div className="grid grid-cols-2 gap-2.5">
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        handleInquiry(
+                          trek.title,
+                          trek.price
+                        );
+                      }}
+                      className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                      title="WhatsApp Inquiry"
+                    >
+                      <MessageCircle
+                        size={14}
+                        className="text-pink-400"
+                      />
+
+                      <span>
+                        Inquiry
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBookTrek(trek);
+                      }}
+                      className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
+                    >
+                      <CalendarCheck size={14} />
+
+                      <span>
+                        Book Now
+                      </span>
+                    </button>
+
+                  </div>
+
+                  {/* Full Details */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleInquiry(trek.title, trek.price);
+
+                      navigate(
+                        `/details/${trek.id}`
+                      );
                     }}
-                    className="bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                    title="WhatsApp Inquiry"
+                    className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                   >
-                    <MessageCircle size={14} className="text-pink-400" />
-                    <span>Inquiry</span>
+                    <span>
+                      Full Details
+                    </span>
+
+                    <ArrowUpRight size={13} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBookTrek(trek);
-                    }}
-                    className="bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-pink-900/20 cursor-pointer whitespace-nowrap"
-                  >
-                    <CalendarCheck size={14} />
-                    <span>Book Now</span>
-                  </button>
+
                 </div>
-
-                {/* Row 2: Full Details Centered */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/details/${trek.id}`);
-                  }}
-                  className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                >
-                  <span>Full Details</span>
-                  <ArrowUpRight size={13} />
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
 
-        {/* See More Button */}
-        {hasMore && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => setVisibleCount(prev => prev + 15)}
-              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
-            >
-              <span>See More</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
           </div>
         )}
+
+        {/* See More */}
+        {hasMore && (
+          <div className="flex justify-center mt-8">
+
+            <button
+              onClick={() =>
+                setVisibleCount(
+                  (prev) => prev + 15
+                )
+              }
+              className="px-10 py-3.5 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-sm rounded-2xl flex items-center gap-2.5 transition-all shadow-lg cursor-pointer"
+            >
+              <span>
+                See More
+              </span>
+
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+
+            </button>
+
+          </div>
+        )}
+
       </div>
 
-      {/* ── 3. SAFETY, ACCLIMATIZATION & MEDICAL READINESS ── */}
+      {/* ── SAFETY, ACCLIMATIZATION & MEDICAL READINESS ── */}
       <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-3xl p-8 sm:p-10 shadow-xl">
+
         <div className="max-w-3xl mb-8">
+
           <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
             UNCOMPROMISING MOUNTAIN SAFETY
           </span>
+
           <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
             How We Safeguard Your Himalayan Ascent
           </h3>
+
           <p className="text-gray-300 text-sm mt-2 font-medium">
-            Trekking above 3,500 meters requires methodical planning. Our certified medical protocols ensure you stay strong, healthy, and acclimatized throughout your trek.
+            Trekking above 3,500 meters requires methodical
+            planning. Our certified medical protocols ensure
+            you stay strong, healthy, and acclimatized
+            throughout your trek.
           </p>
+
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+
           {[
             {
               icon: HeartPulse,
@@ -331,63 +662,125 @@ export const TrekkingDetailContent: React.FC = () => {
             },
           ].map((item, idx) => {
             const Icon = item.icon;
+
             return (
-              <div key={idx} className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10">
+              <div
+                key={idx}
+                className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10"
+              >
+
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] flex items-center justify-center text-white mb-3 shadow-md">
                   <Icon size={20} />
                 </div>
-                <h4 className="font-bold text-white text-sm mb-1">{item.title}</h4>
-                <p className="text-gray-300 text-xs leading-relaxed font-medium">{item.desc}</p>
+
+                <h4 className="font-bold text-white text-sm mb-1">
+                  {item.title}
+                </h4>
+
+                <p className="text-gray-300 text-xs leading-relaxed font-medium">
+                  {item.desc}
+                </p>
+
               </div>
             );
           })}
+
         </div>
       </div>
 
-      {/* ── 4. PACKING & GEAR CHECKLIST ── */}
+      {/* ── PACKING & GEAR CHECKLIST ── */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+
         <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-xs block mb-1">
           GEAR RECOMMENDATIONS
         </span>
+
         <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight mb-6">
           Trekker's Packing Essentials
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+
           {[
             {
               title: "Layering & Outerwear",
-              items: ["Waterproof Gore-Tex Jacket", "Down Jacket (-10°C to -20°C)", "Thermal base layers (Top & Bottom)", "Fleece mid-layer sweater"],
+              items: [
+                "Waterproof Gore-Tex Jacket",
+                "Down Jacket (-10°C to -20°C)",
+                "Thermal base layers (Top & Bottom)",
+                "Fleece mid-layer sweater",
+              ],
             },
             {
               title: "Footwear & Socks",
-              items: ["Broken-in trekking boots", "Camp shoes / sandals", "4-5 pairs merino wool socks", "Gaiters (for snowy passes)"],
+              items: [
+                "Broken-in trekking boots",
+                "Camp shoes / sandals",
+                "4-5 pairs merino wool socks",
+                "Gaiters (for snowy passes)",
+              ],
             },
             {
               title: "Trail Accessories",
-              items: ["Adjustable trekking poles", "UV400 Glacier sunglasses", "Headlamp with spare batteries", "Water purification tablets"],
+              items: [
+                "Adjustable trekking poles",
+                "UV400 Glacier sunglasses",
+                "Headlamp with spare batteries",
+                "Water purification tablets",
+              ],
             },
             {
               title: "Personal Medical Kit",
-              items: ["Diamox (Acetazolamide)", "Blister band-aids & tape", "Lip balm & high SPF sunscreen", "Electrolyte hydration salts"],
+              items: [
+                "Diamox (Acetazolamide)",
+                "Blister band-aids & tape",
+                "Lip balm & high SPF sunscreen",
+                "Electrolyte hydration salts",
+              ],
             },
           ].map((cat, idx) => (
-            <div key={idx} className="p-5 rounded-2xl bg-[#FBFBFE] border border-gray-200/80">
-              <h4 className="font-extrabold text-[#2D1347] text-sm mb-3 pb-2 border-b border-gray-200">{cat.title}</h4>
+
+            <div
+              key={idx}
+              className="p-5 rounded-2xl bg-[#FBFBFE] border border-gray-200/80"
+            >
+
+              <h4 className="font-extrabold text-[#2D1347] text-sm mb-3 pb-2 border-b border-gray-200">
+                {cat.title}
+              </h4>
+
               <ul className="space-y-2">
+
                 {cat.items.map((it, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs text-gray-600 font-medium">
-                    <CheckCircle2 size={13} className="text-emerald-500 flex-shrink-0" />
-                    <span>{it}</span>
+
+                  <li
+                    key={i}
+                    className="flex items-center gap-2 text-xs text-gray-600 font-medium"
+                  >
+
+                    <CheckCircle2
+                      size={13}
+                      className="text-emerald-500 flex-shrink-0"
+                    />
+
+                    <span>
+                      {it}
+                    </span>
+
                   </li>
+
                 ))}
+
               </ul>
+
             </div>
+
           ))}
+
         </div>
       </div>
 
-      {/* ── 5. CURATED TREKKING FAQS ── */}
+      {/* ── TREKKING FAQS ── */}
       <DynamicFaqSection
         targetType="service"
         targetId="himalayan-trekking"
@@ -396,12 +789,15 @@ export const TrekkingDetailContent: React.FC = () => {
         subtitle="Frequently asked questions about trails, permits, and lodges"
       />
 
-      {/* ── BOOKING MODAL POPUP ── */}
+      {/* ── BOOKING MODAL ── */}
       <BookingModal
         pkg={selectedBookingTrek}
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        onClose={() =>
+          setIsBookingModalOpen(false)
+        }
       />
+
     </div>
   );
 };

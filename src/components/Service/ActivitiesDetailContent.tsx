@@ -1,29 +1,28 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { packages } from "../../assets/data/mockData";
+
 import type { Package } from "../../assets/data/types";
-import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
+
+import {
+  useGlobalCurrency,
+} from "../../context/CurrencyContext";
+
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import FilterSideBar from "../TravelPackage/FilterSiderBar";
 import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
+
+// Change only this path if your API file is somewhere else
+import { getPackagesByCategory } from "../../api/BackendApi";
+
 import {
   Wind,
   ShieldCheck,
-  Zap,
-  Clock,
-  MapPin,
   CheckCircle2,
   Video,
   Gauge,
   Sparkles,
-  HelpCircle,
-  ChevronDown,
-  MessageCircle,
   AlertCircle,
-  Flame,
-  CalendarCheck,
-  ArrowUpRight,
 } from "lucide-react";
 
 const ACTIVITY_FAQS = [
@@ -50,19 +49,168 @@ const ACTIVITY_FAQS = [
 ];
 
 export const ActivitiesDetailContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState<number>(5000);
-  const [selectedRating, setSelectedRating] = useState<number>(0);
-  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
-  const navigate = useNavigate();
-  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-  const [selectedBookingActivity, setSelectedBookingActivity] = useState<Package | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  // 100% Dynamically sourced from packages data
-  const activityPackages = packages.filter(
-    (p) => p.type === "activity" || p.type === "combo" || p.adventureCategory
-  );
+  // =========================================================
+  // FILTER STATES
+  // =========================================================
+
+  const [activeTab, setActiveTab] =
+    useState<string>("all");
+
+  /*
+   * 0 means NO price filtering.
+   *
+   * When the user changes the price from FilterSideBar,
+   * packages at or below that price will be shown.
+   */
+  const [priceRange, setPriceRange] =
+    useState<number>(0);
+
+  const [selectedRating, setSelectedRating] =
+    useState<number>(0);
+
+  const [selectedKeywords, setSelectedKeywords] =
+    useState<string[]>([]);
+
+  // =========================================================
+  // BACKEND DATA STATES
+  // =========================================================
+
+  const [activityPackages, setActivityPackages] =
+    useState<any[]>([]);
+
+  const [loading, setLoading] =
+    useState<boolean>(true);
+
+  const [error, setError] =
+    useState<string>("");
+
+  // =========================================================
+  // BOOKING STATES
+  // =========================================================
+
+  const [selectedBookingActivity, setSelectedBookingActivity] =
+    useState<Package | null>(null);
+
+  const [isBookingModalOpen, setIsBookingModalOpen] =
+    useState<boolean>(false);
+
+  const navigate = useNavigate();
+
+  const {
+    selectedCurrency,
+    nprPerOneDollar,
+    nprPerOneINR,
+  } = useGlobalCurrency();
+
+  // =========================================================
+  // FETCH ADVENTURE ACTIVITIES
+  //
+  // GET:
+  // /packageByCategory?category=Adventure%20Activities
+  // =========================================================
+
+  useEffect(() => {
+
+    const fetchAdventureActivities = async () => {
+
+      try {
+
+        setLoading(true);
+        setError("");
+
+        const response =
+          await getPackagesByCategory(
+            "Adventure Activities"
+          );
+
+        console.log(
+          "Adventure Activities API response:",
+          response.data
+        );
+
+        /*
+         * Expected Laravel response:
+         *
+         * {
+         *   status: true,
+         *   data: {
+         *     current_page: 1,
+         *     data: [...]
+         *   }
+         * }
+         */
+
+        const packages =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+
+        setActivityPackages(
+          Array.isArray(packages)
+            ? packages
+            : []
+        );
+
+      } catch (err: any) {
+
+        console.error(
+          "Failed to fetch Adventure Activities:",
+          err
+        );
+
+        setActivityPackages([]);
+
+        setError(
+          err?.response?.data?.message ||
+          "Unable to load adventure activities."
+        );
+
+      } finally {
+
+        setLoading(false);
+
+      }
+    };
+
+    fetchAdventureActivities();
+
+  }, []);
+
+  // =========================================================
+  // BOOK ACTIVITY
+  // =========================================================
+
+  const handleBookActivity = (pkg: any) => {
+
+    const token =
+      localStorage.getItem("token");
+
+    // Not logged in
+    if (!token) {
+
+      navigate("/login", {
+        state: {
+          from: "/service/activities",
+          packageId: pkg.id,
+          openBooking: true,
+        },
+      });
+
+      return;
+    }
+
+    // Logged in
+    setSelectedBookingActivity(
+      pkg as Package
+    );
+
+    setIsBookingModalOpen(true);
+  };
+
+  // =========================================================
+  // ADVENTURE KEYWORDS
+  // =========================================================
 
   const adventureKeywords = [
     "PARAGLIDING",
@@ -79,90 +227,290 @@ export const ActivitiesDetailContent: React.FC = () => {
     "COMBO",
   ];
 
-  const filteredActivities = activityPackages.filter((pkg) => {
-    // 1. Category Tab Filter
-    if (activeTab === "Air" && pkg.adventureCategory !== "Air") return false;
-    if (activeTab === "Water" && pkg.adventureCategory !== "Water") return false;
-    if (activeTab === "Land" && pkg.adventureCategory !== "Land") return false;
-    if (activeTab === "combo" && pkg.type !== "combo") return false;
+  // =========================================================
+  // FILTER ACTIVITIES
+  // =========================================================
 
-    // 2. Price Range Filter
-    const priceNum = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
-    const matchesPrice = priceNum === 0 || priceNum <= priceRange;
+  const filteredActivities =
+    activityPackages.filter((pkg) => {
 
-    // 3. Ratings Filter
-    const pkgRating =
-      pkg.rating !== undefined
-        ? pkg.rating
-        : pkg.testimonies && pkg.testimonies.length > 0
-        ? pkg.testimonies[0].rating
-        : 5;
-    const matchesRating = selectedRating === 0 || Math.round(pkgRating) >= selectedRating;
+      // -----------------------------------------------------
+      // 1. CATEGORY TAB FILTER
+      //
+      // Backend uses:
+      // adventure_category
+      //
+      // NOT:
+      // adventureCategory
+      // -----------------------------------------------------
 
-    // 4. Keywords Filter
-    const matchesKeywords =
-      selectedKeywords.length === 0
-        ? true
-        : selectedKeywords.some((keyword) => {
-            const kw = keyword.toLowerCase();
-            return (
-              pkg.title?.toLowerCase().includes(kw) ||
-              pkg.location?.toLowerCase().includes(kw) ||
-              pkg.adventureCategory?.toLowerCase().includes(kw) ||
-              pkg.highlights?.some((hl) => hl.toLowerCase().includes(kw))
+      if (
+        activeTab === "Air" &&
+        pkg.adventure_category !== "Air"
+      ) {
+        return false;
+      }
+
+      if (
+        activeTab === "Water" &&
+        pkg.adventure_category !== "Water"
+      ) {
+        return false;
+      }
+
+      if (
+        activeTab === "Land" &&
+        pkg.adventure_category !== "Land"
+      ) {
+        return false;
+      }
+
+      /*
+       * There is currently no "combo" field in the backend
+       * package response you showed.
+       *
+       * For now this checks title/intensity for combo.
+       */
+      if (activeTab === "combo") {
+
+        const title =
+          pkg.title?.toLowerCase() || "";
+
+        const intensity =
+          pkg.intensity?.toLowerCase() || "";
+
+        if (
+          !title.includes("combo") &&
+          !intensity.includes("combo")
+        ) {
+          return false;
+        }
+      }
+
+      // -----------------------------------------------------
+      // 2. PRICE FILTER
+      //
+      // Backend price example:
+      // "25000"
+      //
+      // priceRange === 0 means:
+      // NO PRICE FILTER
+      // -----------------------------------------------------
+
+      const priceNum =
+        Number(pkg.price || 0);
+
+      const matchesPrice =
+        priceRange === 0 ||
+        priceNum === 0 ||
+        priceNum <= priceRange;
+
+      // -----------------------------------------------------
+      // 3. RATING FILTER
+      //
+      // Your current backend package response does not
+      // contain rating.
+      //
+      // Therefore don't remove packages just because
+      // rating doesn't exist.
+      // -----------------------------------------------------
+
+      let matchesRating = true;
+
+      if (selectedRating > 0) {
+
+        if (pkg.rating !== undefined) {
+
+          matchesRating =
+            Math.round(
+              Number(pkg.rating)
+            ) >= selectedRating;
+
+        } else {
+
+          /*
+           * Backend doesn't provide rating,
+           * so package remains visible.
+           */
+          matchesRating = true;
+
+        }
+      }
+
+      // -----------------------------------------------------
+      // 4. KEYWORD FILTER
+      // -----------------------------------------------------
+
+      const matchesKeywords =
+        selectedKeywords.length === 0
+          ? true
+          : selectedKeywords.some(
+              (keyword) => {
+
+                const kw =
+                  keyword.toLowerCase();
+
+                const title =
+                  pkg.title
+                    ?.toLowerCase() || "";
+
+                const location =
+                  pkg.location
+                    ?.toLowerCase() || "";
+
+                const adventureCategory =
+                  pkg.adventure_category
+                    ?.toLowerCase() || "";
+
+                const intensity =
+                  pkg.intensity
+                    ?.toLowerCase() || "";
+
+                const description =
+                  pkg.description
+                    ?.toLowerCase() || "";
+
+                return (
+                  title.includes(kw) ||
+                  location.includes(kw) ||
+                  adventureCategory.includes(kw) ||
+                  intensity.includes(kw) ||
+                  description.includes(kw)
+                );
+              }
             );
-          });
 
-    return matchesPrice && matchesRating && matchesKeywords;
-  });
+      return (
+        matchesPrice &&
+        matchesRating &&
+        matchesKeywords
+      );
+    });
 
-  const handleBookActivity = (pkg: Package) => {
-    setSelectedBookingActivity(pkg);
-    setIsBookingModalOpen(true);
-  };
+  // =========================================================
+  // LOADING
+  // =========================================================
+
+  if (loading) {
+
+    return (
+      <div className="py-16 text-center">
+
+        <p className="text-[#2D1347] font-bold">
+          Loading adventure activities...
+        </p>
+
+      </div>
+    );
+  }
+
+  // =========================================================
+  // ERROR
+  // =========================================================
+
+  if (error) {
+
+    return (
+      <div className="py-16 text-center">
+
+        <p className="text-red-600 font-bold">
+          {error}
+        </p>
+
+      </div>
+    );
+  }
+
+  // =========================================================
+  // PAGE
+  // =========================================================
 
   return (
+
     <div className="space-y-12">
 
-      {/* ── HEADER & FILTER PILLS ── */}
+      {/* ──────────────────────────────────────────────────── */}
+      {/* HEADER & FILTER PILLS */}
+      {/* ──────────────────────────────────────────────────── */}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+
         <div>
+
           <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+
             Featured Adventure Activities &amp; Combos
+
           </h3>
+
           <p className="text-xs text-gray-500 font-medium mt-1">
-            Browse adrenaline experiences, aerial flights, whitewater runs, and multi-activity combos.
+
+            Browse adrenaline experiences, aerial flights,
+            whitewater runs, and multi-activity combos.
+
           </p>
+
         </div>
 
         {/* Filter Pills */}
+
         <div className="flex flex-wrap gap-2">
+
           {[
-            { id: "all", label: `All Activities (${activityPackages.length})` },
-            { id: "Air", label: "Aerial Thrills" },
-            { id: "Water", label: "River Rapids" },
-            { id: "Land", label: "Gravity & Land" },
-            { id: "combo", label: "Multi-Activity Combos" },
+            {
+              id: "all",
+              label: `All Activities (${activityPackages.length})`,
+            },
+            {
+              id: "Air",
+              label: "Aerial Thrills",
+            },
+            {
+              id: "Water",
+              label: "River Rapids",
+            },
+            {
+              id: "Land",
+              label: "Gravity & Land",
+            },
+            {
+              id: "combo",
+              label: "Multi-Activity Combos",
+            },
           ].map((tab) => (
+
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() =>
+                setActiveTab(tab.id)
+              }
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-[#2D1347] text-white shadow-md"
                   : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"
               }`}
             >
+
               {tab.label}
+
             </button>
+
           ))}
+
         </div>
+
       </div>
 
-      {/* ── MAIN CONTENT: SIDEBAR + PACKAGES LIST (EXACTLY SAME AS PACKAGES PAGE) ── */}
+      {/* ──────────────────────────────────────────────────── */}
+      {/* SIDEBAR + PACKAGE CARDS */}
+      {/* ──────────────────────────────────────────────────── */}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left: Filter Sidebar */}
+
+        {/* LEFT FILTER SIDEBAR */}
+
         <div className="lg:col-span-1">
+
           <FilterSideBar
             setPriceRange={setPriceRange}
             priceRange={priceRange}
@@ -172,33 +520,69 @@ export const ActivitiesDetailContent: React.FC = () => {
             setSelectedKeywords={setSelectedKeywords}
             customKeywords={adventureKeywords}
           />
+
         </div>
 
-        {/* Right: Package Details Cards */}
+        {/* RIGHT PACKAGE LIST */}
+
         <div className="lg:col-span-3">
-          <PackageDetailsSection
-            pkgs={filteredActivities}
-            onBook={handleBookActivity}
-            itemsPerPage={12}
-          />
+
+          {filteredActivities.length === 0 ? (
+
+            <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
+
+              <p className="font-bold text-gray-500">
+                No adventure activities found.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <PackageDetailsSection
+              pkgs={filteredActivities}
+              onBook={handleBookActivity}
+              itemsPerPage={12}
+            />
+
+          )}
+
         </div>
+
       </div>
 
-      {/* ── 3. SAFETY FIRST PROTOCOLS ── */}
+      {/* ──────────────────────────────────────────────────── */}
+      {/* SAFETY FIRST PROTOCOLS */}
+      {/* ──────────────────────────────────────────────────── */}
+
       <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 shadow-xl">
+
         <div className="max-w-3xl mb-6 sm:mb-8">
+
           <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs block mb-1">
+
             SAFETY &amp; CERTIFICATION
+
           </span>
+
           <h3 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight">
+
             How We Protect You On Every Jump, Flight &amp; Rapid
+
           </h3>
+
           <p className="text-gray-300 text-xs sm:text-sm mt-2 font-medium">
-            We adhere to the highest international adventure tourism safety codes with certified instructors, double-checked equipment, and daily inspections.
+
+            We adhere to the highest international adventure
+            tourism safety codes with certified instructors,
+            double-checked equipment, and daily inspections.
+
           </p>
+
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
+
           {[
             {
               icon: ShieldCheck,
@@ -231,64 +615,145 @@ export const ActivitiesDetailContent: React.FC = () => {
               desc: "Flexible weather-guarantee policy: full refund or zero-fee rebooking if flights are rained out.",
             },
           ].map((item, idx) => {
+
             const Icon = item.icon;
+
             return (
-              <div key={idx} className="bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10">
+
+              <div
+                key={idx}
+                className="bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10"
+              >
+
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] flex items-center justify-center text-white mb-3 shadow-md">
+
                   <Icon size={20} />
+
                 </div>
-                <h4 className="font-bold text-white text-sm mb-1">{item.title}</h4>
-                <p className="text-gray-300 text-xs leading-relaxed font-medium">{item.desc}</p>
+
+                <h4 className="font-bold text-white text-sm mb-1">
+
+                  {item.title}
+
+                </h4>
+
+                <p className="text-gray-300 text-xs leading-relaxed font-medium">
+
+                  {item.desc}
+
+                </p>
+
               </div>
+
             );
           })}
+
         </div>
+
       </div>
 
-      {/* ── 4. WHAT TO BRING & PACKING GUIDE ── */}
+      {/* ──────────────────────────────────────────────────── */}
+      {/* WHAT TO BRING */}
+      {/* ──────────────────────────────────────────────────── */}
+
       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm">
+
         <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs block mb-1">
+
           ESSENTIAL CHECKLIST
+
         </span>
+
         <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2D1347] tracking-tight mb-4 sm:mb-6">
+
           What to Wear &amp; Bring for Adventure Sports
+
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+
           {[
             {
               title: "Footwear",
-              items: ["Lace-up athletic shoes", "Tied sandals for rafting", "No flip-flops on jumps"],
+              items: [
+                "Lace-up athletic shoes",
+                "Tied sandals for rafting",
+                "No flip-flops on jumps",
+              ],
             },
             {
               title: "Clothing",
-              items: ["Comfortable active wear", "Windbreaker jacket", "Quick-dry shorts for river"],
+              items: [
+                "Comfortable active wear",
+                "Windbreaker jacket",
+                "Quick-dry shorts for river",
+              ],
             },
             {
               title: "Accessories",
-              items: ["Sunglasses with strap", "Sunscreen (SPF 50+)", "Waterproof phone pouch"],
+              items: [
+                "Sunglasses with strap",
+                "Sunscreen (SPF 50+)",
+                "Waterproof phone pouch",
+              ],
             },
             {
               title: "Documents",
-              items: ["Passport / ID Copy", "Travel Insurance policy", "Signed consent form"],
+              items: [
+                "Passport / ID Copy",
+                "Travel Insurance policy",
+                "Signed consent form",
+              ],
             },
           ].map((cat, idx) => (
-            <div key={idx} className="p-5 rounded-2xl bg-[#FBFBFE] border border-gray-200/80">
-              <h4 className="font-extrabold text-[#2D1347] text-sm mb-3 pb-2 border-b border-gray-200">{cat.title}</h4>
+
+            <div
+              key={idx}
+              className="p-5 rounded-2xl bg-[#FBFBFE] border border-gray-200/80"
+            >
+
+              <h4 className="font-extrabold text-[#2D1347] text-sm mb-3 pb-2 border-b border-gray-200">
+
+                {cat.title}
+
+              </h4>
+
               <ul className="space-y-2">
+
                 {cat.items.map((it, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs text-gray-600 font-medium">
-                    <CheckCircle2 size={13} className="text-emerald-500 flex-shrink-0" />
-                    <span>{it}</span>
+
+                  <li
+                    key={i}
+                    className="flex items-center gap-2 text-xs text-gray-600 font-medium"
+                  >
+
+                    <CheckCircle2
+                      size={13}
+                      className="text-emerald-500 flex-shrink-0"
+                    />
+
+                    <span>
+                      {it}
+                    </span>
+
                   </li>
+
                 ))}
+
               </ul>
+
             </div>
+
           ))}
+
         </div>
+
       </div>
 
-      {/* ── 5. CURATED ACTIVITIES FAQS ── */}
+      {/* ──────────────────────────────────────────────────── */}
+      {/* FAQ */}
+      {/* ──────────────────────────────────────────────────── */}
+
       <DynamicFaqSection
         targetType="service"
         targetId="adventure-activities"
@@ -297,12 +762,18 @@ export const ActivitiesDetailContent: React.FC = () => {
         subtitle="Clear answers on safety, slots, and requirements"
       />
 
-      {/* ── BOOKING MODAL POPUP ── */}
+      {/* ──────────────────────────────────────────────────── */}
+      {/* BOOKING MODAL */}
+      {/* ──────────────────────────────────────────────────── */}
+
       <BookingModal
         pkg={selectedBookingActivity}
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        onClose={() =>
+          setIsBookingModalOpen(false)
+        }
       />
+
     </div>
   );
 };

@@ -4,6 +4,7 @@ import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { getPackageCategoryName } from "../../utils/categoryUtils";
 
 // CHANGE THIS IMPORT PATH ONLY if your API file has a different location/name
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -11,6 +12,7 @@ import { getPackagesByCategory } from "../../api/BackendApi";
 import {
   MapPin,
   Clock,
+  Tag,
   CheckCircle2,
   ShieldCheck,
   Award,
@@ -22,6 +24,8 @@ import {
   CalendarCheck,
   ArrowUpRight,
 } from "lucide-react";
+
+
 
 const TOUR_FAQS = [
   {
@@ -378,17 +382,24 @@ export const ToursDetailContent: React.FC = () => {
                       )}
                     </div>
 
-                    {tour.location && (
-                      <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mb-4">
-                        <MapPin
-                          size={14}
-                          className="text-[#E11D48] flex-shrink-0"
-                        />
-                        <span className="truncate">
-                          {tour.location}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold text-gray-500 mb-4">
+                      {tour.location && (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <MapPin
+                            size={14}
+                            className="text-[#E11D48] flex-shrink-0"
+                          />
+                          <span className="truncate">
+                            {tour.location}
+                          </span>
+                        </div>
+                      )}
+
+                      <span className="inline-flex items-center gap-1 bg-pink-50 text-[#E11D48] px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-pink-100 flex-shrink-0">
+                        <Tag size={11} className="flex-shrink-0" />
+                        <span>{getPackageCategoryName(tour, "Tours")}</span>
+                      </span>
+                    </div>
 
                     {tour.description && (
                       <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3 mb-6">
@@ -482,8 +493,6 @@ export const ToursDetailContent: React.FC = () => {
         )}
       </div>
 
-      {/* KEEP YOUR EXISTING "WHAT'S INCLUDED" SECTION HERE */}
-      {/* KEEP YOUR EXISTING SEASON SECTION HERE */}
 
       <DynamicFaqSection
         targetType="service"

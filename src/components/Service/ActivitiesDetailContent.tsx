@@ -25,6 +25,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+
+
 const ACTIVITY_FAQS = [
   {
     q: "Do I need prior experience to do Paragliding or Bungee jumping?",
@@ -749,6 +751,8 @@ export const ActivitiesDetailContent: React.FC = () => {
         </div>
 
       </div>
+
+
 
       {/* ──────────────────────────────────────────────────── */}
       {/* FAQ */}

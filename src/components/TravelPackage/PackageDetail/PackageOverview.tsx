@@ -1,17 +1,65 @@
 import React from "react";
 import { useOutletContext } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
-import { CheckCircle2, Clock, MapPin } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Tag } from "lucide-react";
+import { getPackageCategoryName } from "../../../utils/categoryUtils";
 import IncludesExclude from "./IncludesExclude";
 import PackagePricing from "./PackagePricing";
+import TripRoadmap, { type RoadmapStep } from "../../reusable/TripRoadmap";
+
 
 interface PackageProp {
   pkg: Package;
   allItenary: { day: string; title: string; desc: string }[];
 }
 
+// ─────────────────────────────────────────────
+// MOCK ROADMAP DATA (used as fallback when API itinerary is empty)
+// Replace / remove once the API provides itinerary steps.
+// ─────────────────────────────────────────────
+const MOCK_ROADMAP_STEPS: RoadmapStep[] = [
+  {
+    day: "Day 01",
+    schedule: "Full Day Schedule",
+    title: "Arrival & Welcome",
+    description:
+      "Our representative will receive you and transfer you to your accommodation. Evening free for local exploration.",
+    tags: ["Breakfast", "Guided Sightseeing"],
+  },
+  {
+    day: "Day 02",
+    schedule: "Full Day Schedule",
+    title: "Full Day Sightseeing",
+    description:
+      "Visit the most famous landmarks and cultural heritage sites of the region with our expert guide.",
+    tags: ["Breakfast", "Guided Sightseeing"],
+  },
+  {
+    day: "Day 03",
+    schedule: "Full Day Schedule",
+    title: "Final Departure",
+    description:
+      "Transfer to the airport or bus station for your onward journey home with beautiful memories.",
+    tags: ["Breakfast", "Guided Sightseeing"],
+  },
+];
+
 const PackageOverview: React.FC = () => {
-  const { pkg } = useOutletContext<PackageProp>();
+  const { pkg, allItenary } = useOutletContext<PackageProp>();
+
+  // ── Build roadmap steps from real API data; fall back to mock ──
+  const roadmapSteps: RoadmapStep[] =
+    Array.isArray(allItenary) && allItenary.length > 0
+      ? allItenary.map((item, idx) => ({
+          step: idx + 1,
+          day: item.day || `Day ${String(idx + 1).padStart(2, "0")}`,
+          schedule: (item as any).schedule ?? "Full Day Schedule",
+          title: item.title,
+          description: item.desc || (item as any).description || "",
+          tags: (item as any).tags ?? ["Breakfast", "Guided Sightseeing"],
+        }))
+      : MOCK_ROADMAP_STEPS;
+
 
   return (
     <div className="w-full">
@@ -33,6 +81,11 @@ const PackageOverview: React.FC = () => {
               <span className="flex items-center gap-1.5 text-[#E91E63]">
                 <Clock size={15} />
                 <span className="text-gray-700">{pkg.duration}</span>
+              </span>
+
+              <span className="inline-flex items-center gap-1.5 bg-pink-50 text-[#E91E63] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                <Tag size={12} />
+                <span>{getPackageCategoryName(pkg)}</span>
               </span>
 
               {pkg.difficulty && (
@@ -64,6 +117,9 @@ const PackageOverview: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* ── TRIP ROADMAP ── */}
+          <TripRoadmap steps={roadmapSteps} />
 
           {/* Inclusions & Exclusions */}
           <IncludesExclude />

@@ -1,7 +1,8 @@
 import React from "react";
-import { MapPin, Clock, Star } from "lucide-react";
+import { MapPin, Clock, Star, Tag } from "lucide-react";
 import type { Package } from "../../assets/data/types";
 import { useNavigate } from "react-router-dom";
+import { getPackageCategoryName } from "../../utils/categoryUtils";
 import {
   useGlobalCurrency,
   displayPrice,
@@ -259,9 +260,9 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
           </p>
         </div>
 
-        {/* Location and Duration */}
+        {/* Location, Duration and Category */}
 
-        <div className="flex items-center gap-4 mt-4 pt-2 text-xs font-bold text-gray-600">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 pt-2 text-xs font-bold text-gray-600">
           <span className="flex items-center gap-1 min-w-0">
             <MapPin
               size={13}
@@ -273,13 +274,20 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
             </span>
           </span>
 
-          <span className="flex items-center gap-1 flex-shrink-0">
-            <Clock
-              size={13}
-              className="text-[#E91E63]"
-            />
+          {pkg.duration && (
+            <span className="flex items-center gap-1 flex-shrink-0">
+              <Clock
+                size={13}
+                className="text-[#E91E63]"
+              />
 
-            <span>{pkg.duration}</span>
+              <span>{pkg.duration}</span>
+            </span>
+          )}
+
+          <span className="inline-flex items-center gap-1 bg-pink-50 text-[#E91E63] px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-pink-100 flex-shrink-0">
+            <Tag size={11} className="flex-shrink-0" />
+            <span>{getPackageCategoryName(pkg)}</span>
           </span>
         </div>
       </div>

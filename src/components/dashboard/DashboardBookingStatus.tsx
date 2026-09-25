@@ -21,6 +21,7 @@
 
 import React, { useState, useMemo } from "react";
 import { ArrowLeft, ArrowRight, Eye, ChevronRight, Search, User, X, ChevronDown, Filter, FileText } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ServiceType,
   ServiceBooking,
@@ -73,12 +74,37 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({
   userData,
 }) => {
   const isTableOnly = mode === "table-only";
+  const navigate = useNavigate();
+  const { serviceId: urlServiceId, bookingId: urlBookingId } = useParams<{
+    serviceId?: string;
+    bookingId?: string;
+  }>();
 
-  const [view, setView] = useState<BookingView>(isTableOnly ? "list" : "cards");
-  const [selectedService, setSelectedService] = useState<ServiceType | "all">(
-    isTableOnly ? "all" : "package-booking"
-  );
-  const [selectedBooking, setSelectedBooking] = useState<ServiceBooking | null>(null);
+  /**
+   * Derive view from URL params:
+   *  - cards-first mode without serviceId  → "cards"
+   *  - table-only mode without serviceId   → "list" (all)
+   *  - serviceId present, no bookingId     → "list" (filtered)
+   *  - both serviceId + bookingId present  → "detail"
+   */
+  const view: BookingView = useMemo(() => {
+    if (urlBookingId) return "detail";
+    if (urlServiceId) return "list";
+    return isTableOnly ? "list" : "cards";
+  }, [urlServiceId, urlBookingId, isTableOnly]);
+
+  const selectedService: ServiceType | "all" = useMemo(() => {
+    if (urlServiceId && urlServiceId !== "all") {
+      return urlServiceId as ServiceType;
+    }
+    return "all";
+  }, [urlServiceId]);
+
+  const selectedBooking: ServiceBooking | null = useMemo(() => {
+    if (!urlBookingId) return null;
+    return DEMO_BOOKINGS.find((b) => b.id === urlBookingId) ?? null;
+  }, [urlBookingId]);
+
 
   /* ── Search Filters ── */
   const [searchName, setSearchName] = useState("");
@@ -109,32 +135,33 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({
     }
   }, [selectedService]);
 
-  /* ── Navigation handlers ── */
+  /* ── Navigation handlers (URL-based) ── */
 
   const handleCardClick = (serviceId: ServiceType) => {
-    setSelectedService(serviceId);
     setSearchName("");
     setSearchItem("");
     setSearchSubNo("");
-    setView("list");
+    navigate(`/dashboard/booking/${serviceId}`);
   };
 
   const handleViewDetails = (booking: ServiceBooking) => {
-    setSelectedBooking(booking);
-    setView("detail");
+    const svc = booking.serviceType;
+    navigate(`/dashboard/booking/${svc}/${booking.id}`);
   };
 
   const handleBackFromDetail = () => {
-    setSelectedBooking(null);
-    setView("list");
+    if (selectedBooking) {
+      navigate(`/dashboard/booking/${selectedBooking.serviceType}`);
+    } else {
+      navigate("/dashboard/booking");
+    }
   };
 
   const handleBackFromList = () => {
     if (isTableOnly) {
-      setSelectedService("all");
+      navigate("/dashboard/booking");
     } else {
-      setSelectedService("package-booking");
-      setView("cards");
+      navigate("/dashboard");
     }
     setSearchName("");
     setSearchItem("");
@@ -142,10 +169,19 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({
   };
 
   const handleResetFilters = () => {
-    setSelectedService("all");
+    navigate(isTableOnly ? "/dashboard/booking" : "/dashboard");
     setSearchName("");
     setSearchItem("");
     setSearchSubNo("");
+  };
+
+  /* ── Service filter change (updates URL) ── */
+  const handleServiceFilterChange = (val: ServiceType | "all") => {
+    if (val === "all") {
+      navigate("/dashboard/booking");
+    } else {
+      navigate(`/dashboard/booking/${val}`);
+    }
   };
 
   /* ── Per-service booking stats ── */
@@ -322,10 +358,10 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({
                   <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                     <Filter size={14} />
                   </div>
-                  <select
+          <select
                     id="service-filter-select"
                     value={selectedService}
-                    onChange={(e) => setSelectedService(e.target.value as ServiceType | "all")}
+                    onChange={(e) => handleServiceFilterChange(e.target.value as ServiceType | "all")}
                     aria-label="Filter bookings by service"
                     className="w-full appearance-none pl-9 pr-8 py-2.5 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#FF2A75] focus:ring-1 focus:ring-[#FF2A75] transition-all cursor-pointer shadow-sm truncate"
                   >

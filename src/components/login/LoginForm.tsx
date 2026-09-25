@@ -2,7 +2,6 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  Facebook,
   Mail,
   Phone,
 } from "lucide-react";
@@ -654,36 +653,13 @@ const LoginForm = () => {
             OR CONTINUE WITH
           </p>
 
-          <div className="flex gap-2 w-full justify-between text-center mt-2">
-            {/* GOOGLE */}
-
-            <div className="w-full overflow-hidden rounded-xl">
-              <GoogleLogin
-                onSuccess={
-                  handleGoogleSuccess
-                }
-                onError={() =>
-                  setApiError(
-                    "Unable to authenticate with Google."
-                  )
-                }
-              />
-            </div>
-
-            {/* FACEBOOK */}
-
-            <button
-              type="button"
-              className="bg-blue-500 text-white py-2 w-full rounded-xl text-xs tracking-widest font-bold cursor-pointer transition-opacity hover:opacity-90"
-            >
-              <span className="flex items-center gap-1 justify-center">
-                <Facebook
-                  size={14}
-                />
-
-                FACEBOOK
-              </span>
-            </button>
+          <div className="w-full overflow-hidden rounded-xl mt-2">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() =>
+                setApiError("Unable to authenticate with Google.")
+              }
+            />
           </div>
         </div>
       </div>

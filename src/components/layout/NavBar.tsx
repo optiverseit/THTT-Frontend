@@ -24,10 +24,138 @@ interface NavBarProps {
   onOpenInquiry?: () => void;
 }
 
+/* ─── Self-contained User Dropdown ───────────────────────────────────────────
+   Defined OUTSIDE NavBar so each rendered instance (desktop/tablet) has its
+   own isolated ref and open-state — fixing the shared-ref/mousedown race.
+──────────────────────────────────────────────────────────────────────────── */
+interface UserDropdownProps {
+  displayName: string;
+  userEmail: string;
+  onDashboard: () => void;
+  onSignOut: () => void;
+}
+
+const UserDropdown: React.FC<UserDropdownProps> = ({
+  displayName,
+  userEmail,
+  onDashboard,
+  onSignOut,
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  return (
+    <div className="relative z-[400]" ref={ref}>
+      {/* Trigger button */}
+      <button
+        type="button"
+        id="navbar-user-menu-btn"
+        onMouseDown={(e) => { e.stopPropagation(); setOpen((p) => !p); }}
+        className={`bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full pl-1.5 pr-3 py-1 flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shadow-sm ${open ? "ring-2 ring-[#FF4FA3]/50 bg-white/20" : ""}`}
+        aria-expanded={open}
+        aria-haspopup="true"
+        title={`Account: ${displayName}`}
+      >
+        <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#FF2A75] to-[#8B2CFF] flex items-center justify-center text-white shrink-0 shadow-xs">
+          <User size={12} className="text-white" />
+        </span>
+        <span className="font-semibold text-white max-w-[120px] sm:max-w-[150px] truncate">
+          {displayName}
+        </span>
+        <ChevronDown
+          size={12}
+          className={`text-purple-200 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div
+          id="navbar-user-dropdown"
+          className="absolute right-[-100px] md:right-[-120px] lg:right-[-160px] top-[calc(100%+10px)] w-[272px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.35)] border border-slate-100 p-2 z-[999] animate-in fade-in zoom-in-95 duration-150"
+        >
+          {/* Arrow */}
+          <div className="absolute -top-1.5 left-10 md:left-10 lg:left-[42px] w-3 h-3 bg-white border-t border-l border-slate-200 rotate-45" />
+
+          {/* Profile card */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FF2A75] to-[#8B2CFF] flex items-center justify-center text-white shrink-0 shadow-sm">
+              <User size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black text-slate-900 truncate leading-tight">{displayName}</p>
+              <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">{userEmail}</p>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active Account
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="p-1 mt-1 space-y-1">
+            {/* Dashboard */}
+            <button
+              type="button"
+              id="nav-dropdown-dashboard-btn"
+              onClick={() => { onDashboard(); setOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-purple-50/80 transition-colors group cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-lg bg-purple-100/70 text-[#8B2CFF] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                <LayoutDashboard size={15} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-slate-800 group-hover:text-[#8B2CFF] transition-colors">Dashboard</p>
+                <p className="text-[10px] text-slate-400 font-medium">Manage bookings &amp; profile</p>
+              </div>
+              <ChevronRight size={13} className="text-slate-300 group-hover:text-[#8B2CFF] group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
+
+            {/* Log Out */}
+            <button
+              type="button"
+              id="nav-dropdown-logout-btn"
+              onClick={() => { onSignOut(); setOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-red-50/80 transition-colors group cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-100/70 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                <LogOut size={15} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-red-600 group-hover:text-red-700 transition-colors">Log Out</p>
+                <p className="text-[10px] text-red-400/80 font-medium">Sign out of your session</p>
+              </div>
+              <ChevronRight size={13} className="text-red-200 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  // userDropdownOpen and dropdownRef removed — now owned by <UserDropdown>
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -45,35 +173,12 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
   const userEmail = user?.email || localStorage.getItem("email") || "aniket@gmail.com";
 
-  // Close dropdown on outside click or Escape key
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setUserDropdownOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setUserDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
   const handleSignOut = () => {
     logout();
-    // Use window.location for a hard redirect after logout to guarantee
-    // all in-memory state (protected routes, context) is fully reset.
     window.location.replace("/login");
   };
 
   const handleDashboardNav = () => {
-    setUserDropdownOpen(false);
     navigate("/dashboard");
   };
 
@@ -104,121 +209,6 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
     }
   };
 
-  const renderUserButtonAndDropdown = () => (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        id="navbar-user-menu-btn"
-        onClick={() => setUserDropdownOpen((prev) => !prev)}
-        className={`bg-white/10 hover:bg-white/20 border border-white/25 active:scale-95 text-white font-medium text-[11px] sm:text-[11.5px] rounded-full pl-1.5 pr-3 py-1 flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shadow-sm ${userDropdownOpen ? "ring-2 ring-[#FF4FA3]/50 bg-white/20" : ""
-          }`}
-        aria-expanded={userDropdownOpen}
-        aria-haspopup="true"
-        title={`Account: ${displayName}`}
-      >
-        {/* User icon inside circular badge */}
-        <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#FF2A75] to-[#8B2CFF] flex items-center justify-center text-white shrink-0 shadow-xs">
-          <User size={12} className="text-white" />
-        </span>
-
-        {/* User's Name */}
-        <span className="font-semibold text-white max-w-[120px] sm:max-w-[150px] truncate">
-          {displayName}
-        </span>
-
-        {/* Dropdown Chevron */}
-        <ChevronDown
-          size={12}
-          className={`text-purple-200 transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""
-            }`}
-        />
-      </button>
-
-      {/* Crisp, Luxury White Dropdown Menu */}
-      {userDropdownOpen && (
-        <div
-          id="navbar-user-dropdown"
-          className="absolute right-[-100px] md:right-[-120px] lg:right-[-160px] top-[calc(100%+10px)] w-[272px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.35)] border border-slate-100 p-2 z-[999] animate-in fade-in zoom-in-95 duration-150"
-        >
-          {/* Subtle upward pointer arrow */}
-          <div className="absolute -top-1.5 left-10 md:left-10 lg:left-[42px] w-3 h-3 bg-white border-t border-l border-slate-200 rotate-45" />
-
-          {/* User Profile Header Card */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FF2A75] to-[#8B2CFF] flex items-center justify-center text-white shrink-0 shadow-sm">
-              <User size={18} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-black text-slate-900 truncate leading-tight">
-                {displayName}
-              </p>
-              <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">
-                {userEmail}
-              </p>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Active Account
-              </span>
-            </div>
-          </div>
-
-          {/* Menu Actions */}
-          <div className="p-1 mt-1 space-y-1">
-            {/* Dashboard Option */}
-            <button
-              type="button"
-              id="nav-dropdown-dashboard-btn"
-              onClick={() => {
-                navigate("/dashboard");
-                setUserDropdownOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-purple-50/80 transition-colors group cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-lg bg-purple-100/70 text-[#8B2CFF] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                <LayoutDashboard size={15} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-slate-800 group-hover:text-[#8B2CFF] transition-colors">
-                  Dashboard
-                </p>
-                <p className="text-[10px] text-slate-400 font-medium">
-                  Manage bookings &amp; profile
-                </p>
-              </div>
-              <ChevronRight
-                size={13}
-                className="text-slate-300 group-hover:text-[#8B2CFF] group-hover:translate-x-0.5 transition-all shrink-0"
-              />
-            </button>
-
-            {/* Log Out Option */}
-            <button
-              type="button"
-              id="nav-dropdown-logout-btn"
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-red-50/80 transition-colors group cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-lg bg-red-100/70 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                <LogOut size={15} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-red-600 group-hover:text-red-700 transition-colors">
-                  Log Out
-                </p>
-                <p className="text-[10px] text-red-400/80 font-medium">
-                  Sign out of your session
-                </p>
-              </div>
-              <ChevronRight
-                size={13}
-                className="text-red-200 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all shrink-0"
-              />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <nav className="w-full bg-gradient-to-r from-[#2D1347] via-[#3B145C] to-[#2D1347] border-b border-white/10 text-white relative z-20">
@@ -258,7 +248,12 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
               {/* User Dropdown when logged in, or Login Pill when logged out */}
               {isLoggedIn ? (
-                renderUserButtonAndDropdown()
+                <UserDropdown
+                  displayName={displayName}
+                  userEmail={userEmail}
+                  onDashboard={handleDashboardNav}
+                  onSignOut={handleSignOut}
+                />
               ) : (
                 <button
                   id="nav-login-btn-desktop"
@@ -285,7 +280,12 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
             {/* User Dropdown when logged in, or Login Pill when logged out */}
             {isLoggedIn ? (
-              renderUserButtonAndDropdown()
+              <UserDropdown
+                displayName={displayName}
+                userEmail={userEmail}
+                onDashboard={handleDashboardNav}
+                onSignOut={handleSignOut}
+              />
             ) : (
               <button
                 id="nav-login-btn-tablet"

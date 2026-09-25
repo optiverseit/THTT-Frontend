@@ -2,6 +2,7 @@
  * DashboardSidebar.tsx
  * ─────────────────────
  * Fixed full-height dark purple sidebar for the dashboard.
+ * Navigation is URL-based: clicking a tab navigates to its route.
  *
  * KEY LAYOUT RULE:
  *  - Sidebar starts at top:0, height:100vh, z-index:60 (above sticky header z-50).
@@ -25,6 +26,7 @@ import {
   Luggage,
   LogOut,
 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 /**
  * Sidebar spacer heights matching the sticky header per breakpoint:
@@ -39,6 +41,10 @@ interface NavItem {
   id: DashboardTab;
   label: string;
   icon: React.ReactNode;
+  /** The URL path this item navigates to */
+  path: string;
+  /** URL prefix used to determine if this item is "active" */
+  matchPrefix: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -46,22 +52,26 @@ const NAV_ITEMS: NavItem[] = [
     id: "dashboard",
     label: "Dashboard",
     icon: <LayoutDashboard size={18} className="shrink-0" />,
+    path: "/dashboard",
+    matchPrefix: "/dashboard",
   },
   {
     id: "user-details",
     label: "User Details",
     icon: <User size={18} className="shrink-0" />,
+    path: "/dashboard/user-profile",
+    matchPrefix: "/dashboard/user-profile",
   },
   {
     id: "booking",
     label: "Booking",
     icon: <Luggage size={18} className="shrink-0" />,
+    path: "/dashboard/booking",
+    matchPrefix: "/dashboard/booking",
   },
 ];
 
 interface DashboardSidebarProps {
-  activeTab: DashboardTab;
-  onTabChange: (tab: DashboardTab) => void;
   onLogout: () => void;
   userName: string;
   userEmail: string;
@@ -70,15 +80,27 @@ interface DashboardSidebarProps {
 }
 
 const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
-  activeTab,
-  onTabChange,
   onLogout,
   mobileOpen,
   onMobileClose,
 }) => {
-  const handleTab = (tab: DashboardTab) => {
-    onTabChange(tab);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNav = (item: NavItem) => {
+    navigate(item.path);
     onMobileClose();
+  };
+
+  /**
+   * Determine which nav item is active based on the current URL.
+   * Special case: Dashboard (/) should only be active when path is exactly /dashboard.
+   */
+  const isActive = (item: NavItem): boolean => {
+    if (item.id === "dashboard") {
+      return location.pathname === "/dashboard";
+    }
+    return location.pathname.startsWith(item.matchPrefix);
   };
 
   return (
@@ -123,25 +145,25 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           aria-label="Dashboard sections"
         >
           {NAV_ITEMS.map((item) => {
-            const isActive = activeTab === item.id;
+            const active = isActive(item);
             return (
               <button
                 key={item.id}
                 type="button"
                 id={`sidebar-tab-${item.id}`}
                 role="tab"
-                aria-selected={isActive}
-                onClick={() => handleTab(item.id)}
+                aria-selected={active}
+                onClick={() => handleNav(item)}
                 className={[
                   "w-full flex items-center gap-2.5 px-3 md:px-4 py-2.5 md:py-3 rounded-2xl",
                   "text-[12px] md:text-[13px] font-bold tracking-wide transition-all duration-200",
                   "cursor-pointer text-left active:scale-[0.98]",
-                  isActive
+                  active
                     ? "bg-gradient-to-r from-[#FF2A75] to-[#E91E63] text-white shadow-lg shadow-pink-600/30"
                     : "text-white/65 hover:text-white hover:bg-white/10",
                 ].join(" ")}
               >
-                <span className={isActive ? "text-white" : "text-white/45"}>
+                <span className={active ? "text-white" : "text-white/45"}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>

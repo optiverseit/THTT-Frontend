@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowRight, MessageCircle, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, MessageCircle, Users } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../../context/CurrencyContext";
 
 interface CountryProps {
@@ -27,7 +27,6 @@ interface AgeTier {
 const CostDetails: React.FC<CostDetailsProps> = ({ country }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const [selectedTierIndex, setSelectedTierIndex] = useState<number>(0);
-  const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
 
   // Regulated government, insurance & processing fee tiers
   const ageTiers: AgeTier[] = [
@@ -68,24 +67,6 @@ const CostDetails: React.FC<CostDetailsProps> = ({ country }) => {
   const currencyLabel =
     selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
 
-  const itemizedItems = [
-    {
-      name: "Term Life Insurance (Myadi Bima)",
-      npr: activeTier.insuranceNpr,
-    },
-    {
-      name: "Foreign Employment Welfare Fund",
-      npr: activeTier.welfareNpr,
-    },
-    {
-      name: "Social Security Fund (SSF)",
-      npr: activeTier.ssfNpr,
-    },
-    {
-      name: "FEIMS Filing & Agency Facilitation",
-      npr: activeTier.facilitationNpr,
-    },
-  ];
 
   const handleWhatsAppInquiry = () => {
     const tierPrice = displayPrice(
@@ -111,7 +92,7 @@ const CostDetails: React.FC<CostDetailsProps> = ({ country }) => {
         {/* Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-xl font-bold text-purple-950">Cost Breakdown</h2>
+            <h2 className="text-2xl font-bold text-purple-950">Permit Cost</h2>
             {country && (
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-pink-50 text-[#E91E63] border border-pink-100">
                 {country.name} Permit
@@ -169,40 +150,6 @@ const CostDetails: React.FC<CostDetailsProps> = ({ country }) => {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Toggleable Itemized Breakdown (Hidden by default) */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setShowBreakdown((prev) => !prev)}
-            className="w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-gray-50 hover:bg-gray-100/90 border border-gray-200/70 transition-all text-xs font-bold text-[#2D1347] cursor-pointer"
-          >
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#E91E63]" />
-              {showBreakdown ? "Hide Fee Breakdown" : "View Fee Breakdown"}
-            </span>
-            {showBreakdown ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
-
-          {showBreakdown && (
-            <div className="space-y-2 mt-2.5 pt-1">
-              {itemizedItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-pink-100 transition-all text-xs sm:text-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] flex-shrink-0" />
-                    <span className="font-bold text-gray-800">{item.name}</span>
-                  </div>
-                  <span className="font-black text-[#2D1347] flex-shrink-0 ml-2">
-                    {displayPrice(item.npr, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}

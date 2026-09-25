@@ -20,6 +20,7 @@ import Packages from "./pages/Packages";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import DashboardLayout from "./pages/DashboardLayout";
 import WorkPermit from "./pages/WorkPermit";
 
 // Page-level detail views (moved from deep component paths to pages/)
@@ -82,10 +83,21 @@ const MainLayout = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          {/* /dashboard → main cards view */}
+          <Route index element={<Dashboard tab="dashboard" />} />
+          {/* /dashboard/user-profile */}
+          <Route path="user-profile" element={<Dashboard tab="user-details" />} />
+          {/* /dashboard/booking → all bookings table */}
+          <Route path="booking" element={<Dashboard tab="booking" />} />
+          {/* /dashboard/booking/:serviceId → filtered by service */}
+          <Route path="booking/:serviceId" element={<Dashboard tab="booking" />} />
+          {/* /dashboard/booking/:serviceId/:bookingId → detail view */}
+          <Route path="booking/:serviceId/:bookingId" element={<Dashboard tab="booking" />} />
+        </Route>
 
         {/* ── ABOUT ── */}
         <Route path="/about" element={<About />} />

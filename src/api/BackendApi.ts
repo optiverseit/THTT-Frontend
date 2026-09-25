@@ -25,6 +25,19 @@ export const getPackagesByCategory = (category: string, page = 1) => {
   });
 };
 
+// BOOKING API
+export const createBooking = (bookingData: any) => {
+  return axiosInstance.post("/bookings", bookingData);
+};
+
+export const getMyBookings = (page = 1) => {
+    return axiosInstance.get("/my-bookings", {
+        params: {
+            page,
+        },
+    });
+};
+
 // ==============================
 // PUBLIC CATEGORIES
 // ==============================
@@ -157,6 +170,6 @@ export const getAllVehicles = () => {
   return axiosInstance.get("/vehicles");
 };
 
-export const getVehicleById = (id:number | string) => {
+export const getVehicleById = (id: number | string) => {
   return axiosInstance.get(`/vehicles/${id}`);
 };

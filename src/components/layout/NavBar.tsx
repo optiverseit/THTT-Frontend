@@ -66,7 +66,6 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
   }, []);
 
   const handleSignOut = () => {
-    setUserDropdownOpen(false);
     logout();
     // Use window.location for a hard redirect after logout to guarantee
     // all in-memory state (protected routes, context) is fully reset.
@@ -170,8 +169,8 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
               type="button"
               id="nav-dropdown-dashboard-btn"
               onClick={() => {
-                setUserDropdownOpen(false);
                 navigate("/dashboard");
+                setUserDropdownOpen(false);
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-purple-50/80 transition-colors group cursor-pointer"
             >

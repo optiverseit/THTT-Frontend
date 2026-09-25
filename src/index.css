@@ -11,6 +11,21 @@
     @apply bg-white text-gray-900;
     font-family: var(--font-sans);
   }
+
+  /* ── AUTOFILL OVERRIDE ──
+     Browsers force a yellow/white background on autofilled inputs via
+     -webkit-autofill which ignores regular background-color rules.
+     The inset box-shadow trick is the only reliable way to neutralise it. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px rgba(75, 85, 99, 0.4) inset !important;
+    box-shadow: 0 0 0 1000px rgba(75, 85, 99, 0.4) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff;
+    transition: background-color 9999s ease-in-out 0s;
+  }
 }
 
 /* ── PRINT MEDIA RULES ──

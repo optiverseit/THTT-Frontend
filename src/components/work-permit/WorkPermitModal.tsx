@@ -37,6 +37,7 @@ export type FileKeys =
 
 interface FormDataType {
   name: string;
+  passportNumber: string;
   phoneCode: string;
   phone: string;
   country: string;
@@ -65,6 +66,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
 
   const [formData, setFormData] = useState<FormDataType>({
     name: "",
+    passportNumber: "",
     phoneCode: "+977",
     phone: "",
     country: defaultCountry || "",
@@ -239,6 +241,12 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   const validateStepA = () => {
     const errors: string[] = [];
     if (!formData.name.trim()) errors.push("Full Name is required");
+
+    if (!formData.passportNumber.trim()) {
+      errors.push("Passport Number is required");
+    } else if (!/^[A-Za-z0-9]{6,20}$/.test(formData.passportNumber.trim())) {
+      errors.push("Passport Number must be 6–20 alphanumeric characters");
+    }
 
     const cleanPhone = formData.phone.replace(/[\s\-]/g, "");
     if (!cleanPhone) {
@@ -558,6 +566,10 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
               <td class="info-value accent">${formData.name || "—"}</td>
             </tr>
             <tr>
+              <td class="info-label">Passport Number</td>
+              <td class="info-value mono accent">${formData.passportNumber ? formData.passportNumber.toUpperCase() : "—"}</td>
+            </tr>
+            <tr>
               <td class="info-label">Contact / WhatsApp</td>
               <td class="info-value">${formData.phoneCode} ${formData.phone || "—"}</td>
             </tr>
@@ -836,6 +848,19 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   onChange={handleChange}
                   placeholder="e.g. Ram Bahadur Thapa"
                   className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+
+              {/* Passport Number */}
+              <div>
+                <label className="text-xs text-gray-600 font-bold">Passport Number*</label>
+                <input
+                  name="passportNumber"
+                  value={formData.passportNumber}
+                  onChange={handleChange}
+                  placeholder="e.g. A1234567"
+                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                  style={{ textTransform: "uppercase" }}
                 />
               </div>
 

@@ -67,11 +67,14 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
 
   const handleSignOut = () => {
     logout();
-    localStorage.clear();
-    console.log("cleared log");
-    setUserDropdownOpen(false);
-    navigate("/login", { replace: true });
+    // Use window.location for a hard redirect after logout to guarantee
+    // all in-memory state (protected routes, context) is fully reset.
+    window.location.replace("/login");
+  };
 
+  const handleDashboardNav = () => {
+    setUserDropdownOpen(false);
+    navigate("/dashboard");
   };
 
   const navLinks = [

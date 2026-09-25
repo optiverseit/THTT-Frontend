@@ -26,6 +26,8 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
+
+
 const TREK_FAQS = [
   {
     q: "How difficult is Himalayan trekking and what fitness level is needed?",
@@ -687,6 +689,8 @@ export const TrekkingDetailContent: React.FC = () => {
 
         </div>
       </div>
+
+
 
       {/* ── PACKING & GEAR CHECKLIST ── */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">

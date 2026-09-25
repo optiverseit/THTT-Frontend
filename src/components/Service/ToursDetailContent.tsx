@@ -23,6 +23,8 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
+
+
 const TOUR_FAQS = [
   {
     q: "Can our holiday tour itinerary be completely customized?",
@@ -482,8 +484,6 @@ export const ToursDetailContent: React.FC = () => {
         )}
       </div>
 
-      {/* KEEP YOUR EXISTING "WHAT'S INCLUDED" SECTION HERE */}
-      {/* KEEP YOUR EXISTING SEASON SECTION HERE */}
 
       <DynamicFaqSection
         targetType="service"

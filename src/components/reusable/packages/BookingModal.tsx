@@ -34,7 +34,7 @@ import {
 import { useGlobalCurrency, displayPrice, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 import THTTLogo from "../../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../../utils/countrycodes";
-import { createBooking } from "../../../api/BackendApi";
+import { createBooking, initiatePayment } from "../../../api/BackendApi";
 import PaymentMethod from "../PaymentMethod";
 
 export interface BookingItem {
@@ -198,6 +198,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [submitError, setSubmitError] = useState("");
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [bookingId, setBookingId] = useState<number | null>(null);
 
   // ── Payment flow state ──
   // step: "form" | "payment" | "success"
@@ -370,6 +371,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         console.log("BOOKING RESPONSE:", response?.data);
 
         const booking = response?.data?.data || response?.data;
+
+        if (booking?.id) {
+          setBookingId(Number(booking.id));
+        }
         if (booking?.booking_reference) {
           generatedRef = booking.booking_reference;
         }
@@ -438,23 +443,98 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   // ── eSewa mock payment handler ──
-  const handleEsewaPayment = () => {
-    setIsProcessingPayment(true);
-    setTimeout(() => {
-      setSelectedPaymentMethod("esewa");
-      setPaymentStatus("paid");
-      setIsSubmitted(true);
-      setStep("success");
+  const handleEsewaPayment = async () => {
+    if (!bookingId) {
+      setSubmitError("Booking ID is missing.");
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      setSubmitError("");
+
+      const response = await initiatePayment({
+        booking_id: bookingId,
+        provider: "ESEWA",
+      });
+
+      const data = response.data.data;
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = data.payment_url;
+
+      const fields = {
+        amount: data.amount,
+        tax_amount: data.tax_amount,
+        total_amount: data.total_amount,
+        transaction_uuid: data.transaction_uuid,
+        product_code: data.product_code,
+        product_service_charge: data.product_service_charge,
+        product_delivery_charge: data.product_delivery_charge,
+        success_url: data.success_url,
+        failure_url: data.failure_url,
+        signed_field_names: data.signed_field_names,
+        signature: data.signature,
+      };
+
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error: any) {
+      console.error("ESEWA PAYMENT ERROR:", error);
+
+      setSubmitError(
+        error?.response?.data?.message ||
+        "Failed to initiate eSewa payment."
+      );
+
       setIsProcessingPayment(false);
-    }, 1500);
+    }
   };
 
   // ── Pay Later handler ──
-  const handlePayLater = () => {
-    setSelectedPaymentMethod("pay_later");
-    setPaymentStatus("unpaid");
-    setIsSubmitted(true);
-    setStep("success");
+  const handlePayLater = async () => {
+    if (!bookingId) {
+      setSubmitError("Booking ID is missing.");
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      setSubmitError("");
+
+      const response = await initiatePayment({
+        booking_id: bookingId,
+        provider: "PAYLATER",
+      });
+
+      console.log("PAY LATER RESPONSE:", response.data);
+
+      if (response.data?.status) {
+        setSelectedPaymentMethod("pay_later");
+        setPaymentStatus("unpaid");
+        setIsSubmitted(true);
+        setStep("success");
+      }
+
+    } catch (error: any) {
+      console.error("PAY LATER ERROR:", error);
+
+      setSubmitError(
+        error?.response?.data?.message ||
+        "Failed to create Pay Later payment."
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handleCopyId = () => {
@@ -1022,13 +1102,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </tr>
               <tr>
                 <td class="td-label">Amount Paid</td>
-                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${
-paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"}</td>
+                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"}</td>
               </tr>
               <tr>
                 <td class="td-label">Payment Status</td>
-                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${
-paymentStatus.toUpperCase()}</td>
+                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus.toUpperCase()}</td>
               </tr>
               <tr>
                 <td class="td-label">Payment Verification</td>
@@ -1201,11 +1279,10 @@ paymentStatus.toUpperCase()}</td>
 
               {/* Top Greeting & Status */}
               <div className="space-y-1 pt-0.5">
-                <div className={`inline-flex items-center justify-center w-11 h-11 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${
-                  paymentStatus === "paid"
-                    ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
-                    : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
-                }`}>
+                <div className={`inline-flex items-center justify-center w-11 h-11 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${paymentStatus === "paid"
+                  ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
+                  : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
+                  }`}>
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
                 <div className="flex items-center justify-center gap-1.5">

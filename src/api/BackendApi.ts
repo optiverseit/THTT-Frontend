@@ -35,11 +35,19 @@ export const createBooking = (bookingData: any) => {
 };
 
 export const getMyBookings = (page = 1) => {
-    return axiosInstance.get("/my-bookings", {
-        params: {
-            page,
-        },
-    });
+  return axiosInstance.get("/my-bookings", {
+    params: {
+      page,
+    },
+  });
+};
+
+export const initiatePayment = (data: {
+  booking_id?: number;
+  work_permit_id?: number;
+  provider: "ESEWA" | "KHALTI" | "PAYLATER";
+}) => {
+  return axiosInstance.post("/payments/initiate", data);
 };
 
 // ==============================

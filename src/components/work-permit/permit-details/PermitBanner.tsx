@@ -37,7 +37,6 @@ interface PermitBannerProps {
 }
 
 const PermitBanner: React.FC<PermitBannerProps> = ({
-  id,
   country,
 }) => {
   const [isShareOpen, setIsShareOpen] = useState(false);

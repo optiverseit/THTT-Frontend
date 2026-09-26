@@ -19,7 +19,7 @@ interface WorkPermitPrintDossierProps {
   country: CountryProps;
 }
 
-const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ id, country }) => {
+const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ country }) => {
   const refNumber = `THTT-WP-${country.country_code.toUpperCase()}-${new Date().getFullYear()}`;
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",

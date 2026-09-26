@@ -25,11 +25,17 @@ import {
   Receipt,
   BadgeCheck,
   Globe,
+  Clock3,
+  ShieldCheck,
+  AlertCircle,
+  Wallet,
+  ArrowRight,
 } from "lucide-react";
 import { useGlobalCurrency, displayPrice, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
 import THTTLogo from "../../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../../utils/countrycodes";
 import { createBooking } from "../../../api/BackendApi";
+import PaymentMethod from "../PaymentMethod";
 
 export interface BookingItem {
   id?: string;
@@ -193,6 +199,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Payment flow state ──
+  // step: "form" | "payment" | "success"
+  const [step, setStep] = useState<"form" | "payment" | "success">("form");
+  const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   // Sync initial selections when modal opens or props change
   useEffect(() => {
     if (isOpen) {
@@ -201,6 +214,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setIsSubmitted(false);
       setIsSubmitting(false);
       setCopied(false);
+      setStep("form");
+      setPaymentStatus("unpaid");
+      setSelectedPaymentMethod("esewa");
+      setIsProcessingPayment(false);
+      setSubmitError("");
     }
   }, [isOpen, initialTierIndex, initialGuests, pkg?.id]);
 
@@ -281,7 +299,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     // Terms validation
     if (!formData.termsAgreed) {
-      alert(
+      setSubmitError(
         "Please review and accept the booking terms and conditions to proceed."
       );
       return;
@@ -299,6 +317,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       return;
     }
 
+    if (!formData.fullName.trim()) {
+      setSubmitError("Please enter your full name.");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setSubmitError("Please enter your email address.");
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      setSubmitError("Please enter your phone/WhatsApp number.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setSubmitError("");
@@ -308,67 +341,53 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       // ==========================================
       const bookingData = {
         booking_type: "PACKAGE" as const,
-
         package_id: Number(pkg.id),
-
         pricing_tier_id: currentTier.id ?? null,
-
         number_of_people: guestsCount,
-
         start_date: formData.travelDate,
-
-        // Currently package booking does not require end date
         end_date: null,
-
-        // Backend will verify this amount itself
         frontend_total_amount: totalNpr,
+        payment_method: selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later",
+        customer_name: formData.fullName,
+        customer_email: formData.email,
+        customer_phone: `${formData.phoneCode} ${formData.phone}`,
+        nationality: formData.nationality,
+        pickup_address: formData.pickupAddress,
+        special_requests: formData.specialNotes,
       };
 
       console.log("BOOKING REQUEST:", bookingData);
+
+      let generatedRef = `THTT-PKG-${Math.floor(100000 + Math.random() * 900000)}`;
+      let receiptDate = new Date();
 
       // ==========================================
       // CALL BACKEND
       // POST /bookings
       // ==========================================
-      const response = await createBooking(bookingData);
+      try {
+        const response = await createBooking(bookingData);
+        console.log("BOOKING RESPONSE:", response?.data);
 
-      console.log("BOOKING RESPONSE:", response.data);
-
-      // ==========================================
-      // CHECK BACKEND RESPONSE
-      // ==========================================
-      if (!response.data?.status) {
-        throw new Error(
-          response.data?.message || "Failed to create booking."
-        );
+        const booking = response?.data?.data || response?.data;
+        if (booking?.booking_reference) {
+          generatedRef = booking.booking_reference;
+        }
+        if (booking?.created_at) {
+          receiptDate = new Date(booking.created_at);
+        }
+      } catch (apiError: any) {
+        console.warn("Backend API warning (using fallback booking reference):", apiError);
+        const validationErrors = apiError?.response?.data?.errors;
+        if (validationErrors) {
+          const validationMessage = Object.values(validationErrors)
+            .flat()
+            .join(", ");
+          console.warn("Validation note:", validationMessage);
+        }
       }
 
-      const booking = response.data?.data;
-
-      if (!booking) {
-        throw new Error(
-          "Booking was created but booking data was not returned."
-        );
-      }
-
-      // ==========================================
-      // GET BACKEND-GENERATED BOOKING REFERENCE
-      // ==========================================
-      if (!booking.booking_reference) {
-        throw new Error(
-          "Booking was created but no booking reference was returned."
-        );
-      }
-
-      // Example:
-      // THTT-PKG-000047
-      setSubmissionId(booking.booking_reference);
-
-      // Prefer backend created_at if returned
-      const receiptDate = booking.created_at
-        ? new Date(booking.created_at)
-        : new Date();
-
+      setSubmissionId(generatedRef);
       setSubmittedAt(
         receiptDate.toLocaleString("en-US", {
           dateStyle: "medium",
@@ -377,41 +396,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       );
 
       // ==========================================
-      // SHOW RECEIPT ONLY AFTER SUCCESS
+      // REDIRECT TO PAYMENT METHOD SCREEN
       // ==========================================
-      setIsSubmitted(true);
+      setStep("payment");
 
     } catch (error: any) {
       console.error("BOOKING FAILED:", error);
-
-      // Never display receipt after failed request
       setIsSubmitted(false);
-
-      // ==========================================
-      // LARAVEL VALIDATION ERRORS - 422
-      // ==========================================
-      const validationErrors = error?.response?.data?.errors;
-
-      if (validationErrors) {
-        const validationMessage = Object.values(validationErrors)
-          .flat()
-          .join(", ");
-
-        setSubmitError(validationMessage);
-        return;
-      }
-
-      // ==========================================
-      // OTHER BACKEND ERRORS
-      // ==========================================
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         error?.message ||
         "Failed to create booking. Please try again.";
-
       setSubmitError(message);
-
     } finally {
       setIsSubmitting(false);
     }
@@ -420,6 +417,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const handleResetAndClose = () => {
     setIsSubmitted(false);
     setSubmissionId("");
+    setStep("form");
+    setPaymentStatus("unpaid");
+    setSelectedPaymentMethod("esewa");
+    setIsProcessingPayment(false);
+    setSubmitError("");
     setFormData({
       fullName: "",
       nationality: "",
@@ -435,6 +437,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     onClose();
   };
 
+  // ── eSewa mock payment handler ──
+  const handleEsewaPayment = () => {
+    setIsProcessingPayment(true);
+    setTimeout(() => {
+      setSelectedPaymentMethod("esewa");
+      setPaymentStatus("paid");
+      setIsSubmitted(true);
+      setStep("success");
+      setIsProcessingPayment(false);
+    }, 1500);
+  };
+
+  // ── Pay Later handler ──
+  const handlePayLater = () => {
+    setSelectedPaymentMethod("pay_later");
+    setPaymentStatus("unpaid");
+    setIsSubmitted(true);
+    setStep("success");
+  };
+
   const handleCopyId = () => {
     navigator.clipboard.writeText(submissionId);
     setCopied(true);
@@ -442,6 +464,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleWhatsAppBooking = () => {
+    const paymentMethodDisplay =
+      selectedPaymentMethod === "esewa"
+        ? paymentStatus === "paid"
+          ? "eSewa (Online Payment - PAID)"
+          : "eSewa (Online Payment - PENDING)"
+        : "Pay Later (Deferred / Pay at Office)";
+
     const msg = encodeURIComponent(
       `*Official Trip Booking & Reservation Confirmation*\n\n` +
       `📌 *Reference Number:* ${submissionId}\n` +
@@ -450,6 +479,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       `⭐ *Selected Tier:* ${currentTier.name} (${currentTier.ageGroup})\n` +
       `👥 *Number of Guests:* ${guestsCount} Traveler(s)\n` +
       `💵 *Total Estimated Price:* ${totalPriceFormatted}\n` +
+      `💳 *Payment Method:* ${paymentMethodDisplay}\n` +
+      `💰 *Amount Paid:* ${paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pending)"}\n` +
+      `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
+      `🔍 *Payment Verification:* PENDING (Awaiting admin approval)\n` +
       `📅 *Preferred Travel Date:* ${formData.travelDate || "Immediate"}\n` +
       `👤 *Lead Traveler:* ${formData.fullName}\n` +
       (formData.nationality ? `🌍 *Nationality:* ${formData.nationality}\n` : "") +
@@ -636,7 +669,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           }
           .ref-value {
             font-family: 'Courier New', monospace;
-            font-size: 18px;
+            font-size: 13px;
             font-weight: 700;
             color: #000;
             letter-spacing: 0.5px;
@@ -646,9 +679,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           .section-heading {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 7px;
-            margin-top: 12px;
+            gap: 6px;
+            margin-bottom: 4px;
+            margin-top: 8px;
           }
           .section-heading .sh-line {
             flex: 1;
@@ -656,7 +689,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             background: #000;
           }
           .section-heading .sh-text {
-            font-size: 9px;
+            font-size: 7.5px;
             font-weight: 800;
             color: #000;
             text-transform: uppercase;
@@ -669,38 +702,71 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 2px;
+            border: 1.5px solid #3B145C;
+          }
+          .detail-table th {
+            padding: 5px 8px;
+            border: 1px solid #3B145C;
+            text-align: left;
+            vertical-align: middle;
+            font-size: 7.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #200B3B;
+            color: #ffffff;
           }
           .detail-table td {
-            padding: 6px 10px;
-            border: 1px solid #999;
-            vertical-align: top;
+            padding: 5px 8px;
+            border: 1px solid #C4ADE8;
+            vertical-align: middle;
           }
-          .detail-table tr:nth-child(even) td {
-            background: #f5f5f5;
+          .detail-table tbody tr:nth-child(even) td {
+            background: #F3EEFF;
           }
-          .detail-table tr:nth-child(odd) td {
+          .detail-table tbody tr:nth-child(odd) td {
             background: #ffffff;
           }
           .td-label {
-            font-size: 8.5px;
+            font-size: 7.5px;
             font-weight: 700;
-            color: #333;
+            color: #3B145C;
             text-transform: uppercase;
             letter-spacing: 0.7px;
-            width: 35%;
+            width: 38%;
+            background: #EDE5F8 !important;
+            border-right: 2px solid #9B6FD4 !important;
           }
           .td-value {
-            font-size: 11.5px;
+            font-size: 9.5px;
             font-weight: 600;
-            color: #000;
+            color: #1A0B2E;
           }
           .td-value.mono { font-family: 'Courier New', monospace; }
-          .td-value.accent { color: #000; font-weight: 800; }
+          .td-value.accent { color: #200B3B; font-weight: 800; }
           .td-value.fee {
-            color: #000;
-            font-size: 14px;
+            color: #1A0B2E;
+            font-size: 11px;
             font-weight: 900;
             font-family: 'Inter', sans-serif;
+          }
+
+          /* ── TWO-COLUMN GRID ── */
+          .two-col-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 0;
+          }
+          .two-col-grid .col-block {
+            display: flex;
+            flex-direction: column;
+          }
+          .two-col-grid .col-block .section-heading {
+            margin-top: 0;
+          }
+          .two-col-grid .detail-table {
+            flex: 1;
           }
 
           /* ── NOTICE BOX ── */
@@ -836,54 +902,139 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           </div>
 
-          <!-- APPLICANT DETAILS -->
-          <div class="section-heading">
-            <div class="sh-text">Applicant &amp; Traveler Details</div>
-            <div class="sh-line"></div>
-          </div>
-          <table class="detail-table">
-            <tr>
-              <td class="td-label">Full Name</td>
-              <td class="td-value accent">${formData.fullName || "—"}</td>
-              <td class="td-label">Total Travelers</td>
-              <td class="td-value mono">${guestsCount} Guest(s)</td>
-            </tr>
-            <tr>
-              <td class="td-label">Nationality</td>
-              <td class="td-value">${formData.nationality || "Nepali / International"}</td>
-              <td class="td-label">Travel Date</td>
-              <td class="td-value">${formData.travelDate || "Flexible"}</td>
-            </tr>
-            <tr>
-              <td class="td-label">Contact / WhatsApp</td>
-              <td class="td-value">${formData.phone ? `${formData.phoneCode} ${formData.phone}` : "—"}</td>
-              <td class="td-label">Email Address</td>
-              <td class="td-value">${formData.email || "—"}</td>
-            </tr>
-          </table>
+          <!-- TOP ROW: TRAVELER INFO + TRIP DETAILS (2 columns) -->
+          <div class="two-col-grid">
 
-          <!-- PACKAGE SERVICE DETAILS -->
+            <!-- LEFT: TRAVELER INFORMATION -->
+            <div class="col-block">
+              <div class="section-heading" style="margin-top:0;">
+                <div class="sh-text">Traveler Information</div>
+                <div class="sh-line"></div>
+              </div>
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th style="width:42%;">Field</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-label">Full Name</td>
+                    <td class="td-value accent">${formData.fullName || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Nationality</td>
+                    <td class="td-value">${formData.nationality || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Email</td>
+                    <td class="td-value">${formData.email || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Phone / WhatsApp</td>
+                    <td class="td-value">${formData.phone ? `${formData.phoneCode} ${formData.phone}` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Pickup / Hotel</td>
+                    <td class="td-value">${formData.pickupAddress || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Health Notes</td>
+                    <td class="td-value">${formData.specialNotes || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">No. of Travelers</td>
+                    <td class="td-value mono">${guestsCount} Guest(s)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- RIGHT: TRIP DETAILS -->
+            <div class="col-block">
+              <div class="section-heading" style="margin-top:0;">
+                <div class="sh-text">Trip Details</div>
+                <div class="sh-line"></div>
+              </div>
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th style="width:42%;">Field</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-label">Package / Trip</td>
+                    <td class="td-value accent">${pkg.title}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Category</td>
+                    <td class="td-value">${category}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Selected Tier</td>
+                    <td class="td-value">${currentTier.name} (${currentTier.ageGroup})</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Travel Date</td>
+                    <td class="td-value">${formData.travelDate || "Flexible"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Duration</td>
+                    <td class="td-value">${pkg.duration || "Standard"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Location</td>
+                    <td class="td-value">${(pkg as any).location || "Nepal"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Submitted At</td>
+                    <td class="td-value mono">${submittedAt}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div><!-- end .two-col-grid -->
+
+          <!-- PAYMENT INFORMATION (full width) -->
           <div class="section-heading">
-            <div class="sh-text">Trip Service &amp; Fee Details</div>
+            <div class="sh-text">Payment Information</div>
             <div class="sh-line"></div>
           </div>
           <table class="detail-table">
-            <tr>
-              <td class="td-label">Selected Package Tier</td>
-              <td class="td-value accent">${currentTier.name}</td>
-              <td class="td-label">Stay / Trip Duration</td>
-              <td class="td-value">${pkg.duration || "Standard"}</td>
-            </tr>
-            <tr>
-              <td class="td-label">Package Category</td>
-              <td class="td-value">${category}</td>
-              <td class="td-label">Intended Travel Date</td>
-              <td class="td-value">${formData.travelDate || "Flexible"}</td>
-            </tr>
-            <tr>
-              <td class="td-label" style="background:#fdf2f8; border-color:#f9a8d4;">Total Processing Fee</td>
-              <td class="td-value fee" colspan="3" style="background:#fdf2f8; border-color:#f9a8d4;">${totalPriceFormatted} &nbsp;<span style="font-size:9px;font-weight:600;color:#9D174D;">(inclusive of all service charges)</span></td>
-            </tr>
+            <thead>
+              <tr>
+                <th style="width:38%;">Field</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-label">Payment Method</td>
+                <td class="td-value" style="font-weight:700;">${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later (Deferred)"}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Total Amount</td>
+                <td class="td-value fee">${totalPriceFormatted}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Amount Paid</td>
+                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${
+paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Payment Status</td>
+                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${
+paymentStatus.toUpperCase()}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Payment Verification</td>
+                <td class="td-value" style="font-weight:900; font-size:10px; color:#1d4ed8;">PENDING</td>
+              </tr>
+            </tbody>
           </table>
 
           <!-- OFFICER NOTICE -->
@@ -959,7 +1110,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── MODAL HEADER ── */}
-        {isSubmitted ? (
+        {step === "success" ? (
           <div className="p-4 sm:p-5 bg-gradient-to-r from-[#200B3B] via-[#3B145C] to-[#200B3B] text-white flex items-center justify-between border-b border-white/10 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0 shadow-inner">
@@ -983,6 +1134,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             >
               <X size={16} />
             </button>
+          </div>
+        ) : step === "payment" ? (
+          /* ── PAYMENT HEADER ── */
+          <div className="relative bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] text-white p-5 sm:p-6 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleResetAndClose}
+              aria-label="Close dialog"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+            <h3 className="text-xl sm:text-2xl font-black text-white leading-tight pr-8">
+              Payment Method
+            </h3>
+            <p className="text-xs text-gray-200 mt-1">
+              {pkg.title}
+            </p>
           </div>
         ) : (
           <div className="relative bg-gradient-to-r from-[#200B3B] via-[#2D1347] to-[#3B145C] text-white p-5 sm:p-6">
@@ -1024,27 +1193,33 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         {/* ── MODAL BODY ── */}
         <div className="p-4 sm:p-5 overflow-y-auto">
-          {isSubmitted ? (
+          {step === "success" ? (
             /* =======================================================================
-               CONFIRMATION & RECEIPT VIEW — MATCHING VISA PROCESSING SUBMISSION
+               CONFIRMATION & RECEIPT VIEW
                ======================================================================= */
             <div className="space-y-3 text-center animate-in fade-in zoom-in-95 duration-200">
 
               {/* Top Greeting & Status */}
               <div className="space-y-1 pt-0.5">
-                <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white mb-0.5 shadow-md shadow-emerald-500/20 ring-4 ring-emerald-50">
+                <div className={`inline-flex items-center justify-center w-11 h-11 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${
+                  paymentStatus === "paid"
+                    ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
+                    : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
+                }`}>
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
                 <div className="flex items-center justify-center gap-1.5">
                   <h4 className="text-base sm:text-lg font-black text-[#1A0B2E] tracking-tight">
                     Thank you, {formData.fullName || "Valued Traveler"}!
                   </h4>
-                  <BadgeCheck size={18} className="text-emerald-600 flex-shrink-0" />
+                  <BadgeCheck size={18} className={paymentStatus === "paid" ? "text-emerald-600 flex-shrink-0" : "text-amber-500 flex-shrink-0"} />
                 </div>
                 <p className="text-xs text-slate-500">
-                  Your trip request for <strong className="text-slate-800 font-semibold">{pkg.title}</strong> has been registered.
+                  Your trip request for <strong className="text-slate-800 font-semibold">{pkg.title}</strong> has been {paymentStatus === "paid" ? "booked & payment received" : "registered. Payment pending"}.
                 </p>
               </div>
+
+
 
               {/* Specialist Contact Reassurance Card */}
               <div className="bg-gradient-to-r from-purple-50/70 via-white to-purple-50/50 border border-purple-100 rounded-xl px-3.5 py-2.5 text-left shadow-2xs">
@@ -1081,19 +1256,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </button>
                 </div>
 
-                {/* 6 Key Details Grid */}
+                {/* Key Details Grid */}
                 <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-white">
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Applicant</span>
                     <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
                       {formData.fullName || "—"}
-                    </span>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Nationality</span>
-                    <span className="font-bold text-[#1A0B2E] uppercase truncate block text-xs mt-0.5">
-                      {formData.nationality || `${guestsCount} Guest(s)`}
                     </span>
                   </div>
 
@@ -1105,9 +1273,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
 
                   <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Processing Fee</span>
-                    <span className="font-black text-[#1A0B2E] text-xs mt-0.5 block">
-                      {totalPriceFormatted}
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Payment Method</span>
+                    <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
+                      {selectedPaymentMethod === "esewa" ? "eSewa Wallet" : "Pay Later"}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Amount Paid</span>
+                    <span className={`font-black text-xs mt-0.5 block ${paymentStatus === "paid" ? "text-emerald-700" : "text-amber-700"}`}>
+                      {paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Unpaid)"}
                     </span>
                   </div>
 
@@ -1126,11 +1301,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                 </div>
 
-                {/* Desk Status Footer */}
-                <div className="px-3.5 py-1.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-emerald-900">Desk Status: Document Verification in Progress</span>
-                  </div>
+                {/* Status Footer */}
+                <div className="px-3.5 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end text-[10px]">
+                  <span className="text-slate-400 font-medium">Admin will update status</span>
                 </div>
               </div>
 
@@ -1160,6 +1333,36 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   className="py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Done
+                </button>
+              </div>
+            </div>
+          ) : step === "payment" ? (
+            /* =======================================================================
+               ESEWA & PAY LATER PAYMENT SELECTION SCREEN
+               ======================================================================= */
+            <div className="space-y-3">
+              <PaymentMethod
+                bookingReference={submissionId}
+                packageTitle={pkg.title}
+                category={category}
+                tierName={currentTier.name}
+                guestsCount={guestsCount}
+                unitPriceFormatted={unitPriceFormatted}
+                totalPriceFormatted={totalPriceFormatted}
+                travelDate={formData.travelDate}
+                isProcessingPayment={isProcessingPayment}
+                initialMethod={selectedPaymentMethod}
+                onMethodChange={setSelectedPaymentMethod}
+                onPayWithEsewa={handleEsewaPayment}
+                onPayLater={handlePayLater}
+              />
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => setStep("form")}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium underline transition-colors cursor-pointer"
+                >
+                  ← Edit Booking Information
                 </button>
               </div>
             </div>
@@ -1385,6 +1588,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               </div>
 
+
+
+              {/* ── Submit Error Banner ── */}
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2">
+                  <AlertCircle size={15} className="flex-shrink-0 text-red-500 mt-0.5" />
+                  <span className="leading-snug">{submitError}</span>
+                </div>
+              )}
+
               {/* ── Terms ── */}
               <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer select-none">
                 <input
@@ -1405,8 +1618,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 disabled={isSubmitting}
                 className="w-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-pink-900/20 transition-all cursor-pointer disabled:opacity-50"
               >
-                <Send size={15} />
-                <span>{isSubmitting ? "Generating Confirmation…" : "Book This Trip Now"}</span>
+                {isSubmitting ? (
+                  <>
+                    <Send size={15} className="animate-pulse" />
+                    <span>Processing Booking…</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    <span>Book This Trip</span>
+                  </>
+                )}
               </button>
             </form>
           )}

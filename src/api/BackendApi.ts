@@ -177,3 +177,17 @@ export const getAllVehicles = () => {
 export const getVehicleById = (id: number | string) => {
   return axiosInstance.get(`/vehicles/${id}`);
 };
+
+
+// WORK PERMIT
+export const getCountries = () => {
+  return axiosInstance.get("/countries");
+};
+
+export const getCountryById = (id: string | number) => {
+  return axiosInstance.get(`/countries/${id}`);
+};
+
+export const getPermitFeeTiers = (countryId: string | number) => {
+  return axiosInstance.get(`/countries/${countryId}/permit-fee-tiers`);
+};

@@ -3,10 +3,15 @@ import { MapPin, Phone, Mail, Globe } from "lucide-react";
 import Logo from "../../../assets/images/Logo.png";
 
 interface CountryProps {
-  id: string;
-  name: string;
-  flag: string;
-  desc?: string;
+  id: number;
+  country_code: string;
+  country_name: string;
+  iso_2: string;
+  flag_code: string;
+  short_description?: string;
+  processing_days?: number;
+  status?: string;
+  display_order?: number;
 }
 
 interface WorkPermitPrintDossierProps {
@@ -14,8 +19,8 @@ interface WorkPermitPrintDossierProps {
   country: CountryProps;
 }
 
-const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ id, country }) => {
-  const refNumber = `THTT-WP-${id.toUpperCase()}-${new Date().getFullYear()}`;
+const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ country }) => {
+  const refNumber = `THTT-WP-${country.country_code.toUpperCase()}-${new Date().getFullYear()}`;
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -340,7 +345,7 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ id, cou
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>
-              {country.name.toUpperCase()} - NEW LABOUR PERMIT (GOVERNMENT OF NEPAL / DOFE)
+              {country.country_name.toUpperCase()} - NEW LABOUR PERMIT (GOVERNMENT OF NEPAL / DOFE)
             </div>
             <div
               style={{
@@ -362,7 +367,7 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ id, cou
                   fontWeight: 700,
                 }}
               >
-                📍 {country.name}
+                📍 {country.country_name}
               </span>
               <span
                 style={{
@@ -436,7 +441,7 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({ id, cou
           }}
         >
           <strong style={{ color: "#2D1347" }}>Official Overview: </strong>
-          Official Government of Nepal Department of Foreign Employment (DOFE) verified labor approval (Shram Swikriti) processing for {country.name}. Facilitated with end-to-end documentation, SSF enrollment, mandatory insurance, biometric registration, FEO coordination, and live FEIMS status tracking.
+          Official Government of Nepal Department of Foreign Employment (DOFE) verified labor approval (Shram Swikriti) processing for {country.country_name}. Facilitated with end-to-end documentation, SSF enrollment, mandatory insurance, biometric registration, FEO coordination, and live FEIMS status tracking.
         </div>
       </div>
 

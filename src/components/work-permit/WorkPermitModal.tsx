@@ -22,10 +22,14 @@ import THTTLogo from "../../assets/images/THTTLogo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 
 interface CountryProps {
-  id: string;
-  name: string;
-  flag: string;
-  desc: string;
+  id: number;
+  country_code: string;
+  country_name: string;
+  iso_2: string;
+  flag_code: string;
+  short_description?: string;
+  processing_days?: number;
+  status?: string;
 }
 
 export type FileKeys =
@@ -42,7 +46,7 @@ interface FormDataType {
   passportNumber: string;
   phoneCode: string;
   phone: string;
-  country: string;
+  countryId: string;
   permitType: string;
   adDate: string;
   bsDate: string;
@@ -72,7 +76,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
     passportNumber: "",
     phoneCode: "+977",
     phone: "",
-    country: defaultCountry || "",
+    countryId: "",
     permitType: "new_labour_permit",
     adDate: "",
     bsDate: "",
@@ -90,13 +94,25 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   });
 
   useEffect(() => {
-    if (defaultCountry) {
-      setFormData((prev) => ({
-        ...prev,
-        country: prev.country || defaultCountry,
-      }));
+    if (defaultCountry && country.length > 0) {
+      const matchedCountry = country.find(
+        (c) => c.country_name === defaultCountry
+      );
+
+      if (matchedCountry) {
+        setFormData((prev) => ({
+          ...prev,
+          countryId: prev.countryId || matchedCountry.id.toString(),
+        }));
+      }
     }
-  }, [defaultCountry]);
+  }, [defaultCountry, country]);
+
+  const selectedCountry = country.find(
+    (c) => c.id.toString() === formData.countryId
+  );
+
+  const selectedCountryName = selectedCountry?.country_name || "";
 
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -106,49 +122,49 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
     required: boolean;
     hint: string;
   }[] = [
-    {
-      key: "photo",
-      label: "MRP Size Photo (Recent) *",
-      required: true,
-      hint: "Recent white background passport/MRP size photo",
-    },
-    {
-      key: "passport",
-      label: "Original Passport (Scan Copy) *",
-      required: true,
-      hint: "Clear scan of first (bio) & last page with signature",
-    },
-    {
-      key: "visaCopy",
-      label: "Valid Job Offer Letter/Visa Copy *",
-      required: true,
-      hint: "Approved entry visa or official employer job agreement",
-    },
-    {
-      key: "experienceCert",
-      label: "Experience Certificates (If Required)",
-      required: false,
-      hint: "Trade, technical, or prior foreign employment proof if available",
-    },
-    {
-      key: "policeReport",
-      label: "Police Clearance Report (If Required)",
-      required: false,
-      hint: "Police character certificate if requested by employer/embassy",
-    },
-    {
-      key: "insuranceReg",
-      label: "Insurance Registration – SSF / Welfare Fund (If Required)",
-      required: false,
-      hint: "Social Security Fund or Foreign Employment Welfare Fund insurance slip",
-    },
-    {
-      key: "feims",
-      label: "FEIMS Online Registration Slip (If Required)",
-      required: false,
-      hint: "Foreign Employment Information Management System online registration slip",
-    },
-  ];
+      {
+        key: "photo",
+        label: "MRP Size Photo (Recent) *",
+        required: true,
+        hint: "Recent white background passport/MRP size photo",
+      },
+      {
+        key: "passport",
+        label: "Original Passport (Scan Copy) *",
+        required: true,
+        hint: "Clear scan of first (bio) & last page with signature",
+      },
+      {
+        key: "visaCopy",
+        label: "Valid Job Offer Letter/Visa Copy *",
+        required: true,
+        hint: "Approved entry visa or official employer job agreement",
+      },
+      {
+        key: "experienceCert",
+        label: "Experience Certificates (If Required)",
+        required: false,
+        hint: "Trade, technical, or prior foreign employment proof if available",
+      },
+      {
+        key: "policeReport",
+        label: "Police Clearance Report (If Required)",
+        required: false,
+        hint: "Police character certificate if requested by employer/embassy",
+      },
+      {
+        key: "insuranceReg",
+        label: "Insurance Registration – SSF / Welfare Fund (If Required)",
+        required: false,
+        hint: "Social Security Fund or Foreign Employment Welfare Fund insurance slip",
+      },
+      {
+        key: "feims",
+        label: "FEIMS Online Registration Slip (If Required)",
+        required: false,
+        hint: "Foreign Employment Information Management System online registration slip",
+      },
+    ];
 
   const handleButtonClick = (key: string) => {
     fileRefs.current[key]?.click();
@@ -217,9 +233,9 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
     if (age < 0) return "Invalid Date";
     const label =
       age < 18 ? "Under 18 years" :
-      age <= 35 ? "Below 35 years" :
-      age <= 50 ? "35–50 years" :
-      "Above 51 years";
+        age <= 35 ? "Below 35 years" :
+          age <= 50 ? "35–50 years" :
+            "Above 51 years";
     return `${label}  ·  ${age} yrs old`;
   };
 
@@ -258,7 +274,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
       errors.push("Phone must be a valid number (6–15 digits)");
     }
 
-    if (!formData.country) {
+    if (!formData.countryId) {
       errors.push("Destination Country is required");
     }
 
@@ -750,7 +766,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
           <div class="title-band">
             <div>
               <h1>Work Permit (Shram Swikriti) Application Slip</h1>
-              <div class="destination">Destination: ${formData.country || "Nepal"} &nbsp;/&nbsp; ${permitTypeLabel}</div>
+              <div class="destination">Destination: ${selectedCountryName || "Nepal"} &nbsp;/&nbsp; ${permitTypeLabel}</div>
             </div>
             <div class="doc-id">
               <div class="doc-id-label">Document ID</div>
@@ -800,7 +816,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   </tr>
                   <tr>
                     <td class="td-label">Destination Country</td>
-                    <td class="td-value accent">${formData.country || "—"}</td>
+                    <td class="td-value accent">${selectedCountryName || "—"}</td>
                   </tr>
                   <tr>
                     <td class="td-label">Permit Service Type</td>
@@ -897,15 +913,13 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
               </tr>
               <tr>
                 <td class="td-label">Amount Paid</td>
-                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${
-                  paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"
-                }</td>
+                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"
+      }</td>
               </tr>
               <tr>
                 <td class="td-label">Payment Status</td>
-                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${
-                  paymentStatus.toUpperCase()
-                }</td>
+                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus.toUpperCase()
+      }</td>
               </tr>
               <tr>
                 <td class="td-label">Payment Verification</td>
@@ -1011,7 +1025,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
               </h2>
               {currentStep === "payment" && (
                 <p className="text-xs text-gray-200 mt-1">
-                  Work Permit — {formData.country || "Government Shram"}
+                  Work Permit — {selectedCountryName || "Government Shram"}
                 </p>
               )}
             </div>
@@ -1028,11 +1042,10 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
             <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-white/15">
               {/* Step A */}
               <div
-                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
-                  currentStep === "stepA"
-                    ? "bg-pink-600/90 text-white shadow-sm"
-                    : "bg-white/10 text-gray-300"
-                }`}
+                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepA"
+                  ? "bg-pink-600/90 text-white shadow-sm"
+                  : "bg-white/10 text-gray-300"
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white text-[#2D1347] text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   A
@@ -1045,11 +1058,10 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
 
               {/* Step B */}
               <div
-                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
-                  currentStep === "stepB"
-                    ? "bg-pink-600/90 text-white shadow-sm"
-                    : "bg-white/10 text-gray-300"
-                }`}
+                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepB"
+                  ? "bg-pink-600/90 text-white shadow-sm"
+                  : "bg-white/10 text-gray-300"
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white text-[#2D1347] text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   B
@@ -1062,11 +1074,10 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
 
               {/* Step C */}
               <div
-                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
-                  currentStep === "stepC"
-                    ? "bg-pink-600/90 text-white shadow-sm"
-                    : "bg-white/10 text-gray-300"
-                }`}
+                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepC"
+                  ? "bg-pink-600/90 text-white shadow-sm"
+                  : "bg-white/10 text-gray-300"
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white text-[#2D1347] text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   C
@@ -1196,11 +1207,10 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                 <input
                   value={getAgeCategoryText(formData.age)}
                   readOnly
-                  className={`input w-full border rounded-xl px-3 py-2 text-sm font-bold mt-1 ${
-                    formData.age !== null && (formData.age < 18 || formData.age < 0)
-                      ? "bg-red-50 border-red-200 text-red-700"
-                      : "bg-gray-50 border-gray-200 text-[#4a1c8c]"
-                  }`}
+                  className={`input w-full border rounded-xl px-3 py-2 text-sm font-bold mt-1 ${formData.age !== null && (formData.age < 18 || formData.age < 0)
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : "bg-gray-50 border-gray-200 text-[#4a1c8c]"
+                    }`}
                 />
                 {formData.age !== null && formData.age >= 0 && formData.age < 18 && (
                   <div className="flex items-start gap-1.5 mt-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -1217,15 +1227,16 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                 <div>
                   <label className="text-xs text-gray-600 font-bold">Destination Country*</label>
                   <select
-                    name="country"
-                    value={formData.country}
+                    name="countryId"
+                    value={formData.countryId}
                     onChange={handleChange}
                     className="select w-full border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm mt-1 cursor-pointer"
                   >
                     <option value="">Select Destination</option>
+
                     {country.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
+                      <option key={c.id} value={c.id.toString()}>
+                        {c.country_name}
                       </option>
                     ))}
                   </select>
@@ -1393,7 +1404,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   </div>
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Destination</span>
-                    <span className="font-bold text-pink-600">{formData.country}</span>
+                    <span className="font-bold text-pink-600">{selectedCountryName}</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Permit Category</span>
@@ -1475,7 +1486,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
             <div className="space-y-3">
               <PaymentMethod
                 bookingReference={applicationId}
-                packageTitle={`Work Permit (${formData.country || "Government Shram"})`}
+                packageTitle={`Work Permit (${selectedCountryName || "Government Shram"})`}
                 category="Work Permit"
                 tierName={getFeeTierLabel(formData.age)}
                 guestsCount={1}
@@ -1504,20 +1515,18 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
           {currentStep === "submitted" && (
             <div className="text-center py-4 space-y-6">
               {/* Success Badge */}
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-md ring-8 ${
-                paymentStatus === "paid"
-                  ? "bg-emerald-100 text-emerald-600 ring-emerald-50"
-                  : "bg-amber-100 text-amber-600 ring-amber-50"
-              }`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-md ring-8 ${paymentStatus === "paid"
+                ? "bg-emerald-100 text-emerald-600 ring-emerald-50"
+                : "bg-amber-100 text-amber-600 ring-amber-50"
+                }`}>
                 <CheckCircle2 size={36} />
               </div>
 
               <div>
-                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                  paymentStatus === "paid"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-amber-100 text-amber-800"
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${paymentStatus === "paid"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-amber-100 text-amber-800"
+                  }`}>
                   {paymentStatus === "paid" ? "Payment Received • Application Logged" : "Application Logged • Payment Pending"}
                 </span>
                 <h3 className="text-2xl font-black text-purple-950 mt-2">
@@ -1574,7 +1583,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <a
                   href={`https://wa.me/9779851420882?text=${encodeURIComponent(
-                    `Hello Trip Himalaya! I just submitted my Work Permit application (ID: ${applicationId}) for ${formData.name} to ${formData.country}. Total Fee: ${totalPriceFormatted}. Payment Method: ${selectedPaymentMethod === "esewa" ? (paymentStatus === "paid" ? "eSewa (PAID)" : "eSewa (PENDING)") : "Pay Later (PENDING)"}. Please confirm receipt.`
+                    `Hello Trip Himalaya! I just submitted my Work Permit application (ID: ${applicationId}) for ${formData.name} to ${selectedCountryName}. Total Fee: ${totalPriceFormatted}. Payment Method: ${selectedPaymentMethod === "esewa" ? (paymentStatus === "paid" ? "eSewa (PAID)" : "eSewa (PENDING)") : "Pay Later (PENDING)"}. Please confirm receipt.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

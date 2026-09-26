@@ -274,6 +274,7 @@ export const PackageHeliService: React.FC = () => {
   const [packageFaqs, setPackageFaqs] = useState<Array<{ q: string; a: string }>>([]);
   const [packagesLoading, setPackagesLoading] = useState<boolean>(true);
   const [packagesError, setPackagesError] = useState<string>("");
+  const [bookingPricingTierId, setBookingPricingTierId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -888,6 +889,8 @@ export const PackageHeliService: React.FC = () => {
     flightType: "charter" | "sharing";
     seatCount: number;
     totalPriceNPR: number;
+    formattedPrice: string;
+    pricingTierId: number;
   }) => {
     if (!selectedTour) return;
     const seatCount = details.flightType === "charter" ? 1 : Math.max(1, details.seatCount || 1);
@@ -896,6 +899,7 @@ export const PackageHeliService: React.FC = () => {
     setBookingSeatCount(seatCount);
     setActiveApplicantIndex(0);
     setBookingTotalPriceNPR(details.totalPriceNPR);
+    setBookingPricingTierId(details.pricingTierId);
     setBookingFormData((prev) => ({
       ...prev,
       applicants: Array.from(
@@ -1003,6 +1007,7 @@ export const PackageHeliService: React.FC = () => {
       data.append("number_of_people", String(bookingFormData.applicants?.length || 1));
       data.append("start_date", bookingFormData.applicants?.[0]?.preferredDate || "");
       data.append("frontend_total_amount", String(bookingTotalPriceNPR));
+      if (bookingPricingTierId) data.append("pricing_tier_id", String(bookingPricingTierId));
 
       bookingFormData.applicants?.forEach((applicant, index) => {
         data.append(`travellers[${index}][name]`, applicant?.fullName || "");

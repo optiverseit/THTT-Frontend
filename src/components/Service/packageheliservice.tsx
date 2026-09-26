@@ -71,6 +71,7 @@ import {
   getPackagesByCategory,
   getPackagePricingTiers,
   getPackageFaqs,
+  createBooking
 } from "../../api/BackendApi";
 
 // =============================================================================
@@ -926,7 +927,7 @@ export const PackageHeliService: React.FC = () => {
   };
 
   // Form submission handler
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const paxCount = bookingFlightOption === "charter" ? 1 : Math.max(1, bookingSeatCount || 1);
@@ -993,16 +994,49 @@ export const PackageHeliService: React.FC = () => {
     }
 
     setFormErrors({});
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const generatedId = `TH-HELI-2026-${randomSuffix}`;
-    const now = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
 
-    setSubmissionId(generatedId);
-    setSubmittedAt(now);
-    setIsSubmitted(true);
+    try {
+      const applicant = bookingFormData.applicants?.[0];
+      const data = new FormData();
+      data.append("booking_type", "HELI");
+      data.append("package_id", String(bookingTour?.backendId));
+      data.append("number_of_people", String(bookingFormData.applicants?.length || 1));
+      data.append("start_date", bookingFormData.applicants?.[0]?.preferredDate || "");
+      data.append("frontend_total_amount", String(bookingTotalPriceNPR));
+
+      bookingFormData.applicants?.forEach((applicant, index) => {
+        data.append(`travellers[${index}][name]`, applicant?.fullName || "");
+        data.append(`travellers[${index}][nationality]`, applicant?.nationality || "");
+        data.append(`travellers[${index}][identity_number]`, applicant?.idNumber || "");
+
+        if (applicant?.bodyWeightKg) data.append(`travellers[${index}][weight]`, String(applicant.bodyWeightKg));
+        if (applicant?.luggageKg) data.append(`travellers[${index}][luggage]`, String(applicant.luggageKg));
+        if (applicant?.passportFile) data.append(`travellers[${index}][passport_nid_image]`, applicant.passportFile);
+        if (applicant?.photoFile) data.append(`travellers[${index}][pp_size_photo]`, applicant.photoFile);
+        if (applicant?.flightFile) data.append(`travellers[${index}][confirmed_flight_ticket_image]`, applicant.flightFile);
+        if (applicant?.insuranceFile) data.append(`travellers[${index}][travel_insurance_image]`, applicant.insuranceFile);
+      });
+
+      const response = await createBooking(data);
+
+      if (response.data?.status) {
+        const booking = response.data.data;
+
+        const now = new Date().toLocaleString("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+
+        setSubmissionId(booking.booking_reference);
+        setSubmittedAt(now);
+        setIsSubmitted(true);
+      }
+    } catch (error: any) {
+      console.error(
+        "Booking failed:",
+        error?.response?.data || error
+      );
+    }
   };
 
   // Print quotation dossier from Details View

@@ -27,7 +27,11 @@ export const getPackagesByCategory = (category: string, page = 1) => {
 
 // BOOKING API
 export const createBooking = (bookingData: any) => {
-  return axiosInstance.post("/bookings", bookingData);
+  return axiosInstance.post("/bookings", bookingData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };
 
 export const getMyBookings = (page = 1) => {

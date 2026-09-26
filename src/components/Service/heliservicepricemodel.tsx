@@ -77,6 +77,7 @@ interface HeliServicePriceModelProps {
     seatCount: number;
     totalPriceNPR: number;
     formattedPrice: string;
+    pricingTierId: number;
   }) => void;
   onWhatsAppInquiry?: (
     flightType: "charter" | "sharing",
@@ -131,11 +132,16 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
   const formattedTotalPrice = formatAmount(currentTotalNPR);
 
   const handleBookClick = () => {
+    const selectedTier = flightOption === "charter" ? charterTier : sharingTier;
+
+    if (!selectedTier) return;
+
     onBookNow({
       flightType: flightOption,
       seatCount: flightOption === "charter" ? 1 : sharingSeats,
       totalPriceNPR: currentTotalNPR,
       formattedPrice: formattedTotalPrice,
+      pricingTierId: selectedTier.id,
     });
   };
 
@@ -176,33 +182,30 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
             <button
               type="button"
               onClick={() => setSelectedCurrency("nepali")}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                selectedCurrency === "nepali"
+              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${selectedCurrency === "nepali"
                   ? "bg-white text-[#200B3B] font-black shadow-xs"
                   : "text-white/80 hover:text-white"
-              }`}
+                }`}
             >
               NEPALI
             </button>
             <button
               type="button"
               onClick={() => setSelectedCurrency("foreigner")}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                selectedCurrency === "foreigner"
+              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${selectedCurrency === "foreigner"
                   ? "bg-white text-[#200B3B] font-black shadow-xs"
                   : "text-white/80 hover:text-white"
-              }`}
+                }`}
             >
               USD ($)
             </button>
             <button
               type="button"
               onClick={() => setSelectedCurrency("inr")}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                selectedCurrency === "inr"
+              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${selectedCurrency === "inr"
                   ? "bg-white text-[#200B3B] font-black shadow-xs"
                   : "text-white/80 hover:text-white"
-              }`}
+                }`}
             >
               INR (₹)
             </button>
@@ -232,111 +235,103 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
 
           {/* Row 1: Private Charter */}
           {!pricingLoading && charterTier && (
-          <div
-            onClick={() => setFlightOption("charter")}
-            className={`grid grid-cols-12 items-start py-2.5 px-1 rounded-xl cursor-pointer transition-colors duration-150 ${
-              flightOption === "charter" ? "bg-pink-50/30" : "hover:bg-gray-50/60"
-            }`}
-          >
-            {/* Column 1: Option / Tier */}
-            <div className="col-span-6 flex items-start gap-2.5">
-              <div className="pt-0.5 flex-shrink-0">
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    flightOption === "charter"
-                      ? "border-[#E91E63] bg-[#E91E63]"
-                      : "border-gray-300 bg-white"
-                  }`}
-                >
-                  {flightOption === "charter" && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                  )}
+            <div
+              onClick={() => setFlightOption("charter")}
+              className={`grid grid-cols-12 items-start py-2.5 px-1 rounded-xl cursor-pointer transition-colors duration-150 ${flightOption === "charter" ? "bg-pink-50/30" : "hover:bg-gray-50/60"
+                }`}
+            >
+              {/* Column 1: Option / Tier */}
+              <div className="col-span-6 flex items-start gap-2.5">
+                <div className="pt-0.5 flex-shrink-0">
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${flightOption === "charter"
+                        ? "border-[#E91E63] bg-[#E91E63]"
+                        : "border-gray-300 bg-white"
+                      }`}
+                  >
+                    {flightOption === "charter" && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4
+                    className={`text-xs font-black leading-tight ${flightOption === "charter" ? "text-[#E91E63]" : "text-[#200B3B]"
+                      }`}
+                  >
+                    {charterTier?.service ?? "Private Charter"}
+                  </h4>
                 </div>
               </div>
-              <div>
-                <h4
-                  className={`text-xs font-black leading-tight ${
-                    flightOption === "charter" ? "text-[#E91E63]" : "text-[#200B3B]"
-                  }`}
+
+              {/* Column 2: Age Group */}
+              <div className="col-span-3 text-center pt-0.5">
+                <span className="text-[10px] font-semibold text-gray-700 leading-tight block">
+                  {charterTier?.age_group ?? "-"}
+                </span>
+              </div>
+
+              {/* Column 3: Price */}
+              <div className="col-span-3 text-left pt-0.5">
+                <span
+                  className={`text-xs font-black block ${flightOption === "charter" ? "text-[#E91E63]" : "text-[#200B3B]"
+                    }`}
                 >
-                  {charterTier?.service ?? "Private Charter"}
-                </h4>
+                  {formattedCharterPrice}
+                </span>
               </div>
             </div>
-
-            {/* Column 2: Age Group */}
-            <div className="col-span-3 text-center pt-0.5">
-              <span className="text-[10px] font-semibold text-gray-700 leading-tight block">
-                {charterTier?.age_group ?? "-"}
-              </span>
-            </div>
-
-            {/* Column 3: Price */}
-            <div className="col-span-3 text-left pt-0.5">
-              <span
-                className={`text-xs font-black block ${
-                  flightOption === "charter" ? "text-[#E91E63]" : "text-[#200B3B]"
-                }`}
-              >
-                {formattedCharterPrice}
-              </span>
-            </div>
-          </div>
 
           )}
 
           {/* Row 2: Sharing Flight */}
           {!pricingLoading && sharingTier && (
-          <div
-            onClick={() => setFlightOption("sharing")}
-            className={`grid grid-cols-12 items-start py-2.5 px-1 rounded-xl cursor-pointer transition-colors duration-150 ${
-              flightOption === "sharing" ? "bg-pink-50/30" : "hover:bg-gray-50/60"
-            }`}
-          >
-            {/* Column 1: Option / Tier */}
-            <div className="col-span-6 flex items-start gap-2.5">
-              <div className="pt-0.5 flex-shrink-0">
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    flightOption === "sharing"
-                      ? "border-[#E91E63] bg-[#E91E63]"
-                      : "border-gray-300 bg-white"
-                  }`}
-                >
-                  {flightOption === "sharing" && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                  )}
+            <div
+              onClick={() => setFlightOption("sharing")}
+              className={`grid grid-cols-12 items-start py-2.5 px-1 rounded-xl cursor-pointer transition-colors duration-150 ${flightOption === "sharing" ? "bg-pink-50/30" : "hover:bg-gray-50/60"
+                }`}
+            >
+              {/* Column 1: Option / Tier */}
+              <div className="col-span-6 flex items-start gap-2.5">
+                <div className="pt-0.5 flex-shrink-0">
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${flightOption === "sharing"
+                        ? "border-[#E91E63] bg-[#E91E63]"
+                        : "border-gray-300 bg-white"
+                      }`}
+                  >
+                    {flightOption === "sharing" && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4
+                    className={`text-xs font-black leading-tight ${flightOption === "sharing" ? "text-[#E91E63]" : "text-[#200B3B]"
+                      }`}
+                  >
+                    {sharingTier?.service ?? "Sharing Heli Service"}
+                  </h4>
                 </div>
               </div>
-              <div>
-                <h4
-                  className={`text-xs font-black leading-tight ${
-                    flightOption === "sharing" ? "text-[#E91E63]" : "text-[#200B3B]"
-                  }`}
+
+              {/* Column 2: Age Group */}
+              <div className="col-span-3 text-center pt-0.5">
+                <span className="text-[10px] font-semibold text-gray-700 leading-tight block">
+                  {sharingTier?.age_group ?? "-"}
+                </span>
+              </div>
+
+              {/* Column 3: Price */}
+              <div className="col-span-3 text-left pt-0.5">
+                <span
+                  className={`text-xs font-black block ${flightOption === "sharing" ? "text-[#E91E63]" : "text-[#200B3B]"
+                    }`}
                 >
-                  {sharingTier?.service ?? "Sharing Heli Service"}
-                </h4>
+                  {formattedSharingPrice}
+                </span>
               </div>
             </div>
-
-            {/* Column 2: Age Group */}
-            <div className="col-span-3 text-center pt-0.5">
-              <span className="text-[10px] font-semibold text-gray-700 leading-tight block">
-                {sharingTier?.age_group ?? "-"}
-              </span>
-            </div>
-
-            {/* Column 3: Price */}
-            <div className="col-span-3 text-left pt-0.5">
-              <span
-                className={`text-xs font-black block ${
-                  flightOption === "sharing" ? "text-[#E91E63]" : "text-[#200B3B]"
-                }`}
-              >
-                {formattedSharingPrice}
-              </span>
-            </div>
-          </div>
 
           )}
 
@@ -385,22 +380,22 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
           {!pricingLoading &&
             ((flightOption === "charter" && charterTier) ||
               (flightOption === "sharing" && sharingTier)) && (
-          <div className="pt-2 text-left">
-            <span className="text-[9.5px] font-black uppercase text-gray-400 tracking-wider block">
-              {flightOption === "charter"
-                ? "CHARTER TOTAL (FLAT RATE)"
-                : `TOTAL ESTIMATE (${sharingSeats} SEAT${sharingSeats > 1 ? "S" : ""})`}
-            </span>
-            <div className="text-xl sm:text-2xl font-black text-[#200B3B] mt-0.5 tracking-tight">
-              {formattedTotalPrice}
-            </div>
-            <span className="text-[9px] text-gray-400 font-medium block mt-0.5">
-              {flightOption === "charter"
-                ? "Exclusive Aircraft — no per-person charge"
-                : `Based on ${formattedSharingPrice} per seat`}
-            </span>
-          </div>
-          )}
+              <div className="pt-2 text-left">
+                <span className="text-[9.5px] font-black uppercase text-gray-400 tracking-wider block">
+                  {flightOption === "charter"
+                    ? "CHARTER TOTAL (FLAT RATE)"
+                    : `TOTAL ESTIMATE (${sharingSeats} SEAT${sharingSeats > 1 ? "S" : ""})`}
+                </span>
+                <div className="text-xl sm:text-2xl font-black text-[#200B3B] mt-0.5 tracking-tight">
+                  {formattedTotalPrice}
+                </div>
+                <span className="text-[9px] text-gray-400 font-medium block mt-0.5">
+                  {flightOption === "charter"
+                    ? "Exclusive Aircraft — no per-person charge"
+                    : `Based on ${formattedSharingPrice} per seat`}
+                </span>
+              </div>
+            )}
 
           {/* Action CTAs (Matching image) */}
           <div className="space-y-2 pt-1">

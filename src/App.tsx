@@ -43,6 +43,8 @@ import LoginForgotPass from "./components/login/LoginForgotPass";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GlobalCurrencyProvider } from "./context/CurrencyContext";
 import { FaqProvider } from "./context/FaqContext";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
 
 const MainLayout = () => {
   const { isLoggedIn } = useAuth();
@@ -65,6 +67,9 @@ const MainLayout = () => {
       <Routes>
         {/* ── HOME ── */}
         <Route path="/" element={<Home />} />
+
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-failure" element={<PaymentFailure />} />
 
         {/* ── LOGIN (nested subroutes) ── */}
         <Route path="/login" element={<Login />}>

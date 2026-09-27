@@ -39,6 +39,8 @@ import {
   triggerNativeShare,
   openSharePopup,
 } from "../../utils/shareUtils";
+import PermitService from "../work-permit/permit-details/PermitService";
+import { services } from "../../assets/data/mockData";
 
 
 export interface CostOption {
@@ -1125,90 +1127,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         </div>
       </div>
 
-      {/* ── OUR OTHER SERVICES SECTION (As drawn in wireframe sketch) ── */}
-      <div className="print:hidden pt-8 border-t border-gray-200 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              Our other Services:
-            </h3>
-            <p className="text-xs text-gray-500">Complete one-stop travel logistics by Trip Himalaya</p>
-          </div>
-          <Link
-            to="/service"
-            className="text-xs sm:text-sm font-bold text-[#E91E63] hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <span>view all Services.</span>
-            <ChevronRight size={14} />
-          </Link>
-        </div>
-
-        {/* Horizontal row of 6 service cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {[
-            {
-              name: "Air Ticket",
-              slug: "air-ticket",
-              icon: Plane,
-              desc: "Domestic & Global Flights",
-              color: "text-blue-600 bg-blue-50",
-            },
-            {
-              name: "Holiday Tours",
-              slug: "tours",
-              icon: Compass,
-              desc: "Heritage & Leisure Trips",
-              color: "text-amber-600 bg-amber-50",
-            },
-            {
-              name: "Trekking",
-              slug: "trekking",
-              icon: Mountain,
-              desc: "Himalayan Expeditions",
-              color: "text-emerald-600 bg-emerald-50",
-            },
-            {
-              name: "Hotel Booking",
-              slug: "hotel-booking",
-              icon: Bed,
-              desc: "Worldwide Hotel Stays",
-              color: "text-purple-600 bg-purple-50",
-            },
-            {
-              name: "Travel Insurance",
-              slug: "travel-insurance",
-              icon: ShieldCheck,
-              desc: "Medical & Luggage Cover",
-              color: "text-pink-600 bg-pink-50",
-            },
-            {
-              name: "Vehicle Rental",
-              slug: "vehicle-rental",
-              icon: Car,
-              desc: "Luxury Tourist Vehicles",
-              color: "text-indigo-600 bg-indigo-50",
-            },
-          ].map((srv, idx) => {
-            const IconComp = srv.icon;
-            return (
-              <Link
-                key={idx}
-                to={`/service/${srv.slug}`}
-                className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-[#E91E63] hover:shadow-md transition-all group flex flex-col items-center text-center justify-between cursor-pointer"
-              >
-                <div className={`w-11 h-11 rounded-xl ${srv.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform`}>
-                  <IconComp size={20} />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-[#2D1347] group-hover:text-[#E91E63] transition-colors leading-tight">
-                    {srv.name}
-                  </h4>
-                  <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">{srv.desc}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+      {/* ── OUR OTHER SERVICES SECTION ── */}
+      <div className="print:hidden pt-8 border-t border-gray-200">
+        <PermitService service={services} />
       </div>
 
       {/* ── VISA APPLICATION MODAL (Triggered when clicking 'Process Now') ── */}

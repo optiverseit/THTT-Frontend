@@ -73,6 +73,8 @@ import {
   getPackageFaqs,
   createBooking
 } from "../../api/BackendApi";
+import PermitService from "../work-permit/permit-details/PermitService";
+import { services } from "../../assets/data/mockData";
 
 // =============================================================================
 // Comprehensive Helicopter Tours Data
@@ -1911,6 +1913,7 @@ export const PackageHeliService: React.FC = () => {
       {/* ── DETAIL VIEW (Matching Image 2) ─────────────────────────────────────── */}
       {/* ========================================================================= */}
       {selectedTour ? (
+        <>
         <div className="w-full space-y-8 animate-in fade-in duration-300">
           {/* ══════════════════════════════════════════════════════════
               PRINT-ONLY COMPREHENSIVE DOSSIER & QUOTATION
@@ -2766,6 +2769,12 @@ export const PackageHeliService: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* ── OUR OTHER SERVICES ── */}
+        <div className="mt-10">
+          <PermitService service={services} />
+        </div>
+        </>
       ) : (
         /* ======================================================================= */
         /* ── CARDS LISTING VIEW (Matching Image 1) ────────────────────────────── */

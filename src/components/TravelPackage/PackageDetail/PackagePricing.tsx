@@ -57,11 +57,11 @@ const WHATSAPP_BUSINESS_NUMBER = "9779851403761";
  * Extracts the numeric base price (in USD) from the package price string.
  * Example: "$85" -> 85. Falls back to 85 if absent or invalid.
  */
-function extractBaseUSDPrice(rawPriceString: string | undefined): number {
-  if (!rawPriceString) return 85;
-  const digitsOnly = Number(rawPriceString.replace(/[^0-9]/g, ""));
-  return digitsOnly > 0 ? digitsOnly : 85;
-}
+// function extractBaseUSDPrice(rawPriceString: string | undefined): number {
+//   if (!rawPriceString) return 85;
+//   const digitsOnly = Number(rawPriceString.replace(/[^0-9]/g, ""));
+//   return digitsOnly > 0 ? digitsOnly : 85;
+// }
 
 // =============================================================================
 // Component
@@ -103,40 +103,20 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   // ---------------------------------------------------------------------------
 
   /** Base price in USD extracted from the package record (e.g. "$85" -> 85) */
-  const basePackagePriceInUSD = extractBaseUSDPrice(pkg.price);
+  // const basePackagePriceInUSD = extractBaseUSDPrice(pkg.price);
 
   /**
    * Builds the array of pricing rows to display in the table.
    * All prices are stored internally as raw NPR numbers.
    */
   const pricingRows: PricingRow[] =
-    pkg.pricingTable && pkg.pricingTable.length > 0
+    Array.isArray(pkg.pricingTable)
       ? pkg.pricingTable.map((dataRow) => ({
         serviceName: dataRow.service,
-
         targetAgeGroup: dataRow.ageGroup,
-
-        priceInNPR:
-          Number(dataRow.priceNepali) ||
-          basePackagePriceInUSD * nprPerOneDollar,
+        priceInNPR: Number(dataRow.priceNepali),
       }))
-      : [
-        {
-          serviceName: "Standard Experience",
-          targetAgeGroup: "Adult (16+)",
-          priceInNPR: 9500,
-        },
-        {
-          serviceName: "VIP Tandem + Media Pack",
-          targetAgeGroup: "All Ages",
-          priceInNPR: 12500,
-        },
-        {
-          serviceName: "Student / Youth Special",
-          targetAgeGroup: "Youth (12-15)",
-          priceInNPR: 8000,
-        },
-      ];
+      : [];
 
   // ---------------------------------------------------------------------------
   // Estimated Total Calculation
@@ -145,14 +125,20 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   /**
    * Unit price used for the total calculation based on the user-selected tier
    */
-  const selectedRow = pricingRows[selectedTierIndex] || pricingRows[0];
+  const selectedRow = pricingRows[selectedTierIndex];
 
-  const unitPriceForEstimatedTotal: number =
-    selectedCurrency === "nepali"
-      ? selectedRow.priceInNPR
-      : selectedCurrency === "inr"
-        ? Math.round(selectedRow.priceInNPR / nprPerOneINR)
-        : Math.round(selectedRow.priceInNPR / nprPerOneDollar);
+// If a pricing tier exists, use tier price.
+// Otherwise use the actual package price from API.
+const priceInNPR = selectedRow
+  ? selectedRow.priceInNPR
+  : Number(pkg.price || 0);
+
+const unitPriceForEstimatedTotal: number =
+  selectedCurrency === "nepali"
+    ? priceInNPR
+    : selectedCurrency === "inr"
+      ? Math.round(priceInNPR / nprPerOneINR)
+      : Math.round(priceInNPR / nprPerOneDollar);
 
   /** Final estimated total = unit price * guest count */
   const estimatedTotalPrice: number = unitPriceForEstimatedTotal * numberOfGuests;
@@ -211,7 +197,7 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
     const packageTitle = pkg.title;
     const guestCount = numberOfGuests;
     const totalFormatted = getFormattedEstimatedTotal();
-    const tierName = selectedRow.serviceName;
+    const tierName = selectedRow?.serviceName || "";
 
     const inquiryMessage = encodeURIComponent(
       `Hello Trip Himalaya (${teamName})! I am interested in booking "${packageTitle}" (${tierName}) for ${guestCount} guest(s). Estimated Total: ${totalFormatted} (${currencyText}). Please share availability and confirmation details.`
@@ -421,6 +407,7 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
             <div className="space-y-1.5 pt-0.5">
               <button
                 onClick={handleBookNow}
+                // disabled={pricingRows.length === 0}
                 aria-label="Book this trip"
                 className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${isBookingConfirmed
                   ? "bg-emerald-600 text-white"

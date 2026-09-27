@@ -203,3 +203,21 @@ export const getPermitFeeTiers = (countryId: string | number) => {
 export const createWorkPermit = (formData: FormData) => {
   return axiosInstance.post("/work-permits/store", formData);
 };
+
+// WORKPERMIT INFORMATION AND DOCUMENT
+export const getPermitDocumentRequirementsByCountry = (
+  countryId: number
+) => {
+  return axiosInstance.get(
+    `/work-permit-document-requirements/${countryId}`
+  );
+};
+
+// Get active work permit information by country
+export const getWorkPermitInformationByCountry = (
+  countryId: number
+) => {
+  return axiosInstance.get(
+    `/work-permit-country-information/${countryId}`
+  );
+};

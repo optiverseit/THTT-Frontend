@@ -1338,6 +1338,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   {pkg.location}
                 </span>
               )}
+              {isVehicleRental && (
+                isPrivateTrip ? (
+                  <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-xs font-medium text-purple-200">
+                    <Users size={12} className="text-purple-300" />
+                    {totalSeats} seats (Whole Vehicle)
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 rounded-full backdrop-blur-xs font-bold text-emerald-300">
+                    <Users size={12} />
+                    {availableSeats} / {totalSeats} seats
+                  </span>
+                )
+              )}
               <span className="bg-[#E11D48] text-white font-extrabold px-3 py-1 rounded-full shadow-sm ml-auto flex items-baseline gap-1">
                 {unitPriceFormatted}
                 {isVehicleRental && !isPrivateTrip && (
@@ -1964,7 +1977,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               </div>
 
-
+              {/* ── Seat Availability Notice (vehicle rental only) ── */}
+              {isVehicleRental && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 flex items-start gap-2">
+                  <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded bg-amber-500 flex items-center justify-center">
+                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                  <p className="text-[11px] text-amber-800 font-medium leading-snug">
+                    <span className="font-bold">Seat availability is not real-time.</span> Confirm via{" "}
+                    <a href="https://wa.me/9779851403761" target="_blank" rel="noopener noreferrer" className="font-extrabold text-emerald-700 underline hover:text-emerald-900 transition-colors">
+                      WhatsApp
+                    </a>{" "}
+                    before | after booking for confirmation.
+                  </p>
+                </div>
+              )}
 
               {/* ── Submit Error Banner ── */}
               {submitError && (
@@ -1984,7 +2011,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   className="mt-0.5 rounded text-[#E11D48] focus:ring-[#E11D48] cursor-pointer"
                 />
                 <span>
-                  I agree to Trip Himalaya's booking terms, free 48h cancellation policy, and confirm the traveler information is accurate.
+                  I agree to Trip Himalaya's booking terms, 24-hour cancellation policy, and confirm the traveler information is accurate.
                 </span>
               </label>
 

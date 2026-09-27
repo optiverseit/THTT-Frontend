@@ -131,99 +131,21 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
   /* ── Comprehensive data fallback lists for complete PDF / Print dossier ── */
- const printingTable =
-  pkg.pricingTable && pkg.pricingTable.length > 0
-    ? pkg.pricingTable
-    : [
-        {
-          service: "Standard Experience",
-          ageGroup: "Adult (16+)",
-          priceNepali: `NPR ${Math.round(
-            basePackagePriceNPR
-          ).toLocaleString("en-IN")}`,
-          priceForeigner: `$${(
-            basePackagePriceNPR / nprPerOneDollar
-          ).toFixed(2)}`,
-        },
-        {
-          service: "VIP Tandem + Media Pack",
-          ageGroup: "All Ages",
-          priceNepali: `NPR ${Math.round(
-            basePackagePriceNPR * 1.3
-          ).toLocaleString("en-IN")}`,
-          priceForeigner: `$${(
-            (basePackagePriceNPR * 1.3) /
-            nprPerOneDollar
-          ).toFixed(2)}`,
-        },
-        {
-          service: "Student / Youth Special",
-          ageGroup: "Youth (12-15)",
-          priceNepali: `NPR ${Math.round(
-            basePackagePriceNPR * 0.85
-          ).toLocaleString("en-IN")}`,
-          priceForeigner: `$${(
-            (basePackagePriceNPR * 0.85) /
-            nprPerOneDollar
-          ).toFixed(2)}`,
-        },
-      ];
+const printingTable = Array.isArray(pkg.pricingTable) ? pkg.pricingTable : [];
 
-  const itineraryList = pkg.allItenary && pkg.allItenary.length > 0 ? pkg.allItenary : [
-    { day: "1", title: "Hotel Pickup & Base Station Transfer", desc: "Enjoy comfortable private pickup directly from your hotel with scenic transfer to our activity briefing lounge." },
-    { day: "2", title: "Preparation & Safety Briefing", desc: "Meet with your certified tandem master, review wind conditions and safety protocols, and strap into safety gear." },
-    { day: "3", title: "Scenic Mountain Ascent to Launch Point", desc: "Drive up through scenic winding mountain roads to the launch vantage point with panoramic Himalayan vistas." },
-    { day: "4", title: `Main ${pkg.title} Experience`, desc: "Experience the exhilarating core adventure with professional guidance and live 4K GoPro video recording." },
-    { day: "5", title: "Gentle Landing & Refreshment", desc: "Perform a safe, smooth touchdown at the lakeside landing zone followed by fresh refreshments." },
-    { day: "6", title: "Media Handover & Hotel Drop-off", desc: "Receive your high-definition aerial video footage and action photos directly on your device, with return hotel transfer." },
-  ];
+const itineraryList = Array.isArray(pkg.allItenary) ? pkg.allItenary : [];
 
-  const highlightsList = pkg.highlights && pkg.highlights.length > 0 ? pkg.highlights : [
-    "Panoramic views of Himalayan ranges and valleys",
-    "Internationally certified and experienced tandem pilots",
-    "High-definition 4K aerial photography & video recording",
-    "Full safety briefing and top-tier imported safety harness gear",
-    "Complimentary private hotel pickup and drop-off service",
-    "Official flight certificate & high-resolution media package",
-  ];
+const highlightsList = Array.isArray(pkg.highlights) ? pkg.highlights : [];
 
-  const includesList = pkg.allIncludes && pkg.allIncludes.length > 0 ? pkg.allIncludes : (pkg.includes && pkg.includes.length > 0 ? pkg.includes : [
-    "Certified English-speaking guide and expert instructor",
-    "All essential safety equipment and gear rental",
-    "Hotel pickup & drop-off within city center",
-    "Complimentary action photos & 4K video recording",
-    "Govt taxes and emergency first-aid kit",
-  ]);
+const includesList = Array.isArray(pkg.allIncludes) ? pkg.allIncludes : [];
 
-  const excludesList = pkg.allExcludes && pkg.allExcludes.length > 0 ? pkg.allExcludes : (pkg.excludes && pkg.excludes.length > 0 ? pkg.excludes : [
-    "Personal travel insurance (mandatory)",
-    "Alcoholic beverages and personal snacks",
-    "Tips & gratitude for instructor and crew",
-    "Extra personal expenses not specified",
-  ]);
+const excludesList = Array.isArray(pkg.allExcludes) ? pkg.allExcludes : [];
 
-  const restrictionsList = pkg.restrictions && pkg.restrictions.length > 0 ? pkg.restrictions : [
-    "Maximum weight limit: 110 kg (242 lbs)",
-    "Minimum age requirement: 12 years with parental consent",
-    "Not recommended for pregnant travelers or individuals with acute heart conditions",
-    "Participants must wear sturdy closed-toe footwear",
-  ];
+const restrictionsList = Array.isArray(pkg.restrictions) ? pkg.restrictions : [];
 
-  const whatToBringList = pkg.whatToBring && pkg.whatToBring.length > 0 ? pkg.whatToBring : [
-    "Comfortable sports clothing and windproof jacket",
-    "Sturdy running or hiking shoes",
-    "UV protection sunglasses and sunscreen",
-    "Valid government ID or passport copy",
-    "Personal water bottle and lightweight daypack",
-  ];
+const whatToBringList = Array.isArray(pkg.whatToBring) ? pkg.whatToBring : [];
 
-  const faqsList = pkg.allfaqs && pkg.allfaqs.length > 0 ? pkg.allfaqs : [
-    { question: `What is the cancellation and rescheduling policy for ${pkg.title}?`, answer: "100% full refund if cancelled up to 24 hours prior to departure. In the event of unsuitable weather conditions, Trip Himalaya offers free immediate rescheduling or a 100% full refund." },
-    { question: "Is prior experience required to participate?", answer: "No prior experience is necessary. All activities are conducted tandem or fully guided by certified master instructors with years of Himalayan experience." },
-    { question: "Are transport and safety gear included?", answer: "Yes, complete safety gear, harness/equipment, and round-trip hotel pickup/drop-off within the city are included." },
-    { question: "Is personal travel insurance required?", answer: "Yes, personal travel insurance covering medical emergency and adventure activities is strongly advised and mandatory for high-altitude activities." },
-  ];
-
+const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
   return (
     <div className="w-full bg-[#FBFBFE]">
 

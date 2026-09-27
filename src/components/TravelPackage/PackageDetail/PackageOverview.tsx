@@ -16,48 +16,50 @@ interface PackageProp {
 // MOCK ROADMAP DATA (used as fallback when API itinerary is empty)
 // Replace / remove once the API provides itinerary steps.
 // ─────────────────────────────────────────────
-const MOCK_ROADMAP_STEPS: RoadmapStep[] = [
-  {
-    day: "Day 01",
-    schedule: "Full Day Schedule",
-    title: "Arrival & Welcome",
-    description:
-      "Our representative will receive you and transfer you to your accommodation. Evening free for local exploration.",
-    tags: ["Breakfast", "Guided Sightseeing"],
-  },
-  {
-    day: "Day 02",
-    schedule: "Full Day Schedule",
-    title: "Full Day Sightseeing",
-    description:
-      "Visit the most famous landmarks and cultural heritage sites of the region with our expert guide.",
-    tags: ["Breakfast", "Guided Sightseeing"],
-  },
-  {
-    day: "Day 03",
-    schedule: "Full Day Schedule",
-    title: "Final Departure",
-    description:
-      "Transfer to the airport or bus station for your onward journey home with beautiful memories.",
-    tags: ["Breakfast", "Guided Sightseeing"],
-  },
-];
+// const MOCK_ROADMAP_STEPS: RoadmapStep[] = [
+//   {
+//     day: "Day 01",
+//     schedule: "Full Day Schedule",
+//     title: "Arrival & Welcome",
+//     description:
+//       "Our representative will receive you and transfer you to your accommodation. Evening free for local exploration.",
+//     tags: ["Breakfast", "Guided Sightseeing"],
+//   },
+//   {
+//     day: "Day 02",
+//     schedule: "Full Day Schedule",
+//     title: "Full Day Sightseeing",
+//     description:
+//       "Visit the most famous landmarks and cultural heritage sites of the region with our expert guide.",
+//     tags: ["Breakfast", "Guided Sightseeing"],
+//   },
+//   {
+//     day: "Day 03",
+//     schedule: "Full Day Schedule",
+//     title: "Final Departure",
+//     description:
+//       "Transfer to the airport or bus station for your onward journey home with beautiful memories.",
+//     tags: ["Breakfast", "Guided Sightseeing"],
+//   },
+// ];
 
 const PackageOverview: React.FC = () => {
   const { pkg, allItenary } = useOutletContext<PackageProp>();
 
   // ── Build roadmap steps from real API data; fall back to mock ──
   const roadmapSteps: RoadmapStep[] =
-    Array.isArray(allItenary) && allItenary.length > 0
+    Array.isArray(allItenary)
       ? allItenary.map((item, idx) => ({
-          step: idx + 1,
-          day: item.day || `Day ${String(idx + 1).padStart(2, "0")}`,
-          schedule: (item as any).schedule ?? "Full Day Schedule",
-          title: item.title,
-          description: item.desc || (item as any).description || "",
-          tags: (item as any).tags ?? ["Breakfast", "Guided Sightseeing"],
-        }))
-      : MOCK_ROADMAP_STEPS;
+        step: idx + 1,
+        day: item.day || `Day ${String(idx + 1).padStart(2, "0")}`,
+        schedule: (item as any).schedule || "",
+        title: item.title || "",
+        description: item.desc || (item as any).description || "",
+        tags: Array.isArray((item as any).tags)
+          ? (item as any).tags
+          : [],
+      }))
+      : [];
 
 
   return (

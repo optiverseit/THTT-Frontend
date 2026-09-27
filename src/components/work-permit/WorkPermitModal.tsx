@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
+import { createWorkPermit } from "../../api/BackendApi";
 
 interface CountryProps {
   id: number;
@@ -44,15 +45,39 @@ export type FileKeys =
 interface FormDataType {
   name: string;
   passportNumber: string;
+  passportExpiryDate: string;
+
   phoneCode: string;
   phone: string;
+  email: string;
+
   countryId: string;
-  permitType: string;
+  permitType:
+  | "NEW_LABOUR_PERMIT"
+  | "RENEWAL_PERMIT"
+  | "INDIVIDUAL_PERMIT"
+  | "LEGALIZATION_ATTESTATION";
+
   adDate: string;
   bsDate: string;
   age: number | null;
-  files: Record<FileKeys, File | null>;
+
+  gender: string;
+  jobTitle: string;
+  employerCompanyName: string;
+
+  files: {
+    passport: File | null;
+    visaCopy: File | null;
+    experienceCert: File | null;
+    photo: File | null;
+    policeReport: File | null;
+    insuranceReg: File | null;
+    feims: File | null;
+  };
+
   companyChange: boolean;
+  previousShramNumber: string;
 }
 
 interface WorkPermitModalProps {
@@ -67,6 +92,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Max selectable DOB is today (cannot be in future)
   const todayStr = new Date().toISOString().split("T")[0];
@@ -74,13 +100,23 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   const [formData, setFormData] = useState<FormDataType>({
     name: "",
     passportNumber: "",
+    passportExpiryDate: "",
+
     phoneCode: "+977",
     phone: "",
+    email: "",
+
     countryId: "",
-    permitType: "new_labour_permit",
+    permitType: "NEW_LABOUR_PERMIT",
+
     adDate: "",
     bsDate: "",
     age: null,
+
+    gender: "",
+    jobTitle: "",
+    employerCompanyName: "",
+
     files: {
       passport: null,
       visaCopy: null,
@@ -90,7 +126,9 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
       insuranceReg: null,
       feims: null,
     },
+
     companyChange: false,
+    previousShramNumber: "",
   });
 
   useEffect(() => {
@@ -335,13 +373,127 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   const totalFeeNpr = getFeeAmount(formData.age);
   const totalPriceFormatted = `NPR ${totalFeeNpr.toLocaleString("en-IN")}`;
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!applicationId) {
-      const trackingCode = `TH-WP-${Math.floor(100000 + Math.random() * 900000)}`;
-      setApplicationId(trackingCode);
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+
+      const payload = new FormData();
+
+      // =========================
+      // BASIC APPLICATION DATA
+      // =========================
+
+      payload.append("country_id", formData.countryId);
+
+      payload.append(
+        "permit_type",
+        formData.permitType
+      );
+
+      payload.append(
+        "applicant_full_name",
+        formData.name
+      );
+
+      payload.append(
+        "phone_number",
+        `${formData.phoneCode}${formData.phone}`
+      );
+
+      payload.append(
+        "email",
+        formData.email
+      );
+
+      payload.append(
+        "dob_ad",
+        formData.adDate
+      );
+
+      payload.append(
+        "dob_bs",
+        formData.bsDate
+      );
+
+      payload.append(
+        "passport_number",
+        formData.passportNumber
+      );
+
+      payload.append(
+        "passport_expiry_date",
+        formData.passportExpiryDate
+      );
+      payload.append(
+        "company_changed",
+        formData.companyChange ? "1" : "0"
+      );
+
+      // =========================
+      // OPTIONAL FIELDS
+      // =========================
+
+      if (formData.gender) {
+        payload.append("gender", formData.gender);
+      }
+
+      if (formData.jobTitle) {
+        payload.append("job_title", formData.jobTitle);
+      }
+
+      if (formData.employerCompanyName) {
+        payload.append(
+          "employer_company_name",
+          formData.employerCompanyName
+        );
+      }
+
+      if (formData.previousShramNumber) {
+        payload.append(
+          "previous_shram_number",
+          formData.previousShramNumber
+        );
+      }
+
+      // =========================
+      // DOCUMENTS
+      // =========================
+
+      Object.entries(formData.files).forEach(([key, file]) => {
+        if (file instanceof File) {
+          payload.append(key, file);
+        }
+      });
+
+      // =========================
+      // API CALL
+      // =========================
+
+      const response = await createWorkPermit(payload);
+
+      if (response.data?.status) {
+        const application = response.data.data;
+
+        // IMPORTANT:
+        // Store actual DB work permit ID for payment.
+        setApplicationId(application.id);
+
+        // Go to existing payment screen
+        setCurrentStep("payment");
+      }
+    } catch (error: any) {
+      console.error(
+        "Work permit submission failed:",
+        error.response?.data || error
+      );
+
+      alert(
+        error.response?.data?.message ||
+        "Failed to submit work permit application."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    setCurrentStep("payment");
   };
 
   // ── eSewa mock payment handler ──

@@ -199,3 +199,7 @@ export const getCountryById = (id: string | number) => {
 export const getPermitFeeTiers = (countryId: string | number) => {
   return axiosInstance.get(`/countries/${countryId}/permit-fee-tiers`);
 };
+
+export const createWorkPermit = (formData: FormData) => {
+  return axiosInstance.post("/work-permits/store", formData);
+};

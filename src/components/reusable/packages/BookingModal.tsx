@@ -44,7 +44,7 @@ export interface BookingItem {
   location?: string;
   price?: string;
   image?: string;
-  type?: "tour" | "trek" | "trekking" | "adventure" | "activity" | "package" | string;
+  type?: "tour" | "trek" | "trekking" | "adventure" | "activity" | "package" | "vehicle-rental" | string;
   category?: string;
   pricingTable?: Array<{
     id?: number;
@@ -53,6 +53,18 @@ export interface BookingItem {
     priceNepali: string;
     priceForeigner?: string;
   }>;
+  vehicleRental?: {
+    tripType?: string;
+    totalSeats?: number;
+    availableSeats?: number;
+    fromLocation?: string;
+    destination?: string;
+    vehicleType?: string;
+    fuelType?: string;
+    availableFrom?: string;
+    availableTo?: string;
+    basePrice?: number;
+  };
 }
 
 export interface BookingTier {
@@ -91,8 +103,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     nprPerOneINR,
   } = useGlobalCurrency();
 
-  // Determine Category (Tour, Trekking, Adventure)
-  const getPackageCategory = (): "Tour" | "Trekking" | "Adventure Activity" => {
+  // Determine Category (Tour, Trekking, Adventure, Vehicle Rental)
+  const getPackageCategory = (): "Tour" | "Trekking" | "Adventure Activity" | "Vehicle Rental" => {
     if (!pkg) return "Tour";
     const titleLower = (pkg.title || "").toLowerCase();
     const rawCategory = (pkg as any).type || (pkg as any).category || "";
@@ -106,6 +118,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           rawCategory?.slug ||
           ""
         ).toLowerCase();
+
+    if (
+      typeLower.includes("vehicle") ||
+      titleLower.includes("vehicle") ||
+      Boolean((pkg as any)?.vehicleRental)
+    ) {
+      return "Vehicle Rental";
+    }
 
     if (
       typeLower.includes("trek") ||
@@ -132,7 +152,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const category = getPackageCategory();
   const assignedTeam =
-    category === "Tour"
+    category === "Vehicle Rental"
+      ? "Vehicle Rental & Chauffeur Team"
+      : category === "Tour"
       ? "Tours & Holidays Team"
       : "Trekking & Adventure Activity Team";
 
@@ -185,6 +207,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     phoneCode: "+977",
     phone: "",
     travelDate: "",
+    travelDateFrom: "",
+    travelDateTo: "",
     pickupAddress: "",
     specialNotes: "",
     termsAgreed: false,
@@ -207,11 +231,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // Vehicle Rental helpers
+  const isVehicleRental =
+    category === "Vehicle Rental" ||
+    (pkg as any)?.type === "vehicle-rental" ||
+    Boolean((pkg as any)?.vehicleRental);
+
+  const vehicleInfo = (pkg as any)?.vehicleRental;
+  const tripType = vehicleInfo?.tripType || (pkg as any)?.tripType || "One Way";
+  const isPrivateTrip = tripType.toLowerCase() === "private";
+  const totalSeats = Number(vehicleInfo?.totalSeats) || 10;
+  const availableSeats = Number(vehicleInfo?.availableSeats) || 7;
+  const maxSeatsSelectable = isPrivateTrip ? totalSeats : Math.max(1, availableSeats);
+
   // Sync initial selections when modal opens or props change
   useEffect(() => {
     if (isOpen) {
       setSelectedTierIndex(initialTierIndex);
-      setGuestsCount(initialGuests > 0 ? initialGuests : 1);
+      setGuestsCount(1);
       setIsSubmitted(false);
       setIsSubmitting(false);
       setCopied(false);
@@ -220,6 +257,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setSelectedPaymentMethod("esewa");
       setIsProcessingPayment(false);
       setSubmitError("");
+      setFormData({
+        fullName: "",
+        nationality: "",
+        email: "",
+        phoneCode: "+977",
+        phone: "",
+        travelDate: (pkg as any)?.vehicleRental?.availableFrom || "",
+        travelDateFrom: (pkg as any)?.vehicleRental?.availableFrom || "",
+        travelDateTo: (pkg as any)?.vehicleRental?.availableTo || "",
+        pickupAddress: "",
+        specialNotes: "",
+        termsAgreed: false,
+      });
     }
   }, [isOpen, initialTierIndex, initialGuests, pkg?.id]);
 
@@ -256,7 +306,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     nprPerOneINR
   );
 
-  const totalNpr = currentTier.nprPrice * guestsCount;
+  // If private vehicle trip: show original price, no addition of price per person
+  // If one way / round trip (two way): basePrice * guestsCount (passengers)
+  const totalNpr = isVehicleRental && isPrivateTrip
+    ? currentTier.nprPrice
+    : currentTier.nprPrice * guestsCount;
+
   const totalPriceFormatted = displayPrice(
     totalNpr,
     selectedCurrency,
@@ -313,8 +368,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
 
     // Travel date validation
-    if (!formData.travelDate) {
-      setSubmitError("Please select a travel date.");
+    const effectiveTravelDate = formData.travelDateFrom || formData.travelDate;
+    if (!effectiveTravelDate) {
+      setSubmitError("Please select a travel start date.");
       return;
     }
 
@@ -338,15 +394,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setSubmitError("");
 
       // ==========================================
-      // PACKAGE BOOKING REQUEST
+      // BOOKING REQUEST (Package or Vehicle)
       // ==========================================
       const bookingData = {
-        booking_type: "PACKAGE" as const,
-        package_id: Number(pkg.id),
+        booking_type: isVehicleRental ? "VEHICLE" : ("PACKAGE" as const),
+        package_id: isVehicleRental ? undefined : Number(pkg.id),
+        vehicle_id: isVehicleRental ? Number(pkg.id) : undefined,
         pricing_tier_id: currentTier.id ?? null,
         number_of_people: guestsCount,
-        start_date: formData.travelDate,
-        end_date: null,
+        start_date: effectiveTravelDate,
+        end_date: formData.travelDateTo || null,
         frontend_total_amount: totalNpr,
         payment_method: selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later",
         customer_name: formData.fullName,
@@ -354,12 +411,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         customer_phone: `${formData.phoneCode} ${formData.phone}`,
         nationality: formData.nationality,
         pickup_address: formData.pickupAddress,
-        special_requests: formData.specialNotes,
+        special_requests: formData.specialNotes
+          ? `${isVehicleRental ? `[Trip Type: ${tripType}] ` : ""}${formData.specialNotes}`
+          : isVehicleRental ? `[Trip Type: ${tripType}]` : "",
       };
 
       console.log("BOOKING REQUEST:", bookingData);
 
-      let generatedRef = `THTT-PKG-${Math.floor(100000 + Math.random() * 900000)}`;
+      let generatedRef = `THTT-${isVehicleRental ? "VHC" : "PKG"}-${Math.floor(100000 + Math.random() * 900000)}`;
       let receiptDate = new Date();
 
       // ==========================================
@@ -434,6 +493,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       phoneCode: "+977",
       phone: "",
       travelDate: "",
+      travelDateFrom: "",
+      travelDateTo: "",
       pickupAddress: "",
       specialNotes: "",
       termsAgreed: false,
@@ -551,19 +612,29 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           : "eSewa (Online Payment - PENDING)"
         : "Pay Later (Deferred / Pay at Office)";
 
+    const travelDateDisplay = isVehicleRental
+      ? `${formData.travelDateFrom || formData.travelDate || "Immediate"}${formData.travelDateTo ? ` to ${formData.travelDateTo}` : ""}`
+      : formData.travelDate || "Immediate";
+
+    const travelersDisplay = isVehicleRental
+      ? isPrivateTrip
+        ? `${guestsCount} Passenger(s) (Full Private Vehicle)`
+        : `${guestsCount} Passenger(s) (${tripType} Trip)`
+      : `${guestsCount} Traveler(s)`;
+
     const msg = encodeURIComponent(
       `*Official Trip Booking & Reservation Confirmation*\n\n` +
       `📌 *Reference Number:* ${submissionId}\n` +
-      `🎒 *Package Title:* ${pkg.title}\n` +
-      `🏷️ *Category:* ${category}\n` +
-      `⭐ *Selected Tier:* ${currentTier.name} (${currentTier.ageGroup})\n` +
-      `👥 *Number of Guests:* ${guestsCount} Traveler(s)\n` +
+      `🎒 *${isVehicleRental ? "Vehicle" : "Package Title"}:* ${pkg.title}\n` +
+      `🏷️ *Category:* ${category}${isVehicleRental ? ` (${tripType})` : ""}\n` +
+      (!isVehicleRental ? `⭐ *Selected Tier:* ${currentTier.name} (${currentTier.ageGroup})\n` : "") +
+      `👥 *Number of ${isVehicleRental ? "Passengers" : "Guests"}:* ${travelersDisplay}\n` +
       `💵 *Total Estimated Price:* ${totalPriceFormatted}\n` +
       `💳 *Payment Method:* ${paymentMethodDisplay}\n` +
       `💰 *Amount Paid:* ${paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pending)"}\n` +
       `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
       `🔍 *Payment Verification:* PENDING (Awaiting admin approval)\n` +
-      `📅 *Preferred Travel Date:* ${formData.travelDate || "Immediate"}\n` +
+      `📅 *Preferred Travel Date:* ${travelDateDisplay}\n` +
       `👤 *Lead Traveler:* ${formData.fullName}\n` +
       (formData.nationality ? `🌍 *Nationality:* ${formData.nationality}\n` : "") +
       `📞 *Phone / WhatsApp:* ${formData.phone ? `${formData.phoneCode} ${formData.phone}` : "—"}\n` +
@@ -1250,6 +1321,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <span className="bg-white/10 px-3 py-1 rounded-full font-bold backdrop-blur-xs text-pink-300">
                 {category}
               </span>
+              {isVehicleRental && tripType && (
+                <span className="bg-white/15 px-3 py-1 rounded-full font-bold backdrop-blur-xs text-yellow-300 border border-white/10">
+                  Trip Type: {tripType}
+                </span>
+              )}
               {pkg.duration && (
                 <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-xs font-medium">
                   <Clock size={13} className="text-pink-400" />
@@ -1262,8 +1338,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   {pkg.location}
                 </span>
               )}
-              <span className="bg-[#E11D48] text-white font-extrabold px-3 py-1 rounded-full shadow-sm ml-auto">
-                {totalPriceFormatted} Total
+              <span className="bg-[#E11D48] text-white font-extrabold px-3 py-1 rounded-full shadow-sm ml-auto flex items-baseline gap-1">
+                {unitPriceFormatted}
+                {isVehicleRental && !isPrivateTrip && (
+                  <span className="text-[10px] font-semibold text-red-200">/ person</span>
+                )}
               </span>
             </div>
           </div>
@@ -1447,129 +1526,345 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             /* ── BOOKING FORM ── */
             <form onSubmit={handleSubmit} className="space-y-4">
 
-              {/* ── Selected Tier Summary banner ── */}
-              <div className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-xl px-4 py-3">
-                <div>
-                  <p className="text-[9px] font-black text-pink-500 uppercase tracking-wider mb-0.5">
-                    Selected Experience Tier
-                  </p>
-                  <p className="text-sm font-black text-[#2D1347] leading-tight">
-                    {currentTier.name}
-                    <span className="text-[10px] font-semibold text-gray-500 ml-1.5">{currentTier.ageGroup}</span>
-                  </p>
+              {/* ── Summary banner: Standard Package Tier only (vehicle rental has no in-form banner) ── */}
+              {!isVehicleRental && (
+                <div className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-xl px-4 py-3">
+                  <div>
+                    <p className="text-[9px] font-black text-pink-500 uppercase tracking-wider mb-0.5">
+                      Selected Experience Tier
+                    </p>
+                    <p className="text-sm font-black text-[#2D1347] leading-tight">
+                      {currentTier.name}
+                      <span className="text-[10px] font-semibold text-gray-500 ml-1.5">{currentTier.ageGroup}</span>
+                    </p>
+                  </div>
+                  <span className="text-sm font-black text-[#E11D48] whitespace-nowrap">
+                    {unitPriceFormatted}
+                    <span className="text-[10px] font-semibold text-gray-400"> / guest</span>
+                  </span>
                 </div>
-                <span className="text-sm font-black text-[#E11D48] whitespace-nowrap">{unitPriceFormatted}<span className="text-[10px] font-semibold text-gray-400"> / guest</span></span>
-              </div>
+              )}
 
-              {/* ── Travel Date ── */}
-              {/* ── Travel Date & Nationality ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Travel Date <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <div className="relative">
-                    <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    <input
-                      type="date"
-                      name="travelDate"
-                      required
-                      value={formData.travelDate}
-                      onChange={handleChange}
-                      className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
-                    />
+              {/* ── Vehicle Rental Form Fields (reordered) ── */}
+              {isVehicleRental ? (
+                <>
+                  {/* 1. Primary Traveller Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Primary Traveller Name <span className="text-[#E11D48]">*</span>
+                    </label>
+                    <div className="relative">
+                      <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        name="fullName"
+                        required
+                        placeholder="e.g. Ram Sharma"
+                        value={formData.fullName}
+                        onChange={handleChange}
+                        className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. Nationality */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Nationality <span className="text-[#E11D48]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        name="nationality"
+                        required
+                        placeholder="e.g. Nepali, Indian, American"
+                        value={formData.nationality}
+                        onChange={handleChange}
+                        className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. Email + Phone */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Email Address <span className="text-[#E11D48]">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <input
+                          type="email"
+                          name="email"
+                          required
+                          placeholder="name@example.com"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Phone / WhatsApp <span className="text-[#E11D48]">*</span>
+                      </label>
+                      <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#2D1347] focus-within:ring-2 focus-within:ring-purple-100 transition-all overflow-hidden h-10">
+                        <select
+                          name="phoneCode"
+                          value={formData.phoneCode}
+                          onChange={handleChange}
+                          className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 text-xs font-bold text-[#2D1347] focus:outline-none cursor-pointer"
+                          style={{ maxWidth: "110px" }}
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.iso} value={c.code}>
+                              {isoToFlag(c.iso)} {c.code}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          name="phone"
+                          required
+                          placeholder="9851400000"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className="flex-1 min-w-0 px-3 bg-white text-xs text-gray-800 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Travel Date From (Required) & Travel Date To (Optional) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Travel Date (From) <span className="text-[#E11D48]">*</span>
+                      </label>
+                      <div className="relative">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <input
+                          type="date"
+                          name="travelDateFrom"
+                          required
+                          value={formData.travelDateFrom || formData.travelDate}
+                          onChange={(e) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              travelDateFrom: e.target.value,
+                              travelDate: e.target.value,
+                            }));
+                          }}
+                          className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Travel Date (To) <span className="text-gray-400 font-normal">(Optional)</span>
+                      </label>
+                      <div className="relative">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <input
+                          type="date"
+                          name="travelDateTo"
+                          value={formData.travelDateTo || ""}
+                          min={formData.travelDateFrom || formData.travelDate || undefined}
+                          onChange={(e) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              travelDateTo: e.target.value,
+                            }));
+                          }}
+                          className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. No. of Passengers — only shown for non-private trips */}
+                  {!isPrivateTrip && (
+                    <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3 sm:p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex-1 min-w-[200px]">
+                          <label className="block text-xs font-bold text-gray-800">
+                            No. of Passengers (Seats)
+                          </label>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1 shadow-2xs">
+                          <button
+                            type="button"
+                            disabled={guestsCount <= 1}
+                            onClick={() => setGuestsCount((prev) => Math.max(1, prev - 1))}
+                            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm text-[#2D1347] flex items-center justify-center transition-all cursor-pointer"
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-black text-sm text-[#200B3B]">
+                            {guestsCount}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={guestsCount >= maxSeatsSelectable}
+                            onClick={() => {
+                              if (guestsCount < maxSeatsSelectable) {
+                                setGuestsCount((prev) => prev + 1);
+                              }
+                            }}
+                            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm text-[#2D1347] flex items-center justify-center transition-all cursor-pointer"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {guestsCount >= availableSeats && (
+                        <p className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
+                          Maximum available seats reached ({availableSeats} available).
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 text-xs">
+                        <span className="text-gray-600 font-medium text-[11px]">
+                          {unitPriceFormatted} × {guestsCount} passenger{guestsCount > 1 ? "s" : ""}:
+                        </span>
+                        <span className="font-extrabold text-[#E11D48] text-xs">
+                          {totalPriceFormatted}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Private trip — fixed seats info */}
+                  {isPrivateTrip && (
+                    <div className="bg-purple-50/60 border border-purple-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-bold text-purple-800">Private Vehicle Booking</p>
+                        <p className="text-[10.5px] text-purple-600 font-medium mt-0.5">
+                          Reserves the whole vehicle — capacity up to {totalSeats} seats. Fixed flat rate.
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-base font-black text-[#E11D48]">{unitPriceFormatted}</span>
+                        <span className="text-[10px] font-semibold text-gray-400 block">/ full vehicle</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* ── Regular Package Travel Date & Nationality ── */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Travel Date <span className="text-[#E11D48]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input
+                        type="date"
+                        name="travelDate"
+                        required
+                        value={formData.travelDate}
+                        onChange={handleChange}
+                        className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Nationality <span className="text-[#E11D48]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        name="nationality"
+                        required
+                        placeholder="e.g. Nepali, Indian, American"
+                        value={formData.nationality}
+                        onChange={handleChange}
+                        className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                      />
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Nationality <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <div className="relative">
-                    <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      name="nationality"
-                      required
-                      placeholder="e.g. Nepali, Indian, American"
-                      value={formData.nationality}
-                      onChange={handleChange}
-                      className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
-                    />
+              {/* ── Standard Package: Full Name & Email+Phone (non-vehicle rental) ── */}
+              {!isVehicleRental && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Primary Traveler Full Name <span className="text-[#E11D48]">*</span>
+                    </label>
+                    <div className="relative">
+                      <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        name="fullName"
+                        required
+                        placeholder="e.g. Ram Sharma"
+                        value={formData.fullName}
+                        onChange={handleChange}
+                        className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                      />
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* ── Full Name ── */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Primary Traveler Full Name <span className="text-[#E11D48]">*</span>
-                </label>
-                <div className="relative">
-                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    name="fullName"
-                    required
-                    placeholder="e.g. Ram Sharma"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
-                  />
-                </div>
-              </div>
-
-              {/* ── Email + Phone ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Email Address <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <div className="relative">
-                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      placeholder="name@example.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Email Address <span className="text-[#E11D48]">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <input
+                          type="email"
+                          name="email"
+                          required
+                          placeholder="name@example.com"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Phone / WhatsApp <span className="text-[#E11D48]">*</span>
+                      </label>
+                      <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#2D1347] focus-within:ring-2 focus-within:ring-purple-100 transition-all overflow-hidden h-10">
+                        <select
+                          name="phoneCode"
+                          value={formData.phoneCode}
+                          onChange={handleChange}
+                          className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 text-xs font-bold text-[#2D1347] focus:outline-none cursor-pointer"
+                          style={{ maxWidth: "110px" }}
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.iso} value={c.code}>
+                              {isoToFlag(c.iso)} {c.code}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          name="phone"
+                          required
+                          placeholder="9851400000"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className="flex-1 min-w-0 px-3 bg-white text-xs text-gray-800 focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Phone / WhatsApp <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#2D1347] focus-within:ring-2 focus-within:ring-purple-100 transition-all overflow-hidden h-10">
-                    {/* Country Code Selector */}
-                    <select
-                      name="phoneCode"
-                      value={formData.phoneCode}
-                      onChange={handleChange}
-                      className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 text-xs font-bold text-[#2D1347] focus:outline-none cursor-pointer"
-                      style={{ maxWidth: "110px" }}
-                    >
-                      {COUNTRY_CODES.map((c) => (
-                        <option key={c.iso} value={c.code}>
-                          {isoToFlag(c.iso)} {c.code}
-                        </option>
-                      ))}
-                    </select>
-                    {/* Phone Number Input */}
-                    <input
-                      type="tel"
-                      name="phone"
-                      required
-                      placeholder="9851400000"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="flex-1 min-w-0 px-3 bg-white text-xs text-gray-800 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
 
               {/* ── Pickup Address ── */}
               <div>
@@ -1659,7 +1954,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="flex items-center justify-between bg-[#FAF8FF] border border-purple-100 rounded-xl px-4 py-3">
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Estimated Total ({guestsCount} × {unitPriceFormatted})
+                    {isVehicleRental
+                      ? isPrivateTrip
+                        ? "Vehicle Flat Rate (Whole Vehicle Reservation)"
+                        : `Estimated Total (${guestsCount} Passenger${guestsCount > 1 ? "s" : ""} × ${unitPriceFormatted})`
+                      : `Estimated Total (${guestsCount} × ${unitPriceFormatted})`}
                   </p>
                   <p className="text-xl font-black text-[#2D1347]">{totalPriceFormatted}</p>
                 </div>

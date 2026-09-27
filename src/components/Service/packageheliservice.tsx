@@ -456,6 +456,7 @@ export const PackageHeliService: React.FC = () => {
 
   // Submission / Print Slip State
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submissionId, setSubmissionId] = useState<string>("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copiedId, setCopiedId] = useState<boolean>(false);
@@ -999,6 +1000,9 @@ export const PackageHeliService: React.FC = () => {
 
     setFormErrors({});
 
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
       const applicant = bookingFormData.applicants?.[0];
       const data = new FormData();
@@ -1041,6 +1045,8 @@ export const PackageHeliService: React.FC = () => {
         "Booking failed:",
         error?.response?.data || error
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -3774,10 +3780,11 @@ export const PackageHeliService: React.FC = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full py-3.5 rounded-xl bg-[#E91E63] hover:bg-pink-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
+                    disabled={isSubmitting}
+                    className="w-full py-3.5 rounded-xl bg-[#E91E63] hover:bg-pink-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
                   >
                     <Plane size={16} />
-                    <span>CONFIRM &amp; SUBMIT HELI RESERVATION</span>
+                    <span>{isSubmitting ? "SUBMITTING..." : "CONFIRM & SUBMIT HELI RESERVATION"}</span>
                   </button>
                 </form>
               ) : (

@@ -649,12 +649,15 @@ const LoginForm = () => {
         {/* SOCIAL LOGIN */}
 
         <div className="mt-8">
-          <p>
+          <p className="text-center text-[10px] tracking-widest font-bold text-gray-400">
             OR CONTINUE WITH
           </p>
 
-          <div className="w-full overflow-hidden rounded-xl mt-2">
+          <div className="w-full overflow-hidden rounded-xl mt-2 flex justify-center [&>div]:!w-full [&_iframe]:!w-full [&_iframe]:!rounded-xl">
             <GoogleLogin
+              width="100%"
+              size="large"
+              text="continue_with"
               onSuccess={handleGoogleSuccess}
               onError={() =>
                 setApiError("Unable to authenticate with Google.")

@@ -38,7 +38,8 @@ import { useAuth } from "../../context/AuthContext";
 import { registerUser } from "../../api/BackendApi";
 
 interface RegisterFormData {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   countryCode: string;
   countryIso: string;
@@ -51,7 +52,8 @@ interface RegisterFormData {
 }
 
 interface RegErrors {
-  fullName?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   password?: string;
@@ -96,7 +98,8 @@ const RegisterPage: React.FC = () => {
     formData,
     setFormData,
   ] = useState<RegisterFormData>({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     countryCode: "+977",
     countryIso: "NP",
@@ -194,14 +197,19 @@ const RegisterPage: React.FC = () => {
   const validateDetails = (): boolean => {
     const errs: RegErrors = {};
 
-    if (!formData.fullName.trim()) {
-      errs.fullName =
-        "Full name is required.";
+    if (!formData.firstName.trim()) {
+      errs.firstName =
+        "First name is required.";
     } else if (
-      formData.fullName.trim().length < 2
+      formData.firstName.trim().length < 2
     ) {
-      errs.fullName =
-        "Name must be at least 2 characters.";
+      errs.firstName =
+        "First name must be at least 2 characters.";
+    }
+
+    if (!formData.lastName.trim()) {
+      errs.lastName =
+        "Last name is required.";
     }
 
     if (!formData.email.trim()) {
@@ -304,24 +312,11 @@ const RegisterPage: React.FC = () => {
       setLoading(true);
       setErrorMessage(null);
 
-      const nameParts =
-        formData.fullName
-          .trim()
-          .split(/\s+/);
-
-      const firstName =
-        nameParts[0] || "";
-
-      const lastName =
-        nameParts.length > 1
-          ? nameParts
-              .slice(1)
-              .join(" ")
-          : "";
-
       const userData = {
-        first_name: firstName,
-        last_name: lastName,
+        first_name:
+          formData.firstName.trim(),
+        last_name:
+          formData.lastName.trim(),
 
         email:
           formData.email.trim(),
@@ -478,7 +473,7 @@ const RegisterPage: React.FC = () => {
         login({
           name:
             fullName ||
-            formData.fullName.trim(),
+            `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
 
           email:
             user.email ||
@@ -607,19 +602,19 @@ const RegisterPage: React.FC = () => {
               className="mt-5 sm:mt-6 space-y-3.5"
             >
 
-              {/* FULL NAME + EMAIL */}
+              {/* FIRST NAME + LAST NAME */}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
 
                 <div>
 
                   <label className="text-[10px] sm:text-[11px] font-bold tracking-widest text-purple-200/70 uppercase block mb-1.5">
-                    FULL NAME
+                    FIRST NAME
                   </label>
 
                   <div
                     className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
-                      fieldErrors.fullName
+                      fieldErrors.firstName
                         ? "border-red-500/70 focus-within:border-red-500 focus-within:ring-red-500/30"
                         : "border-purple-800/40 focus-within:border-pink-500 focus-within:ring-pink-500/30"
                     }`}
@@ -627,14 +622,14 @@ const RegisterPage: React.FC = () => {
 
                     <input
                       type="text"
-                      name="fullName"
+                      name="firstName"
                       value={
-                        formData.fullName
+                        formData.firstName
                       }
                       onChange={
                         handleInputChange
                       }
-                      placeholder="Your full name"
+                      placeholder="First name"
                       className="w-full bg-transparent text-white text-xs sm:text-sm placeholder:text-purple-300/40 focus:outline-none pr-7"
                     />
 
@@ -645,10 +640,10 @@ const RegisterPage: React.FC = () => {
 
                   </div>
 
-                  {fieldErrors.fullName && (
+                  {fieldErrors.firstName && (
                     <p className="text-red-400 text-[10px] mt-1">
                       {
-                        fieldErrors.fullName
+                        fieldErrors.firstName
                       }
                     </p>
                   )}
@@ -658,44 +653,90 @@ const RegisterPage: React.FC = () => {
                 <div>
 
                   <label className="text-[10px] sm:text-[11px] font-bold tracking-widest text-purple-200/70 uppercase block mb-1.5">
-                    EMAIL
+                    LAST NAME
                   </label>
 
                   <div
                     className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
-                      fieldErrors.email
+                      fieldErrors.lastName
                         ? "border-red-500/70 focus-within:border-red-500 focus-within:ring-red-500/30"
                         : "border-purple-800/40 focus-within:border-pink-500 focus-within:ring-pink-500/30"
                     }`}
                   >
 
                     <input
-                      type="email"
-                      name="email"
+                      type="text"
+                      name="lastName"
                       value={
-                        formData.email
+                        formData.lastName
                       }
                       onChange={
                         handleInputChange
                       }
-                      placeholder="you@example.com"
+                      placeholder="Last name"
                       className="w-full bg-transparent text-white text-xs sm:text-sm placeholder:text-purple-300/40 focus:outline-none pr-7"
                     />
 
-                    <Mail
+                    <User
                       size={15}
                       className="text-purple-300/60 shrink-0 absolute right-3 pointer-events-none"
                     />
 
                   </div>
 
-                  {fieldErrors.email && (
+                  {fieldErrors.lastName && (
                     <p className="text-red-400 text-[10px] mt-1">
-                      {fieldErrors.email}
+                      {
+                        fieldErrors.lastName
+                      }
                     </p>
                   )}
 
                 </div>
+
+              </div>
+
+              {/* EMAIL */}
+
+              <div>
+
+                <label className="text-[10px] sm:text-[11px] font-bold tracking-widest text-purple-200/70 uppercase block mb-1.5">
+                  EMAIL
+                </label>
+
+                <div
+                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
+                    fieldErrors.email
+                      ? "border-red-500/70 focus-within:border-red-500 focus-within:ring-red-500/30"
+                      : "border-purple-800/40 focus-within:border-pink-500 focus-within:ring-pink-500/30"
+                  }`}
+                >
+
+                  <input
+                    type="email"
+                    name="email"
+                    value={
+                      formData.email
+                    }
+                    onChange={
+                      handleInputChange
+                    }
+                    placeholder="you@example.com"
+                    className="w-full bg-transparent text-white text-xs sm:text-sm placeholder:text-purple-300/40 focus:outline-none pr-7"
+                  />
+
+                  <Mail
+                    size={15}
+                    className="text-purple-300/60 shrink-0 absolute right-3 pointer-events-none"
+                  />
+
+                </div>
+
+                {fieldErrors.email && (
+                  <p className="text-red-400 text-[10px] mt-1">
+                    {fieldErrors.email}
+                  </p>
+                )}
 
               </div>
 

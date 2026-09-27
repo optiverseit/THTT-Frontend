@@ -1,13 +1,11 @@
-import { ArrowRight, CheckCircle2, Mail } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Step = "form" | "success";
-
 const LoginForgotPass = () => {
-  const [step, setStep] = useState<Step>("form");
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,18 +25,14 @@ const LoginForgotPass = () => {
     setError("");
     setLoading(true);
 
-    // TODO: Replace with real API call — POST /api/auth/forgot-password { email }
-    // On success: setStep("success")
-    // On error (email not found in DB): setError("No account found with this email address.")
     setTimeout(() => {
       setLoading(false);
-      setStep("success");
-    }, 800);
+      navigate("/login/otp", { state: { email: email.trim(), mode: "reset-password" } });
+    }, 600);
   };
 
-  /* -- STEP 1: Enter Email -- */
-  if (step === "form") {
-    return (
+  /* -- Enter Email -- */
+  return (
       <form onSubmit={handleSubmit} noValidate>
         <div className="p-5 backdrop-blur-md bg-gray-600/40 rounded-xl">
           {/* Header row */}
@@ -89,7 +83,7 @@ const LoginForgotPass = () => {
             {/* Inline error */}
             {error && (
               <p className="text-red-400 text-[11px] mt-1.5 flex items-center gap-1">
-                <span>?</span> {error}
+                <span>âš </span> {error}
               </p>
             )}
           </div>
@@ -101,7 +95,7 @@ const LoginForgotPass = () => {
           disabled={loading}
           className="mt-4 flex items-center justify-center rounded-xl bg-white hover:bg-white/95 active:scale-[0.99] shadow-lg shadow-pink-800/50 w-full py-2.5 text-purple-950 tracking-wide font-bold text-sm gap-2 transition-all cursor-pointer disabled:opacity-70"
         >
-          {loading ? "SENDING..." : "SEND PASSWORD RESET LINK"}
+          {loading ? "SENDING..." : "SEND OTP"}
           {!loading && <ArrowRight size={14} strokeWidth={3} />}
         </button>
 
@@ -115,52 +109,6 @@ const LoginForgotPass = () => {
           </Link>
         </div>
       </form>
-    );
-  }
-
-  /* -- STEP 2: Success -- */
-  return (
-    <div>
-      <div className="p-6 backdrop-blur-md bg-gray-600/40 rounded-xl text-center space-y-4">
-        {/* Icon */}
-        <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
-          <CheckCircle2 size={30} />
-        </div>
-
-        <div>
-          <h3 className="text-white font-bold text-lg">Check your inbox!</h3>
-          <p className="text-gray-400 text-sm mt-2 leading-relaxed">
-            We've sent a password reset link to{" "}
-            <strong className="text-pink-300">{email}</strong>.
-            <br />
-            Follow the link in the email to reset your password.
-          </p>
-        </div>
-
-        {/* Tips */}
-        <div className="bg-purple-900/30 border border-purple-700/30 rounded-xl px-4 py-3 text-left text-xs text-gray-400 space-y-1">
-          <p>• Check your spam/junk folder if you don't see it.</p>
-          <p>• The link expires in <strong className="text-gray-300">30 minutes</strong>.</p>
-        </div>
-
-        {/* Try again */}
-        <button
-          type="button"
-          onClick={() => { setStep("form"); setEmail(""); setError(""); }}
-          className="text-xs text-pink-400 hover:text-pink-300 font-semibold cursor-pointer transition-colors"
-        >
-          Didn't receive it? Try again ?
-        </button>
-      </div>
-
-      {/* Back to login */}
-      <Link
-        to="/login"
-        className="mt-4 flex items-center justify-center rounded-xl bg-white hover:bg-white/95 shadow-lg shadow-pink-800/50 w-full py-2.5 text-purple-950 tracking-wide font-bold text-sm gap-2 transition-all cursor-pointer"
-      >
-        BACK TO LOGIN <ArrowRight size={14} strokeWidth={3} />
-      </Link>
-    </div>
   );
 };
 

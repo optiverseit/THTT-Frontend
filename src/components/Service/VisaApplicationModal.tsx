@@ -21,6 +21,7 @@ import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
+import { PaymentMethod } from "../reusable/PaymentMethod";
 export { COUNTRY_CODES, isoToFlag };
 
 export interface VisaApplicationModalProps {
@@ -95,6 +96,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         return next.slice(0, guests);
       });
       setActiveApplicantIndex(0);
+      setCurrentStep("form");
+      setPaymentStatus("unpaid");
+      setSelectedPaymentMethod("esewa");
+      setIsProcessingPayment(false);
     }
   }, [guests, isOpen]);
 
@@ -110,10 +115,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   const flightRef = useRef<HTMLInputElement>(null);
   const hotelRef = useRef<HTMLInputElement>(null);
 
-  const [submitted, setSubmitted] = useState(false);
+  const [currentStep, setCurrentStep] = useState<"form" | "payment" | "submitted">("form");
   const [submissionId, setSubmissionId] = useState("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   if (!isOpen) return null;
 
@@ -244,7 +252,25 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
     setSubmissionId(generatedId);
     setSubmittedAt(now);
-    setSubmitted(true);
+    setCurrentStep("payment");
+  };
+
+  // ── eSewa mock payment handler ──
+  const handleEsewaPayment = () => {
+    setIsProcessingPayment(true);
+    setTimeout(() => {
+      setSelectedPaymentMethod("esewa");
+      setPaymentStatus("paid");
+      setCurrentStep("submitted");
+      setIsProcessingPayment(false);
+    }, 1500);
+  };
+
+  // ── Pay Later handler ──
+  const handlePayLater = () => {
+    setSelectedPaymentMethod("pay_later");
+    setPaymentStatus("unpaid");
+    setCurrentStep("submitted");
   };
 
   const handleCopyId = () => {
@@ -277,7 +303,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
         `💰 *Total Processing Fee (${guests} applicant${
           guests > 1 ? "s" : ""
-        }):* ${formattedFee}\n\n` +
+        }):* ${formattedFee}\n` +
+        `💳 *Payment Method:* ${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later"}\n` +
+        `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
+        `🔍 *Payment Verification:* PENDING\n\n` +
         `Hello Trip Himalaya (Visa & Documentation Team), I have submitted my visa application online. Please confirm document receipt and advise on embassy processing.`
     );
     window.open(
@@ -667,6 +696,44 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             </tr>
           </table>
 
+          <!-- PAYMENT INFORMATION -->
+          <div class="section-heading">
+            <div class="sh-text">Payment Information</div>
+            <div class="sh-line"></div>
+          </div>
+          <table class="detail-table">
+            <tr>
+              <td class="td-label">Payment Method</td>
+              <td class="td-value" style="font-weight:700;">${
+                selectedPaymentMethod === "esewa"
+                  ? "eSewa Digital Wallet"
+                  : "Pay Later (Deferred / Pay at Office)"
+              }</td>
+              <td class="td-label">Total Processing Fee</td>
+              <td class="td-value fee">${formattedFee}</td>
+            </tr>
+            <tr>
+              <td class="td-label">Amount Paid</td>
+              <td class="td-value fee" style="color:${
+                paymentStatus === "paid" ? "#047857" : "#b45309"
+              };">${
+                paymentStatus === "paid"
+                  ? formattedFee
+                  : selectedCurrency
+                  ? `${selectedCurrency} 0 (Pay Later)`
+                  : "NPR 0 (Pay Later)"
+              }</td>
+              <td class="td-label">Payment Status</td>
+              <td class="td-value" style="font-weight:900; font-size:10px; color:${
+                paymentStatus === "paid" ? "#047857" : "#b45309"
+              };">${paymentStatus.toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td class="td-label">Payment Verification</td>
+              <td class="td-value" colspan="3" style="font-weight:900; font-size:10px; color:#1d4ed8;">PENDING</td>
+            </tr>
+          </table>
+
           <!-- OFFICER NOTICE -->
           <div class="notice-box">
             <strong>Next Step:</strong> Our dedicated Visa Officer will contact you within <strong>15–30 minutes</strong> via WhatsApp or phone call to verify your documents and guide you through the embassy biometric/submission process.
@@ -722,9 +789,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   };
 
   const handleResetAndClose = () => {
-    setSubmitted(false);
+    setCurrentStep("form");
     setSubmissionId("");
     setActiveApplicantIndex(0);
+    setPaymentStatus("unpaid");
+    setSelectedPaymentMethod("esewa");
+    setIsProcessingPayment(false);
     onClose();
   };
 
@@ -748,10 +818,14 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             </div>
             <div>
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF4FA3] block">
-                {submitted ? "Submission Confirmed" : "Official Visa Application"}
+                {currentStep === "payment"
+                  ? "Select Payment Option"
+                  : currentStep === "submitted"
+                  ? "Submission Confirmed"
+                  : "Official Visa Application"}
               </span>
               <h3 className="text-sm sm:text-base font-black tracking-tight leading-tight text-white">
-                {country} – {visaType}
+                {currentStep === "payment" ? "Payment Method" : `${country} – ${visaType}`}
               </h3>
             </div>
           </div>
@@ -767,7 +841,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         </div>
 
         {/* ── SELECTED PLAN SUMMARY BAR (Visible only in form view) ── */}
-        {!submitted && (
+        {currentStep === "form" && (
           <div className="bg-[#FAF7FD] px-5 py-2.5 border-b border-purple-100/70 flex flex-wrap items-center justify-between gap-2 text-xs flex-shrink-0">
             <div className="flex items-center gap-2 font-bold text-[#200B3B] flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full bg-[#E91E63] text-white text-[10px] uppercase tracking-wider font-black">
@@ -807,16 +881,59 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
         {/* ── MODAL BODY SCROLLABLE ── */}
         <div className="p-4 sm:p-5 overflow-y-auto">
-          {submitted ? (
+          {currentStep === "payment" ? (
+            /* =======================================================================
+               PAYMENT METHOD VIEW (eSewa & Pay Later)
+               ======================================================================= */
+            <div className="space-y-3">
+              <PaymentMethod
+                bookingReference={submissionId}
+                packageTitle={`${country} – ${visaType}`}
+                category="Visa Service"
+                tierName={selectedOption.name}
+                guestsCount={guests}
+                unitPriceFormatted={formattedPerPerson}
+                totalPriceFormatted={formattedFee}
+                travelDate={applicants[0]?.travelDate ? `Travel: ${applicants[0].travelDate}` : undefined}
+                isProcessingPayment={isProcessingPayment}
+                initialMethod={selectedPaymentMethod}
+                onMethodChange={setSelectedPaymentMethod}
+                onPayWithEsewa={handleEsewaPayment}
+                onPayLater={handlePayLater}
+              />
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep("form")}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium underline transition-colors cursor-pointer"
+                >
+                  ← Edit Application Details
+                </button>
+              </div>
+            </div>
+          ) : currentStep === "submitted" ? (
             /* =======================================================================
                CONFIRMATION & RECEIPT VIEW
                ======================================================================= */
             <div className="space-y-3 text-center animate-in fade-in zoom-in-95 duration-200">
               
               {/* Top Greeting & Status */}
-              <div className="space-y-1 pt-0.5">
-                <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white mb-0.5 shadow-md shadow-emerald-500/20 ring-4 ring-emerald-50">
-                  <CheckCircle2 size={24} className="stroke-[2.5]" />
+              <div className="space-y-1.5 pt-0.5">
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${
+                  paymentStatus === "paid"
+                    ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
+                    : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
+                }`}>
+                  <CheckCircle2 size={26} className="stroke-[2.5]" />
+                </div>
+                <div>
+                  <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    paymentStatus === "paid"
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                      : "bg-amber-100 text-amber-800 border border-amber-200"
+                  }`}>
+                    {paymentStatus === "paid" ? "Payment Received • Application Registered" : "Application Registered • Payment Pending"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-center gap-1.5">
                   <h4 className="text-base sm:text-lg font-black text-[#1A0B2E] tracking-tight">
@@ -927,6 +1044,20 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       {submittedAt}
                     </span>
                   </div>
+
+                  <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Payment Status</span>
+                    <span className={`font-black text-xs mt-0.5 block ${paymentStatus === "paid" ? "text-emerald-700" : "text-amber-600"}`}>
+                      {paymentStatus.toUpperCase()} ({selectedPaymentMethod === "esewa" ? (paymentStatus === "paid" ? "eSewa" : "eSewa Pending") : "Pay Later"})
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Payment Verification</span>
+                    <span className="font-black text-blue-600 text-xs mt-0.5 block">
+                      PENDING
+                    </span>
+                  </div>
                 </div>
 
                 {/* Multiple applicants list breakdown if guests > 1 */}
@@ -990,12 +1121,6 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </div>
                 )}
 
-                {/* Desk Status Footer */}
-                <div className="px-3.5 py-1.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                  <span className="font-bold text-emerald-900">
-                    Desk Status: Document Verification in Progress
-                  </span>
-                </div>
               </div>
 
               {/* Action Buttons */}

@@ -10,9 +10,9 @@ import {
 
 import FilterSideBar from "../TravelPackage/FilterSiderBar";
 
-import BookingModal, {
-  BookingItem,
-} from "../reusable/packages/BookingModal";
+import VehicleRentalBookingModal, {
+  VehicleBookingItem,
+} from "./VehicleRentalBookingModal";
 
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 
@@ -574,7 +574,7 @@ const VehicleRentalDetailContent: React.FC = () => {
 
   // Booking Modal
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [selectedBookingItem, setSelectedBookingItem] = useState<BookingItem | null>(null);
+  const [selectedBookingItem, setSelectedBookingItem] = useState<VehicleBookingItem | null>(null);
 
   // Pagination for cards
   const [currentPage, setCurrentPage] = useState(1);
@@ -1330,9 +1330,9 @@ const VehicleRentalDetailContent: React.FC = () => {
         subtitle="Important details regarding chauffeur services and highway routes"
       />
 
-      {/* Booking Modal (Preserved as requested) */}
-      <BookingModal
-        pkg={selectedBookingItem}
+      {/* Vehicle Rental Booking Modal */}
+      <VehicleRentalBookingModal
+        item={selectedBookingItem}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
       />

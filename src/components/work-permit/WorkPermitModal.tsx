@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
+import { getWorkPermitDocumentRequirements, createWorkPermitApplication, getPermitFeeTiers, initiatePayment, } from "../../api/BackendApi";
 
 interface CountryProps {
   id: number;
@@ -32,26 +33,54 @@ interface CountryProps {
   status?: string;
 }
 
-export type FileKeys =
-  | "passport"
-  | "visaCopy"
-  | "experienceCert"
-  | "photo"
-  | "policeReport"
-  | "insuranceReg"
-  | "feims";
+// export type FileKeys =
+//   | "passport"
+//   | "visaCopy"
+//   | "experienceCert"
+//   | "photo"
+//   | "policeReport"
+//   | "insuranceReg"
+//   | "feims";
+
+interface DocumentRequirement {
+  id: number;
+  country_id: number;
+  permit_type: string;
+  document_type: string;
+  title: string;
+  description: string | null;
+  is_required: boolean;
+  display_order: number;
+  status: string;
+}
+
+interface PermitFeeTier {
+  id: number;
+  country_id: number;
+  age_group_label: string;
+  min_age: number;
+  max_age: number;
+  insurance_premium_npr: string | number;
+  service_fee_npr: string | number;
+  ssf_contribution_npr: string | number;
+  welfare_fund_npr: string | number;
+  total_cost_npr: string | number;
+  status: string;
+}
 
 interface FormDataType {
   name: string;
+  email: string;
   passportNumber: string;
   phoneCode: string;
   phone: string;
   countryId: string;
   permitType: string;
+  passportExpiryDate: string;
   adDate: string;
   bsDate: string;
   age: number | null;
-  files: Record<FileKeys, File | null>;
+  files: Record<string, File | null>;
   companyChange: boolean;
 }
 
@@ -63,36 +92,37 @@ interface WorkPermitModalProps {
 const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   const [currentStep, setCurrentStep] = useState<"stepA" | "stepB" | "stepC" | "payment" | "submitted">("stepA");
   const [applicationId, setApplicationId] = useState("");
+  const [workPermitId, setWorkPermitId] = useState<number | null>(null);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [documentRequirements, setDocumentRequirements] = useState<DocumentRequirement[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [permitFeeTiers, setPermitFeeTiers] = useState<PermitFeeTier[]>([]);
+  const [loadingFeeTiers, setLoadingFeeTiers] = useState(false);
 
   // Max selectable DOB is today (cannot be in future)
   const todayStr = new Date().toISOString().split("T")[0];
 
   const [formData, setFormData] = useState<FormDataType>({
     name: "",
+    email: "",
     passportNumber: "",
     phoneCode: "+977",
     phone: "",
     countryId: "",
     permitType: "new_labour_permit",
+    passportExpiryDate: "",
     adDate: "",
     bsDate: "",
     age: null,
-    files: {
-      passport: null,
-      visaCopy: null,
-      experienceCert: null,
-      photo: null,
-      policeReport: null,
-      insuranceReg: null,
-      feims: null,
-    },
+    files: {},
     companyChange: false,
   });
 
+  // Set default country
   useEffect(() => {
     if (defaultCountry && country.length > 0) {
       const matchedCountry = country.find(
@@ -108,6 +138,95 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
     }
   }, [defaultCountry, country]);
 
+
+  // Fetch document requirements when country changes
+  useEffect(() => {
+    if (!formData.countryId) {
+      setDocumentRequirements([]);
+      return;
+    }
+
+    const fetchDocumentRequirements = async () => {
+      try {
+        setLoadingDocuments(true);
+
+        const response = await getWorkPermitDocumentRequirements(
+          Number(formData.countryId)
+        );
+
+        setDocumentRequirements(response.data.data || []);
+
+        // Clear previously selected files when country changes
+        setFormData((prev) => ({
+          ...prev,
+          files: {},
+        }));
+
+      } catch (error) {
+        console.error(
+          "Failed to fetch document requirements:",
+          error
+        );
+
+        setDocumentRequirements([]);
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+
+    fetchDocumentRequirements();
+
+  }, [formData.countryId]);
+
+useEffect(() => {
+  const fetchPermitFeeTiers = async () => {
+    if (!formData.countryId) {
+      setPermitFeeTiers([]);
+      return;
+    }
+
+    try {
+      setLoadingFeeTiers(true);
+
+      const response = await getPermitFeeTiers(
+        formData.countryId
+      );
+
+      console.log(
+        "PERMIT FEE TIERS RESPONSE:",
+        response.data
+      );
+
+      // API response:
+      // response.data.data = paginator
+      // response.data.data.data = actual fee tier array
+      const tiers = response.data?.data?.data ?? [];
+
+      console.log("ACTUAL FEE TIERS:", tiers);
+
+      setPermitFeeTiers(
+        Array.isArray(tiers) ? tiers : []
+      );
+    } catch (error) {
+      console.error(
+        "Failed to fetch permit fee tiers:",
+        error
+      );
+
+      setPermitFeeTiers([]);
+    } finally {
+      setLoadingFeeTiers(false);
+    }
+  };
+
+  fetchPermitFeeTiers();
+}, [formData.countryId]);
+
+  const filteredDocumentRequirements = documentRequirements.filter(
+    (document) =>
+      document.permit_type === formData.permitType.toUpperCase()
+  );
+
   const selectedCountry = country.find(
     (c) => c.id.toString() === formData.countryId
   );
@@ -116,66 +235,69 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
 
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const fileFields: {
-    key: FileKeys;
-    label: string;
-    required: boolean;
-    hint: string;
-  }[] = [
-      {
-        key: "photo",
-        label: "MRP Size Photo (Recent) *",
-        required: true,
-        hint: "Recent white background passport/MRP size photo",
-      },
-      {
-        key: "passport",
-        label: "Original Passport (Scan Copy) *",
-        required: true,
-        hint: "Clear scan of first (bio) & last page with signature",
-      },
-      {
-        key: "visaCopy",
-        label: "Valid Job Offer Letter/Visa Copy *",
-        required: true,
-        hint: "Approved entry visa or official employer job agreement",
-      },
-      {
-        key: "experienceCert",
-        label: "Experience Certificates (If Required)",
-        required: false,
-        hint: "Trade, technical, or prior foreign employment proof if available",
-      },
-      {
-        key: "policeReport",
-        label: "Police Clearance Report (If Required)",
-        required: false,
-        hint: "Police character certificate if requested by employer/embassy",
-      },
-      {
-        key: "insuranceReg",
-        label: "Insurance Registration – SSF / Welfare Fund (If Required)",
-        required: false,
-        hint: "Social Security Fund or Foreign Employment Welfare Fund insurance slip",
-      },
-      {
-        key: "feims",
-        label: "FEIMS Online Registration Slip (If Required)",
-        required: false,
-        hint: "Foreign Employment Information Management System online registration slip",
-      },
-    ];
+  // const fileFields: {
+  //   key: FileKeys;
+  //   label: string;
+  //   required: boolean;
+  //   hint: string;
+  // }[] = [
+  //     {
+  //       key: "photo",
+  //       label: "MRP Size Photo (Recent) *",
+  //       required: true,
+  //       hint: "Recent white background passport/MRP size photo",
+  //     },
+  //     {
+  //       key: "passport",
+  //       label: "Original Passport (Scan Copy) *",
+  //       required: true,
+  //       hint: "Clear scan of first (bio) & last page with signature",
+  //     },
+  //     {
+  //       key: "visaCopy",
+  //       label: "Valid Job Offer Letter/Visa Copy *",
+  //       required: true,
+  //       hint: "Approved entry visa or official employer job agreement",
+  //     },
+  //     {
+  //       key: "experienceCert",
+  //       label: "Experience Certificates (If Required)",
+  //       required: false,
+  //       hint: "Trade, technical, or prior foreign employment proof if available",
+  //     },
+  //     {
+  //       key: "policeReport",
+  //       label: "Police Clearance Report (If Required)",
+  //       required: false,
+  //       hint: "Police character certificate if requested by employer/embassy",
+  //     },
+  //     {
+  //       key: "insuranceReg",
+  //       label: "Insurance Registration – SSF / Welfare Fund (If Required)",
+  //       required: false,
+  //       hint: "Social Security Fund or Foreign Employment Welfare Fund insurance slip",
+  //     },
+  //     {
+  //       key: "feims",
+  //       label: "FEIMS Online Registration Slip (If Required)",
+  //       required: false,
+  //       hint: "Foreign Employment Information Management System online registration slip",
+  //     },
+  //   ];
 
   const handleButtonClick = (key: string) => {
     fileRefs.current[key]?.click();
   };
 
-  const handleFileChange = (key: FileKeys, file: File | null) => {
+  const handleFileChange = (
+    documentType: string,
+    file: File | null
+  ) => {
     setFormData((prev) => ({
       ...prev,
       files: {
         ...prev.files,
-        [key]: file,
+        [documentType]: file,
       },
     }));
   };
@@ -267,6 +389,12 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
       errors.push("Passport Number must be 6–20 alphanumeric characters");
     }
 
+    if (!formData.email.trim()) {
+      errors.push("Email is required");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.push("Please enter a valid email address");
+    }
+
     const cleanPhone = formData.phone.replace(/[\s\-]/g, "");
     if (!cleanPhone) {
       errors.push("Phone / WhatsApp number is required");
@@ -292,16 +420,15 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
 
   const validateStepB = () => {
     const errors: string[] = [];
-    if (!formData.files.passport) {
-      errors.push("Original Passport (Scan Copy) is required");
-    }
-    if (!formData.files.visaCopy) {
-      errors.push("Valid Job Offer Letter/Visa Copy is required");
-    }
-    if (!formData.files.photo) {
-      errors.push("MRP Size Photo (Recent) is required");
-    }
+
+    filteredDocumentRequirements.forEach((document) => {
+      if (document.is_required && !formData.files[document.document_type]) {
+        errors.push(`${document.title} is required`);
+      }
+    });
+
     setStepErrors(errors);
+
     return errors.length === 0;
   };
 
@@ -320,46 +447,279 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   };
 
   // ── Work Permit Fee Calculation (Age-based government & insurance fee structure) ──
-  const getFeeAmount = (age: number | null) => {
-    if (age !== null && age > 50) return 15500;
-    if (age !== null && age > 35) return 12500;
-    return 11000;
-  };
+const selectedFeeTier =
+  formData.age !== null
+    ? permitFeeTiers.find(
+        (tier) =>
+          formData.age! >= Number(tier.min_age) &&
+          formData.age! <= Number(tier.max_age)
+      )
+    : undefined;
 
-  const getFeeTierLabel = (age: number | null) => {
-    if (age !== null && age > 50) return "Above 51 years (Age 51+)";
-    if (age !== null && age > 35) return "35–50 years";
-    return "Below 35 years (Ages 18–35)";
-  };
+const totalFeeNpr = selectedFeeTier
+  ? Number(selectedFeeTier.total_cost_npr)
+  : 0;
 
-  const totalFeeNpr = getFeeAmount(formData.age);
-  const totalPriceFormatted = `NPR ${totalFeeNpr.toLocaleString("en-IN")}`;
+const getFeeTierLabel = () => {
+  if (!selectedFeeTier) {
+    return "No fee tier available";
+  }
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  return selectedFeeTier.age_group_label;
+};
+
+const totalPriceFormatted = loadingFeeTiers
+  ? "Loading..."
+  : selectedFeeTier
+    ? `NPR ${totalFeeNpr.toLocaleString("en-IN")}`
+    : "NPR 0";
+
+  // const handleSubmit = (e?: React.FormEvent) => {
+  //   if (e) e.preventDefault();
+  //   if (!applicationId) {
+  //     const trackingCode = `TH-WP-${Math.floor(100000 + Math.random() * 900000)}`;
+  //     setApplicationId(trackingCode);
+  //   }
+  //   setCurrentStep("payment");
+  // };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!applicationId) {
-      const trackingCode = `TH-WP-${Math.floor(100000 + Math.random() * 900000)}`;
-      setApplicationId(trackingCode);
+
+    try {
+      setIsSubmitting(true);
+      setStepErrors([]);
+
+      const payload = new FormData();
+
+      // Application data
+      payload.append("country_id", formData.countryId);
+      payload.append(
+        "permit_type",
+        formData.permitType.toUpperCase()
+      );
+
+      payload.append(
+        "applicant_full_name",
+        formData.name
+      );
+
+      payload.append(
+        "phone_number",
+        `${formData.phoneCode}${formData.phone}`
+      );
+
+      payload.append("email", formData.email);
+
+      payload.append("dob_ad", formData.adDate);
+      payload.append("dob_bs", formData.bsDate);
+
+      payload.append(
+        "passport_number",
+        formData.passportNumber
+      );
+
+      payload.append(
+        "passport_expiry_date",
+        formData.passportExpiryDate
+      );
+
+      payload.append(
+        "company_changed",
+        formData.companyChange ? "1" : "0"
+      );
+
+      // Documents
+      filteredDocumentRequirements.forEach((document) => {
+        const file =
+          formData.files[document.document_type];
+
+        if (file) {
+          payload.append(
+            "document_types[]",
+            document.document_type
+          );
+
+          payload.append(
+            "files[]",
+            file
+          );
+        }
+      });
+
+      const response =
+        await createWorkPermitApplication(payload);
+
+      console.log(
+        "WORK PERMIT CREATED:",
+        response.data
+      );
+
+      const application = response.data.data;
+
+      setWorkPermitId(application.id);
+
+      setApplicationId(
+        application.application_number
+      );
+
+      setCurrentStep("payment");
+
+    } catch (error: any) {
+      console.error(
+        "Work permit submission failed:",
+        error
+      );
+
+      const responseData = error?.response?.data;
+
+      if (responseData?.errors) {
+        const validationErrors = Object.values(
+          responseData.errors
+        ).flat() as string[];
+
+        setStepErrors(validationErrors);
+      } else {
+        setStepErrors([
+          responseData?.message ||
+          "Failed to submit work permit application.",
+        ]);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setCurrentStep("payment");
   };
 
   // ── eSewa mock payment handler ──
-  const handleEsewaPayment = () => {
-    setIsProcessingPayment(true);
-    setTimeout(() => {
-      setSelectedPaymentMethod("esewa");
-      setPaymentStatus("paid");
-      setCurrentStep("submitted");
+  const handleEsewaPayment = async () => {
+    if (!workPermitId) {
+      setStepErrors([
+        "Work permit application ID not found.",
+      ]);
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      setStepErrors([]);
+
+      // 1. Create PENDING payment and get eSewa payment data
+      const response = await initiatePayment({
+        work_permit_id: workPermitId,
+        provider: "ESEWA",
+      });
+
+      console.log(
+        "ESEWA INITIATE RESPONSE:",
+        response.data
+      );
+
+      const paymentData = response.data?.data;
+
+      if (!response.data?.status || !paymentData) {
+        throw new Error(
+          response.data?.message ||
+          "Failed to initiate eSewa payment."
+        );
+      }
+
+      if (!paymentData.payment_url) {
+        throw new Error(
+          "eSewa payment URL was not returned."
+        );
+      }
+
+      // 2. Create form for eSewa
+      const form = document.createElement("form");
+
+      form.method = "POST";
+      form.action = paymentData.payment_url;
+
+      // 3. Exact fields returned by your Laravel backend
+      const fields = {
+        amount: paymentData.amount,
+        tax_amount: paymentData.tax_amount,
+        total_amount: paymentData.total_amount,
+        transaction_uuid:
+          paymentData.transaction_uuid,
+        product_code: paymentData.product_code,
+        product_service_charge:
+          paymentData.product_service_charge,
+        product_delivery_charge:
+          paymentData.product_delivery_charge,
+        success_url: paymentData.success_url,
+        failure_url: paymentData.failure_url,
+        signed_field_names:
+          paymentData.signed_field_names,
+        signature: paymentData.signature,
+      };
+
+      // 4. Convert fields into hidden form inputs
+      Object.entries(fields).forEach(
+        ([name, value]) => {
+          const input =
+            document.createElement("input");
+
+          input.type = "hidden";
+          input.name = name;
+          input.value = String(value);
+
+          form.appendChild(input);
+        }
+      );
+
+      // 5. Add form to DOM
+      document.body.appendChild(form);
+
+      // 6. Submit directly to eSewa
+      form.submit();
+
+    } catch (error: any) {
+      console.error(
+        "eSewa payment initiation failed:",
+        error
+      );
+
+      setStepErrors([
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to initiate eSewa payment.",
+      ]);
+
       setIsProcessingPayment(false);
-    }, 1500);
+    }
   };
 
   // ── Pay Later handler ──
-  const handlePayLater = () => {
-    setSelectedPaymentMethod("pay_later");
-    setPaymentStatus("unpaid");
-    setCurrentStep("submitted");
+  const handlePayLater = async () => {
+    if (!workPermitId) {
+      setStepErrors(["Work permit application ID not found."]);
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      setStepErrors([]);
+
+      await initiatePayment({
+        work_permit_id: workPermitId,
+        provider: "PAYLATER",
+      });
+
+      setSelectedPaymentMethod("pay_later");
+      setPaymentStatus("unpaid");
+      setCurrentStep("submitted");
+
+    } catch (error: any) {
+      console.error("Pay later initiation failed:", error);
+
+      setStepErrors([
+        error?.response?.data?.message ||
+        "Failed to select Pay Later.",
+      ]);
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handleDownloadSlip = () => {
@@ -836,7 +1196,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   </tr>
                   <tr>
                     <td class="td-label">Age Category</td>
-                    <td class="td-value">${formData.age !== null ? `${getFeeTierLabel(formData.age)} (${formData.age} yrs)` : "—"}</td>
+                    <td class="td-value">${formData.age !== null ? `${getFeeTierLabel()} (${formData.age} yrs)` : "—"}</td>
                   </tr>
                   <tr>
                     <td class="td-label">Company Transfer</td>
@@ -846,51 +1206,53 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
               </table>
             </div>
 
-            <!-- RIGHT: SUBMITTED DOCUMENTS -->
-            <div class="col-block">
-              <div class="section-heading" style="margin-top:0;">
-                <div class="sh-text">Submitted Documents</div>
-                <div class="sh-line"></div>
-              </div>
-              <table class="detail-table">
-                <thead>
-                  <tr>
-                    <th style="width:48%;">Document</th>
-                    <th>Status / Filename</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td class="td-label">Passport (Scan Copy)</td>
-                    <td class="td-value" style="color:#047857; font-weight:700;">${formData.files.passport ? "✓ " + formData.files.passport.name : "✓ Uploaded"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Visa / Job Offer Copy</td>
-                    <td class="td-value" style="color:#047857; font-weight:700;">${formData.files.visaCopy ? "✓ " + formData.files.visaCopy.name : "✓ Uploaded"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">MRP Size Photo</td>
-                    <td class="td-value" style="color:#047857; font-weight:700;">${formData.files.photo ? "✓ " + formData.files.photo.name : "✓ Uploaded"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Experience Certificate</td>
-                    <td class="td-value">${formData.files.experienceCert ? '<span style="color:#047857; font-weight:700;">✓ ' + formData.files.experienceCert.name + '</span>' : '<span style="color:#9ca3af; font-style:italic;">Not provided</span>'}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Police Clearance</td>
-                    <td class="td-value">${formData.files.policeReport ? '<span style="color:#047857; font-weight:700;">✓ ' + formData.files.policeReport.name + '</span>' : '<span style="color:#9ca3af; font-style:italic;">Not provided</span>'}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Insurance (SSF / Welfare)</td>
-                    <td class="td-value">${formData.files.insuranceReg ? '<span style="color:#047857; font-weight:700;">✓ ' + formData.files.insuranceReg.name + '</span>' : '<span style="color:#9ca3af; font-style:italic;">Not provided</span>'}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">FEIMS Online Slip</td>
-                    <td class="td-value">${formData.files.feims ? '<span style="color:#047857; font-weight:700;">✓ ' + formData.files.feims.name + '</span>' : '<span style="color:#9ca3af; font-style:italic;">Not provided</span>'}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+           <!-- RIGHT: SUBMITTED DOCUMENTS -->
+<div class="col-block">
+  <div class="section-heading" style="margin-top:0;">
+    <div class="sh-text">Submitted Documents</div>
+    <div class="sh-line"></div>
+  </div>
+
+  <table class="detail-table">
+    <thead>
+      <tr>
+        <th style="width:48%;">Document</th>
+        <th>Status / Filename</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      ${filteredDocumentRequirements
+        .map((document) => {
+          const file = formData.files[document.document_type];
+
+          return `
+            <tr>
+              <td class="td-label">
+                ${document.title}
+              </td>
+
+              <td class="td-value">
+                ${file
+              ? `<span style="color:#047857; font-weight:700;">
+                        ✓ ${file.name}
+                      </span>`
+              : document.is_required
+                ? `<span style="color:#dc2626; font-weight:700;">
+                          Missing (Required)
+                        </span>`
+                : `<span style="color:#9ca3af; font-style:italic;">
+                          Not provided
+                        </span>`
+            }
+              </td>
+            </tr>
+          `;
+        })
+        .join("")}
+    </tbody>
+  </table>
+</div>
 
           </div><!-- end .two-col-grid -->
 
@@ -996,16 +1358,28 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
   };
 
   const handleCloseModal = () => {
-    const modal = document.getElementById("work_permit_modal") as HTMLDialogElement;
+    const modal = document.getElementById(
+      "work_permit_modal"
+    ) as HTMLDialogElement;
+
     modal?.close();
-    // Reset after closing animation
+
     setTimeout(() => {
       setCurrentStep("stepA");
       setStepErrors([]);
       setPaymentStatus("unpaid");
       setSelectedPaymentMethod("esewa");
       setIsProcessingPayment(false);
+
+      // Reset application identifiers
       setApplicationId("");
+      setWorkPermitId(null);
+
+      // Reset uploaded files
+      setFormData((prev) => ({
+        ...prev,
+        files: {},
+      }));
     }, 300);
   };
 
@@ -1134,6 +1508,21 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g. Ram Bahadur Thapa"
+                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-600 font-bold">
+                  Email Address*
+                </label>
+
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="e.g. ram@gmail.com"
                   className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
@@ -1301,59 +1690,91 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
               </div>
 
               {/* Document upload cards - 5 files matching page specifications */}
-              {fileFields.map((field) => (
-                <div
-                  key={field.key}
-                  className="rounded-2xl bg-gray-50 p-4 border border-gray-100 hover:border-pink-200 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <label className="text-xs text-gray-800 font-bold block">
-                      {field.label}
-                    </label>
-                    {field.required ? (
-                      <span className="text-[10px] font-extrabold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
-                        Required
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                        Optional
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-gray-500 mb-2.5 leading-relaxed">
-                    {field.hint}
-                  </p>
-
-                  <input
-                    type="file"
-                    className="hidden"
-                    ref={(el) => {
-                      fileRefs.current[field.key] = el;
-                    }}
-                    onChange={(e) =>
-                      handleFileChange(field.key, e.target.files?.[0] || null)
-                    }
-                  />
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleButtonClick(field.key)}
-                      className="cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold bg-pink-600 text-white hover:bg-pink-700 transition-colors shadow-xs"
-                    >
-                      Choose File
-                    </button>
-                    {formData.files[field.key] ? (
-                      <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5 truncate">
-                        <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
-                        <span className="truncate">{formData.files[field.key]?.name}</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400 italic">No file selected yet</span>
-                    )}
-                  </div>
+              {loadingDocuments ? (
+                <div className="py-8 text-center text-sm text-gray-500">
+                  Loading required documents...
                 </div>
-              ))}
+              ) : filteredDocumentRequirements.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-500">
+                  No document requirements found for this permit type.
+                </div>
+              ) : (
+                filteredDocumentRequirements.map((document) => (
+                  <div
+                    key={document.id}
+                    className="rounded-2xl bg-gray-50 p-4 border border-gray-100 hover:border-pink-200 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <label className="text-xs text-gray-800 font-bold block">
+                        {document.title}
+                        {document.is_required && (
+                          <span className="text-pink-500 ml-1">*</span>
+                        )}
+                      </label>
+
+                      {document.is_required ? (
+                        <span className="text-[10px] font-extrabold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+                          Required
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                          Optional
+                        </span>
+                      )}
+                    </div>
+
+                    {document.description && (
+                      <p className="text-[10px] text-gray-500 mb-2.5 leading-relaxed">
+                        {document.description}
+                      </p>
+                    )}
+
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      className="hidden"
+                      ref={(el) => {
+                        fileRefs.current[document.document_type] = el;
+                      }}
+                      onChange={(e) =>
+                        handleFileChange(
+                          document.document_type,
+                          e.target.files?.[0] || null
+                        )
+                      }
+                    />
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleButtonClick(document.document_type)
+                        }
+                        className="cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold bg-pink-600 text-white hover:bg-pink-700 transition-colors shadow-xs"
+                      >
+                        Choose File
+                      </button>
+
+                      {formData.files[document.document_type] ? (
+                        <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5 truncate">
+                          <CheckCircle2
+                            size={14}
+                            className="text-emerald-600 flex-shrink-0"
+                          />
+
+                          <span className="truncate">
+                            {formData.files[document.document_type]?.name}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">
+                          No file selected yet
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
 
               {/* Optional Company Change Checkbox */}
               <div className="rounded-2xl bg-purple-50/70 p-4 border border-purple-100">
@@ -1449,24 +1870,39 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   Uploaded Documentation (5 Checkpoints)
                 </h4>
                 <div className="space-y-1.5 text-gray-600">
-                  {fileFields.map((field) => (
-                    <div
-                      key={field.key}
-                      className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-b-0"
-                    >
-                      <span className="text-gray-700 font-semibold">{field.label.replace("*", "").trim()}:</span>
-                      {formData.files[field.key] ? (
-                        <span className="font-bold text-emerald-700 flex items-center gap-1">
-                          <CheckCircle2 size={13} className="text-emerald-600 flex-shrink-0" />
-                          <span className="truncate max-w-[180px]">{formData.files[field.key]?.name}</span>
+                  {filteredDocumentRequirements.map((document) => {
+                    const file = formData.files[document.document_type];
+
+                    return (
+                      <div
+                        key={document.id}
+                        className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-b-0"
+                      >
+                        <span className="text-gray-700 font-semibold">
+                          {document.title}:
                         </span>
-                      ) : (
-                        <span className="text-gray-400 italic text-[11px]">
-                          {field.required ? "Missing (Required)" : "Not provided (Optional)"}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+
+                        {file ? (
+                          <span className="font-bold text-emerald-700 flex items-center gap-1">
+                            <CheckCircle2
+                              size={13}
+                              className="text-emerald-600 flex-shrink-0"
+                            />
+
+                            <span className="truncate max-w-[180px]">
+                              {file.name}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 italic text-[11px]">
+                            {document.is_required
+                              ? "Missing (Required)"
+                              : "Not provided (Optional)"}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1504,7 +1940,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                 bookingReference={applicationId}
                 packageTitle={`Work Permit (${selectedCountryName || "Government Shram"})`}
                 category="Work Permit"
-                tierName={getFeeTierLabel(formData.age)}
+                tierName={getFeeTierLabel()}
                 guestsCount={1}
                 unitPriceFormatted={totalPriceFormatted}
                 totalPriceFormatted={totalPriceFormatted}

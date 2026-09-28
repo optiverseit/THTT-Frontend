@@ -794,7 +794,7 @@ const VehicleRentalDetailContent: React.FC = () => {
     const priceNum = getVehiclePrice(vehicle);
 
     setSelectedBookingItem({
-      id: vehicle.id,
+      id: String(vehicle.id),
       title: vehicle.name,
       location: `Route: ${vehicle.fromLocation} to ${vehicle.destination}`,
       duration: `Rental (${vehicle.noOfDays})`,
@@ -1063,7 +1063,7 @@ const VehicleRentalDetailContent: React.FC = () => {
                                   Bags per person
                                 </span>
                               </div>
-                              <span className="font-bold text-gray-800 text-[11px] leading-tight truncate" title={vehicle.bagsPerPerson}>
+                              <span className="font-bold text-gray-800 text-[11px] leading-tight truncate" title={String(vehicle.bagsPerPerson)}>
                                 {vehicle.bagsPerPerson}
                               </span>
                             </div>

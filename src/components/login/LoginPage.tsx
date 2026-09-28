@@ -7,10 +7,13 @@ const LoginPage = () => {
 
   const getHeader = () => {
     if (location.pathname.includes("otp")) {
-      return { title: "Verify OTP", description: "First-time login requires verification." };
+      return { title: "Verify OTP", description: "First-time login or password reset requires verification." };
+    }
+    if (location.pathname.includes("reset-password")) {
+      return { title: "Reset Password", description: "" };
     }
     if (location.pathname.includes("forgot")) {
-      return { title: "Forgot Password", description: "Enter your email to receive a password reset link" };
+      return { title: "Forgot Password", description: "Enter your email to receive an OTP" };
     }
     return { title: "Login", description: "" };
   };

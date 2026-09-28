@@ -963,6 +963,10 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                     <td class="td-value mono accent">${formData.passportNumber ? formData.passportNumber.toUpperCase() : "—"}</td>
                   </tr>
                   <tr>
+                    <td class="td-label">Passport Expiry Date</td>
+                    <td class="td-value mono">${formData.passportExpiryDate || "—"}</td>
+                  </tr>
+                  <tr>
                     <td class="td-label">Contact / WhatsApp</td>
                     <td class="td-value">${formData.phoneCode} ${formData.phone || "—"}</td>
                   </tr>
@@ -1296,6 +1300,18 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
                   placeholder="e.g. A1234567"
                   className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
                   style={{ textTransform: "uppercase" }}
+                />
+              </div>
+
+              {/* Passport Expiry Date */}
+              <div>
+                <label className="text-xs text-gray-600 font-bold">Passport Expiry Date*</label>
+                <input
+                  type="date"
+                  name="passport_expiry_date"
+                  value={formData.passportExpiryDate}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, passportExpiryDate: e.target.value }))}
+                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
 

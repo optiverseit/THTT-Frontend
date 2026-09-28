@@ -38,6 +38,7 @@ import LoginForm from "./components/login/LoginForm";
 import LoginOtp from "./components/login/LoginOtp";
 import LoginDetails from "./components/login/LoginDetails";
 import LoginForgotPass from "./components/login/LoginForgotPass";
+import LoginResetPass from "./components/login/LoginResetPass";
 
 // Contexts
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -77,6 +78,7 @@ const MainLayout = () => {
           <Route path="otp" element={<LoginOtp />} />
           <Route path="details" element={<LoginDetails />} />
           <Route path="forgot-password" element={<LoginForgotPass />} />
+          <Route path="reset-password" element={<LoginResetPass />} />
         </Route>
 
         {/* ── REGISTRATION ── */}

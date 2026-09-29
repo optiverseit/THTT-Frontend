@@ -35,7 +35,7 @@ import ReactCountryFlag from "react-country-flag";
 
 import { useAuth } from "../../context/AuthContext";
 
-import { registerUser } from "../../api/BackendApi";
+import { registerUser, loginUser } from "../../api/BackendApi";
 
 interface RegisterFormData {
   firstName: string;
@@ -322,7 +322,7 @@ const RegisterPage: React.FC = () => {
           formData.email.trim(),
 
         phone:
-          `${formData.countryCode}${formData.phone.trim()}`,
+          formData.phone.trim().replace(/[\s\-()]/g, ""),
 
         password:
           formData.password,
@@ -340,197 +340,30 @@ const RegisterPage: React.FC = () => {
           formData.nationality.trim(),
       };
 
-      console.log(
-        "Register payload:",
-        userData
-      );
+      const displayPhone = `${formData.countryCode} ${formData.phone.trim()}`;
+      const payloadData = {
+        ...userData,
+        countryCode: formData.countryCode,
+        displayPhone,
+      };
 
-      const response =
-        await registerUser(userData);
+      // Store pending registration data for OTP verification stage
+      // (User will be created in database only after correct OTP is entered)
+      sessionStorage.setItem("pending_register_user", JSON.stringify(payloadData));
 
-      const responseData =
-        response.data;
-
-      console.log(
-        "Register response:",
-        responseData
-      );
-
-      if (
-        responseData?.success &&
-        responseData?.token &&
-        responseData?.user
-      ) {
-        const user =
-          responseData.user;
-
-        // ==============================
-        // STORE ACCESS TOKEN
-        // ==============================
-
-        localStorage.setItem(
-          "token",
-          responseData.token
-        );
-
-        // Keep support for refresh token
-        // when backend adds it later
-        if (
-          responseData.refreshToken
-        ) {
-          localStorage.setItem(
-            "refreshToken",
-            responseData.refreshToken
-          );
-        }
-
-        // ==============================
-        // STORE USER INFORMATION
-        // ==============================
-
-        if (user.id) {
-          localStorage.setItem(
-            "userId",
-            user.id.toString()
-          );
-        }
-
-        if (user.role?.slug) {
-          localStorage.setItem(
-            "role",
-            user.role.slug
-          );
-        }
-
-        if (user.role?.name) {
-          localStorage.setItem(
-            "roleName",
-            user.role.name
-          );
-        }
-
-        if (user.email) {
-          localStorage.setItem(
-            "email",
-            user.email
-          );
-        }
-
-        if (user.first_name) {
-          localStorage.setItem(
-            "firstName",
-            user.first_name
-          );
-        }
-
-        if (user.last_name) {
-          localStorage.setItem(
-            "lastName",
-            user.last_name
-          );
-        }
-
-        const fullName = [
-          user.first_name,
-          user.middle_name,
-          user.last_name,
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        if (fullName) {
-          localStorage.setItem(
-            "name",
-            fullName
-          );
-        }
-
-        const phoneVal =
-          user.phone ||
-          `${formData.countryCode} ${formData.phone.trim()}`;
-
-        localStorage.setItem("phone", phoneVal);
-
-        const genderVal = user.gender || formData.gender;
-        if (genderVal) {
-          localStorage.setItem("gender", genderVal);
-        }
-
-        const addressVal = user.address || formData.address.trim();
-        if (addressVal) {
-          localStorage.setItem("address", addressVal);
-        }
-
-        const nationalityVal = user.nationality || formData.nationality.trim();
-        if (nationalityVal) {
-          localStorage.setItem("nationality", nationalityVal);
-        }
-
-        // ==============================
-        // UPDATE AUTH CONTEXT
-        // ==============================
-
-        login({
-          name:
-            fullName ||
-            `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
-
-          email:
-            user.email ||
-            formData.email.trim(),
-
-          phone: phoneVal,
-          gender: genderVal,
-          address: addressVal,
-          nationality: nationalityVal,
-        });
-
-        // ==============================
-        // REDIRECT TO DASHBOARD
-        // ==============================
-
-        navigate(
-          "/dashboard",
-          {
-            replace: true,
-          }
-        );
-      } else {
-        setErrorMessage(
-          responseData?.message ||
-            "Registration failed. Please try again."
-        );
-      }
+      // Redirect towards OTP verification
+      navigate("/register/otp", {
+        state: {
+          email: userData.email,
+          phone: displayPhone,
+          userData: payloadData,
+        },
+      });
     } catch (error: any) {
-      console.error(
-        "Registration error:",
-        error
+      console.error("Registration error:", error);
+      setErrorMessage(
+        error.response?.data?.message || "Unable to proceed to verification. Please try again."
       );
-
-      const backendErrors =
-        error.response?.data?.errors;
-
-      if (backendErrors) {
-        const firstError =
-          Object.values(
-            backendErrors
-          )
-            .flat()
-            .find(Boolean);
-
-        setErrorMessage(
-          String(
-            firstError ||
-              "Registration failed."
-          )
-        );
-      } else {
-        setErrorMessage(
-          error.response?.data
-            ?.message ||
-            "Unable to register. Please try again."
-        );
-      }
     } finally {
       setLoading(false);
     }

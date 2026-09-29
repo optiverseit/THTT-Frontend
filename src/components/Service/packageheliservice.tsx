@@ -1885,8 +1885,9 @@ export const PackageHeliService: React.FC = () => {
 
   if (packagesLoading) {
     return (
-      <div className="w-full py-16 text-center text-sm font-bold text-gray-500">
-        Loading helicopter packages...
+      <div className="py-20 text-center">
+        <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-[#2D1347] font-bold text-base">Loading helicopter packages...</p>
       </div>
     );
   }
@@ -1895,6 +1896,15 @@ export const PackageHeliService: React.FC = () => {
     return (
       <div className="w-full py-16 text-center text-sm font-bold text-red-500">
         {packagesError}
+      </div>
+    );
+  }
+
+  if (routeTourId && packagesLoading) {
+    return (
+      <div className="py-20 text-center">
+        <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-[#2D1347] font-bold text-base">Loading helicopter details...</p>
       </div>
     );
   }

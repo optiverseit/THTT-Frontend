@@ -963,10 +963,9 @@ const Packages: React.FC = () => {
 
             {loading ? (
 
-              <div className="py-20 text-center text-gray-500">
-
-                Loading packages...
-
+              <div className="py-20 text-center">
+                <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-[#2D1347] font-bold text-base">Loading packages...</p>
               </div>
 
             ) : filteredPackages.length ===

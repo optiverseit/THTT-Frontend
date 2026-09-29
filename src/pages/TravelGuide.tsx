@@ -1,6 +1,6 @@
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronRight, Plane, Phone } from "lucide-react";
 
 interface MenuItem {
@@ -10,6 +10,24 @@ interface MenuItem {
 
 const TravelGuide: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string>("getting-in");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    // TODO: Replace static content with API call here.
+    // Example:
+    // const fetchGuideContent = async () => {
+    //   try {
+    //     setLoading(true);
+    //     const response = await getTravelGuide();
+    //     setContent(response.data?.data ?? []);
+    //   } catch (err) {
+    //     console.error("Failed to fetch travel guide:", err);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+    // fetchGuideContent();
+  }, []);
 
   const menuItems: MenuItem[] = [
     { id: "getting-in", label: "Getting in Nepal" },
@@ -34,6 +52,12 @@ const TravelGuide: React.FC = () => {
       />
 
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
+        {loading ? (
+          <div className="py-20 text-center">
+            <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#2D1347] font-bold text-base">Loading travel guide...</p>
+          </div>
+        ) : (
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10 lg:gap-14">
           {/* Main Content */}
           <div className="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 md:p-12 lg:p-16 h-fit">
@@ -145,6 +169,7 @@ const TravelGuide: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* PreFooter CTA */}

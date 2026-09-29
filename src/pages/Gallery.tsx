@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Compass,
   Eye,
@@ -23,6 +23,24 @@ const categories = [
 const Gallery: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    // TODO: Replace galleryData with API call here.
+    // Example:
+    // const fetchGallery = async () => {
+    //   try {
+    //     setLoading(true);
+    //     const response = await getGallery();
+    //     setPhotos(response.data?.data ?? []);
+    //   } catch (err) {
+    //     console.error("Failed to fetch gallery:", err);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+    // fetchGallery();
+  }, []);
 
   const filteredPhotos = selectedCategory === "all"
     ? galleryData
@@ -88,6 +106,12 @@ const Gallery: React.FC = () => {
         </div>
 
         {/* Photos Grid */}
+        {loading ? (
+          <div className="py-20 text-center">
+            <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#2D1347] font-bold text-base">Loading gallery...</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {filteredPhotos.map((photo, index) => (
             <div
@@ -128,6 +152,7 @@ const Gallery: React.FC = () => {
             </div>
           ))}
         </div>
+        )}
 
       </main>
 

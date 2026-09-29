@@ -15,6 +15,36 @@ export const googleLogin = (idToken: any) => {
   });
 };
 
+export const forgotPassword = (email: string) => {
+    return axiosInstance.post("/auth/forgot-password", {
+        email,
+    });
+};
+
+export const verifyResetOtp = (
+    email: string,
+    otp: string
+) => {
+    return axiosInstance.post("/auth/verify-reset-otp", {
+        email,
+        otp,
+    });
+};
+
+export const resetPassword = (
+    email: string,
+    resetToken: string,
+    password: string,
+    passwordConfirmation: string
+) => {
+    return axiosInstance.post("/auth/reset-password", {
+        email,
+        reset_token: resetToken,
+        password,
+        password_confirmation: passwordConfirmation,
+    });
+};
+
 
 export const getPackagesByCategory = (category: string, page = 1) => {
   return axiosInstance.get("/packageByCategory", {
@@ -217,3 +247,38 @@ export const createWorkPermitApplication = (data: FormData) => {
     }
   );
 };
+
+// ============================================
+// VISA SERVICE - PUBLIC
+// ============================================
+
+export const getVisaCategories = () => {
+    return axiosInstance.get("/visa-categories");
+};
+
+export const getVisaPublicDocumentRequirements = (
+    visaCategoryId: number | string
+) => {
+    return axiosInstance.get(
+        `/visa-public-document-requirements/${visaCategoryId}`
+    );
+};
+
+export const getVisaPublicInformation = (
+    visaCategoryId: number | string
+) => {
+    return axiosInstance.get(
+        `/visa-public-information/${visaCategoryId}`
+    );
+};
+
+export const getVisaPublicPricingTiers = (
+    visaCategoryId: number | string
+) => {
+    return axiosInstance.get(
+        `/visa-public-pricing-tiers/${visaCategoryId}`
+    );
+};
+
+
+

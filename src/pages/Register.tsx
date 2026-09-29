@@ -1,5 +1,5 @@
 import React from "react";
-import RegisterPage from "../components/register/RegisterPage";
+import { Outlet } from "react-router-dom";
 
 const Register: React.FC = () => {
   return (
@@ -11,10 +11,11 @@ const Register: React.FC = () => {
 
       {/* Main Registration Card between 3-tier Header and Footer */}
       <div className="relative z-10 w-full">
-        <RegisterPage />
+        <Outlet />
       </div>
     </div>
   );
 };
 
 export default Register;
+

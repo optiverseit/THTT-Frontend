@@ -40,6 +40,11 @@ import LoginDetails from "./components/login/LoginDetails";
 import LoginForgotPass from "./components/login/LoginForgotPass";
 import LoginResetPass from "./components/login/LoginResetPass";
 
+// Register sub-views
+import RegisterPage from "./components/register/RegisterPage";
+import RegisterOtp from "./components/register/RegisterOtp";
+import RegisterSuccess from "./components/register/RegisterSuccess";
+
 // Contexts
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GlobalCurrencyProvider } from "./context/CurrencyContext";
@@ -82,8 +87,22 @@ const MainLayout = () => {
         </Route>
 
         {/* ── REGISTRATION ── */}
-        <Route path="/register" element={<Register />} />
-        <Route path="/signup" element={<Register />} />
+        <Route path="/register" element={<Register />}>
+          <Route index path="" element={<RegisterPage />} />
+          <Route path="otp" element={<RegisterOtp />} />
+          <Route path="success" element={<RegisterSuccess />} />
+        </Route>
+        <Route path="/signup" element={<Register />}>
+          <Route index path="" element={<RegisterPage />} />
+          <Route path="otp" element={<RegisterOtp />} />
+          <Route path="success" element={<RegisterSuccess />} />
+        </Route>
+        <Route path="/register-otp" element={<Register />}>
+          <Route index element={<RegisterOtp />} />
+        </Route>
+        <Route path="/registration-success" element={<Register />}>
+          <Route index element={<RegisterSuccess />} />
+        </Route>
 
         {/* ── USER DASHBOARD ── */}
         <Route

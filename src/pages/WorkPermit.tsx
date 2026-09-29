@@ -291,6 +291,7 @@ const WorkPermit = () => {
         <PermitServices
           countries={countries}
           filterCountryId={appliedCountry}
+          isLoading={countriesLoading}
           onClearFilter={() => {
             setAppliedCountry("");
             setSelectedCountry("");

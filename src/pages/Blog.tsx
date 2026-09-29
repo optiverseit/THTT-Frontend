@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Search,
@@ -336,6 +336,24 @@ const Blog: React.FC = () => {
   const [mode, setMode] = useState<BlogMode>(initialMode);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    // TODO: Replace mockData with API call here.
+    // Example:
+    // const fetchBlogs = async () => {
+    //   try {
+    //     setLoading(true);
+    //     const response = await getBlogs();
+    //     setPosts(response.data?.data ?? []);
+    //   } catch (err) {
+    //     console.error("Failed to fetch blogs:", err);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+    // fetchBlogs();
+  }, []);
 
   const handleModeChange = (newMode: BlogMode) => {
     setMode(newMode);
@@ -570,7 +588,12 @@ const Blog: React.FC = () => {
             </div>
 
             {/* ── BLOG GRID ── */}
-            {mode === "read" &&
+            {loading ? (
+              <div className="py-20 text-center">
+                <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-[#2D1347] font-bold text-base">Loading blogs...</p>
+              </div>
+            ) : mode === "read" &&
               (filteredPosts.length === 0 ? (
                 <div className="col-span-2 text-center py-16 bg-white rounded-2xl border border-gray-100">
                   <p className="text-gray-400 text-sm font-medium">

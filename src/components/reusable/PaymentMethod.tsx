@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Wallet, Loader2, ArrowRight, Lock, Check } from "lucide-react";
 import esewaLogo from "../../assets/images/esewa_logo.jpg";
 
@@ -31,6 +31,12 @@ export const PaymentMethod: React.FC<PaymentMethodProps> = ({
   onPayLater,
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<"esewa" | "pay_later">(initialMethod);
+
+  useEffect(() => {
+    if (initialMethod) {
+      setSelectedMethod(initialMethod);
+    }
+  }, [initialMethod]);
 
   const handleSelect = (method: "esewa" | "pay_later") => {
     setSelectedMethod(method);
@@ -156,7 +162,7 @@ export const PaymentMethod: React.FC<PaymentMethodProps> = ({
           {isProcessingPayment ? (
             <div className="flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-white" />
-              <span>Redirecting to eSewa…</span>
+              <span>{selectedMethod === "esewa" ? "Redirecting to eSewa…" : "Confirming Pay Later…"}</span>
             </div>
           ) : selectedMethod === "esewa" ? (
             <>

@@ -18,12 +18,14 @@ interface PermitServicesProps {
   countries?: Country[];
   filterCountryId?: string;
   onClearFilter?: () => void;
+  isLoading?: boolean;
 }
 
 const PermitServices = ({
   countries = [],
   filterCountryId = "",
   onClearFilter,
+  isLoading = false,
 }: PermitServicesProps) => {
   const navigate = useNavigate();
 
@@ -64,7 +66,12 @@ const PermitServices = ({
           )}
         </header>
 
-        {visibleCountries.length > 0 ? (
+        {isLoading ? (
+          <div className="py-20 text-center">
+            <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#2D1347] font-bold text-base">Loading work permits...</p>
+          </div>
+        ) : visibleCountries.length > 0 ? (
           <div
             className={`grid gap-4 sm:gap-6 ${
               isFiltered

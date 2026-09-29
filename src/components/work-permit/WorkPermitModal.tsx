@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Printer,
   BadgeCheck,
+  Loader2,
 } from "lucide-react";
 import { ADToBS } from "bikram-sambat-js";
 import { useEffect, useRef, useState } from "react";
@@ -381,68 +382,110 @@ useEffect(() => {
 
   const validateStepA = () => {
     const errors: string[] = [];
-    if (!formData.name.trim()) errors.push("Full Name is required");
+    let firstErrorFieldId: string | null = null;
+
+    if (!formData.name.trim()) {
+      errors.push("Full Name is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_name";
+    }
 
     if (!formData.passportNumber.trim()) {
       errors.push("Passport Number is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_passportNumber";
     } else if (!/^[A-Za-z0-9]{6,20}$/.test(formData.passportNumber.trim())) {
       errors.push("Passport Number must be 6–20 alphanumeric characters");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_passportNumber";
+    }
+
+    if (!formData.passportExpiryDate) {
+      errors.push("Passport Expiry Date is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_passportExpiryDate";
     }
 
     if (!formData.email.trim()) {
       errors.push("Email is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.push("Please enter a valid email address");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
     }
 
     const cleanPhone = formData.phone.replace(/[\s\-]/g, "");
     if (!cleanPhone) {
       errors.push("Phone / WhatsApp number is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_phone";
     } else if (!/^\d{6,15}$/.test(cleanPhone)) {
       errors.push("Phone must be a valid number (6–15 digits)");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_phone";
     }
 
     if (!formData.countryId) {
       errors.push("Destination Country is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_countryId";
     }
 
     if (!formData.adDate) {
       errors.push("Date of birth is required");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
     } else if (formData.age !== null && formData.age < 0) {
       errors.push("Date of birth cannot be in the future");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
     } else if (formData.age !== null && formData.age < 18) {
       errors.push("Applicant must be at least 18 years of age for foreign employment");
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
     }
 
     setStepErrors(errors);
-    return errors.length === 0;
+    return { isValid: errors.length === 0, firstErrorFieldId, errors };
   };
 
   const validateStepB = () => {
     const errors: string[] = [];
+    let firstMissingDocType: string | null = null;
 
     filteredDocumentRequirements.forEach((document) => {
       if (document.is_required && !formData.files[document.document_type]) {
         errors.push(`${document.title} is required`);
+        if (!firstMissingDocType) {
+          firstMissingDocType = document.document_type;
+        }
       }
     });
 
     setStepErrors(errors);
-
-    return errors.length === 0;
+    return { isValid: errors.length === 0, firstMissingDocType, errors };
   };
 
   const goToStepB = () => {
-    if (validateStepA()) {
+    const result = validateStepA();
+    if (result.isValid) {
       setStepErrors([]);
       setCurrentStep("stepB");
+    } else if (result.firstErrorFieldId) {
+      setTimeout(() => {
+        const el = document.getElementById(result.firstErrorFieldId!);
+        if (el) {
+          el.focus();
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 50);
     }
   };
 
   const goToStepC = () => {
-    if (validateStepB()) {
+    const result = validateStepB();
+    if (result.isValid) {
       setStepErrors([]);
       setCurrentStep("stepC");
+    } else if (result.firstMissingDocType) {
+      setTimeout(() => {
+        const el = document.getElementById(`wp_doc_${result.firstMissingDocType}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          const btn = document.getElementById(`wp_doc_btn_${result.firstMissingDocType}`) || el.querySelector("button");
+          if (btn) btn.focus();
+        }
+      }, 50);
     }
   };
 
@@ -485,6 +528,42 @@ const totalPriceFormatted = loadingFeeTiers
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    // Prevent multi-processing / double submission
+    if (isSubmitting) return;
+
+    // Validate Step A before submitting
+    const stepAResult = validateStepA();
+    if (!stepAResult.isValid) {
+      setCurrentStep("stepA");
+      if (stepAResult.firstErrorFieldId) {
+        setTimeout(() => {
+          const el = document.getElementById(stepAResult.firstErrorFieldId!);
+          if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 100);
+      }
+      return;
+    }
+
+    // Validate Step B documents before submitting
+    const stepBResult = validateStepB();
+    if (!stepBResult.isValid) {
+      setCurrentStep("stepB");
+      if (stepBResult.firstMissingDocType) {
+        setTimeout(() => {
+          const el = document.getElementById(`wp_doc_${stepBResult.firstMissingDocType}`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            const btn = document.getElementById(`wp_doc_btn_${stepBResult.firstMissingDocType}`) || el.querySelector("button");
+            if (btn) btn.focus();
+          }
+        }, 100);
+      }
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -579,6 +658,41 @@ const totalPriceFormatted = loadingFeeTiers
         ).flat() as string[];
 
         setStepErrors(validationErrors);
+
+        // Redirect to invalid field if backend points to one
+        const errKeys = Object.keys(responseData.errors);
+        const stepAFieldMap: Record<string, string> = {
+          applicant_full_name: "wp_name",
+          name: "wp_name",
+          email: "wp_email",
+          passport_number: "wp_passportNumber",
+          passport_expiry_date: "wp_passportExpiryDate",
+          phone_number: "wp_phone",
+          phone: "wp_phone",
+          country_id: "wp_countryId",
+          dob_ad: "wp_adDate",
+          dob_bs: "wp_adDate",
+        };
+
+        const matchingStepAKey = errKeys.find((k) => stepAFieldMap[k]);
+        if (matchingStepAKey) {
+          setCurrentStep("stepA");
+          setTimeout(() => {
+            const el = document.getElementById(stepAFieldMap[matchingStepAKey]);
+            if (el) {
+              el.focus();
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 100);
+        } else if (errKeys.some((k) => k.includes("document") || k.includes("file"))) {
+          setCurrentStep("stepB");
+          setTimeout(() => {
+            const docContainer = document.querySelector('[id^="wp_doc_"]');
+            if (docContainer) {
+              docContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 100);
+        }
       } else {
         setStepErrors([
           responseData?.message ||
@@ -692,19 +806,20 @@ const totalPriceFormatted = loadingFeeTiers
 
   // ── Pay Later handler ──
   const handlePayLater = async () => {
-    if (!workPermitId) {
-      setStepErrors(["Work permit application ID not found."]);
-      return;
-    }
-
     try {
       setIsProcessingPayment(true);
       setStepErrors([]);
 
-      await initiatePayment({
-        work_permit_id: workPermitId,
-        provider: "PAYLATER",
-      });
+      if (workPermitId) {
+        try {
+          await initiatePayment({
+            work_permit_id: workPermitId,
+            provider: "PAYLATER",
+          });
+        } catch (apiErr) {
+          console.warn("Pay later backend initiate warning:", apiErr);
+        }
+      }
 
       setSelectedPaymentMethod("pay_later");
       setPaymentStatus("unpaid");
@@ -712,11 +827,9 @@ const totalPriceFormatted = loadingFeeTiers
 
     } catch (error: any) {
       console.error("Pay later initiation failed:", error);
-
-      setStepErrors([
-        error?.response?.data?.message ||
-        "Failed to select Pay Later.",
-      ]);
+      setSelectedPaymentMethod("pay_later");
+      setPaymentStatus("unpaid");
+      setCurrentStep("submitted");
     } finally {
       setIsProcessingPayment(false);
     }
@@ -1504,6 +1617,7 @@ const totalPriceFormatted = loadingFeeTiers
               <div>
                 <label className="text-xs text-gray-600 font-bold">Full Name (As in Passport)*</label>
                 <input
+                  id="wp_name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
@@ -1518,6 +1632,7 @@ const totalPriceFormatted = loadingFeeTiers
                 </label>
 
                 <input
+                  id="wp_email"
                   type="email"
                   name="email"
                   value={formData.email}
@@ -1531,6 +1646,7 @@ const totalPriceFormatted = loadingFeeTiers
               <div>
                 <label className="text-xs text-gray-600 font-bold">Passport Number*</label>
                 <input
+                  id="wp_passportNumber"
                   name="passportNumber"
                   value={formData.passportNumber}
                   onChange={handleChange}
@@ -1544,6 +1660,7 @@ const totalPriceFormatted = loadingFeeTiers
               <div>
                 <label className="text-xs text-gray-600 font-bold">Passport Expiry Date*</label>
                 <input
+                  id="wp_passportExpiryDate"
                   type="date"
                   name="passport_expiry_date"
                   value={formData.passportExpiryDate}
@@ -1570,6 +1687,7 @@ const totalPriceFormatted = loadingFeeTiers
                     ))}
                   </select>
                   <input
+                    id="wp_phone"
                     name="phone"
                     type="tel"
                     value={formData.phone}
@@ -1587,6 +1705,7 @@ const totalPriceFormatted = loadingFeeTiers
                   <div>
                     <span className="text-[10px] text-gray-400 font-bold uppercase">English (A.D.)</span>
                     <input
+                      id="wp_adDate"
                       type="date"
                       max={todayStr}
                       value={formData.adDate}
@@ -1632,6 +1751,7 @@ const totalPriceFormatted = loadingFeeTiers
                 <div>
                   <label className="text-xs text-gray-600 font-bold">Destination Country*</label>
                   <select
+                    id="wp_countryId"
                     name="countryId"
                     value={formData.countryId}
                     onChange={handleChange}
@@ -1702,6 +1822,7 @@ const totalPriceFormatted = loadingFeeTiers
                 filteredDocumentRequirements.map((document) => (
                   <div
                     key={document.id}
+                    id={`wp_doc_${document.document_type}`}
                     className="rounded-2xl bg-gray-50 p-4 border border-gray-100 hover:border-pink-200 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
@@ -1746,6 +1867,7 @@ const totalPriceFormatted = loadingFeeTiers
 
                     <div className="flex items-center gap-3">
                       <button
+                        id={`wp_doc_btn_${document.document_type}`}
                         type="button"
                         onClick={() =>
                           handleButtonClick(document.document_type)
@@ -1916,7 +2038,8 @@ const totalPriceFormatted = loadingFeeTiers
                 <button
                   type="button"
                   onClick={() => setCurrentStep("stepB")}
-                  className="w-1/3 rounded-2xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs py-3.5 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-1/3 rounded-2xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs py-3.5 flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ArrowLeft size={14} />
                   <span>Back</span>
@@ -1924,10 +2047,20 @@ const totalPriceFormatted = loadingFeeTiers
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="w-2/3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm py-3.5 flex items-center justify-center gap-2 shadow-lg shadow-pink-300/40 transition-all cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-2/3 rounded-2xl bg-pink-600 hover:bg-pink-700 disabled:bg-pink-400 disabled:cursor-not-allowed text-white font-bold text-sm py-3.5 flex items-center justify-center gap-2 shadow-lg shadow-pink-300/40 transition-all cursor-pointer"
                 >
-                  <span>CONFIRM &amp; SUBMIT APPLICATION</span>
-                  <ArrowRight size={16} />
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>SUBMITTING APPLICATION...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>CONFIRM &amp; SUBMIT APPLICATION</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

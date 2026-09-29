@@ -299,9 +299,7 @@ const RegisterPage: React.FC = () => {
   // REGISTER USER WITH BACKEND
   // ==========================================
 
-  const handleRegisterSubmit = async (
-    e: React.FormEvent
-  ) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateDetails()) {
@@ -313,56 +311,98 @@ const RegisterPage: React.FC = () => {
       setErrorMessage(null);
 
       const userData = {
-        first_name:
-          formData.firstName.trim(),
-        last_name:
-          formData.lastName.trim(),
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
 
-        email:
-          formData.email.trim(),
+        email: formData.email.trim(),
 
-        phone:
-          formData.phone.trim().replace(/[\s\-()]/g, ""),
+        country_code: formData.countryCode,
 
-        password:
-          formData.password,
+        phone: formData.phone
+          .trim()
+          .replace(/[\s\-()]/g, ""),
+
+        password: formData.password,
 
         password_confirmation:
           formData.confirmPassword,
 
-        gender:
-          formData.gender,
+        gender: formData.gender,
 
-        address:
-          formData.address.trim(),
+        address: formData.address.trim(),
 
         nationality:
           formData.nationality.trim(),
       };
 
-      const displayPhone = `${formData.countryCode} ${formData.phone.trim()}`;
-      const payloadData = {
-        ...userData,
-        countryCode: formData.countryCode,
-        displayPhone,
-      };
+      const response =
+        await registerUser(userData);
 
-      // Store pending registration data for OTP verification stage
-      // (User will be created in database only after correct OTP is entered)
-      sessionStorage.setItem("pending_register_user", JSON.stringify(payloadData));
+      if (response.data?.success) {
+        sessionStorage.setItem(
+          "pending_register_email",
+          userData.email
+        );
 
-      // Redirect towards OTP verification
-      navigate("/register/otp", {
-        state: {
-          email: userData.email,
-          phone: displayPhone,
-          userData: payloadData,
-        },
-      });
+        navigate("/register/otp", {
+          state: {
+            email: userData.email,
+          },
+        });
+      }
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error(
+        "Registration error:",
+        error
+      );
+
+      const backendErrors =
+        error.response?.data?.errors;
+
+      if (backendErrors) {
+        const errors: RegErrors = {};
+
+        if (backendErrors.first_name) {
+          errors.firstName =
+            backendErrors.first_name[0];
+        }
+
+        if (backendErrors.last_name) {
+          errors.lastName =
+            backendErrors.last_name[0];
+        }
+
+        if (backendErrors.email) {
+          errors.email =
+            backendErrors.email[0];
+        }
+
+        if (backendErrors.phone) {
+          errors.phone =
+            backendErrors.phone[0];
+        }
+
+        if (backendErrors.password) {
+          errors.password =
+            backendErrors.password[0];
+        }
+
+        if (backendErrors.address) {
+          errors.address =
+            backendErrors.address[0];
+        }
+
+        if (backendErrors.nationality) {
+          errors.nationality =
+            backendErrors.nationality[0];
+        }
+
+        setFieldErrors(errors);
+      }
+
       setErrorMessage(
-        error.response?.data?.message || "Unable to proceed to verification. Please try again."
+        error.response?.data?.message ||
+        "Registration failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -446,11 +486,10 @@ const RegisterPage: React.FC = () => {
                   </label>
 
                   <div
-                    className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
-                      fieldErrors.firstName
+                    className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${fieldErrors.firstName
                         ? "border-red-500/70 focus-within:border-red-500 focus-within:ring-red-500/30"
                         : "border-purple-800/40 focus-within:border-pink-500 focus-within:ring-pink-500/30"
-                    }`}
+                      }`}
                   >
 
                     <input
@@ -490,11 +529,10 @@ const RegisterPage: React.FC = () => {
                   </label>
 
                   <div
-                    className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
-                      fieldErrors.lastName
+                    className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${fieldErrors.lastName
                         ? "border-red-500/70 focus-within:border-red-500 focus-within:ring-red-500/30"
                         : "border-purple-800/40 focus-within:border-pink-500 focus-within:ring-pink-500/30"
-                    }`}
+                      }`}
                   >
 
                     <input
@@ -538,11 +576,10 @@ const RegisterPage: React.FC = () => {
                 </label>
 
                 <div
-                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
-                    fieldErrors.email
+                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${fieldErrors.email
                       ? "border-red-500/70 focus-within:border-red-500 focus-within:ring-red-500/30"
                       : "border-purple-800/40 focus-within:border-pink-500 focus-within:ring-pink-500/30"
-                  }`}
+                    }`}
                 >
 
                   <input
@@ -666,7 +703,7 @@ const RegisterPage: React.FC = () => {
                         <div className="overflow-y-auto flex-1 space-y-0.5 pr-1">
 
                           {filteredCountryCodes.length ===
-                          0 ? (
+                            0 ? (
 
                             <div className="text-purple-300/50 text-[11px] text-center py-2">
                               No countries
@@ -689,14 +726,13 @@ const RegisterPage: React.FC = () => {
                                       item
                                     )
                                   }
-                                  className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
-                                    formData.countryCode ===
+                                  className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${formData.countryCode ===
                                       item.code &&
-                                    formData.countryIso ===
+                                      formData.countryIso ===
                                       item.iso
                                       ? "bg-pink-600 text-white font-bold"
                                       : "text-purple-100 hover:bg-purple-800/40"
-                                  }`}
+                                    }`}
                                 >
 
                                   <div className="flex items-center gap-2">
@@ -735,7 +771,7 @@ const RegisterPage: React.FC = () => {
                                   {formData.countryCode ===
                                     item.code &&
                                     formData.countryIso ===
-                                      item.iso && (
+                                    item.iso && (
                                       <Check
                                         size={
                                           12
@@ -759,11 +795,10 @@ const RegisterPage: React.FC = () => {
                   </div>
 
                   <div
-                    className={`flex-1 relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${
-                      fieldErrors.phone
+                    className={`flex-1 relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 focus-within:ring-1 transition-all ${fieldErrors.phone
                         ? "border-red-500/70"
                         : "border-purple-800/40 focus-within:border-pink-500"
-                    }`}
+                      }`}
                   >
 
                     <input
@@ -807,11 +842,10 @@ const RegisterPage: React.FC = () => {
                   </label>
 
                   <div
-                    className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${
-                      fieldErrors.password
+                    className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${fieldErrors.password
                         ? "border-red-500/70"
                         : "border-purple-800/40 focus-within:border-pink-500"
-                    }`}
+                      }`}
                   >
 
                     <input
@@ -916,11 +950,10 @@ const RegisterPage: React.FC = () => {
                 </label>
 
                 <div
-                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${
-                    fieldErrors.confirmPassword
+                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${fieldErrors.confirmPassword
                       ? "border-red-500/70"
                       : "border-purple-800/40 focus-within:border-pink-500"
-                  }`}
+                    }`}
                 >
 
                   <input
@@ -977,11 +1010,10 @@ const RegisterPage: React.FC = () => {
                 </label>
 
                 <div
-                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${
-                    fieldErrors.address
+                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${fieldErrors.address
                       ? "border-red-500/70"
                       : "border-purple-800/40 focus-within:border-pink-500"
-                  }`}
+                    }`}
                 >
 
                   <input
@@ -1021,11 +1053,10 @@ const RegisterPage: React.FC = () => {
                 </label>
 
                 <div
-                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${
-                    fieldErrors.nationality
+                  className={`relative flex items-center bg-[#29174d]/85 border rounded-xl px-3.5 h-11 ${fieldErrors.nationality
                       ? "border-red-500/70"
                       : "border-purple-800/40 focus-within:border-pink-500"
-                  }`}
+                    }`}
                 >
 
                   <input

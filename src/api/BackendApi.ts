@@ -5,6 +5,13 @@ export const registerUser = (userData: any) => {
   return axiosInstance.post("auth/register", userData);
 };
 
+export const verifyEmailOtp = (data: {
+  email: string;
+  otp: string;
+}) => {
+  return axiosInstance.post("/auth/verify-email-otp", data);
+};
+
 export const loginUser = (loginData: any) => {
   return axiosInstance.post("/auth/login", loginData);
 };

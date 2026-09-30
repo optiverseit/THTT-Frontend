@@ -25,6 +25,7 @@ import { useGlobalCurrency, displayPrice, formatNPR, formatUSD, formatINR } from
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { InsurancePlan, InsuranceCostOption } from "./insuranceData";
+import { InsuranceDocumentField, DEFAULT_DOCUMENT_CONFIG, buildEmptyDocumentFiles } from "./insuranceDocumentConfig";
 
 export interface InsuranceApplicationModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ export interface InsuranceApplicationModalProps {
   plan: InsurancePlan;
   selectedOption: InsuranceCostOption;
   numberOfTravelers?: number;
+  /** Optional document config override from admin panel / API */
+  documentConfig?: InsuranceDocumentField[];
 }
 
 export interface InsuredApplicantData {
@@ -43,15 +46,13 @@ export interface InsuredApplicantData {
   passportNumber: string;
   passportExpiry: string;
   dateOfBirth: string;
-  passportFile: File | null;
-  photoFile: File | null;
-  itineraryFile: File | null;
-  medicalFitnessFile: File | null;
+  /** Dynamic file map keyed by InsuranceDocumentField.id */
+  files: Record<string, File | null>;
   hasMedicalCondition: boolean;
   medicalNotes: string;
 }
 
-const createDefaultApplicant = (): InsuredApplicantData => ({
+const createDefaultApplicant = (docConfig: InsuranceDocumentField[] = DEFAULT_DOCUMENT_CONFIG): InsuredApplicantData => ({
   fullName: "",
   nationality: "Nepal",
   email: "",
@@ -60,10 +61,7 @@ const createDefaultApplicant = (): InsuredApplicantData => ({
   passportNumber: "",
   passportExpiry: "",
   dateOfBirth: "",
-  passportFile: null,
-  photoFile: null,
-  itineraryFile: null,
-  medicalFitnessFile: null,
+  files: buildEmptyDocumentFiles(docConfig),
   hasMedicalCondition: false,
   medicalNotes: "",
 });
@@ -74,6 +72,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   plan,
   selectedOption,
   numberOfTravelers = 1,
+  documentConfig = DEFAULT_DOCUMENT_CONFIG,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
@@ -81,7 +80,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   const totalNprPrice = selectedOption.nprPrice * travelersCount;
 
   const [applicants, setApplicants] = useState<InsuredApplicantData[]>(() =>
-    Array.from({ length: travelersCount }, createDefaultApplicant)
+    Array.from({ length: travelersCount }, () => createDefaultApplicant(documentConfig))
   );
   const [activeApplicantIndex, setActiveApplicantIndex] = useState(0);
 
@@ -95,7 +94,6 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [emergencyRelationship, setEmergencyRelationship] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
-  const [altitudeDeclarationAgreed, setAltitudeDeclarationAgreed] = useState(false);
 
   // Submission State
   const [submitted, setSubmitted] = useState(false);
@@ -103,11 +101,13 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copied, setCopied] = useState(false);
 
-  // File Input Refs
-  const passportRef = useRef<HTMLInputElement>(null);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const itineraryRef = useRef<HTMLInputElement>(null);
-  const medicalRef = useRef<HTMLInputElement>(null);
+  // File input refs — one per document config slot (dynamic)
+  const fileRefs = useRef<Record<string, React.RefObject<HTMLInputElement | null>>>({});
+  documentConfig.forEach((field) => {
+    if (!fileRefs.current[field.id]) {
+      fileRefs.current[field.id] = React.createRef<HTMLInputElement>();
+    }
+  });
 
   // Sync applicants array whenever travelersCount or modal opens
   useEffect(() => {
@@ -116,7 +116,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         if (prev.length === travelersCount) return prev;
         const next = [...prev];
         while (next.length < travelersCount) {
-          next.push(createDefaultApplicant());
+          next.push(createDefaultApplicant(documentConfig));
         }
         return next.slice(0, travelersCount);
       });
@@ -133,12 +133,12 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
       }
       setAgencyOrGuideName("Trip Himalaya Tours & Travel (Authorized Lead)");
     }
-  }, [travelersCount, isOpen, plan]);
+  }, [travelersCount, isOpen, plan, documentConfig]);
 
   if (!isOpen) return null;
 
   const currentApplicant =
-    applicants[activeApplicantIndex] || applicants[0] || createDefaultApplicant();
+    applicants[activeApplicantIndex] || applicants[0] || createDefaultApplicant(documentConfig);
 
   const updateCurrentApplicant = (patch: Partial<InsuredApplicantData>) => {
     setApplicants((prev) => {
@@ -152,32 +152,20 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
     });
   };
 
-  const handlePassportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /** Universal file handler – works for any document config slot */
+  const handleFileChange = (fieldId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({ passportFile: e.target.files[0] });
+      updateCurrentApplicant({
+        files: { ...currentApplicant.files, [fieldId]: e.target.files[0] },
+      });
     }
     e.target.value = "";
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({ photoFile: e.target.files[0] });
-    }
-    e.target.value = "";
-  };
-
-  const handleItineraryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({ itineraryFile: e.target.files[0] });
-    }
-    e.target.value = "";
-  };
-
-  const handleMedicalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({ medicalFitnessFile: e.target.files[0] });
-    }
-    e.target.value = "";
+  const clearFile = (fieldId: string) => {
+    updateCurrentApplicant({
+      files: { ...currentApplicant.files, [fieldId]: null },
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -263,18 +251,14 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         return;
       }
 
-      // Documents validation
-      if (!app.passportFile) {
-        setActiveApplicantIndex(i);
-        alert(`Please upload Passport, NID, or Citizenship Scanned Copy for Traveler ${i + 1}.`);
-        return;
+      // Documents validation — driven by documentConfig
+      for (const field of documentConfig) {
+        if (field.required && !app.files[field.id]) {
+          setActiveApplicantIndex(i);
+          alert(`Please upload "${field.title}" for Traveler ${i + 1}.`);
+          return;
+        }
       }
-      if (!app.photoFile) {
-        setActiveApplicantIndex(i);
-        alert(`Please upload Passport Size Photo for Traveler ${i + 1}.`);
-        return;
-      }
-      // Note: Trekking Permit / Itinerary is Optional in Section 3
     }
 
     // Section 2: Healthcare & Emergency details validation
@@ -307,10 +291,6 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
 
     if (!termsAgreed) {
       alert("Please accept the insurance terms and conditions to proceed.");
-      return;
-    }
-    if (!altitudeDeclarationAgreed) {
-      alert("Please check the altitude safety declaration.");
       return;
     }
 
@@ -366,38 +346,46 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
       <div className={`relative w-full ${submitted ? "max-w-2xl" : "max-w-xl"} bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[92vh] z-10 print:border-none print:shadow-none print:max-w-none print:w-full print:rounded-none`}>
         
         {/* ── TOP HEADER ── */}
-        <div className="bg-gradient-to-r from-[#2D1347] via-[#3B145C] to-[#2D1347] p-5 sm:p-6 text-white flex items-center justify-between print:hidden">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center flex-shrink-0">
-              <Mountain className="text-pink-300" size={22} />
+        <div className="bg-gradient-to-r from-[#2D1347] via-[#3B145C] to-[#2D1347] px-4 pt-4 pb-3.5 sm:px-5 sm:pt-4.5 sm:pb-3.5 text-white flex items-start justify-between print:hidden">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center flex-shrink-0">
+              <Mountain className="text-pink-300" size={18} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-black tracking-widest uppercase bg-[#E11D48] text-white px-2.5 py-0.5 rounded-full">
                   {plan.badge}
                 </span>
-                <span className="text-xs text-purple-200 font-semibold">
-                  {plan.maxAltitude}
-                </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-black text-white truncate mt-0.5">
+              <h2 className="text-base sm:text-lg font-black text-white truncate mt-0.5">
                 {submitted ? "Insurance Application Confirmed" : `Apply for ${plan.name}`}
               </h2>
-              <p className="text-xs text-white/70">
-                Option: <strong className="text-white">{selectedOption.name} ({selectedOption.days})</strong> • {selectedOption.coverageLimit}
+              <p className="text-xs text-white/80 font-semibold mt-0.5">
+                {selectedOption.name} ({selectedOption.days})
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            type="button"
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer flex-shrink-0 ml-3"
-            aria-label="Close modal"
-          >
-            <X size={18} />
-          </button>
+          {/* Right side: Close button top (tier level) + Price pill bottom */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-3">
+            <button
+              onClick={onClose}
+              type="button"
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer flex-shrink-0"
+              aria-label="Close modal"
+            >
+              <X size={16} />
+            </button>
+            {!submitted && (
+              <div className="bg-[#E11D48] text-white text-xs font-black px-2.5 py-1 rounded-xl shadow-md whitespace-nowrap mt-3.5">
+                {displayPrice(selectedOption.nprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}{" "}
+                <span className="text-[10px] font-semibold text-white/90">/Person</span>
+              </div>
+            )}
+          </div>
         </div>
+
+
 
         {/* ══════════════════════════════════════════════════════════════════
             SUBMITTED SUCCESS VIEW / CONFIRMATION SLIP
@@ -825,7 +813,10 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                           <td className="py-2 px-3">{app.phoneCode} {app.phone}</td>
                           <td className="py-2 px-3">
                             <span className="inline-flex items-center gap-1 text-[9.5px] font-bold" style={{ color: "#15803d" }}>
-                              <CheckCircle2 size={11} /> {app.passportFile && app.photoFile ? (app.itineraryFile ? "3 Files (Attached)" : "2 Files (Attached)") : "Pending"}
+                              <CheckCircle2 size={11} /> {(() => {
+                                const count = Object.values(app.files || {}).filter(Boolean).length;
+                                return count > 0 ? `${count} File${count > 1 ? "s" : ""} (Attached)` : "Pending";
+                              })()}
                             </span>
                           </td>
                         </tr>
@@ -1232,105 +1223,115 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 Attach for Traveler {travelersCount > 1 ? activeApplicantIndex + 1 : "1"} ({currentApplicant.fullName || "Current"}). PDF, JPG, PNG (max 10 MB each).
               </p>
 
-              {/* Hidden file inputs */}
-              <input ref={passportRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handlePassportChange} className="hidden" />
-              <input ref={photoRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoChange} className="hidden" />
-              <input ref={itineraryRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleItineraryChange} className="hidden" />
-              <input ref={medicalRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleMedicalChange} className="hidden" />
+              {/* Hidden file inputs — one per document config entry */}
+              {documentConfig.map((field) => (
+                <input
+                  key={field.id}
+                  ref={fileRefs.current[field.id]}
+                  type="file"
+                  accept={field.accept}
+                  onChange={(e) => handleFileChange(field.id, e)}
+                  className="hidden"
+                />
+              ))}
 
               <div className="space-y-2.5">
-                {([
-                  {
-                    label: travelersCount > 1 ? `Passport / NID / Citizenship (Traveler ${activeApplicantIndex + 1})` : "Passport / NID / Citizenship Scanned Copy",
-                    required: true,
-                    ref: passportRef,
-                    file: currentApplicant.passportFile,
-                    clear: () => updateCurrentApplicant({ passportFile: null }),
-                    hint: "Clear color scan of Passport, National ID (NID), or Citizenship certificate",
-                  },
-                  {
-                    label: travelersCount > 1 ? `Passport Photo (Traveler ${activeApplicantIndex + 1})` : "Passport Size Photo (MRP)",
-                    required: true,
-                    ref: photoRef,
-                    file: currentApplicant.photoFile,
-                    clear: () => updateCurrentApplicant({ photoFile: null }),
-                    hint: "Recent front-facing digital photo with white background",
-                  },
-                  {
-                    label: "Trekking Permit / Route Itinerary",
-                    required: false,
-                    ref: itineraryRef,
-                    file: currentApplicant.itineraryFile,
-                    clear: () => updateCurrentApplicant({ itineraryFile: null }),
-                    hint: "TIMS card, conservation permit, or route itinerary slip (optional)",
-                  },
-                ] as Array<{
-                  label: string;
-                  required: boolean;
-                  ref: React.RefObject<HTMLInputElement>;
-                  file: File | null;
-                  clear: () => void;
-                  hint: string;
-                }>).map((field) => (
-                  <div
-                    key={field.label}
-                    className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
-                      field.file
-                        ? "bg-emerald-50/60 border-emerald-200"
-                        : field.required
-                        ? "bg-white border-gray-200 hover:border-[#E11D48]"
-                        : "bg-white border-gray-200 hover:border-purple-300"
-                    } transition-all`}
-                  >
-                    {/* Left: icon + label */}
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        field.file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E11D48]"
-                      }`}>
-                        {field.file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
-                          {field.label}
-                          {field.required ? (
-                            <span className="text-[#E11D48] font-black">*</span>
-                          ) : (
-                            <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>
-                          )}
-                        </p>
-                        {field.file ? (
-                          <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">
-                            {field.file.name}{" "}
-                            <span className="text-emerald-500 font-normal">({(field.file.size / 1024).toFixed(0)} KB)</span>
+                {documentConfig.map((field) => {
+                  const file = currentApplicant.files[field.id] ?? null;
+                  const label =
+                    travelersCount > 1
+                      ? `${field.title} (Traveler ${activeApplicantIndex + 1})`
+                      : field.title;
+                  return (
+                    <div
+                      key={field.id}
+                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
+                        file
+                          ? "bg-emerald-50/60 border-emerald-200"
+                          : field.required
+                          ? "bg-white border-gray-200 hover:border-[#E11D48]"
+                          : "bg-white border-gray-200 hover:border-purple-300"
+                      } transition-all`}
+                    >
+                      {/* Left: icon + label */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E11D48]"
+                        }`}>
+                          {file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
+                            {label}
+                            {field.required ? (
+                              <span className="text-[#E11D48] font-black">*</span>
+                            ) : (
+                              <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>
+                            )}
                           </p>
-                        ) : (
-                          <p className="text-[10px] text-gray-400">{field.hint}</p>
-                        )}
+                          {file ? (
+                            <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">
+                              {file.name}{" "}
+                              <span className="text-emerald-500 font-normal">({(file.size / 1024).toFixed(0)} KB)</span>
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-gray-400">{field.subtitle}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Right: attach / remove */}
-                    {field.file ? (
-                      <button
-                        type="button"
-                        onClick={field.clear}
-                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"
-                      >
-                        <Trash2 size={11} />
-                        Remove
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => field.ref.current?.click()}
-                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E11D48] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"
-                      >
-                        <UploadCloud size={12} />
-                        Attach
-                      </button>
-                    )}
+                      {/* Right: attach / remove */}
+                      {file ? (
+                        <button
+                          type="button"
+                          onClick={() => clearFile(field.id)}
+                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={11} />
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => fileRefs.current[field.id]?.current?.click()}
+                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E11D48] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"
+                        >
+                          <UploadCloud size={12} />
+                          Attach
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── CALCULATED PRICE SUMMARY ── */}
+            <div className="bg-gradient-to-r from-pink-50/70 via-purple-50/50 to-pink-50/70 rounded-2xl p-3.5 sm:p-4 border border-pink-200/70 shadow-xs flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
+                  <Users size={16} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-black text-[#2D1347]">Total Insurance Price</span>
+                    <span className="text-[10px] font-semibold text-gray-500 bg-white/80 border border-gray-200/80 px-2 py-0.5 rounded-full">
+                      {selectedOption.name} ({selectedOption.days})
+                    </span>
                   </div>
-                ))}
+                  <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                    {displayPrice(selectedOption.nprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)} × {travelersCount} {travelersCount === 1 ? "Applicant" : "Applicants"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right flex-shrink-0">
+                <div className="text-base sm:text-lg font-black text-[#E11D48] tracking-tight">
+                  {displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                </div>
+                <div className="text-[10px] font-semibold text-gray-400">
+                  {travelersCount} {travelersCount === 1 ? "Pax Total" : "Pax Total"}
+                </div>
               </div>
             </div>
 
@@ -1340,42 +1341,22 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 <input
                   type="checkbox"
                   required
-                  checked={altitudeDeclarationAgreed}
-                  onChange={(e) => setAltitudeDeclarationAgreed(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded text-[#E11D48] focus:ring-[#E11D48] border-gray-300 cursor-pointer flex-shrink-0"
-                />
-                <span className="text-gray-600 leading-relaxed">
-                  <strong>High-Altitude &amp; Medical Declaration:</strong> I confirm that the insured traveler(s) are physically fit for the indicated trekking altitude ({plan.maxAltitude}) and have disclosed any major pre-existing heart or lung conditions.
-                </span>
-              </label>
-
-              <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  required
                   checked={termsAgreed}
                   onChange={(e) => setTermsAgreed(e.target.checked)}
                   className="mt-0.5 w-4 h-4 rounded text-[#E11D48] focus:ring-[#E11D48] border-gray-300 cursor-pointer flex-shrink-0"
                 />
                 <span className="text-gray-600 leading-relaxed">
-                  I agree to the Trip Himalaya Insurance Terms, 24/7 Helicopter Evacuation Dispatch Protocol, and Cashless Hospital Admission regulations.
+                  I agree to the Trip Himalaya Insurance Terms.
                 </span>
               </label>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
+            <div className="flex items-center justify-end pt-1 border-t border-gray-100">
 
               <div className="text-right">
                 <div className="text-[10px] text-gray-400 font-medium mb-0.5">
-                  {travelersCount} {travelersCount === 1 ? "Traveler" : "Travelers"} • {selectedOption.name}
+                  {travelersCount} {travelersCount === 1 ? "Applicant" : "Applicants"}
                 </div>
                 <button
                   type="submit"

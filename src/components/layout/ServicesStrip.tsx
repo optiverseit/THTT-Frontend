@@ -11,6 +11,7 @@ import {
   Car,
   Wind,
   FileText,
+  FileCheck,
   ChevronLeft,
   ChevronRight,
   type LucideIcon,
@@ -34,6 +35,7 @@ const servicesList: ServiceItem[] = [
   { id: "8", name: "VEHICLE RENTAL", slug: "/service/vehicle-rental", icon: Car },
   { id: "9", name: "HELI SERVICES", slug: "/service/heli-services", icon: Wind },
   { id: "10", name: "ONLINE SHRAM", slug: "/work-permit", icon: FileText },
+  { id: "11", name: "DOCUMENTATION", slug: "/documentation", icon: FileCheck },
 ];
 
 const ServicesStrip: React.FC = () => {

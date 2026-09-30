@@ -74,7 +74,7 @@ import {
   createBooking,
   initiatePayment,
 } from "../../api/BackendApi";
-import PermitService from "../work-permit/permit-details/PermitService";
+import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 
@@ -2907,10 +2907,12 @@ export const PackageHeliService: React.FC = () => {
             </div>
           </div>
 
-          {/* ── OUR OTHER SERVICES ── */}
-          <div className="mt-10">
-            <PermitService service={services} />
-          </div>
+
+        {/* ── OUR OTHER SERVICES ── */}
+        <div className="mt-10">
+          <OtherServicesComponent service={services} />
+        </div>
+
         </>
       ) : (
         /* ======================================================================= */

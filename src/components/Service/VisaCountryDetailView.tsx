@@ -39,7 +39,7 @@ import {
   triggerNativeShare,
   openSharePopup,
 } from "../../utils/shareUtils";
-import PermitService from "../work-permit/permit-details/PermitService";
+import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
 
 
@@ -1129,7 +1129,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
 
       {/* ── OUR OTHER SERVICES SECTION ── */}
       <div className="print:hidden pt-8 border-t border-gray-200">
-        <PermitService service={services} />
+        <OtherServicesComponent service={services} />
       </div>
 
       {/* ── VISA APPLICATION MODAL (Triggered when clicking 'Process Now') ── */}

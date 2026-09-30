@@ -26,7 +26,7 @@ import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
-import { createBooking } from "../../api/BackendApi";
+import { createBooking, initiatePayment } from "../../api/BackendApi";
 
 export interface VehicleBookingItem {
   id?: string;
@@ -75,6 +75,7 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const [bookingId, setBookingId] = useState<number | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,6 +105,8 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
   useEffect(() => {
     if (isOpen) {
       setCurrentStep("form");
+      setBookingId(null);
+
       setSubmissionId("");
       setSubmittedAt("");
       setCopied(false);
@@ -202,20 +205,30 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
       setFormError("Please enter your phone/WhatsApp number.");
       return;
     }
-    const effectiveStartDate = formData.travelDateFrom || formData.travelDate;
+
+    const effectiveStartDate =
+      formData.travelDateFrom || formData.travelDate;
+
     if (!effectiveStartDate) {
       setFormError("Please select your travel date (From).");
       return;
     }
+
     if (!formData.termsAgreed) {
-      setFormError("Please accept the terms and conditions to proceed.");
+      setFormError(
+        "Please accept the terms and conditions to proceed."
+      );
+      return;
+    }
+
+    if (!item.id) {
+      setFormError("Vehicle information is missing.");
       return;
     }
 
     setFormError("");
     setIsSubmitting(true);
 
-    let generatedRef = `THTT-VHC-${Math.floor(100000 + Math.random() * 900000)}`;
     const now = new Date().toLocaleString("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
@@ -224,53 +237,160 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
     try {
       const bookingData = {
         booking_type: "VEHICLE" as const,
-        vehicle_id: item.id ? Number(item.id) : undefined,
+        vehicle_id: Number(item.id),
         number_of_people: passengersCount,
         start_date: effectiveStartDate,
         end_date: formData.travelDateTo || null,
         frontend_total_amount: totalNpr,
-        payment_method: selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later",
+
+        payment_method:
+          selectedPaymentMethod === "esewa"
+            ? "eSewa"
+            : "Pay Later",
+
         customer_name: formData.fullName,
         customer_email: formData.email,
         customer_phone: `${formData.phoneCode} ${formData.phone}`,
         nationality: formData.nationality,
         pickup_address: formData.pickupAddress,
+
         special_requests: formData.specialNotes
           ? `[Trip Type: ${tripType}] ${formData.specialNotes}`
           : `[Trip Type: ${tripType}]`,
       };
 
       const response = await createBooking(bookingData);
+
       const booking = response?.data?.data || response?.data;
-      if (booking?.booking_reference) {
-        generatedRef = booking.booking_reference;
+
+      if (!booking?.id) {
+        throw new Error("Booking ID was not returned by the backend.");
       }
-    } catch (err) {
-      console.warn("Booking backend notice (fallback tracking ref active):", err);
-    } finally {
-      setSubmissionId(generatedRef);
+
+      // IMPORTANT: save real booking ID for payment initiation
+      setBookingId(Number(booking.id));
+
+      // Use backend booking reference
+      setSubmissionId(booking.booking_reference || "");
+
       setSubmittedAt(now);
-      setIsSubmitting(false);
+
+      // Only go to payment after booking was successfully created
       setCurrentStep("payment");
+
+    } catch (err: any) {
+      console.error("Vehicle booking failed:", err);
+
+      setFormError(
+        err?.response?.data?.message ||
+        err?.response?.data?.errors?.number_of_people?.[0] ||
+        err?.message ||
+        "Failed to create booking. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleEsewaPayment = () => {
-    setIsProcessingPayment(true);
-    setTimeout(() => {
+  const handleEsewaPayment = async () => {
+    if (!bookingId) {
+      setFormError("Booking ID is missing. Please create the booking first.");
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      setFormError("");
       setSelectedPaymentMethod("esewa");
-      setPaymentStatus("paid");
-      setCurrentStep("submitted");
+
+      const response = await initiatePayment({
+        booking_id: bookingId,
+        provider: "ESEWA",
+      });
+
+      const data = response?.data?.data;
+
+      if (!data?.payment_url) {
+        throw new Error("eSewa payment URL was not returned.");
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = data.payment_url;
+
+      const fields = {
+        amount: data.amount,
+        tax_amount: data.tax_amount,
+        total_amount: data.total_amount,
+        transaction_uuid: data.transaction_uuid,
+        product_code: data.product_code,
+        product_service_charge: data.product_service_charge,
+        product_delivery_charge: data.product_delivery_charge,
+        success_url: data.success_url,
+        failure_url: data.failure_url,
+        signed_field_names: data.signed_field_names,
+        signature: data.signature,
+      };
+
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value ?? "");
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err: any) {
+      console.error("eSewa payment initiation failed:", err);
+
+      setFormError(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to initiate eSewa payment."
+      );
+
       setIsProcessingPayment(false);
-    }, 1500);
+    }
   };
 
-  const handlePayLater = () => {
-    setSelectedPaymentMethod("pay_later");
-    setPaymentStatus("unpaid");
-    setCurrentStep("submitted");
-  };
+  const handlePayLater = async () => {
+    if (!bookingId) {
+      setFormError("Booking ID is missing. Please create the booking first.");
+      return;
+    }
 
+    try {
+      setIsProcessingPayment(true);
+      setFormError("");
+      setSelectedPaymentMethod("pay_later");
+
+      const response = await initiatePayment({
+        booking_id: bookingId,
+        provider: "PAYLATER",
+      });
+
+      if (!response?.data?.status) {
+        throw new Error(
+          response?.data?.message || "Failed to select Pay Later."
+        );
+      }
+
+      setPaymentStatus("unpaid");
+      setCurrentStep("submitted");
+    } catch (err: any) {
+      console.error("Pay Later failed:", err);
+
+      setFormError(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to select Pay Later."
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
   const handleCopyId = () => {
     navigator.clipboard.writeText(submissionId);
     setCopied(true);
@@ -284,20 +404,20 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
 
     const msg = encodeURIComponent(
       `*Official Vehicle Rental Booking Confirmation*\n\n` +
-        `📌 *Booking Reference:* ${submissionId}\n` +
-        `🚗 *Vehicle:* ${item.title}\n` +
-        `🛣️ *Route:* ${route}\n` +
-        `🏷️ *Trip Type:* ${tripType}\n` +
-        `👥 *Passengers:* ${passengersCount} Pax\n` +
-        `📅 *Travel Date:* ${formData.travelDateFrom || formData.travelDate}${formData.travelDateTo ? ` to ${formData.travelDateTo}` : ""}\n` +
-        `📍 *Pickup Location:* ${formData.pickupAddress || "To be confirmed"}\n` +
-        `👤 *Lead Passenger:* ${formData.fullName}\n` +
-        `📞 *Contact:* ${formData.phoneCode} ${formData.phone}\n` +
-        `💰 *Total Rental Fee:* ${totalPriceFormatted}\n` +
-        `💳 *Payment Method:* ${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later"}\n` +
-        `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
-        `🔍 *Payment Verification:* PENDING\n\n` +
-        `Hello Trip Himalaya (Vehicle & Fleet Operations), I have booked a vehicle rental online. Please confirm booking receipt and driver assignment.`
+      `📌 *Booking Reference:* ${submissionId}\n` +
+      `🚗 *Vehicle:* ${item.title}\n` +
+      `🛣️ *Route:* ${route}\n` +
+      `🏷️ *Trip Type:* ${tripType}\n` +
+      `👥 *Passengers:* ${passengersCount} Pax\n` +
+      `📅 *Travel Date:* ${formData.travelDateFrom || formData.travelDate}${formData.travelDateTo ? ` to ${formData.travelDateTo}` : ""}\n` +
+      `📍 *Pickup Location:* ${formData.pickupAddress || "To be confirmed"}\n` +
+      `👤 *Lead Passenger:* ${formData.fullName}\n` +
+      `📞 *Contact:* ${formData.phoneCode} ${formData.phone}\n` +
+      `💰 *Total Rental Fee:* ${totalPriceFormatted}\n` +
+      `💳 *Payment Method:* ${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later"}\n` +
+      `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
+      `🔍 *Payment Verification:* PENDING\n\n` +
+      `Hello Trip Himalaya (Vehicle & Fleet Operations), I have booked a vehicle rental online. Please confirm booking receipt and driver assignment.`
     );
     window.open(
       `https://api.whatsapp.com/send?phone=9779851403761&text=${msg}`,
@@ -665,29 +785,25 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
           <table class="detail-table">
             <tr>
               <td class="td-label">Payment Method</td>
-              <td class="td-value" style="font-weight:700;">${
-                selectedPaymentMethod === "esewa"
-                  ? "eSewa Digital Wallet"
-                  : "Pay Later (Deferred / Pay at Office)"
-              }</td>
+              <td class="td-value" style="font-weight:700;">${selectedPaymentMethod === "esewa"
+        ? "eSewa Digital Wallet"
+        : "Pay Later (Deferred / Pay at Office)"
+      }</td>
               <td class="td-label">Total Rental Fee</td>
               <td class="td-value fee">${totalPriceFormatted}</td>
             </tr>
             <tr>
               <td class="td-label">Amount Paid</td>
-              <td class="td-value fee" style="color:${
-                paymentStatus === "paid" ? "#047857" : "#b45309"
-              };">${
-                paymentStatus === "paid"
-                  ? totalPriceFormatted
-                  : selectedCurrency
-                  ? `${selectedCurrency} 0 (Pay Later)`
-                  : "NPR 0 (Pay Later)"
-              }</td>
+              <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"
+      };">${paymentStatus === "paid"
+        ? totalPriceFormatted
+        : selectedCurrency
+          ? `${selectedCurrency} 0 (Pay Later)`
+          : "NPR 0 (Pay Later)"
+      }</td>
               <td class="td-label">Payment Status</td>
-              <td class="td-value" style="font-weight:900; font-size:10px; color:${
-                paymentStatus === "paid" ? "#047857" : "#b45309"
-              };">${paymentStatus.toUpperCase()}</td>
+              <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"
+      };">${paymentStatus.toUpperCase()}</td>
             </tr>
             <tr>
               <td class="td-label">Payment Verification</td>
@@ -755,13 +871,14 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
     setPaymentStatus("unpaid");
     setSelectedPaymentMethod("esewa");
     setIsProcessingPayment(false);
+    setBookingId(null);
     onClose();
   };
 
   return (
     <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[92vh]">
-        
+
         {/* ── MODAL HEADER (Previous design as requested) ── */}
         {currentStep === "submitted" ? (
           <div className="p-4 sm:p-5 bg-gradient-to-r from-[#200B3B] via-[#3B145C] to-[#200B3B] text-white flex items-center justify-between border-b border-white/10 flex-shrink-0">
@@ -900,22 +1017,20 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
                CONFIRMATION & VOUCHER VIEW
                ======================================================================= */
             <div className="space-y-3 text-center animate-in fade-in zoom-in-95 duration-200">
-              
+
               {/* Top Greeting & Status */}
               <div className="space-y-1.5 pt-0.5">
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${
-                  paymentStatus === "paid"
-                    ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
-                    : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
-                }`}>
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${paymentStatus === "paid"
+                  ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
+                  : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
+                  }`}>
                   <CheckCircle2 size={26} className="stroke-[2.5]" />
                 </div>
                 <div>
-                  <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    paymentStatus === "paid"
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                      : "bg-amber-100 text-amber-800 border border-amber-200"
-                  }`}>
+                  <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${paymentStatus === "paid"
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : "bg-amber-100 text-amber-800 border border-amber-200"
+                    }`}>
                     {paymentStatus === "paid" ? "Payment Received • Booking Registered" : "Booking Registered • Payment Pending"}
                   </span>
                 </div>
@@ -1381,7 +1496,7 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
               {/* Seat Availability Notice */}
               <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 flex items-start gap-2">
                 <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded bg-amber-500 flex items-center justify-center">
-                  <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </span>
                 <p className="text-[11px] text-amber-800 font-medium leading-snug">
                   <span className="font-bold">Seat availability is not real-time.</span> Confirm via{" "}

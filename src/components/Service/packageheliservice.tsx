@@ -71,10 +71,12 @@ import {
   getPackagesByCategory,
   getPackagePricingTiers,
   getPackageFaqs,
-  createBooking
+  createBooking,
+  initiatePayment,
 } from "../../api/BackendApi";
 import PermitService from "../work-permit/permit-details/PermitService";
 import { services } from "../../assets/data/mockData";
+import { PaymentMethod } from "../reusable/PaymentMethod";
 
 // =============================================================================
 // Comprehensive Helicopter Tours Data
@@ -277,6 +279,14 @@ export const PackageHeliService: React.FC = () => {
   const [packagesLoading, setPackagesLoading] = useState<boolean>(true);
   const [packagesError, setPackagesError] = useState<string>("");
   const [bookingPricingTierId, setBookingPricingTierId] = useState<number | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const [bookingId, setBookingId] = useState<number | null>(null);
+
+  const [submissionId, setSubmissionId] = useState<string>("");
+  const [submittedAt, setSubmittedAt] = useState<string>("");
+  const [copiedId, setCopiedId] = useState<boolean>(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -456,12 +466,6 @@ export const PackageHeliService: React.FC = () => {
   const [activeApplicantIndex, setActiveApplicantIndex] = useState<number>(0);
   const [bookingTotalPriceNPR, setBookingTotalPriceNPR] = useState<number>(0);
 
-  // Submission / Print Slip State
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [submissionId, setSubmissionId] = useState<string>("");
-  const [submittedAt, setSubmittedAt] = useState<string>("");
-  const [copiedId, setCopiedId] = useState<boolean>(false);
 
   // Booking Applicant Interface
   interface HeliApplicant {
@@ -809,6 +813,22 @@ export const PackageHeliService: React.FC = () => {
   const flightRef = useRef<HTMLInputElement>(null);
   const hotelRef = useRef<HTMLInputElement>(null);
   const insuranceRef = useRef<HTMLInputElement>(null);
+  const [currentStep, setCurrentStep] = useState<
+    "form" | "payment" | "submitted"
+  >("form");
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "esewa" | "pay_later"
+  >("esewa");
+
+  const [paymentStatus, setPaymentStatus] = useState<
+    "unpaid" | "paid"
+  >("unpaid");
+
+  const [isProcessingPayment, setIsProcessingPayment] =
+    useState<boolean>(false);
+
+  const [paymentError, setPaymentError] = useState<string>("");
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -884,6 +904,14 @@ export const PackageHeliService: React.FC = () => {
     setFormErrors({});
     setTouchedFields({});
     setIsSubmitted(false);
+    setBookingId(null);
+    setSubmissionId("");
+    setSubmittedAt("");
+    setCurrentStep("form");
+    setSelectedPaymentMethod("esewa");
+    setPaymentStatus("unpaid");
+    setPaymentError("");
+    setIsProcessingPayment(false);
     setIsBookingModalOpen(true);
   };
 
@@ -930,6 +958,14 @@ export const PackageHeliService: React.FC = () => {
     setFormErrors({});
     setTouchedFields({});
     setIsSubmitted(false);
+    setBookingId(null);
+    setSubmissionId("");
+    setSubmittedAt("");
+    setCurrentStep("form");
+    setSelectedPaymentMethod("esewa");
+    setPaymentStatus("unpaid");
+    setPaymentError("");
+    setIsProcessingPayment(false);
     setIsBookingModalOpen(true);
   };
 
@@ -941,7 +977,6 @@ export const PackageHeliService: React.FC = () => {
     const errors: Record<string, string | undefined> = {};
     const allTouched: Record<string, boolean> = { ...touchedFields };
 
-    // Validate each applicant
     for (let i = 0; i < paxCount; i++) {
       const applicant = bookingFormData.applicants?.[i] || {
         fullName: "",
@@ -960,6 +995,7 @@ export const PackageHeliService: React.FC = () => {
         hotelFile: null,
         insuranceFile: null,
       };
+
       const applicantFields: (keyof HeliApplicant)[] = [
         "fullName",
         "nationality",
@@ -970,6 +1006,7 @@ export const PackageHeliService: React.FC = () => {
         "phone",
         "preferredDate",
       ];
+
       applicantFields.forEach((f) => {
         const errKey = `applicant_${i}_${f}`;
         allTouched[errKey] = true;
@@ -978,7 +1015,6 @@ export const PackageHeliService: React.FC = () => {
       });
     }
 
-    // Terms agreement
     allTouched["termsAgreed"] = true;
     const termsErr = validateHeliField("termsAgreed", bookingFormData.termsAgreed);
     if (termsErr) errors["termsAgreed"] = termsErr;
@@ -987,11 +1023,8 @@ export const PackageHeliService: React.FC = () => {
       setFormErrors(errors);
       setTouchedFields(allTouched);
 
-      // Auto-switch to first applicant with an error
       for (let i = 0; i < paxCount; i++) {
-        const hasErr = Object.keys(errors).some((k) =>
-          k.startsWith(`applicant_${i}_`)
-        );
+        const hasErr = Object.keys(errors).some((k) => k.startsWith(`applicant_${i}_`));
         if (hasErr) {
           setActiveApplicantIndex(i);
           break;
@@ -1001,51 +1034,77 @@ export const PackageHeliService: React.FC = () => {
     }
 
     setFormErrors({});
-
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      const applicant = bookingFormData.applicants?.[0];
       const data = new FormData();
       data.append("booking_type", "HELI");
       data.append("package_id", String(bookingTour?.backendId));
       data.append("number_of_people", String(bookingFormData.applicants?.length || 1));
       data.append("start_date", bookingFormData.applicants?.[0]?.preferredDate || "");
       data.append("frontend_total_amount", String(bookingTotalPriceNPR));
-      if (bookingPricingTierId) data.append("pricing_tier_id", String(bookingPricingTierId));
+
+      if (bookingPricingTierId) {
+        data.append("pricing_tier_id", String(bookingPricingTierId));
+      }
 
       bookingFormData.applicants?.forEach((applicant, index) => {
         data.append(`travellers[${index}][name]`, applicant?.fullName || "");
         data.append(`travellers[${index}][nationality]`, applicant?.nationality || "");
         data.append(`travellers[${index}][identity_number]`, applicant?.idNumber || "");
 
-        if (applicant?.bodyWeightKg) data.append(`travellers[${index}][weight]`, String(applicant.bodyWeightKg));
-        if (applicant?.luggageKg) data.append(`travellers[${index}][luggage]`, String(applicant.luggageKg));
-        if (applicant?.passportFile) data.append(`travellers[${index}][passport_nid_image]`, applicant.passportFile);
-        if (applicant?.photoFile) data.append(`travellers[${index}][pp_size_photo]`, applicant.photoFile);
-        if (applicant?.flightFile) data.append(`travellers[${index}][confirmed_flight_ticket_image]`, applicant.flightFile);
-        if (applicant?.insuranceFile) data.append(`travellers[${index}][travel_insurance_image]`, applicant.insuranceFile);
+        if (applicant?.bodyWeightKg) {
+          data.append(`travellers[${index}][weight]`, String(applicant.bodyWeightKg));
+        }
+
+        if (applicant?.luggageKg) {
+          data.append(`travellers[${index}][luggage]`, String(applicant.luggageKg));
+        }
+
+        if (applicant?.passportFile) {
+          data.append(`travellers[${index}][passport_nid_image]`, applicant.passportFile);
+        }
+
+        if (applicant?.photoFile) {
+          data.append(`travellers[${index}][pp_size_photo]`, applicant.photoFile);
+        }
+
+        if (applicant?.flightFile) {
+          data.append(`travellers[${index}][confirmed_flight_ticket_image]`, applicant.flightFile);
+        }
+
+        if (applicant?.insuranceFile) {
+          data.append(`travellers[${index}][travel_insurance_image]`, applicant.insuranceFile);
+        }
       });
 
       const response = await createBooking(data);
+      const booking = response?.data?.data || response?.data;
 
-      if (response.data?.status) {
-        const booking = response.data.data;
+      if (!booking?.id) {
+        throw new Error("Booking ID was not returned by the backend.");
+      }
 
-        const now = new Date().toLocaleString("en-US", {
+      setBookingId(Number(booking.id));
+      setSubmissionId(booking.booking_reference || "");
+      setSubmittedAt(
+        new Date().toLocaleString("en-US", {
           dateStyle: "medium",
           timeStyle: "short",
-        });
-
-        setSubmissionId(booking.booking_reference);
-        setSubmittedAt(now);
-        setIsSubmitted(true);
-      }
+        })
+      );
+      setPaymentStatus("unpaid");
+      setSelectedPaymentMethod("esewa");
+      setPaymentError("");
+      setCurrentStep("payment");
     } catch (error: any) {
-      console.error(
-        "Booking failed:",
-        error?.response?.data || error
+      console.error("Booking failed:", error?.response?.data || error);
+
+      setPaymentError(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create booking. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -1060,6 +1119,74 @@ export const PackageHeliService: React.FC = () => {
     setTimeout(() => {
       document.title = originalTitle;
     }, 2000);
+  };
+
+  const handleEsewaPayment = async () => {
+    if (!bookingId) {
+      setPaymentError("Booking ID is missing. Please create the booking again.");
+      return;
+    }
+
+    try {
+      setPaymentError("");
+      setIsProcessingPayment(true);
+      setSelectedPaymentMethod("esewa");
+
+      const response = await initiatePayment({
+        booking_id: bookingId,
+        provider: "ESEWA",
+      });
+      const paymentData = response?.data?.data;
+
+      if (!paymentData?.payment_url) {
+        throw new Error("eSewa payment URL was not returned.");
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = paymentData.payment_url;
+
+      const fields = {
+        amount: paymentData.amount,
+        tax_amount: paymentData.tax_amount,
+        total_amount: paymentData.total_amount,
+        transaction_uuid: paymentData.transaction_uuid,
+        product_code: paymentData.product_code,
+        product_service_charge: paymentData.product_service_charge,
+        product_delivery_charge: paymentData.product_delivery_charge,
+        success_url: paymentData.success_url,
+        failure_url: paymentData.failure_url,
+        signed_field_names: paymentData.signed_field_names,
+        signature: paymentData.signature,
+      };
+
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value ?? "");
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error: any) {
+      console.error("eSewa payment initiation failed:", error?.response?.data || error);
+
+      setPaymentError(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to initiate eSewa payment. Please try again."
+      );
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handlePayLater = () => {
+    setSelectedPaymentMethod("pay_later");
+    setPaymentStatus("unpaid");
+    setPaymentError("");
+    setIsBookingModalOpen(false);
   };
 
   // Print booking receipt / slip from Modal (Matches Tour Package PDF/Print Slip exactly)
@@ -1924,866 +2051,866 @@ export const PackageHeliService: React.FC = () => {
       {/* ========================================================================= */}
       {selectedTour ? (
         <>
-        <div className="w-full space-y-8 animate-in fade-in duration-300">
-          {/* ══════════════════════════════════════════════════════════
+          <div className="w-full space-y-8 animate-in fade-in duration-300">
+            {/* ══════════════════════════════════════════════════════════
               PRINT-ONLY COMPREHENSIVE DOSSIER & QUOTATION
               Includes all details: Itinerary, Inclusions, Exclusions,
               Restrictions, What to Bring, Pricing, FAQs, and Policies.
               ══════════════════════════════════════════════════════════ */}
-          {!isBookingModalOpen && (
-            <div
-              id="heli-print-dossier"
-              className="hidden print:block relative"
-              style={{
-                fontFamily: "'Inter', Arial, sans-serif",
-                fontSize: "9.5px",
-                lineHeight: "1.45",
-                color: "#1e293b",
-                width: "100%",
-                position: "relative",
-                WebkitPrintColorAdjust: "exact",
-                printColorAdjust: "exact",
-              }}
-            >
-              {/* ── BACKGROUND WATERMARK ── */}
+            {!isBookingModalOpen && (
               <div
-                aria-hidden="true"
+                id="heli-print-dossier"
+                className="hidden print:block relative"
                 style={{
-                  position: "fixed",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  pointerEvents: "none",
-                  userSelect: "none",
-                  zIndex: 999,
+                  fontFamily: "'Inter', Arial, sans-serif",
+                  fontSize: "9.5px",
+                  lineHeight: "1.45",
+                  color: "#1e293b",
+                  width: "100%",
+                  position: "relative",
+                  WebkitPrintColorAdjust: "exact",
+                  printColorAdjust: "exact",
                 }}
               >
+                {/* ── BACKGROUND WATERMARK ── */}
                 <div
+                  aria-hidden="true"
                   style={{
-                    transform: "rotate(-28deg)",
-                    fontSize: "38px",
-                    fontWeight: 900,
-                    color: "rgba(45, 19, 71, 0.06)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    lineHeight: 2.2,
-                    whiteSpace: "nowrap",
-                    textAlign: "center",
-                    mixBlendMode: "multiply",
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                    zIndex: 999,
                   }}
                 >
-                  Trip Himalaya Tours and Travels
-                </div>
-              </div>
-
-              {/* ── 1. CORPORATE LETTERHEAD ── */}
-              <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "10px 10px 0 0", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-                  <div style={{ background: "#ffffff", borderRadius: "8px", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <img src={Logo} alt="Trip Himalaya" style={{ height: "68px", width: "auto", objectFit: "contain", display: "block" }} />
+                  <div
+                    style={{
+                      transform: "rotate(-28deg)",
+                      fontSize: "38px",
+                      fontWeight: 900,
+                      color: "rgba(45, 19, 71, 0.06)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      lineHeight: 2.2,
+                      whiteSpace: "nowrap",
+                      textAlign: "center",
+                      mixBlendMode: "multiply",
+                    }}
+                  >
+                    Trip Himalaya Tours and Travels
                   </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: "16px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0, whiteSpace: "nowrap" }}>
-                      Trip Himalaya Tours &amp; Travel Pvt. Ltd.
+                </div>
+
+                {/* ── 1. CORPORATE LETTERHEAD ── */}
+                <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "10px 10px 0 0", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
+                    <div style={{ background: "#ffffff", borderRadius: "8px", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <img src={Logo} alt="Trip Himalaya" style={{ height: "68px", width: "auto", objectFit: "contain", display: "block" }} />
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "2.5px",
-                        marginTop: "4px",
-                        fontSize: "8.5px",
-                        color: "#f3e8ff",
-                        lineHeight: "1.35",
-                      }}
-                    >
-                      {/* Row 1: Address */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                        <MapPin size={10} color="#f472b6" style={{ flexShrink: 0 }} />
-                        <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "16px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0, whiteSpace: "nowrap" }}>
+                        Trip Himalaya Tours &amp; Travel Pvt. Ltd.
                       </div>
-                      {/* Row 2: Phone + Website */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                          <span style={{ color: "#f472b6" }}>📞</span>
-                          <span>+977 9851403761</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                          <span style={{ color: "#f472b6" }}>🌐</span>
-                          <span>www.triphimalaya.com.np</span>
-                        </div>
-                      </div>
-                      {/* Row 3: Email */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                        <span style={{ color: "#f472b6" }}>✉</span>
-                        <span>pradip.triphimalayatt@gmail.com</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", alignSelf: "flex-end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", paddingBottom: "2px" }}>
-                  <div style={{ fontSize: "8.5px", background: "rgba(233, 30, 99, 0.25)", color: "#fbcfe8", padding: "2px 8px", borderRadius: "4px", fontWeight: 700, border: "1px solid rgba(233, 30, 99, 0.4)" }}>
-                    Helicopter Operations Team
-                  </div>
-                  <div style={{ fontSize: "9.5px", color: "#e9d5ff", whiteSpace: "nowrap" }}>
-                    Date: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-                  </div>
-                </div>
-              </div>
-              {/* Project brand accent strip */}
-              <div style={{ height: "4px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "10px" }} />
-
-              {/* ── PACKAGE SUMMARY & OVERVIEW CARD ── */}
-              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>{selectedTour.title}</div>
-                    <div style={{ fontSize: "8.5px", color: "#6b21a8", marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                      <span style={{ background: "#2D1347", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>Heli Services</span>
-                      {selectedTour.location && <span style={{ background: "#7c3aed", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>📍 {selectedTour.location}</span>}
-                      {selectedTour.duration && <span style={{ background: "#9333ea", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⏱ {selectedTour.duration}</span>}
-                      {selectedTour.maxAltitude && <span style={{ background: "#c026d3", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⚡ Max Alt: {selectedTour.maxAltitude}</span>}
-                      <span style={{ background: "#E91E63", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>★ {selectedTour.rating || 4.9} / 5.0 ({selectedTour.reviewsCount || 1} reviews)</span>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: "8px", color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Starting From</div>
-                    <div style={{ fontSize: "16px", fontWeight: 900, color: "#2D1347" }}>{startsFromDisplayPrice}</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
-                  <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
-                  {selectedTour.description}
-                </div>
-              </div>
-
-              {/* ── SECTION 1: PRICING SCHEDULE ── */}
-              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "5px" }}>
-                  1. Pricing Schedule &amp; Package Tiers
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px", border: "1px solid #e9d5ff" }}>
-                  <thead>
-                    <tr style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", color: "#ffffff" }}>
-                      <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 800, width: "42%" }}>Service / Experience Tier</th>
-                      <th style={{ padding: "6px 8px", textAlign: "center", fontWeight: 800, width: "22%" }}>Group / Age Bracket</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (NPR)</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (USD)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
-                      <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Private Charter (Full Helicopter)</td>
-                      <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Up to 5 Pax (Private Flight)</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printCharterPriceNPR.toLocaleString("en-IN")}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printCharterPriceUSD.toLocaleString()}</td>
-                    </tr>
-                    <tr style={{ background: "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
-                      <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Group Joining (Per Seat Sharing)</td>
-                      <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Guaranteed Seat)</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printSharingPriceNPR.toLocaleString("en-IN")}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printSharingPriceUSD.toLocaleString()}</td>
-                    </tr>
-                    <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
-                      <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>VIP Priority (Front Window View)</td>
-                      <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Front Window Seat)</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printVipPriceNPR.toLocaleString("en-IN")}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printVipPriceUSD.toLocaleString()}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div style={{ fontSize: "8px", color: "#7c3aed", marginTop: "3px", fontWeight: 500 }}>
-                  * Rates include certified captain/pilot fees, aviation passenger insurance, landing permits, national park fees, and emergency ground support.
-                </div>
-              </div>
-
-              {/* ── SECTION 2: DAY-BY-DAY / STEP-BY-STEP ITINERARY ── */}
-              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                  2. Step-by-Step Experience Itinerary &amp; Timeline
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  {heliItineraryList.map((item, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        border: "1px solid #e9d5ff",
-                        borderRadius: "4px",
-                        padding: "6px 8px",
-                        background: "#faf5ff",
-                        display: "flex",
-                        gap: "8px",
-                        alignItems: "flex-start",
-                        pageBreakInside: "avoid",
-                        breakInside: "avoid",
-                      }}
-                    >
                       <div
                         style={{
-                          background: "#2D1347",
-                          color: "#ffffff",
-                          fontSize: "8px",
-                          fontWeight: 800,
-                          padding: "2px 6px",
-                          borderRadius: "3px",
-                          flexShrink: 0,
-                          textTransform: "uppercase",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2.5px",
+                          marginTop: "4px",
+                          fontSize: "8.5px",
+                          color: "#f3e8ff",
+                          lineHeight: "1.35",
                         }}
                       >
-                        {item.phase || `Phase ${i + 1}`}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "9.5px", fontWeight: 800, color: "#2D1347" }}>{item.title}</div>
-                        <div style={{ fontSize: "8.5px", color: "#581c87", marginTop: "1px", lineHeight: "1.35" }}>{item.desc}</div>
+                        {/* Row 1: Address */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                          <MapPin size={10} color="#f472b6" style={{ flexShrink: 0 }} />
+                          <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
+                        </div>
+                        {/* Row 2: Phone + Website */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                            <span style={{ color: "#f472b6" }}>📞</span>
+                            <span>+977 9851403761</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                            <span style={{ color: "#f472b6" }}>🌐</span>
+                            <span>www.triphimalaya.com.np</span>
+                          </div>
+                        </div>
+                        {/* Row 3: Email */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                          <span style={{ color: "#f472b6" }}>✉</span>
+                          <span>pradip.triphimalayatt@gmail.com</span>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", alignSelf: "flex-end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", paddingBottom: "2px" }}>
+                    <div style={{ fontSize: "8.5px", background: "rgba(233, 30, 99, 0.25)", color: "#fbcfe8", padding: "2px 8px", borderRadius: "4px", fontWeight: 700, border: "1px solid rgba(233, 30, 99, 0.4)" }}>
+                      Helicopter Operations Team
+                    </div>
+                    <div style={{ fontSize: "9.5px", color: "#e9d5ff", whiteSpace: "nowrap" }}>
+                      Date: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                    </div>
+                  </div>
                 </div>
-              </div>
+                {/* Project brand accent strip */}
+                <div style={{ height: "4px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "10px" }} />
 
-              {/* ── SECTION 3: TRIP HIGHLIGHTS ── */}
-              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                  3. Key Highlights &amp; Features
-                </div>
-                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
-                    {(selectedTour.tripHighlights || []).map((h: string, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "9px", color: "#4a154b" }}>
-                        <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
-                        <span style={{ lineHeight: "1.35" }}>{h}</span>
+                {/* ── PACKAGE SUMMARY & OVERVIEW CARD ── */}
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>{selectedTour.title}</div>
+                      <div style={{ fontSize: "8.5px", color: "#6b21a8", marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ background: "#2D1347", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>Heli Services</span>
+                        {selectedTour.location && <span style={{ background: "#7c3aed", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>📍 {selectedTour.location}</span>}
+                        {selectedTour.duration && <span style={{ background: "#9333ea", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⏱ {selectedTour.duration}</span>}
+                        {selectedTour.maxAltitude && <span style={{ background: "#c026d3", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⚡ Max Alt: {selectedTour.maxAltitude}</span>}
+                        <span style={{ background: "#E91E63", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>★ {selectedTour.rating || 4.9} / 5.0 ({selectedTour.reviewsCount || 1} reviews)</span>
                       </div>
-                    ))}
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: "8px", color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Starting From</div>
+                      <div style={{ fontSize: "16px", fontWeight: 900, color: "#2D1347" }}>{startsFromDisplayPrice}</div>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              {/* ── SECTION 4: INCLUSIONS & EXCLUSIONS (2 columns) ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                {/* What's Included */}
-                <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                    4. What&apos;s Included
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    {(selectedTour.whatsIncluded || []).map((inc: string, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
-                        <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
-                        <span style={{ lineHeight: "1.3" }}>{inc}</span>
-                      </div>
-                    ))}
+                  <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
+                    <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
+                    {selectedTour.description}
                   </div>
                 </div>
 
-                {/* What's Excluded */}
-                <div style={{ border: "1.5px solid #fecdd3", borderRadius: "6px", padding: "8px 10px", background: "#fff1f2" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "3px", marginBottom: "5px" }}>
-                    5. What&apos;s Excluded / Not Included
+                {/* ── SECTION 1: PRICING SCHEDULE ── */}
+                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "5px" }}>
+                    1. Pricing Schedule &amp; Package Tiers
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    {(selectedTour.whatsExcluded || []).map((ex: string, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
-                        <span style={{ fontWeight: 900, color: "#be185d", flexShrink: 0 }}>✗</span>
-                        <span style={{ lineHeight: "1.3" }}>{ex}</span>
-                      </div>
-                    ))}
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px", border: "1px solid #e9d5ff" }}>
+                    <thead>
+                      <tr style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", color: "#ffffff" }}>
+                        <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 800, width: "42%" }}>Service / Experience Tier</th>
+                        <th style={{ padding: "6px 8px", textAlign: "center", fontWeight: 800, width: "22%" }}>Group / Age Bracket</th>
+                        <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (NPR)</th>
+                        <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (USD)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
+                        <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Private Charter (Full Helicopter)</td>
+                        <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Up to 5 Pax (Private Flight)</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printCharterPriceNPR.toLocaleString("en-IN")}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printCharterPriceUSD.toLocaleString()}</td>
+                      </tr>
+                      <tr style={{ background: "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
+                        <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Group Joining (Per Seat Sharing)</td>
+                        <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Guaranteed Seat)</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printSharingPriceNPR.toLocaleString("en-IN")}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printSharingPriceUSD.toLocaleString()}</td>
+                      </tr>
+                      <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
+                        <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>VIP Priority (Front Window View)</td>
+                        <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Front Window Seat)</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printVipPriceNPR.toLocaleString("en-IN")}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printVipPriceUSD.toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div style={{ fontSize: "8px", color: "#7c3aed", marginTop: "3px", fontWeight: 500 }}>
+                    * Rates include certified captain/pilot fees, aviation passenger insurance, landing permits, national park fees, and emergency ground support.
                   </div>
                 </div>
-              </div>
 
-              {/* ── SECTION 5: SAFETY GUIDELINES, RESTRICTIONS & WHAT TO BRING (2 columns) ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                {/* Restrictions */}
-                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                    6. Safety Restrictions &amp; CAAN Flight Rules
+                {/* ── SECTION 2: DAY-BY-DAY / STEP-BY-STEP ITINERARY ── */}
+                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
+                    2. Step-by-Step Experience Itinerary &amp; Timeline
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    {(selectedTour.restrictionsAndHealth || []).map((r: string, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4a154b" }}>
-                        <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
-                        <span style={{ lineHeight: "1.3" }}>{r}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* What to Bring */}
-                <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                    7. Passenger Checklist &amp; What to Bring
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    {(selectedTour.whatToBring || []).map((b: string, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
-                        <span style={{ fontWeight: 900, color: "#9333ea", flexShrink: 0 }}>&bull;</span>
-                        <span style={{ lineHeight: "1.3" }}>{b}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* ── SECTION 6: FREQUENTLY ASKED QUESTIONS ── */}
-              <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                  8. Important FAQs &amp; Flight Information
-                </div>
-                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                    {packageFaqs.map((faq, i) => (
-                      <div key={i} style={{ fontSize: "8.5px", color: "#4a154b", lineHeight: "1.35" }}>
-                        <div style={{ fontWeight: 800, color: "#2D1347" }}>Q: {faq.q}</div>
-                        <div style={{ color: "#581c87", marginTop: "1px" }}>A: {faq.a}</div>
+                    {heliItineraryList.map((item, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          border: "1px solid #e9d5ff",
+                          borderRadius: "4px",
+                          padding: "6px 8px",
+                          background: "#faf5ff",
+                          display: "flex",
+                          gap: "8px",
+                          alignItems: "flex-start",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: "#2D1347",
+                            color: "#ffffff",
+                            fontSize: "8px",
+                            fontWeight: 800,
+                            padding: "2px 6px",
+                            borderRadius: "3px",
+                            flexShrink: 0,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {item.phase || `Phase ${i + 1}`}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "9.5px", fontWeight: 800, color: "#2D1347" }}>{item.title}</div>
+                          <div style={{ fontSize: "8.5px", color: "#581c87", marginTop: "1px", lineHeight: "1.35" }}>{item.desc}</div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {/* ── SECTION 3: TRIP HIGHLIGHTS ── */}
+                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
+                    3. Key Highlights &amp; Features
+                  </div>
+                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                      {(selectedTour.tripHighlights || []).map((h: string, i: number) => (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "9px", color: "#4a154b" }}>
+                          <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
+                          <span style={{ lineHeight: "1.35" }}>{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── SECTION 4: INCLUSIONS & EXCLUSIONS (2 columns) ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  {/* What's Included */}
+                  <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                      4. What&apos;s Included
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                      {(selectedTour.whatsIncluded || []).map((inc: string, i: number) => (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
+                          <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
+                          <span style={{ lineHeight: "1.3" }}>{inc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* What's Excluded */}
+                  <div style={{ border: "1.5px solid #fecdd3", borderRadius: "6px", padding: "8px 10px", background: "#fff1f2" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "3px", marginBottom: "5px" }}>
+                      5. What&apos;s Excluded / Not Included
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                      {(selectedTour.whatsExcluded || []).map((ex: string, i: number) => (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
+                          <span style={{ fontWeight: 900, color: "#be185d", flexShrink: 0 }}>✗</span>
+                          <span style={{ lineHeight: "1.3" }}>{ex}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── SECTION 5: SAFETY GUIDELINES, RESTRICTIONS & WHAT TO BRING (2 columns) ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  {/* Restrictions */}
+                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                      6. Safety Restrictions &amp; CAAN Flight Rules
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                      {(selectedTour.restrictionsAndHealth || []).map((r: string, i: number) => (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4a154b" }}>
+                          <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
+                          <span style={{ lineHeight: "1.3" }}>{r}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* What to Bring */}
+                  <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                      7. Passenger Checklist &amp; What to Bring
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                      {(selectedTour.whatToBring || []).map((b: string, i: number) => (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
+                          <span style={{ fontWeight: 900, color: "#9333ea", flexShrink: 0 }}>&bull;</span>
+                          <span style={{ lineHeight: "1.3" }}>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── SECTION 6: FREQUENTLY ASKED QUESTIONS ── */}
+                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
+                    8. Important FAQs &amp; Flight Information
+                  </div>
+                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                      {packageFaqs.map((faq, i) => (
+                        <div key={i} style={{ fontSize: "8.5px", color: "#4a154b", lineHeight: "1.35" }}>
+                          <div style={{ fontWeight: 800, color: "#2D1347" }}>Q: {faq.q}</div>
+                          <div style={{ color: "#581c87", marginTop: "1px" }}>A: {faq.a}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── SECTION 7: BOOKING TERMS & CANCELLATION POLICIES ── */}
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 10px", marginBottom: "10px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
+                    9. Booking Policies, Weather &amp; Cancellation Terms
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", fontSize: "8px", color: "#4a154b", lineHeight: "1.4" }}>
+                    <div><strong style={{ color: "#2D1347" }}>Weather Guarantee:</strong> 100% full refund or complimentary reschedule if flight is grounded due to mountain weather/air traffic control.</div>
+                    <div><strong style={{ color: "#2D1347" }}>Weight &amp; Balance:</strong> Strictly max 5 passengers or total passenger weight per CAAN and aircraft flight manual specifications.</div>
+                    <div><strong style={{ color: "#2D1347" }}>Reservation &amp; Confirmation:</strong> 30% advance deposit secures flight slot and permits; balance payable prior to boarding.</div>
+                    <div><strong style={{ color: "#2D1347" }}>Permits &amp; Identification:</strong> Valid passport copy (or Nepali citizenship ID) required for domestic terminal clearance.</div>
+                  </div>
+                </div>
+
+                {/* ── CORPORATE FOOTER ── */}
+                <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "8px 14px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8.5px", color: "#ffffff" }}>
+                  <div>
+                    <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> &bull; Registered in Nepal (Lic: 2490)
+                  </div>
+                  <div style={{ color: "#fce7f3" }}>
+                    Heli Operations Desk: +977 9851403761 &bull; pradip.triphimalayatt@gmail.com
+                  </div>
+                  <div style={{ fontWeight: 700, color: "#f472b6" }}>
+                    Official Computer-Generated Travel Dossier &bull; Page 1 of 1
+                  </div>
+                </div>
               </div>
+            )}
 
-              {/* ── SECTION 7: BOOKING TERMS & CANCELLATION POLICIES ── */}
-              <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 10px", marginBottom: "10px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                  9. Booking Policies, Weather &amp; Cancellation Terms
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", fontSize: "8px", color: "#4a154b", lineHeight: "1.4" }}>
-                  <div><strong style={{ color: "#2D1347" }}>Weather Guarantee:</strong> 100% full refund or complimentary reschedule if flight is grounded due to mountain weather/air traffic control.</div>
-                  <div><strong style={{ color: "#2D1347" }}>Weight &amp; Balance:</strong> Strictly max 5 passengers or total passenger weight per CAAN and aircraft flight manual specifications.</div>
-                  <div><strong style={{ color: "#2D1347" }}>Reservation &amp; Confirmation:</strong> 30% advance deposit secures flight slot and permits; balance payable prior to boarding.</div>
-                  <div><strong style={{ color: "#2D1347" }}>Permits &amp; Identification:</strong> Valid passport copy (or Nepali citizenship ID) required for domestic terminal clearance.</div>
-                </div>
-              </div>
+            {/* ── TOP HERO HEADER (From Image 2) ── */}
+            <div className="print:hidden relative rounded-3xl overflow-hidden shadow-xl min-h-[300px] sm:min-h-[360px] flex flex-col justify-end text-white">
+              <img
+                src={selectedTour.image}
+                alt={selectedTour.title}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#200B3B]/95 via-[#200B3B]/60 to-black/30" />
 
-              {/* ── CORPORATE FOOTER ── */}
-              <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "8px 14px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8.5px", color: "#ffffff" }}>
-                <div>
-                  <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> &bull; Registered in Nepal (Lic: 2490)
-                </div>
-                <div style={{ color: "#fce7f3" }}>
-                  Heli Operations Desk: +977 9851403761 &bull; pradip.triphimalayatt@gmail.com
-                </div>
-                <div style={{ fontWeight: 700, color: "#f472b6" }}>
-                  Official Computer-Generated Travel Dossier &bull; Page 1 of 1
-                </div>
-              </div>
-            </div>
-          )}
+              {/* ── Share button (top-right, always visible) ── */}
+              <div ref={shareDropdownRef} className="absolute top-3 right-4 sm:top-8 sm:right-6 z-20 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsShareOpen((prev) => !prev)}
+                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95"
+                  title="Share this tour"
+                >
+                  <Share2 size={16} />
+                </button>
 
-          {/* ── TOP HERO HEADER (From Image 2) ── */}
-          <div className="print:hidden relative rounded-3xl overflow-hidden shadow-xl min-h-[300px] sm:min-h-[360px] flex flex-col justify-end text-white">
-            <img
-              src={selectedTour.image}
-              alt={selectedTour.title}
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#200B3B]/95 via-[#200B3B]/60 to-black/30" />
-
-            {/* ── Share button (top-right, always visible) ── */}
-            <div ref={shareDropdownRef} className="absolute top-3 right-4 sm:top-8 sm:right-6 z-20 print:hidden">
-              <button
-                type="button"
-                onClick={() => setIsShareOpen((prev) => !prev)}
-                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95"
-                title="Share this tour"
-              >
-                <Share2 size={16} />
-              </button>
-
-              {/* Share Dropdown */}
-              {isShareOpen && (
-                <div className="absolute top-12 right-0 sm:top-0 sm:right-12 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30 animate-in fade-in duration-150">
-                  {/* Facebook */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(
-                        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                          window.location.href
-                        )}`,
-                        "_blank",
-                        "noopener,noreferrer"
-                      );
-                      setIsShareOpen(false);
-                    }}
-                    title="Facebook"
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                    style={{ background: "#1877F2" }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="white" width="15" height="15">
-                      <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
-                    </svg>
-                  </button>
-
-                  {/* Instagram */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(window.location.href).catch(() => { });
-                      setIsShareCopied(true);
-                      setTimeout(() => setIsShareCopied(false), 2000);
-                      window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
-                      setIsShareOpen(false);
-                    }}
-                    title="Instagram"
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                    style={{
-                      background:
-                        "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2" />
-                      <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white" />
-                      <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
-                    </svg>
-                  </button>
-
-                  {/* TikTok */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(window.location.href).catch(() => { });
-                      setIsShareCopied(true);
-                      setTimeout(() => setIsShareCopied(false), 2000);
-                      window.open("https://www.tiktok.com/@trip.himalaya", "_blank", "noopener,noreferrer");
-                      setIsShareOpen(false);
-                    }}
-                    title="TikTok"
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                    style={{ background: "#000000" }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-                      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-                    </svg>
-                  </button>
-
-                  {/* LinkedIn */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(
-                        `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(
-                          window.location.href
-                        )}&title=${encodeURIComponent(selectedTour.title)}`,
-                        "_blank",
-                        "noopener,noreferrer"
-                      );
-                      setIsShareOpen(false);
-                    }}
-                    title="LinkedIn"
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                    style={{ background: "#0A66C2" }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                      <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
-                      <circle cx="4" cy="4" r="2" fill="white" />
-                    </svg>
-                  </button>
-
-                  {/* Twitter / X */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(
-                        `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-                          window.location.href
-                        )}&text=${encodeURIComponent(selectedTour.title)}`,
-                        "_blank",
-                        "noopener,noreferrer"
-                      );
-                      setIsShareOpen(false);
-                    }}
-                    title="Twitter / X"
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                    style={{ background: "#000000" }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                    </svg>
-                  </button>
-
-                  {/* WhatsApp */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(
-                        `https://wa.me/?text=${encodeURIComponent(
-                          `Check out ${selectedTour.title} on Trip Himalaya: ${window.location.href}`
-                        )}`,
-                        "_blank",
-                        "noopener,noreferrer"
-                      );
-                      setIsShareOpen(false);
-                    }}
-                    title="WhatsApp"
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                    style={{ background: "#25D366" }}
-                  >
-                    <MessageCircle size={15} color="white" />
-                  </button>
-
-                  {/* Copy Link */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(window.location.href).catch(() => { });
-                      setIsShareCopied(true);
-                      setTimeout(() => setIsShareCopied(false), 2000);
-                      setIsShareOpen(false);
-                    }}
-                    title={isShareCopied ? "Copied!" : "Copy Link"}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
-                      }`}
-                  >
-                    {isShareCopied ? (
-                      <Check size={13} color="white" />
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="13" height="13">
-                        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                {/* Share Dropdown */}
+                {isShareOpen && (
+                  <div className="absolute top-12 right-0 sm:top-0 sm:right-12 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30 animate-in fade-in duration-150">
+                    {/* Facebook */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                            window.location.href
+                          )}`,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                        setIsShareOpen(false);
+                      }}
+                      title="Facebook"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      style={{ background: "#1877F2" }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="white" width="15" height="15">
+                        <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
                       </svg>
-                    )}
-                  </button>
+                    </button>
 
-                  <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
-                </div>
-              )}
-            </div>
+                    {/* Instagram */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(window.location.href).catch(() => { });
+                        setIsShareCopied(true);
+                        setTimeout(() => setIsShareCopied(false), 2000);
+                        window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
+                        setIsShareOpen(false);
+                      }}
+                      title="Instagram"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      style={{
+                        background:
+                          "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2" />
+                        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white" />
+                        <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
+                      </svg>
+                    </button>
 
-            {/* ── Desktop-only: stacked action buttons top-right ── */}
-            <div className="hidden sm:flex flex-col absolute sm:top-32 sm:right-6 gap-2 w-48 z-20 print:hidden">
-              <button
-                type="button"
-                onClick={() => handleWhatsAppInquiry(selectedTour)}
-                className="w-full inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
-              >
-                <MessageCircle size={15} />
-                <span>Ask on WhatsApp</span>
-              </button>
-              <button
-                type="button"
-                onClick={handlePrintQuotation}
-                className="w-full inline-flex items-center justify-center gap-2 bg-[#200B3B]/60 hover:bg-[#200B3B]/80 backdrop-blur-md border border-white/25 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
-              >
-                <Printer size={14} />
-                <span>Print / Save PDF</span>
-              </button>
-            </div>
+                    {/* TikTok */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(window.location.href).catch(() => { });
+                        setIsShareCopied(true);
+                        setTimeout(() => setIsShareCopied(false), 2000);
+                        window.open("https://www.tiktok.com/@trip.himalaya", "_blank", "noopener,noreferrer");
+                        setIsShareOpen(false);
+                      }}
+                      title="TikTok"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      style={{ background: "#000000" }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+                        <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+                      </svg>
+                    </button>
 
-            {/* ── Title & description + mobile action buttons ── */}
-            <div className="relative z-10 p-6 sm:p-10">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                  {selectedTour.title}
-                </h1>
-                <span className="bg-[#E91E63] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-xs">
-                  EXPERIENCE
-                </span>
+                    {/* LinkedIn */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(
+                            window.location.href
+                          )}&title=${encodeURIComponent(selectedTour.title)}`,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                        setIsShareOpen(false);
+                      }}
+                      title="LinkedIn"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      style={{ background: "#0A66C2" }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                        <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+                        <circle cx="4" cy="4" r="2" fill="white" />
+                      </svg>
+                    </button>
+
+                    {/* Twitter / X */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                            window.location.href
+                          )}&text=${encodeURIComponent(selectedTour.title)}`,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                        setIsShareOpen(false);
+                      }}
+                      title="Twitter / X"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      style={{ background: "#000000" }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                    </button>
+
+                    {/* WhatsApp */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          `https://wa.me/?text=${encodeURIComponent(
+                            `Check out ${selectedTour.title} on Trip Himalaya: ${window.location.href}`
+                          )}`,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                        setIsShareOpen(false);
+                      }}
+                      title="WhatsApp"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      style={{ background: "#25D366" }}
+                    >
+                      <MessageCircle size={15} color="white" />
+                    </button>
+
+                    {/* Copy Link */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(window.location.href).catch(() => { });
+                        setIsShareCopied(true);
+                        setTimeout(() => setIsShareCopied(false), 2000);
+                        setIsShareOpen(false);
+                      }}
+                      title={isShareCopied ? "Copied!" : "Copy Link"}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
+                        }`}
+                    >
+                      {isShareCopied ? (
+                        <Check size={13} color="white" />
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="13" height="13">
+                          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                        </svg>
+                      )}
+                    </button>
+
+                    <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
+                  </div>
+                )}
               </div>
-              <p className="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl mb-4 sm:mb-0">
-                {selectedTour.description}
-              </p>
 
-              {/* Mobile-only: action buttons below description */}
-              <div className="flex sm:hidden items-center gap-3 mt-4 print:hidden">
+              {/* ── Desktop-only: stacked action buttons top-right ── */}
+              <div className="hidden sm:flex flex-col absolute sm:top-32 sm:right-6 gap-2 w-48 z-20 print:hidden">
                 <button
                   type="button"
                   onClick={() => handleWhatsAppInquiry(selectedTour)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
                 >
-                  <MessageCircle size={14} />
+                  <MessageCircle size={15} />
                   <span>Ask on WhatsApp</span>
                 </button>
                 <button
                   type="button"
                   onClick={handlePrintQuotation}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white text-xs font-semibold py-2.5 px-3 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-[#200B3B]/60 hover:bg-[#200B3B]/80 backdrop-blur-md border border-white/25 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
                 >
                   <Printer size={14} />
                   <span>Print / Save PDF</span>
                 </button>
               </div>
-            </div>
-          </div>
 
-          {/* ── SUB-NAVIGATION STRIP (OVERVIEW | POLICIES | FAQS | TESTIMONIES + Starts From & Book Now) ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto">
-              {(["OVERVIEW", "POLICIES", "FAQS", "TESTIMONIES"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveDetailTab(tab)}
-                  className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${activeDetailTab === tab
-                    ? "text-[#E91E63] bg-pink-50/70 border-b-2 border-[#E91E63]"
-                    : "text-gray-500 hover:text-gray-800"
-                    }`}
-                >
-                  {tab}
-                </button>
-              ))}
+              {/* ── Title & description + mobile action buttons ── */}
+              <div className="relative z-10 p-6 sm:p-10">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+                    {selectedTour.title}
+                  </h1>
+                  <span className="bg-[#E91E63] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-xs">
+                    EXPERIENCE
+                  </span>
+                </div>
+                <p className="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl mb-4 sm:mb-0">
+                  {selectedTour.description}
+                </p>
+
+                {/* Mobile-only: action buttons below description */}
+                <div className="flex sm:hidden items-center gap-3 mt-4 print:hidden">
+                  <button
+                    type="button"
+                    onClick={() => handleWhatsAppInquiry(selectedTour)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+                  >
+                    <MessageCircle size={14} />
+                    <span>Ask on WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrintQuotation}
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white text-xs font-semibold py-2.5 px-3 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+                  >
+                    <Printer size={14} />
+                    <span>Print / Save PDF</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Starts From & Book Now Button */}
-            <div className="flex items-center justify-end gap-3.5">
-              <div className="text-right">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">
-                  STARTS FROM
-                </span>
-                <span className="text-base sm:text-lg font-black text-[#E91E63]">
-                  {displayPrice(
-                    selectedTour.packagePriceNPR,
-                    selectedCurrency,
-                    nprPerOneDollar,
-                    nprPerOneINR
-                  )}
-                </span>
+            {/* ── SUB-NAVIGATION STRIP (OVERVIEW | POLICIES | FAQS | TESTIMONIES + Starts From & Book Now) ── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+              {/* Tabs */}
+              <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto">
+                {(["OVERVIEW", "POLICIES", "FAQS", "TESTIMONIES"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveDetailTab(tab)}
+                    className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${activeDetailTab === tab
+                      ? "text-[#E91E63] bg-pink-50/70 border-b-2 border-[#E91E63]"
+                      : "text-gray-500 hover:text-gray-800"
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleOpenBooking(selectedTour, "charter")}
-                className="px-6 py-2.5 rounded-full bg-[#E91E63] hover:bg-pink-700 active:scale-95 text-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
-              >
-                BOOK NOW
-              </button>
+              {/* Starts From & Book Now Button */}
+              <div className="flex items-center justify-end gap-3.5">
+                <div className="text-right">
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">
+                    STARTS FROM
+                  </span>
+                  <span className="text-base sm:text-lg font-black text-[#E91E63]">
+                    {displayPrice(
+                      selectedTour.packagePriceNPR,
+                      selectedCurrency,
+                      nprPerOneDollar,
+                      nprPerOneINR
+                    )}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenBooking(selectedTour, "charter")}
+                  className="px-6 py-2.5 rounded-full bg-[#E91E63] hover:bg-pink-700 active:scale-95 text-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
+                >
+                  BOOK NOW
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* ── MAIN 2-COLUMN LAYOUT: CONTENT + HELI SERVICE PRICE MODEL ── */}
-          <div className="print:hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* LEFT COLUMN: TOUR DETAILS (8 cols) */}
-            <div className="lg:col-span-8 space-y-6">
-              {/* Tab 1: OVERVIEW */}
-              {activeDetailTab === "OVERVIEW" && (
-                <div className="space-y-6">
-                  {/* Title & Metadata */}
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-[#200B3B] leading-tight">
-                      {selectedTour.title}
-                    </h2>
-                    <div className="flex flex-wrap items-center gap-4 mt-3 text-xs font-bold text-gray-500">
-                      <span className="flex items-center gap-1.5 text-[#E91E63]">
-                        <MapPin size={15} />
-                        <span className="text-gray-700">{selectedTour.location}</span>
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[#E91E63]">
-                        <Clock size={15} />
-                        <span className="text-gray-700">{selectedTour.duration}</span>
-                      </span>
-                      {selectedTour.maxAltitude && (
-                        <span className="bg-pink-50 text-[#E91E63] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                          Max Alt: {selectedTour.maxAltitude}
+            {/* ── MAIN 2-COLUMN LAYOUT: CONTENT + HELI SERVICE PRICE MODEL ── */}
+            <div className="print:hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* LEFT COLUMN: TOUR DETAILS (8 cols) */}
+              <div className="lg:col-span-8 space-y-6">
+                {/* Tab 1: OVERVIEW */}
+                {activeDetailTab === "OVERVIEW" && (
+                  <div className="space-y-6">
+                    {/* Title & Metadata */}
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-black text-[#200B3B] leading-tight">
+                        {selectedTour.title}
+                      </h2>
+                      <div className="flex flex-wrap items-center gap-4 mt-3 text-xs font-bold text-gray-500">
+                        <span className="flex items-center gap-1.5 text-[#E91E63]">
+                          <MapPin size={15} />
+                          <span className="text-gray-700">{selectedTour.location}</span>
                         </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Description + Trip Highlights — single card */}
-                  <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
-                      {selectedTour.description}
-                    </p>
-                    <div className="border-t border-gray-100 pt-4 space-y-3">
-                      <h3 className="text-base sm:text-lg font-black text-[#200B3B]">
-                        Trip Highlights
-                      </h3>
-                      <div className="grid grid-cols-1 gap-2">
-                        {selectedTour.tripHighlights.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-start gap-2 text-[11px] font-medium text-gray-600 text-left"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1 flex-shrink-0" />
-                            <span>{item.replace(/^[\u2022\-\*]\s*/, "")}</span>
-                          </div>
-                        ))}
+                        <span className="flex items-center gap-1.5 text-[#E91E63]">
+                          <Clock size={15} />
+                          <span className="text-gray-700">{selectedTour.duration}</span>
+                        </span>
+                        {selectedTour.maxAltitude && (
+                          <span className="bg-pink-50 text-[#E91E63] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                            Max Alt: {selectedTour.maxAltitude}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* What's Included (Teal Green Card) & What's Excluded (Pink Card) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {/* What's Included */}
-                    <div className="bg-[#009688] text-white p-6 rounded-3xl shadow-sm space-y-4">
-                      <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
-                        <CheckCircle2 size={18} />
-                        <span>What's Included</span>
-                      </h4>
-                      <ul className="space-y-2.5 text-xs font-medium">
-                        {selectedTour.whatsIncluded.map((inc, i) => (
-                          <li key={i} className="flex items-start gap-2 leading-relaxed">
-                            <Check size={15} className="flex-shrink-0 mt-0.5 text-teal-200" />
-                            <span>{inc}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* What's Excluded */}
-                    <div className="bg-[#E91E63] text-white p-6 rounded-3xl shadow-sm space-y-4">
-                      <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
-                        <X size={18} />
-                        <span>What's Excluded</span>
-                      </h4>
-                      <ul className="space-y-2.5 text-xs font-medium">
-                        {selectedTour.whatsExcluded.map((exc, i) => (
-                          <li key={i} className="flex items-start gap-2 leading-relaxed">
-                            <X size={15} className="flex-shrink-0 mt-0.5 text-pink-200" />
-                            <span>{exc}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Restrictions & Health Card (Amber Warning) */}
-                  <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
-                    <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
-                      <AlertTriangle size={20} className="text-amber-500" />
-                      <span>Restrictions &amp; Health</span>
-                    </h3>
-                    <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
-                      {selectedTour.restrictionsAndHealth.map((res, i) => (
-                        <li key={i} className="flex items-start gap-2.5 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                          <span>{res}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* What to Bring Card (Pink Bag) */}
-                  <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
-                    <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
-                      <ShoppingBag size={20} className="text-[#E91E63]" />
-                      <span>What to Bring</span>
-                    </h3>
-                    <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
-                      {selectedTour.whatToBring.map((wtb, i) => (
-                        <li key={i} className="flex items-start gap-2.5 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
-                          <span>{wtb}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: POLICIES */}
-              {activeDetailTab === "POLICIES" && (
-                <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-                  <h3 className="text-xl font-black text-[#200B3B]">
-                    Heli Service Policies &amp; Aviation Guidelines
-                  </h3>
-                  <div className="space-y-4">
-                    {selectedTour.policies.map((policy, idx) => (
-                      <div key={idx} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
-                        <p className="text-xs text-gray-700 font-medium leading-relaxed">
-                          {policy}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: FAQS */}
-              {activeDetailTab === "FAQS" && (
-                <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-                  <h3 className="text-xl font-black text-[#200B3B]">
-                    Frequently Asked Questions about {selectedTour.title}
-                  </h3>
-                  <div className="space-y-3">
-                    {packageFaqs.map((faq, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2"
-                      >
-                        <h4 className="text-sm font-bold text-[#200B3B]">{faq.q}</h4>
-                        <p className="text-xs text-gray-600 leading-relaxed">{faq.a}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 4: TESTIMONIES */}
-              {activeDetailTab === "TESTIMONIES" && (
-                <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-                  <h3 className="text-xl font-black text-[#200B3B]">
-                    Guest Experiences &amp; Reviews
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {selectedTour.testimonies.map((test, idx) => (
-                      <div
-                        key={idx}
-                        className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-3"
-                      >
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: test.rating }).map((_, r) => (
-                            <Star
-                              key={r}
-                              size={14}
-                              className="text-yellow-400 fill-yellow-400"
-                            />
+                    {/* Description + Trip Highlights — single card */}
+                    <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
+                        {selectedTour.description}
+                      </p>
+                      <div className="border-t border-gray-100 pt-4 space-y-3">
+                        <h3 className="text-base sm:text-lg font-black text-[#200B3B]">
+                          Trip Highlights
+                        </h3>
+                        <div className="grid grid-cols-1 gap-2">
+                          {selectedTour.tripHighlights.map((item, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-start gap-2 text-[11px] font-medium text-gray-600 text-left"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1 flex-shrink-0" />
+                              <span>{item.replace(/^[\u2022\-\*]\s*/, "")}</span>
+                            </div>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-700 italic font-medium leading-relaxed">
-                          "{test.comment}"
-                        </p>
-                        <div className="pt-2 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500 font-bold">
-                          <span className="text-[#200B3B]">{test.name} ({test.country})</span>
-                          <span>{test.date}</span>
-                        </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* What's Included (Teal Green Card) & What's Excluded (Pink Card) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      {/* What's Included */}
+                      <div className="bg-[#009688] text-white p-6 rounded-3xl shadow-sm space-y-4">
+                        <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
+                          <CheckCircle2 size={18} />
+                          <span>What's Included</span>
+                        </h4>
+                        <ul className="space-y-2.5 text-xs font-medium">
+                          {selectedTour.whatsIncluded.map((inc, i) => (
+                            <li key={i} className="flex items-start gap-2 leading-relaxed">
+                              <Check size={15} className="flex-shrink-0 mt-0.5 text-teal-200" />
+                              <span>{inc}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* What's Excluded */}
+                      <div className="bg-[#E91E63] text-white p-6 rounded-3xl shadow-sm space-y-4">
+                        <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
+                          <X size={18} />
+                          <span>What's Excluded</span>
+                        </h4>
+                        <ul className="space-y-2.5 text-xs font-medium">
+                          {selectedTour.whatsExcluded.map((exc, i) => (
+                            <li key={i} className="flex items-start gap-2 leading-relaxed">
+                              <X size={15} className="flex-shrink-0 mt-0.5 text-pink-200" />
+                              <span>{exc}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Restrictions & Health Card (Amber Warning) */}
+                    <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                      <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
+                        <AlertTriangle size={20} className="text-amber-500" />
+                        <span>Restrictions &amp; Health</span>
+                      </h3>
+                      <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
+                        {selectedTour.restrictionsAndHealth.map((res, i) => (
+                          <li key={i} className="flex items-start gap-2.5 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                            <span>{res}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* What to Bring Card (Pink Bag) */}
+                    <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                      <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
+                        <ShoppingBag size={20} className="text-[#E91E63]" />
+                        <span>What to Bring</span>
+                      </h3>
+                      <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
+                        {selectedTour.whatToBring.map((wtb, i) => (
+                          <li key={i} className="flex items-start gap-2.5 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
+                            <span>{wtb}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* RIGHT COLUMN: STICKY PRICING MODEL SIDEBAR (Matching Visa Service Details Page) */}
-            <div
-              id="pricing-section"
-              className="lg:col-span-4 lg:sticky lg:top-[150px] self-start space-y-6"
-            >
-              <HeliServicePriceModel
-                tour={selectedTour}
-                pricingTiers={pricingTiers}
-                pricingLoading={pricingLoading}
-                onBookNow={handlePriceModelBookNow}
-                onWhatsAppInquiry={(flightType, formattedTotal) => {
-                  const typeLabel =
-                    flightType === "charter"
-                      ? "Private Charter"
-                      : "Sharing Heli Service";
+                {/* Tab 2: POLICIES */}
+                {activeDetailTab === "POLICIES" && (
+                  <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
+                    <h3 className="text-xl font-black text-[#200B3B]">
+                      Heli Service Policies &amp; Aviation Guidelines
+                    </h3>
+                    <div className="space-y-4">
+                      {selectedTour.policies.map((policy, idx) => (
+                        <div key={idx} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                          <p className="text-xs text-gray-700 font-medium leading-relaxed">
+                            {policy}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                  const msg = encodeURIComponent(
-                    `Hello Trip Himalaya! Inquiring for "${selectedTour.title}". Selected: ${typeLabel}. Price: ${formattedTotal}. Please confirm next flight timing.`
-                  );
+                {/* Tab 3: FAQS */}
+                {activeDetailTab === "FAQS" && (
+                  <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
+                    <h3 className="text-xl font-black text-[#200B3B]">
+                      Frequently Asked Questions about {selectedTour.title}
+                    </h3>
+                    <div className="space-y-3">
+                      {packageFaqs.map((faq, idx) => (
+                        <div
+                          key={idx}
+                          className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2"
+                        >
+                          <h4 className="text-sm font-bold text-[#200B3B]">{faq.q}</h4>
+                          <p className="text-xs text-gray-600 leading-relaxed">{faq.a}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                  window.open(
-                    `https://wa.me/9779851403761?text=${msg}`,
-                    "_blank",
-                    "noopener,noreferrer"
-                  );
-                }}
-              />
+                {/* Tab 4: TESTIMONIES */}
+                {activeDetailTab === "TESTIMONIES" && (
+                  <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
+                    <h3 className="text-xl font-black text-[#200B3B]">
+                      Guest Experiences &amp; Reviews
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {selectedTour.testimonies.map((test, idx) => (
+                        <div
+                          key={idx}
+                          className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-3"
+                        >
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: test.rating }).map((_, r) => (
+                              <Star
+                                key={r}
+                                size={14}
+                                className="text-yellow-400 fill-yellow-400"
+                              />
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-700 italic font-medium leading-relaxed">
+                            "{test.comment}"
+                          </p>
+                          <div className="pt-2 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500 font-bold">
+                            <span className="text-[#200B3B]">{test.name} ({test.country})</span>
+                            <span>{test.date}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT COLUMN: STICKY PRICING MODEL SIDEBAR (Matching Visa Service Details Page) */}
+              <div
+                id="pricing-section"
+                className="lg:col-span-4 lg:sticky lg:top-[150px] self-start space-y-6"
+              >
+                <HeliServicePriceModel
+                  tour={selectedTour}
+                  pricingTiers={pricingTiers}
+                  pricingLoading={pricingLoading}
+                  onBookNow={handlePriceModelBookNow}
+                  onWhatsAppInquiry={(flightType, formattedTotal) => {
+                    const typeLabel =
+                      flightType === "charter"
+                        ? "Private Charter"
+                        : "Sharing Heli Service";
+
+                    const msg = encodeURIComponent(
+                      `Hello Trip Himalaya! Inquiring for "${selectedTour.title}". Selected: ${typeLabel}. Price: ${formattedTotal}. Please confirm next flight timing.`
+                    );
+
+                    window.open(
+                      `https://wa.me/9779851403761?text=${msg}`,
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ── OUR OTHER SERVICES ── */}
-        <div className="mt-10">
-          <PermitService service={services} />
-        </div>
+          {/* ── OUR OTHER SERVICES ── */}
+          <div className="mt-10">
+            <PermitService service={services} />
+          </div>
         </>
       ) : (
         /* ======================================================================= */
@@ -3160,7 +3287,7 @@ export const PackageHeliService: React.FC = () => {
 
             {/* Modal Content (Scrollable to fit any screen height) */}
             <div className="p-5 sm:p-7 overflow-y-auto flex-1 overscroll-contain">
-              {!isSubmitted ? (
+              {currentStep === "form" ? (
                 /* ── STEP 1: SUBMISSION FORM ── */
                 <form onSubmit={handleFormSubmit} noValidate className="space-y-4 sm:space-y-5">
                   {/* Validation Error Banner */}
@@ -3806,157 +3933,65 @@ export const PackageHeliService: React.FC = () => {
                     <span>{isSubmitting ? "SUBMITTING..." : "CONFIRM & SUBMIT HELI RESERVATION"}</span>
                   </button>
                 </form>
-              ) : (
-                /* ── STEP 2: DIGITAL CONFIRMATION & RECEIPT VIEW (Matches Tour Package Modal Exactly) ── */
-                <div className="space-y-3.5 text-center animate-in fade-in zoom-in-95 duration-200">
-                  {/* Top Greeting & Status */}
-                  <div className="space-y-1 pt-0.5">
-                    <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white mb-0.5 shadow-md shadow-emerald-500/20 ring-4 ring-emerald-50">
-                      <CheckCircle2 size={24} className="stroke-[2.5]" />
-                    </div>
-                    <div className="flex items-center justify-center gap-1.5">
-                      <h4 className="text-base sm:text-lg font-black text-[#1A0B2E] tracking-tight">
-                        Thank you, {bookingFormData.fullName || "Valued Traveler"}!
-                      </h4>
-                      <BadgeCheck size={18} className="text-emerald-600 flex-shrink-0" />
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      Your heli flight reservation for <strong className="text-slate-800 font-semibold">{bookingTour.title}</strong> has been registered.
+              ) : currentStep === "payment" ? (
+                <div className="space-y-3">
+                  <PaymentMethod
+                    bookingReference={submissionId}
+                    packageTitle={bookingTour?.title || ""}
+                    category="Helicopter Service"
+                    tierName={
+                      bookingFlightOption === "charter"
+                        ? "Private Charter"
+                        : "Sharing Heli Service"
+                    }
+                    guestsCount={
+                      bookingFlightOption === "charter"
+                        ? 1
+                        : bookingSeatCount
+                    }
+                    unitPriceFormatted={displayPrice(
+                      bookingFlightOption === "sharing"
+                        ? bookingTotalPriceNPR / Math.max(1, bookingSeatCount)
+                        : bookingTotalPriceNPR,
+                      selectedCurrency,
+                      nprPerOneDollar,
+                      nprPerOneINR
+                    )}
+                    totalPriceFormatted={displayPrice(
+                      bookingTotalPriceNPR,
+                      selectedCurrency,
+                      nprPerOneDollar,
+                      nprPerOneINR
+                    )}
+                    travelDate={
+                      bookingFormData.applicants?.[0]?.preferredDate
+                        ? `Date: ${bookingFormData.applicants[0].preferredDate}`
+                        : undefined
+                    }
+                    isProcessingPayment={isProcessingPayment}
+                    initialMethod={selectedPaymentMethod}
+                    onMethodChange={setSelectedPaymentMethod}
+                    onPayWithEsewa={handleEsewaPayment}
+                    onPayLater={handlePayLater}
+                  />
+
+                  {paymentError && (
+                    <p className="text-xs text-red-600 font-semibold text-center">
+                      {paymentError}
                     </p>
-                  </div>
+                  )}
 
-                  {/* Specialist Contact Reassurance Card */}
-                  <div className="bg-gradient-to-r from-purple-50/70 via-white to-purple-50/50 border border-purple-100 rounded-xl px-3.5 py-2.5 text-left shadow-2xs">
-                    <div className="flex items-center justify-between gap-1.5 flex-wrap mb-0.5">
-                      <span className="text-xs font-black text-[#1A0B2E]">
-                        Our Heli Flight Operations Desk will contact you soon
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      Our operations officer will reach out on <strong className="text-slate-800">WhatsApp &amp; Phone</strong> ({bookingFormData.phone ? `${bookingFormData.phoneCode} ${bookingFormData.phone}` : "your number"}) to verify CAAN flight clearances and coordinate helipad boarding.
-                    </p>
-                  </div>
-
-                  {/* Official Digital E-Receipt Voucher Card */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
-                    {/* Submission Reference ID Header Strip */}
-                    <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70 flex items-center justify-between">
-                      <div>
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block leading-none">
-                          OFFICIAL SUBMISSION NUMBER
-                        </span>
-                        <span className="font-mono font-black text-sm sm:text-base text-[#1A0B2E] tracking-wider mt-0.5 block">
-                          {submissionId}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(submissionId);
-                          setCopiedId(true);
-                          setTimeout(() => setCopiedId(false), 2000);
-                        }}
-                        type="button"
-                        className="flex items-center gap-1 text-[11px] font-bold text-[#E91E63] hover:underline cursor-pointer"
-                      >
-                        {copiedId ? <Check size={12} /> : <Copy size={12} />}
-                        <span>{copiedId ? "Copied!" : "Copy Code"}</span>
-                      </button>
-                    </div>
-
-                    {/* 6 Key Details Grid */}
-                    <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-white">
-                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Lead Passenger</span>
-                        <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
-                          {bookingFormData.fullName || "—"}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Flight Option</span>
-                        <span className="font-bold text-[#E91E63] truncate block text-xs mt-0.5">
-                          {bookingFlightOption === "charter" ? "Private Charter" : "Sharing Heli Service"}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Passengers</span>
-                        <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
-                          {bookingFlightOption === "charter" ? "Exclusive Aircraft" : `${bookingSeatCount} Passenger(s)`}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Estimated Fare</span>
-                        <span className="font-black text-[#1A0B2E] text-xs mt-0.5 block">
-                          {displayPrice(
-                            bookingTotalPriceNPR,
-                            selectedCurrency,
-                            nprPerOneDollar,
-                            nprPerOneINR
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Flight Date</span>
-                        <span className="font-medium text-slate-700 text-xs truncate block mt-0.5">
-                          {bookingFormData.preferredDate || "Immediate"}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Submitted At</span>
-                        <span className="font-medium text-slate-700 text-[10.5px] truncate block mt-0.5">
-                          {submittedAt}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Desk Status Footer */}
-                    <div className="px-3.5 py-1.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-emerald-900">Desk Status: CAAN Flight Manifest Clearance in Progress</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="pt-1 text-center">
                     <button
                       type="button"
-                      onClick={() => {
-                        const msg = encodeURIComponent(
-                          `Hello Trip Himalaya! I just booked "${bookingTour.title}" with Reference ID: ${submissionId}. Lead Passenger: ${bookingFormData.fullName}. Flight Date: ${bookingFormData.preferredDate || "Immediate"}. Please confirm my heli flight slot.`
-                        );
-                        window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
-                      }}
-                      className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer truncate"
+                      onClick={() => setCurrentStep("form")}
+                      className="text-xs text-slate-500 hover:text-slate-800 font-medium underline transition-colors cursor-pointer"
                     >
-                      <MessageCircle size={15} />
-                      <span>Chat on WhatsApp</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handlePrintBookingSlip}
-                      className="py-2.5 px-3.5 bg-white hover:bg-purple-50/70 border border-purple-200 text-[#1A0B2E] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer hover:border-purple-300"
-                    >
-                      <Printer size={13} className="text-purple-700" />
-                      <span>Print Slip</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsBookingModalOpen(false)}
-                      className="py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                    >
-                      Done
+                      ← Edit Booking Details
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              ) : null}            </div>
           </div>
         </div>
       )}

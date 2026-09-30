@@ -10,6 +10,7 @@ export interface InsuranceCostOption {
 export interface InsurancePlan {
   id: string;
   name: string;
+  subtitle?: string;
   badge: string;
   badgeColor: string;
   maxAltitude: string;
@@ -19,6 +20,7 @@ export interface InsurancePlan {
   coverageLimit: string;
   highlights: string[];
   inclusions: string[];
+  exclusions?: string[];
   isPopular?: boolean;
   heroImage: string;
   aboutText: string;
@@ -33,8 +35,9 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
   {
     id: "plan-trek-standard",
     name: "Standard Cultural & Foothill Plan",
-    badge: "Low Altitude",
-    badgeColor: "bg-blue-100 text-blue-800",
+    subtitle: "Medical and emergency protection for cultural tours and foothill trekking",
+    badge: "Silver",
+    badgeColor: "bg-slate-100 text-slate-800 border border-slate-300",
     maxAltitude: "Up to 3,000 Meters",
     priceUSD: 28,
     baseNPRPrice: 4300,
@@ -54,6 +57,14 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
       "Trip cancellation & flight delay allowance",
       "24/7 Global emergency multilingual assistance hotline",
       "Loss of travel documents, passport re-issuance support",
+    ],
+    exclusions: [
+      "Altitudes above 3,000 meters — helicopter rescue is excluded from this plan",
+      "Pre-existing chronic illnesses or conditions not declared at time of application",
+      "Injuries sustained while under the influence of alcohol or controlled substances",
+      "Adventure sports (paragliding, bungee jumping, whitewater rafting) not covered",
+      "Personal electronic devices (cameras, laptops, phones) unless separately declared",
+      "Self-inflicted injuries or participation in unauthorized or illegal activities",
     ],
     aboutText:
       "Designed specifically for cultural travelers, city explorers, and gentle foothill trekkers in Nepal. This plan provides robust financial and medical protection for journeys capped at 3,000 meters, covering destinations like Kathmandu Valley, Pokhara, Chitwan National Park, Nagarkot, and the Ghorepani Poon Hill panoramic trail. With cashless admission to premier clinics in Kathmandu and Pokhara, travelers can enjoy peace of mind throughout their scenic stay.",
@@ -101,8 +112,9 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
   {
     id: "plan-high-altitude",
     name: "High-Altitude Alpine & Heli Rescue",
-    badge: "Most Popular in Nepal",
-    badgeColor: "bg-[#E11D48] text-white",
+    subtitle: "High-altitude medical coverage with emergency helicopter evacuation and direct hospital billing",
+    badge: "Gold",
+    badgeColor: "bg-amber-100 text-amber-900 border border-amber-300",
     maxAltitude: "Up to 6,000 Meters",
     priceUSD: 75,
     baseNPRPrice: 11500,
@@ -124,6 +136,14 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
       "Lukla, Jomsom & mountain airstrip weather delay compensation",
       "Emergency international medical repatriation if required",
       "24/7 Kathmandu Operations Emergency Dispatch Hotline",
+    ],
+    exclusions: [
+      "Technical mountaineering above 6,000m using ropes, harnesses, or crampons",
+      "Pre-existing medical conditions not disclosed during policy application",
+      "Losses caused by alcohol, narcotics, or self-medication above prescribed doses",
+      "Baggage or electronic items (cameras, phones, laptops) without supplementary riders",
+      "Unauthorized or solo climbing without a registered trekking agency permit",
+      "Dental treatment other than emergency pain relief caused by accidental injury",
     ],
     aboutText:
       "Nepal's definitive trekking insurance, trusted by thousands of trekkers tackling the Himalayas. Standard travel policies strictly exclude altitudes above 2,500m and helicopter rescue—leaving trekkers vulnerable to astronomical $3,000–$5,000 private rescue charges. Our High-Altitude Alpine Plan guarantees uncapped, immediate helicopter rescue up to 6,000m (covering Everest Base Camp 5,364m, Kala Patthar 5,545m, Annapurna Circuit Thorong La Pass 5,416m, Manaslu Larkya La 5,106m, and Gokyo Lakes). We maintain direct billing with Kathmandu's top tourist hospitals (CIWEC, Swacon, Era) with 100% cashless emergency admission.",
@@ -172,8 +192,9 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
   {
     id: "plan-extreme-expedition",
     name: "Extreme Mountaineering & Peak Climbing",
-    badge: "Technical Climbing",
-    badgeColor: "bg-purple-100 text-purple-800",
+    subtitle: "Advanced expedition and rescue coverage for technical climbing and mountaineering summits",
+    badge: "Platinum",
+    badgeColor: "bg-indigo-100 text-indigo-900 border border-indigo-300",
     maxAltitude: "Above 6,000 Meters (Uncapped)",
     priceUSD: 160,
     baseNPRPrice: 24500,
@@ -193,6 +214,14 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
       "Specialized air-ambulance international repatriation to home country",
       "High-altitude Sherpa climbing guide & porter emergency rescue pool",
       "Search and rescue logistics coordination with Nepal Army / Civil Aviation",
+    ],
+    exclusions: [
+      "Non-technical trekking or leisure travel without a valid peak climbing permit",
+      "Illness or injury caused by pre-existing conditions not declared at enrollment",
+      "Equipment loss or damage (ice axes, crampons, ropes, tents) not covered",
+      "Intentional risks such as soloing extreme routes without guide or safety lines",
+      "Alcohol or substance-related incidents at base camp or high camps",
+      "Civil unrest, political evacuation, or war-related incidents",
     ],
     aboutText:
       "Engineered specifically for mountaineers, technical alpinists, and expedition teams scaling Nepal's demanding trekking peaks (Island Peak 6,189m, Mera Peak 6,476m, Lobuche East 6,119m, Ama Dablam 6,812m, and 8,000m summits). Covers technical climbing hazards using ropes, harnesses, crampons, and ice axes. Includes long-line helicopter rescue extraction from extreme high camps, advanced frostbite and trauma resuscitation, and guaranteed international air-ambulance transfer back to your home country.",
@@ -240,8 +269,9 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
   {
     id: "plan-international",
     name: "Global Outbound & Schengen Compliant",
-    badge: "Schengen Visa Approved",
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    subtitle: "Embassy-certified travel medical insurance for Schengen, worldwide visas, and overseas travel",
+    badge: "Premium",
+    badgeColor: "bg-rose-100 text-[#E11D48] border border-rose-300",
     maxAltitude: "Worldwide Coverage",
     priceUSD: 40,
     baseNPRPrice: 6100,
@@ -261,6 +291,14 @@ export const INSURANCE_PLANS: InsurancePlan[] = [
       "Flight delay, cancellation, and missed transit flight allowances",
       "Accidental death & permanent total disablement coverage",
       "Instant printable QR-verified certificate for embassy appointments",
+    ],
+    exclusions: [
+      "High-altitude trekking or mountaineering activities above 3,000 meters",
+      "Pre-existing medical conditions not declared or disclosed at time of purchase",
+      "Trip extensions beyond the policy end date without prior written renewal",
+      "Losses caused by intentional self-harm, alcohol, or controlled substance use",
+      "Participation in professional sports, motorsports, or extreme adventure activities",
+      "Losses from war, civil conflict, terrorism, or government-ordered travel bans",
     ],
     aboutText:
       "The official international travel medical insurance for Nepali travelers heading abroad. Compliant with 100% of European Schengen embassy visa requirements (covering a mandatory €30,000 minimum medical sum, medical repatriation, and emergency hospital care with zero deductible). Also accepted worldwide for visas to the USA, United Kingdom, Canada, Australia, Japan, Dubai, and Southeast Asia. Receive your digitally certified policy document instantly with an embassy verification seal.",

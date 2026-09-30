@@ -76,8 +76,8 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
         <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#FF2A75] to-[#8B2CFF] flex items-center justify-center text-white shrink-0 shadow-xs">
           <User size={12} className="text-white" />
         </span>
-        <span className="font-semibold text-white max-w-[120px] sm:max-w-[150px] truncate">
-          {displayName}
+        <span className="font-semibold text-white max-w-[160px] sm:max-w-[190px] truncate">
+          Namaste, {displayName}
         </span>
         <ChevronDown
           size={12}

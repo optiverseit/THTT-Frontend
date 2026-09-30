@@ -268,7 +268,7 @@ const PermitBanner: React.FC<PermitBannerProps> = ({
   ];
 
   return (
-    <div className="relative min-h-[22rem] sm:min-h-[20rem] md:h-80 w-full overflow-hidden shadow-md flex flex-col justify-center">
+    <div className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end w-full">
 
       <img
         src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600"
@@ -276,172 +276,157 @@ const PermitBanner: React.FC<PermitBannerProps> = ({
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      {/* Full width dark overlay */}
-      <div className="absolute inset-0 bg-black/60" />
+      {/* Dark gradient overlay matching Visa header */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/90 via-[#1a0836]/60 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40" />
 
-      <div className="relative z-10 w-full px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 pt-12 sm:pt-14 pb-6 sm:pb-8 flex flex-col justify-between h-full">
+      {/* Content */}
+      <div className="relative z-10 pt-10 px-4 pb-4 sm:pt-14 sm:px-6 sm:pb-6 md:p-8">
 
-        {/* Top row: title + action buttons */}
+        {/* Top row: Flag + title + action buttons */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-          <h1 className="text-white text-lg sm:text-2xl md:text-3xl font-bold w-fit rounded-full backdrop-blur-xs bg-gray-200/20 max-w-full">
-
-            <span className="px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2 flex-wrap">
-
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+            {/* Flag in a glassy container */}
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center flex-shrink-0 shadow-lg">
               {country && (
                 <ReactCountryFlag
-                  className="text-[18px] sm:text-[20px]"
+                  className="text-[28px] sm:text-[34px]"
                   countryCode={country.flag_code}
                   svg
                 />
               )}
+            </div>
 
-              <span className="truncate">
-                {country.country_code} - NEW LABOUR PERMIT
-              </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight drop-shadow-sm">
+                  {country.country_name} – WORK PERMIT
+                </h2>
+                <span className="bg-[#E91E63] text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex-shrink-0">
+                  POPULAR
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-semibold text-white/70 mt-1">
+                Authorized Labor Counseling &amp; Government Shram Approval Support
+              </p>
+            </div>
+          </div>
 
-            </span>
-
-          </h1>
-
-          {/* Action buttons */}
-          <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-16">
-
+          {/* Action buttons on the right */}
+          <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-12">
             <button
               onClick={handleWhatsApp}
-              className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
+              className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
             >
-              <MessageCircle size={13} />
+              <MessageCircle size={14} />
               <span>Ask on WhatsApp</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 text-white/75 hover:text-white rounded-md text-[10px] font-medium transition-all cursor-pointer"
-              title="Print or Save as PDF"
+              className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
-              <Printer size={11} />
+              <Printer size={13} />
               <span>Print / Save PDF</span>
             </button>
-
           </div>
 
         </div>
 
-        {/* Details */}
-        <div className="grid grid-cols-2 lg:flex text-white mt-6 sm:mt-8 w-full justify-between gap-3 sm:gap-4">
-
-          {serviceDetails.map((item, index) => {
-            const Icon = item.icon;
-
-            return (
-              <div
-                key={index}
-                className="flex items-center gap-2 sm:gap-3"
-              >
-
-                <div className="p-2.5 sm:p-3.5 md:p-4 backdrop-blur-xs rounded-xl sm:rounded-2xl bg-gray-200/20 flex-shrink-0">
-                  <Icon
-                    size={18}
-                    className="sm:w-5 sm:h-5"
-                  />
-                </div>
-
-                <div className="min-w-0">
-
-                  <h1 className="font-bold text-xs sm:text-sm md:text-base leading-tight truncate">
-                    {item.label.toUpperCase()}
-                  </h1>
-
-                  <p className="text-[10px] sm:text-xs text-gray-300 tracking-wide truncate">
-                    {item.title.toUpperCase()}
-                  </p>
-
-                </div>
-
-              </div>
-            );
-          })}
-
+        {/* Quick pills bar matching Visa */}
+        <div className="flex flex-wrap items-center gap-2 pt-4 mt-4 border-t border-white/10 text-xs font-semibold text-white/90">
+          <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-full">
+            <Clock size={13} className="text-[#E91E63]" />
+            {country.processing_days} Working Days
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-full">
+            <Shield size={13} className="text-emerald-400" />
+            2 Years Valid
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-full">
+            <Users size={13} className="text-sky-300" />
+            24/7 Support
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-full">
+            <TrendingUp size={13} className="text-amber-300" />
+            Live Status Tracking
+          </span>
         </div>
 
-        {/* SHARE BUTTON */}
-        <div
-          ref={shareRef}
-          className="print:hidden absolute top-12 right-4 sm:top-14 sm:right-8 md:right-12 lg:right-16 xl:right-20 z-20"
-        >
+      </div>
 
-          {/* Share popup */}
-          {isShareOpen && (
-            <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max z-30">
-
-              {shareButtons.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    item.action();
-                    setIsShareOpen(false);
-                  }}
-                  title={`Share on ${item.name}`}
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
-                  style={{
-                    background: item.bg,
-                  }}
-                >
-                  {item.svg}
-                </button>
-              ))}
-
-              {/* Copy Link */}
+      {/* SHARE BUTTON TOP RIGHT */}
+      <div
+        ref={shareRef}
+        className="print:hidden absolute top-4 right-4 sm:top-5 sm:right-5 z-20"
+      >
+        {/* Share popup */}
+        {isShareOpen && (
+          <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max z-30">
+            {shareButtons.map((item) => (
               <button
-                onClick={handleCopyLink}
-                title={
-                  isCopied
-                    ? "Copied!"
-                    : "Copy Link"
-                }
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${
-                  isCopied
-                    ? "bg-emerald-500"
-                    : "bg-gray-700 hover:bg-gray-900"
-                }`}
+                key={item.name}
+                onClick={() => {
+                  item.action();
+                  setIsShareOpen(false);
+                }}
+                title={`Share on ${item.name}`}
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
+                style={{
+                  background: item.bg,
+                }}
               >
-                {isCopied ? (
-                  <Check
-                    size={13}
-                    color="white"
-                  />
-                ) : (
-                  <Link2
-                    size={13}
-                    color="white"
-                  />
-                )}
+                {item.svg}
               </button>
+            ))}
 
-              {/* Arrow tip */}
-              <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
+            {/* Copy Link */}
+            <button
+              onClick={handleCopyLink}
+              title={
+                isCopied
+                  ? "Copied!"
+                  : "Copy Link"
+              }
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${
+                isCopied
+                  ? "bg-emerald-500"
+                  : "bg-gray-700 hover:bg-gray-900"
+              }`}
+            >
+              {isCopied ? (
+                <Check
+                  size={13}
+                  color="white"
+                />
+              ) : (
+                <Link2
+                  size={13}
+                  color="white"
+                />
+              )}
+            </button>
 
-            </div>
-          )}
+            {/* Arrow tip */}
+            <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
+          </div>
+        )}
 
-          {/* Share trigger */}
-          <button
-            onClick={() =>
-              setIsShareOpen((prev) => !prev)
-            }
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
-              isShareOpen
-                ? "bg-white text-[#2D1347]"
-                : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
-            }`}
-            title="Share this page"
-          >
-            <Share2 size={15} />
-          </button>
-
-        </div>
-
+        {/* Share trigger */}
+        <button
+          onClick={() =>
+            setIsShareOpen((prev) => !prev)
+          }
+          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
+            isShareOpen
+              ? "bg-white text-[#2D1347]"
+              : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
+          }`}
+          title="Share this page"
+        >
+          <Share2 size={15} />
+        </button>
       </div>
 
     </div>

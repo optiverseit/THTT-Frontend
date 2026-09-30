@@ -104,7 +104,7 @@ const WorkPermitDetails = () => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gray-100 font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
+    <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-10 sm:pt-11 md:pt-12 pb-12 sm:pb-16 print:min-h-0 print:bg-white print:p-0 print:m-0">
 
       {/* PRINT-ONLY OFFICIAL DOSSIER */}
       <WorkPermitPrintDossier
@@ -113,14 +113,14 @@ const WorkPermitDetails = () => {
       />
 
       {/* ON-SCREEN UI */}
-      <div className="print:hidden w-full flex flex-col items-center">
+      <div className="print:hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <PermitBanner
           id={id}
           country={selectedCountry}
         />
 
-        <div className="max-w-7xl w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-8 sm:mt-12 mb-8 sm:mb-10">
 

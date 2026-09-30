@@ -32,6 +32,23 @@ import PackageDetail, {
   PackageFaq,
   PackageTestimonial,
 } from "./pages/PackageDetail";
+import VisaPackageDetail from "./pages/VisaPackageDetail";
+import InsurancePackageDetail from "./pages/InsurancePackageDetail";
+import HotelPackageDetail from "./pages/HotelPackageDetail";
+import VehiclePackageDetail from "./pages/VehiclePackageDetail";
+
+
+// Hotel sub-views
+import HotelOverview from "./components/HotelPackageDetail/HotelOverview";
+import HotelPolicy from "./components/HotelPackageDetail/HotelPolicy";
+import HotelFaq from "./components/HotelPackageDetail/HotelFaq";
+import HotelTestimonial from "./components/HotelPackageDetail/HotelTestimonial";
+
+// Vehicle sub-views
+import VehicleOverview from "./components/VehiclePackageDetail/VehicleOverview";
+import VehiclePolicy from "./components/VehiclePackageDetail/VehiclePolicy";
+import VehicleFaq from "./components/VehiclePackageDetail/VehicleFaq";
+import VehicleTestimonial from "./components/VehiclePackageDetail/VehicleTestimonial";
 
 // Login sub-views
 import LoginForm from "./components/login/LoginForm";
@@ -150,6 +167,28 @@ const MainLayout = () => {
           <Route path="policies" element={<PackagePolicy />} />
           <Route path="faqs" element={<PackageFaq />} />
           <Route path="testimonies" element={<PackageTestimonial />} />
+        </Route>
+
+        {/* ── VISA DETAILS ── */}
+        <Route path="/visa-details/:visaId" element={<VisaPackageDetail />} />
+
+        {/* ── INSURANCE DETAILS ── */}
+        <Route path="/insurance-details/:insuranceId" element={<InsurancePackageDetail />} />
+
+        {/* ── HOTEL DETAILS ── */}
+        <Route path="/hotel-details/:hotelId" element={<HotelPackageDetail />}>
+          <Route index path="" element={<HotelOverview />} />
+          <Route path="policies" element={<HotelPolicy />} />
+          <Route path="faqs" element={<HotelFaq />} />
+          <Route path="testimonies" element={<HotelTestimonial />} />
+        </Route>
+
+        {/* ── VEHICLE DETAILS ── */}
+        <Route path="/vehicle-details/:vehicleId" element={<VehiclePackageDetail />}>
+          <Route index path="" element={<VehicleOverview />} />
+          <Route path="policies" element={<VehiclePolicy />} />
+          <Route path="faqs" element={<VehicleFaq />} />
+          <Route path="testimonies" element={<VehicleTestimonial />} />
         </Route>
 
         {/* ── VIDEO VLOGS ── */}

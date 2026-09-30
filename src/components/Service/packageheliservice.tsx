@@ -73,7 +73,7 @@ import {
   getPackageFaqs,
   createBooking
 } from "../../api/BackendApi";
-import PermitService from "../work-permit/permit-details/PermitService";
+import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
 
 // =============================================================================
@@ -2782,7 +2782,7 @@ export const PackageHeliService: React.FC = () => {
 
         {/* ── OUR OTHER SERVICES ── */}
         <div className="mt-10">
-          <PermitService service={services} />
+          <OtherServicesComponent service={services} />
         </div>
         </>
       ) : (

@@ -861,7 +861,7 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   };
 
   const handleSelectPlan = (plan: VisaDetailPlan) => {
-    navigate(`/details/${plan.id}`);
+    navigate(`/visa-details/${plan.id}`);
   };
 
   const handleWhatsAppInquiry = (plan: VisaDetailPlan) => {

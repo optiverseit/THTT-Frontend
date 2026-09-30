@@ -64,7 +64,7 @@ export const TravelInsuranceDetailContent: React.FC = () => {
 
   // Navigate to the insurance plan detail page
   const handleViewPlan = (planId: string) => {
-    navigate(`/details/${planId}`);
+    navigate(`/insurance-details/${planId}`);
   };
 
   return (

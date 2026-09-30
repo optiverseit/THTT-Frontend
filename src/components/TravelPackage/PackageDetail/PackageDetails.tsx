@@ -5,19 +5,7 @@ import {
   Outlet,
   useParams,
   Link,
-  useNavigate,
 } from "react-router-dom";
-
-import {
-  hotels,
-  vehicles,
-} from "../../../assets/data/mockData";
-
-import { VISA_PLANS } from "../../Service/VisaServicesDetailContent";
-import VisaCountryDetailView from "../../Service/VisaCountryDetailView";
-
-import { INSURANCE_PLANS } from "../../Service/insuranceData";
-import InsurancePlanDetailView from "../../Service/InsurancePlanDetailView";
 
 import PreFooter from "../../reusable/PreFooter";
 
@@ -38,7 +26,6 @@ import {
 
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
-  const navigate = useNavigate();
 
   // ============================================================
   // STATE
@@ -47,43 +34,6 @@ const PackageDetails: React.FC = () => {
   const [backendPackage, setBackendPackage] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [packageLoadFinished, setPackageLoadFinished] = useState(false);
-
-
-  // ============================================================
-  // VISA
-  // ============================================================
-
-  const matchedVisa = VISA_PLANS.find(
-    (v) =>
-      v.id.toLowerCase() === packageId?.toLowerCase() ||
-      v.country.toLowerCase() === packageId?.toLowerCase() ||
-      v.country
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-") === packageId?.toLowerCase() ||
-      packageId
-        ?.toLowerCase()
-        .includes(
-          v.country
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-        ) ||
-      packageId
-        ?.toLowerCase()
-        .includes(v.id.toLowerCase())
-  );
-
-
-  // ============================================================
-  // INSURANCE
-  // ============================================================
-
-  const matchedInsurance = INSURANCE_PLANS.find(
-    (ins) =>
-      ins.id.toLowerCase() === packageId?.toLowerCase() ||
-      packageId
-        ?.toLowerCase()
-        .includes(ins.id.toLowerCase())
-  );
 
 
   // ============================================================
@@ -101,9 +51,7 @@ const PackageDetails: React.FC = () => {
   useEffect(() => {
     if (
       !packageId ||
-      !isNumericPackageId ||
-      matchedVisa ||
-      matchedInsurance
+      !isNumericPackageId
     ) {
       setPackageLoadFinished(true);
       return;
@@ -245,66 +193,6 @@ const PackageDetails: React.FC = () => {
 
 
   // ============================================================
-  // VISA PAGE
-  // ============================================================
-
-  if (matchedVisa) {
-    return (
-      <div className="w-full min-h-screen bg-[#FBFBFE] font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8 sm:pt-14 sm:pb-12 print:max-w-none print:p-0 print:m-0">
-
-          <VisaCountryDetailView
-            plan={matchedVisa}
-            allPlans={VISA_PLANS}
-
-            onSelectPlan={(newPlan) =>
-              navigate(`/details/${newPlan.id}`)
-            }
-
-            onBack={() =>
-              navigate("/service/visa-services")
-            }
-          />
-
-        </div>
-
-      </div>
-    );
-  }
-
-
-  // ============================================================
-  // INSURANCE PAGE
-  // ============================================================
-
-  if (matchedInsurance) {
-    return (
-      <div className="w-full min-h-screen bg-[#FBFBFE] font-sans print:min-h-0 print:bg-white print:p-0 print:m-0">
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8 sm:pt-14 sm:pb-12 print:max-w-none print:p-0 print:m-0">
-
-          <InsurancePlanDetailView
-            plan={matchedInsurance}
-            allPlans={INSURANCE_PLANS}
-
-            onSelectPlan={(newPlan) =>
-              navigate(`/details/${newPlan.id}`)
-            }
-
-            onBack={() =>
-              navigate("/service/travel-insurance")
-            }
-          />
-
-        </div>
-
-      </div>
-    );
-  }
-
-
-  // ============================================================
   // LOADING
   // ============================================================
 
@@ -335,131 +223,6 @@ const PackageDetails: React.FC = () => {
     isNumericPackageId
       ? backendPackage
       : null;
-
-
-  // ============================================================
-  // HOTEL FALLBACK
-  // ============================================================
-
-  if (
-    !pkg &&
-    packageId &&
-    !isNumericPackageId
-  ) {
-    const matchedHotel = hotels.find(
-      (h) =>
-        h.id.toLowerCase() === packageId.toLowerCase() ||
-        h.slug.toLowerCase() === packageId.toLowerCase()
-    );
-
-
-    if (matchedHotel) {
-      pkg = {
-        id: matchedHotel.id,
-        title: matchedHotel.name,
-        slug: matchedHotel.slug,
-
-        duration: "Per Night Stay",
-
-        location:
-          matchedHotel.location ||
-          matchedHotel.city,
-
-        price:
-          `$${matchedHotel.priceUSD}`,
-
-        image:
-          matchedHotel.image,
-
-        gallery:
-          matchedHotel.gallery,
-
-        category:
-          "domestic",
-
-        type:
-          "activity",
-
-        description:
-          matchedHotel.description,
-
-        highlights:
-          matchedHotel.amenities ||
-          matchedHotel.features ||
-          [],
-
-        rating:
-          matchedHotel.rating,
-
-        reviewsCount:
-          matchedHotel.reviewsCount,
-      };
-    }
-  }
-
-
-  // ============================================================
-  // VEHICLE FALLBACK
-  // ============================================================
-
-  if (
-    !pkg &&
-    packageId &&
-    !isNumericPackageId
-  ) {
-    const matchedVehicle = vehicles.find(
-      (v) =>
-        v.id.toLowerCase() === packageId.toLowerCase() ||
-        v.slug.toLowerCase() === packageId.toLowerCase()
-    );
-
-
-    if (matchedVehicle) {
-      pkg = {
-        id:
-          matchedVehicle.id,
-
-        title:
-          matchedVehicle.name,
-
-        slug:
-          matchedVehicle.slug,
-
-        duration:
-          `Capacity: ${matchedVehicle.seats}`,
-
-        location:
-          matchedVehicle.bestFor ||
-          "All Nepal Routes",
-
-        price:
-          `$${matchedVehicle.pricePerDayUSD}`,
-
-        image:
-          matchedVehicle.image,
-
-        gallery:
-          matchedVehicle.gallery,
-
-        category:
-          "domestic",
-
-        type:
-          "activity",
-
-        description:
-          matchedVehicle.description,
-
-        highlights:
-          matchedVehicle.features ||
-          matchedVehicle.amenities ||
-          [],
-
-        rating: 5,
-        reviewsCount: 140,
-      };
-    }
-  }
 
 
   // ============================================================

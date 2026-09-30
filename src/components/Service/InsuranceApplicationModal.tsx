@@ -356,11 +356,14 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:static">
-      {/* Click outside to close (disabled in print) */}
-      <div className="fixed inset-0 print:hidden" onClick={onClose} />
+    <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      <style>{`
+        .ins-modal-input::placeholder { font-size: 10px; font-weight: 400; color: #b0b7c3; letter-spacing: 0.01em; }
+      `}</style>
+      {/* Click outside to close */}
+      <div className="fixed inset-0" onClick={onClose} />
 
-      <div className={`relative w-full ${submitted ? "max-w-2xl" : "max-w-4xl"} bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-auto z-10 transition-all duration-300 print:border-none print:shadow-none print:max-w-none print:w-full print:rounded-none`}>
+      <div className={`relative w-full ${submitted ? "max-w-2xl" : "max-w-xl"} bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[92vh] z-10 print:border-none print:shadow-none print:max-w-none print:w-full print:rounded-none`}>
         
         {/* ── TOP HEADER ── */}
         <div className="bg-gradient-to-r from-[#2D1347] via-[#3B145C] to-[#2D1347] p-5 sm:p-6 text-white flex items-center justify-between print:hidden">
@@ -881,75 +884,101 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
           /* ══════════════════════════════════════════════════════════════════
               MAIN FORM VIEW WITH APPLICANTS & REQUIRED DOCUMENTS
               ══════════════════════════════════════════════════════════════════ */
-          <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-6 max-h-[85vh] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4">
 
             {/* If multiple travelers, show Applicant tabs */}
             {travelersCount > 1 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-100">
-                {applicants.map((app, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveApplicantIndex(idx)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
-                      activeApplicantIndex === idx
-                        ? "bg-[#2D1347] text-white shadow-md"
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    <span>Traveler {idx + 1}</span>
-                    {app.fullName && <span className="text-[10px] text-purple-200 font-normal truncate max-w-[80px]">({app.fullName})</span>}
-                    {app.passportFile && app.photoFile && (
-                      <CheckCircle2 size={12} className="text-emerald-400" />
-                    )}
-                  </button>
-                ))}
+              <div className="bg-gradient-to-r from-purple-50/90 via-pink-50/40 to-purple-50/90 p-3 rounded-2xl border border-purple-200/80 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap px-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-md bg-[#2D1347] text-white flex items-center justify-center text-[10px] font-black">
+                      {travelersCount}
+                    </div>
+                    <h4 className="text-xs font-black text-[#2D1347] uppercase tracking-wider">
+                      Travelers ({travelersCount})
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#E11D48] bg-pink-100/80 px-2.5 py-0.5 rounded-full border border-pink-200">
+                    Editing: Traveler {activeApplicantIndex + 1} of {travelersCount}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                  {applicants.map((app, idx) => {
+                    const isActive = idx === activeApplicantIndex;
+                    const isFilled = app.fullName.trim() !== "" && app.passportNumber.trim() !== "" && app.nationality.trim() !== "";
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveApplicantIndex(idx)}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 border ${
+                          isActive
+                            ? "bg-gradient-to-r from-[#2D1347] to-[#E11D48] text-white border-transparent shadow-sm shadow-pink-500/25"
+                            : isFilled
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-purple-50 hover:border-purple-300"
+                        }`}
+                      >
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                          isActive ? "bg-white/20 text-white" : isFilled ? "bg-emerald-200 text-emerald-800" : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="whitespace-nowrap font-extrabold">Traveler {idx + 1}</span>
+                        {isFilled && !isActive && <Check size={12} className="text-emerald-600 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
             {/* ── SECTION 1: TRAVELER INFORMATION ── */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-[#2D1347] uppercase tracking-wider flex items-center gap-2">
-                  <User size={16} className="text-[#E11D48]" />
-                  <span>1. Traveler {travelersCount > 1 ? `${activeApplicantIndex + 1} of ${travelersCount}` : ""} Information</span>
-                </h3>
-                <span className="text-[11px] text-gray-400 font-medium">As shown in official identification</span>
+            <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
+                <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
+                  <User size={13} />
+                </div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
+                  1. Traveler {travelersCount > 1 ? `${activeApplicantIndex + 1} of ${travelersCount}` : ""} Information
+                </h4>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Full Name */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Full Name <span className="text-red-500">*</span>
+                    Full Name <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Ram Bahadur Thapa"
                     value={currentApplicant.fullName}
                     onChange={(e) => updateCurrentApplicant({ fullName: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
                 {/* Nationality */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Nationality <span className="text-red-500">*</span>
+                    Nationality <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Nepali"
                     value={currentApplicant.nationality}
                     onChange={(e) => updateCurrentApplicant({ nationality: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
                 {/* Date of Birth */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Date of Birth (18+ Years) <span className="text-red-500">*</span>
+                    Date of Birth (18+ Years) <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="date"
@@ -957,59 +986,60 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     max={new Date().toISOString().split("T")[0]}
                     value={currentApplicant.dateOfBirth}
                     onChange={(e) => updateCurrentApplicant({ dateOfBirth: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                  />
-                </div>
-
-                {/* Passport / NID / Citizenship Number */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Passport/NID Number, Citizenship <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={currentApplicant.passportNumber}
-                    onChange={(e) => updateCurrentApplicant({ passportNumber: e.target.value.toUpperCase() })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all uppercase"
-                  />
-                </div>
-
-                {/* Passport Expiry or NID/Citizenship Issued date */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Passport Expiry or NID/Citizenship Issued date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={currentApplicant.passportExpiry}
-                    onChange={(e) => updateCurrentApplicant({ passportExpiry: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
                 {/* Email Address */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Email Address <span className="text-red-500">*</span>
+                    Email Address <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="email"
                     required
+                    placeholder="e.g. john@email.com"
                     value={currentApplicant.email}
                     onChange={(e) => updateCurrentApplicant({ email: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
+                  />
+                </div>
+
+                {/* Passport / NID / Citizenship Number */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Passport / NID / Citizenship No. <span className="text-[#E11D48]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. A1234567"
+                    value={currentApplicant.passportNumber}
+                    onChange={(e) => updateCurrentApplicant({ passportNumber: e.target.value.toUpperCase() })}
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-[#200B3B] uppercase focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
+                  />
+                </div>
+
+                {/* Passport Expiry or NID/Citizenship Issued date */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Passport Expiry / NID Issued Date <span className="text-[#E11D48]">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={currentApplicant.passportExpiry}
+                    onChange={(e) => updateCurrentApplicant({ passportExpiry: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
                 {/* WhatsApp / Mobile Number (10 Digits) */}
-                <div className="sm:col-span-2 lg:col-span-3">
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    WhatsApp / Mobile Number (10 Digits) <span className="text-red-500">*</span>
+                    WhatsApp / Mobile Number (10 Digits) <span className="text-[#E11D48]">*</span>
                   </label>
-                  <div className="flex items-stretch border border-gray-300 rounded-xl bg-white focus-within:border-[#2D1347] focus-within:ring-2 focus-within:ring-purple-100 transition-all overflow-hidden">
-                    {/* Country Code Selector with flag */}
+                  <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#E11D48] focus-within:ring-2 focus-within:ring-pink-100 transition-all overflow-hidden">
                     <select
                       value={currentApplicant.phoneCode}
                       onChange={(e) => updateCurrentApplicant({ phoneCode: e.target.value })}
@@ -1022,17 +1052,17 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                         </option>
                       ))}
                     </select>
-                    {/* Phone Number Input (numeric, max 10 digits) */}
                     <input
                       type="tel"
                       required
+                      placeholder="9800000000"
                       value={currentApplicant.phone}
                       onChange={(e) => {
                         const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
                         updateCurrentApplicant({ phone: digits });
                       }}
                       maxLength={10}
-                      className="flex-1 min-w-0 px-3.5 py-2.5 bg-white text-xs font-semibold text-[#200B3B] focus:outline-none"
+                      className="ins-modal-input flex-1 min-w-0 px-3 py-2 bg-white text-xs font-semibold text-[#200B3B] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1040,71 +1070,76 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
             </div>
 
             {/* ── SECTION 2: HEALTHCARE & EMERGENCY DETAILS ── */}
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-[#2D1347] uppercase tracking-wider flex items-center gap-2">
-                  <HeartPulse size={16} className="text-[#E11D48]" />
-                  <span>2. Healthcare &amp; Emergency details</span>
-                </h3>
-                <span className="text-[11px] text-gray-400 font-medium">Next of kin / Emergency contact</span>
+            <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
+                <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
+                  <HeartPulse size={13} />
+                </div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
+                  2. Healthcare &amp; Emergency Contact
+                </h4>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Full name */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Full name <span className="text-red-500">*</span>
+                    Full Name <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Sita Kumari Sharma"
                     value={emergencyContactName}
                     onChange={(e) => setEmergencyContactName(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
                 {/* Relationship */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Relationship <span className="text-red-500">*</span>
+                    Relationship <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Mother, Father, Spouse"
                     value={emergencyRelationship}
                     onChange={(e) => setEmergencyRelationship(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
-                {/* emergency contact number */}
-                <div>
+                {/* Emergency contact number */}
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    emergency contact number <span className="text-red-500">*</span>
+                    Emergency Contact Number <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="tel"
                     required
+                    placeholder="e.g. +977 9800000000"
                     value={emergencyContactPhone}
                     onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
               </div>
             </div>
 
             {/* ── SECTION 3: TREKKING ROUTE & TRAVEL SCHEDULE ── */}
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-black text-[#2D1347] uppercase tracking-wider flex items-center gap-2">
-                  <Mountain size={16} className="text-[#E11D48]" />
-                  <span>3. Trekking Route &amp; Travel Schedule</span>
-                </h3>
-                <span className="text-[11px] text-gray-400 font-medium">Route plan &amp; expected policy duration</span>
+            <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
+                <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
+                  <Mountain size={13} />
+                </div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
+                  3. Trekking Route &amp; Travel Schedule
+                </h4>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Trek Destination / Trail (Unchangeable) */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
@@ -1115,7 +1150,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     type="text"
                     disabled
                     value={trekkingRegion}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-700 cursor-not-allowed outline-none font-medium"
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-xl text-[10px] text-gray-600 cursor-not-allowed outline-none font-medium"
                   />
                 </div>
 
@@ -1129,7 +1164,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     type="text"
                     disabled
                     value={maxAltitudeMeters || plan.maxAltitude}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-700 cursor-not-allowed outline-none font-medium"
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-xl text-[10px] text-gray-600 cursor-not-allowed outline-none font-medium"
                   />
                 </div>
 
@@ -1143,14 +1178,14 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     type="text"
                     disabled
                     value={agencyOrGuideName}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-700 cursor-not-allowed outline-none font-medium"
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-xl text-[10px] text-gray-600 cursor-not-allowed outline-none font-medium"
                   />
                 </div>
 
-                {/* Policy Expected Start Date (User Editable & Required) */}
+                {/* Policy Expected Start Date */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Policy Expected Start Date <span className="text-red-500">*</span>
+                    Policy Expected Start Date <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="date"
@@ -1158,14 +1193,14 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     min={new Date().toISOString().split("T")[0]}
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
-                {/* Policy Expected End Date (User Editable & Required) */}
+                {/* Policy Expected End Date */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Policy Expected End Date <span className="text-red-500">*</span>
+                    Policy Expected End Date <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="date"
@@ -1173,183 +1208,143 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     min={startDate || new Date().toISOString().split("T")[0]}
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2 rounded-xl border border-gray-300 focus:border-[#2D1347] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
               </div>
             </div>
 
             {/* ── SECTION 4: REQUIRED DOCUMENTS UPLOAD ── */}
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h3 className="text-sm font-black text-[#2D1347] uppercase tracking-wider flex items-center gap-2">
-                    <FileText size={16} className="text-[#E11D48]" />
-                    <span>4. Required Documents Upload</span>
-                  </h3>
-                  <p className="text-[11px] text-gray-500 mt-0.5">
-                    For Traveler {travelersCount > 1 ? `${activeApplicantIndex + 1}` : "1"} ({currentApplicant.fullName || "Current"}) • JPG, PNG or PDF (Max 10MB each)
-                  </p>
+            <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
+                    <UploadCloud size={13} />
+                  </div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
+                    4. Document Attachments {travelersCount > 1 ? `— Traveler ${activeApplicantIndex + 1}` : ""}
+                  </h4>
                 </div>
-                <span className="text-[10px] font-black uppercase text-[#E11D48] bg-pink-50 px-2.5 py-1 rounded-full border border-pink-100">
-                  Mandatory For Policy Certification
-                </span>
+                <span className="text-[10px] font-black uppercase text-[#E11D48] bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">Required</span>
               </div>
 
-              {/* Document upload grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                
-                {/* 1. Passport, NID, Citizenship Scanned Copy */}
-                <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 hover:border-purple-300 transition-all flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-gray-800">Passport, NID, Citizenship Scanned Copy</span>
-                      <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Required</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500">
-                      Clear color scan or photo of Passport, National ID (NID), or Citizenship certificate.
-                    </p>
-                  </div>
+              <p className="text-[11px] text-gray-400 -mt-1">
+                Attach for Traveler {travelersCount > 1 ? activeApplicantIndex + 1 : "1"} ({currentApplicant.fullName || "Current"}). PDF, JPG, PNG (max 10 MB each).
+              </p>
 
-                  <div className="mt-3">
-                    <input
-                      ref={passportRef}
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={handlePassportChange}
-                      className="hidden"
-                    />
-                    {currentApplicant.passportFile ? (
-                      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-xs">
-                        <span className="truncate max-w-[140px] font-medium">
-                          {currentApplicant.passportFile.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateCurrentApplicant({ passportFile: null })}
-                          className="text-red-500 hover:text-red-700 cursor-pointer p-1"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+              {/* Hidden file inputs */}
+              <input ref={passportRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handlePassportChange} className="hidden" />
+              <input ref={photoRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoChange} className="hidden" />
+              <input ref={itineraryRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleItineraryChange} className="hidden" />
+              <input ref={medicalRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleMedicalChange} className="hidden" />
+
+              <div className="space-y-2.5">
+                {([
+                  {
+                    label: travelersCount > 1 ? `Passport / NID / Citizenship (Traveler ${activeApplicantIndex + 1})` : "Passport / NID / Citizenship Scanned Copy",
+                    required: true,
+                    ref: passportRef,
+                    file: currentApplicant.passportFile,
+                    clear: () => updateCurrentApplicant({ passportFile: null }),
+                    hint: "Clear color scan of Passport, National ID (NID), or Citizenship certificate",
+                  },
+                  {
+                    label: travelersCount > 1 ? `Passport Photo (Traveler ${activeApplicantIndex + 1})` : "Passport Size Photo (MRP)",
+                    required: true,
+                    ref: photoRef,
+                    file: currentApplicant.photoFile,
+                    clear: () => updateCurrentApplicant({ photoFile: null }),
+                    hint: "Recent front-facing digital photo with white background",
+                  },
+                  {
+                    label: "Trekking Permit / Route Itinerary",
+                    required: false,
+                    ref: itineraryRef,
+                    file: currentApplicant.itineraryFile,
+                    clear: () => updateCurrentApplicant({ itineraryFile: null }),
+                    hint: "TIMS card, conservation permit, or route itinerary slip (optional)",
+                  },
+                ] as Array<{
+                  label: string;
+                  required: boolean;
+                  ref: React.RefObject<HTMLInputElement>;
+                  file: File | null;
+                  clear: () => void;
+                  hint: string;
+                }>).map((field) => (
+                  <div
+                    key={field.label}
+                    className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
+                      field.file
+                        ? "bg-emerald-50/60 border-emerald-200"
+                        : field.required
+                        ? "bg-white border-gray-200 hover:border-[#E11D48]"
+                        : "bg-white border-gray-200 hover:border-purple-300"
+                    } transition-all`}
+                  >
+                    {/* Left: icon + label */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        field.file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E11D48]"
+                      }`}>
+                        {field.file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
                       </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
+                          {field.label}
+                          {field.required ? (
+                            <span className="text-[#E11D48] font-black">*</span>
+                          ) : (
+                            <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>
+                          )}
+                        </p>
+                        {field.file ? (
+                          <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">
+                            {field.file.name}{" "}
+                            <span className="text-emerald-500 font-normal">({(field.file.size / 1024).toFixed(0)} KB)</span>
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-gray-400">{field.hint}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: attach / remove */}
+                    {field.file ? (
+                      <button
+                        type="button"
+                        onClick={field.clear}
+                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={11} />
+                        Remove
+                      </button>
                     ) : (
                       <button
                         type="button"
-                        onClick={() => passportRef.current?.click()}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-gray-100 border border-dashed border-gray-300 rounded-xl text-xs font-bold text-gray-700 cursor-pointer transition-all shadow-2xs"
+                        onClick={() => field.ref.current?.click()}
+                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E11D48] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"
                       >
-                        <UploadCloud size={14} className="text-purple-600" />
-                        <span>Upload Document Scan</span>
+                        <UploadCloud size={12} />
+                        Attach
                       </button>
                     )}
                   </div>
-                </div>
-
-                {/* 2. Passport Size Digital Photograph */}
-                <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 hover:border-purple-300 transition-all flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-gray-800">Passport Photo (MRP)</span>
-                      <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Required</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500">
-                      Recent front-facing digital photo with white background.
-                    </p>
-                  </div>
-
-                  <div className="mt-3">
-                    <input
-                      ref={photoRef}
-                      type="file"
-                      accept=".jpg,.jpeg,.png"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                    {currentApplicant.photoFile ? (
-                      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-xs">
-                        <span className="truncate max-w-[140px] font-medium">
-                          {currentApplicant.photoFile.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateCurrentApplicant({ photoFile: null })}
-                          className="text-red-500 hover:text-red-700 cursor-pointer p-1"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => photoRef.current?.click()}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-gray-100 border border-dashed border-gray-300 rounded-xl text-xs font-bold text-gray-700 cursor-pointer transition-all shadow-2xs"
-                      >
-                        <UploadCloud size={14} className="text-purple-600" />
-                        <span>Upload Photo</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 3. Trekking Permit / Route Itinerary (Optional) */}
-                <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 hover:border-purple-300 transition-all flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-gray-800">Trekking Permit / Itinerary (Optional)</span>
-                      <span className="text-[10px] font-bold text-gray-600 bg-gray-200/80 px-1.5 py-0.5 rounded">Optional</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500">
-                      TIMS card, conservation permit, or route itinerary slip (if available).
-                    </p>
-                  </div>
-
-                  <div className="mt-3">
-                    <input
-                      ref={itineraryRef}
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={handleItineraryChange}
-                      className="hidden"
-                    />
-                    {currentApplicant.itineraryFile ? (
-                      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-xs">
-                        <span className="truncate max-w-[140px] font-medium">
-                          {currentApplicant.itineraryFile.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateCurrentApplicant({ itineraryFile: null })}
-                          className="text-red-500 hover:text-red-700 cursor-pointer p-1"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => itineraryRef.current?.click()}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-gray-100 border border-dashed border-gray-300 rounded-xl text-xs font-bold text-gray-700 cursor-pointer transition-all shadow-2xs"
-                      >
-                        <UploadCloud size={14} className="text-purple-600" />
-                        <span>Upload Itinerary (Optional)</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
-            {/* ── SECTION 4: DECLARATIONS & SUBMIT ── */}
-            <div className="space-y-3 pt-4 border-t border-gray-100 text-xs">
+            {/* ── DECLARATIONS & SUBMIT ── */}
+            <div className="bg-purple-50/50 p-3.5 rounded-2xl border border-purple-100 space-y-3 text-xs">
               <label className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   required
                   checked={altitudeDeclarationAgreed}
                   onChange={(e) => setAltitudeDeclarationAgreed(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#2D1347] focus:ring-purple-500 mt-0.5"
+                  className="mt-0.5 w-4 h-4 rounded text-[#E11D48] focus:ring-[#E11D48] border-gray-300 cursor-pointer flex-shrink-0"
                 />
-                <span className="text-gray-700 leading-snug">
+                <span className="text-gray-600 leading-relaxed">
                   <strong>High-Altitude &amp; Medical Declaration:</strong> I confirm that the insured traveler(s) are physically fit for the indicated trekking altitude ({plan.maxAltitude}) and have disclosed any major pre-existing heart or lung conditions.
                 </span>
               </label>
@@ -1360,41 +1355,33 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                   required
                   checked={termsAgreed}
                   onChange={(e) => setTermsAgreed(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#2D1347] focus:ring-purple-500 mt-0.5"
+                  className="mt-0.5 w-4 h-4 rounded text-[#E11D48] focus:ring-[#E11D48] border-gray-300 cursor-pointer flex-shrink-0"
                 />
-                <span className="text-gray-700 leading-snug">
+                <span className="text-gray-600 leading-relaxed">
                   I agree to the Trip Himalaya Insurance Terms, 24/7 Helicopter Evacuation Dispatch Protocol, and Cashless Hospital Admission regulations.
                 </span>
               </label>
             </div>
 
-            {/* Sticky/Bottom Action Footer */}
-            <div className="bg-gray-50 -mx-5 -mb-5 sm:-mx-7 sm:-mb-7 p-4 sm:p-5 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <span className="text-[11px] text-gray-500 font-bold uppercase block">
-                  Total Premium ({travelersCount} {travelersCount === 1 ? "Traveler" : "Travelers"})
-                </span>
-                <span className="text-xl font-black text-[#2D1347]">
-                  {displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  {selectedOption.name} • {selectedOption.days} Coverage
-                </span>
-              </div>
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 sm:flex-none px-5 py-3 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-100 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
+              <div className="text-right">
+                <div className="text-[10px] text-gray-400 font-medium mb-0.5">
+                  {travelersCount} {travelersCount === 1 ? "Traveler" : "Travelers"} • {selectedOption.name}
+                </div>
                 <button
                   type="submit"
-                  className="flex-1 sm:flex-none px-7 py-3 rounded-xl bg-[#2D1347] hover:bg-[#3B145C] text-white text-xs font-bold shadow-lg shadow-purple-900/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="px-7 py-2.5 bg-gradient-to-r from-[#2D1347] to-[#E11D48] hover:from-[#3B145C] hover:to-pink-600 text-white font-black text-xs rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 active:scale-98 transition-all cursor-pointer flex items-center gap-2"
                 >
-                  <span>Submit Application</span>
+                  <span>Submit Application ({travelersCount} Pax)</span>
                   <ArrowRight size={14} />
                 </button>
               </div>

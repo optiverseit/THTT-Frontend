@@ -90,7 +90,7 @@ const VisaPricing: React.FC<VisaPricingProps> = ({ pkg }) => {
             {(
               [
                 { id: "nepali", label: "NEPALI", sub: "NPR (रू)" },
-                { id: "usd", label: "USD", sub: "USD ($)" },
+                { id: "foreigner", label: "USD", sub: "USD ($)" },
                 { id: "inr", label: "INR", sub: "INR (₹)" },
               ] as const
             ).map((c) => (

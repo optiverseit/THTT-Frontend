@@ -312,8 +312,7 @@ const InsuranceImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         <ShareModal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
-          title={pkg.title}
-          url={window.location.href}
+          data={{ title: pkg.title, url: window.location.href }}
         />
       )}
     </div>

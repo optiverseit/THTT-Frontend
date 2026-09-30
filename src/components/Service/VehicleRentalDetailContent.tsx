@@ -60,7 +60,18 @@ interface BackendVehicle {
   pricePerDay?: number | string;
 
   image?: string;
-  images?: string[];
+  images?: Array<
+    | string
+    | {
+      id?: number;
+      vehicle_id?: number;
+      image?: string;
+      image_url?: string;
+      url?: string;
+      secure_url?: string;
+      image_public_id?: string;
+    }
+  >;
   description?: string;
   location?: string;
 
@@ -338,9 +349,8 @@ const VehicleImageSlider: React.FC<VehicleImageSliderProps> = ({
           key={idx}
           src={imgSrc}
           alt={`${alt} - ${idx + 1}`}
-          className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out ${
-            idx === currentIndex ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
-          }`}
+          className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out ${idx === currentIndex ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
+            }`}
         />
       ))}
 
@@ -348,11 +358,10 @@ const VehicleImageSlider: React.FC<VehicleImageSliderProps> = ({
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 flex-wrap">
         {fuelType && (
           <span
-            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-xs ${
-              fuelType.toLowerCase() === "electric"
+            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-xs ${fuelType.toLowerCase() === "electric"
                 ? "bg-emerald-600 text-white"
                 : "bg-white/95 text-amber-800"
-            }`}
+              }`}
           >
             {fuelType.toLowerCase() === "electric" ? (
               <Zap size={10} className="fill-current" />
@@ -401,11 +410,10 @@ const VehicleImageSlider: React.FC<VehicleImageSliderProps> = ({
                   e.stopPropagation();
                   setCurrentIndex(i);
                 }}
-                className={`transition-all rounded-full ${
-                  i === currentIndex
+                className={`transition-all rounded-full ${i === currentIndex
                     ? "w-4 h-1.5 bg-[#FF4FA3]"
                     : "w-1.5 h-1.5 bg-white/70 hover:bg-white"
-                }`}
+                  }`}
               />
             ))}
           </div>
@@ -496,36 +504,26 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   const rating = v.rating ?? 5;
 
   // 10. Sliding Images gallery (each 3 seconds)
-  const fallbackGallery: Record<string, string[]> = {
-    HiAce: [
-      "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
-    ],
-    "4wd SUVs": [
-      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-    ],
-    Sedan: [
-      "https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=800&q=80",
-    ],
-    Coaster: [
-      "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80",
-    ],
-  };
-
   let images: string[] = [];
+
   if (Array.isArray(v.images) && v.images.length > 0) {
-    images = v.images;
-  } else if (v.image) {
-    const list = fallbackGallery[vehicleType] || fallbackGallery["4wd SUVs"];
-    images = [v.image, ...list.filter((img) => img !== v.image)];
-  } else {
-    images = fallbackGallery[vehicleType] || fallbackGallery["4wd SUVs"];
+    images = v.images
+      .map((img) => {
+        if (typeof img === "string") return img;
+
+        return (
+          img.image ||
+          img.image_url ||
+          img.secure_url ||
+          img.url ||
+          ""
+        );
+      })
+      .filter((img): img is string => Boolean(img));
+  }
+
+  if (images.length === 0 && v.image) {
+    images = [v.image];
   }
 
   return {
@@ -734,21 +732,21 @@ const VehicleRentalDetailContent: React.FC = () => {
       selectedKeywords.length === 0
         ? true
         : selectedKeywords.some((keyword) => {
-            const kw = keyword.toLowerCase();
-            const name = (v.name || v.title || "").toLowerCase();
-            const type = (v.type || v.vehicleType || "").toLowerCase();
-            const desc = (v.description || "").toLowerCase();
-            const fuel = (v.fuelType || "").toLowerCase();
-            const location = (v.fromLocation || "" + v.destination || "").toLowerCase();
+          const kw = keyword.toLowerCase();
+          const name = (v.name || v.title || "").toLowerCase();
+          const type = (v.type || v.vehicleType || "").toLowerCase();
+          const desc = (v.description || "").toLowerCase();
+          const fuel = (v.fuelType || "").toLowerCase();
+          const location = (v.fromLocation || "" + v.destination || "").toLowerCase();
 
-            return (
-              name.includes(kw) ||
-              type.includes(kw) ||
-              desc.includes(kw) ||
-              fuel.includes(kw) ||
-              location.includes(kw)
-            );
-          });
+          return (
+            name.includes(kw) ||
+            type.includes(kw) ||
+            desc.includes(kw) ||
+            fuel.includes(kw) ||
+            location.includes(kw)
+          );
+        });
 
     return matchesPrice && matchesRating && matchesKeywords;
   });
@@ -885,11 +883,10 @@ const VehicleRentalDetailContent: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeTab === tab.id
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${activeTab === tab.id
                   ? "bg-[#2D1347] text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -926,11 +923,11 @@ const VehicleRentalDetailContent: React.FC = () => {
                 const formattedStartingPrice =
                   baseNPRPrice > 0
                     ? displayPrice(
-                        baseNPRPrice,
-                        selectedCurrency,
-                        nprPerOneDollar,
-                        nprPerOneINR
-                      )
+                      baseNPRPrice,
+                      selectedCurrency,
+                      nprPerOneDollar,
+                      nprPerOneINR
+                    )
                     : "Contact Us";
 
                 return (
@@ -1124,7 +1121,7 @@ const VehicleRentalDetailContent: React.FC = () => {
                         rel="noopener noreferrer"
                         className="w-full mt-2 py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-wider bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.558 4.133 1.532 5.869L.054 23.447a.5.5 0 0 0 .614.614l5.578-1.478A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.823 9.823 0 0 1-5.012-1.375l-.36-.214-3.31.877.877-3.31-.214-.36A9.823 9.823 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.558 4.133 1.532 5.869L.054 23.447a.5.5 0 0 0 .614.614l5.578-1.478A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.823 9.823 0 0 1-5.012-1.375l-.36-.214-3.31.877.877-3.31-.214-.36A9.823 9.823 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z" /></svg>
                         WhatsApp
                       </a>
 
@@ -1171,11 +1168,10 @@ const VehicleRentalDetailContent: React.FC = () => {
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
                         aria-label="Previous Page"
-                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                          currentPage === 1
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${currentPage === 1
                             ? "text-gray-300 cursor-not-allowed bg-gray-50"
                             : "text-gray-600 bg-gray-100 hover:bg-pink-50 hover:text-[#E91E63] cursor-pointer active:scale-95"
-                        }`}
+                          }`}
                       >
                         <ChevronLeft size={14} />
                         <span className="hidden sm:inline">Prev</span>
@@ -1189,11 +1185,10 @@ const VehicleRentalDetailContent: React.FC = () => {
                           key={pageNum}
                           type="button"
                           onClick={() => handlePageChange(pageNum)}
-                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            currentPage === pageNum
+                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentPage === pageNum
                               ? "bg-[#2D1347] text-white shadow-xs"
                               : "text-gray-600 bg-gray-100 hover:bg-pink-50 hover:text-[#E91E63]"
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -1206,11 +1201,10 @@ const VehicleRentalDetailContent: React.FC = () => {
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
                         aria-label="Next Page"
-                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                          currentPage === totalPages
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${currentPage === totalPages
                             ? "text-gray-300 cursor-not-allowed bg-gray-50"
                             : "text-gray-600 bg-gray-100 hover:bg-pink-50 hover:text-[#E91E63] cursor-pointer active:scale-95"
-                        }`}
+                          }`}
                       >
                         <span className="hidden sm:inline">Next</span>
                         <ChevronRight size={14} />

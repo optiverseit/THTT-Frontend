@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import PermitBanner from "./PermitBanner";
 import AboutPermit from "./AboutPermit";
 import CostDetails from "./CostDetails";
-import PermitService from "./PermitService";
+import OtherServicesComponent from "../../reusable/OtherServicesComponent";
 import { services } from "../../../assets/data/mockData";
 import WorkPermitModal from "../WorkPermitModal";
 import WorkPermitPrintDossier from "./WorkPermitPrintDossier";
@@ -135,7 +135,7 @@ const WorkPermitDetails = () => {
 
           </div>
 
-          <PermitService service={services} />
+          <OtherServicesComponent service={services} />
 
           <WorkPermitModal
             country={[selectedCountry]}

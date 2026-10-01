@@ -54,3 +54,271 @@
     margin: 8mm 10mm;
   }
 }
+
+/* ── CMS / RICH TEXT CONTENT FORMATTING ──
+   Ensures HTML inserted from CMS (WYSIWYG editors like TinyMCE, CKEditor, Quill, Gutenberg)
+   renders with exact list markers (bullets, dots, decimal numbers, multi-level/nested lists),
+   text alignments (left, center, right, justify), inline colors, font sizes, tables, and spacing. */
+.cms-content {
+  color: #374151;
+  line-height: 1.75;
+  word-break: break-word;
+}
+
+.cms-content p {
+  margin-top: 0.65rem;
+  margin-bottom: 0.85rem;
+  line-height: 1.75;
+}
+
+/* ── Lists: Unordered (Bullets / Dots) & Nested Multi-level ── */
+.cms-content ul {
+  list-style-type: disc !important;
+  margin-top: 0.65rem !important;
+  margin-bottom: 0.85rem !important;
+  padding-left: 2rem !important;
+}
+
+.cms-content ul ul {
+  list-style-type: circle !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+  padding-left: 1.75rem !important;
+}
+
+.cms-content ul ul ul {
+  list-style-type: square !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  padding-left: 1.5rem !important;
+}
+
+/* Support specific bullet types when assigned */
+.cms-content ul[type="disc"] { list-style-type: disc !important; }
+.cms-content ul[type="circle"] { list-style-type: circle !important; }
+.cms-content ul[type="square"] { list-style-type: square !important; }
+
+/* ── Lists: Ordered (Numbers) & Nested Multi-level ── */
+.cms-content ol {
+  list-style-type: decimal !important;
+  margin-top: 0.65rem !important;
+  margin-bottom: 0.85rem !important;
+  padding-left: 2rem !important;
+}
+
+.cms-content ol ol {
+  list-style-type: lower-alpha !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+  padding-left: 1.75rem !important;
+}
+
+.cms-content ol ol ol {
+  list-style-type: lower-roman !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  padding-left: 1.5rem !important;
+}
+
+.cms-content ol ol ol ol {
+  list-style-type: upper-alpha !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  padding-left: 1.5rem !important;
+}
+
+/* Support HTML type attribute on ol (e.g. <ol type="a"> or <ol type="I">) */
+.cms-content ol[type="1"] { list-style-type: decimal !important; }
+.cms-content ol[type="a"] { list-style-type: lower-alpha !important; }
+.cms-content ol[type="A"] { list-style-type: upper-alpha !important; }
+.cms-content ol[type="i"] { list-style-type: lower-roman !important; }
+.cms-content ol[type="I"] { list-style-type: upper-roman !important; }
+
+/* Mixed nested lists: ul inside ol, ol inside ul */
+.cms-content ol ul {
+  list-style-type: disc !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+  padding-left: 1.75rem !important;
+}
+
+.cms-content ul ol {
+  list-style-type: decimal !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+  padding-left: 1.75rem !important;
+}
+
+.cms-content li {
+  display: list-item !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+  line-height: 1.7 !important;
+}
+
+.cms-content li::marker {
+  color: #E91E63;
+  font-weight: 700;
+}
+
+/* ── Alignments (Style, Attribute, Classes from CMS/Gutenberg/Quill/TinyMCE) ── */
+.cms-content [style*="text-align: left"],
+.cms-content [style*="text-align:left"],
+.cms-content [align="left"],
+.cms-content .text-left,
+.cms-content .has-text-align-left,
+.cms-content .ql-align-left {
+  text-align: left !important;
+}
+
+.cms-content [style*="text-align: center"],
+.cms-content [style*="text-align:center"],
+.cms-content [align="center"],
+.cms-content .text-center,
+.cms-content .has-text-align-center,
+.cms-content .ql-align-center {
+  text-align: center !important;
+}
+
+.cms-content [style*="text-align: right"],
+.cms-content [style*="text-align:right"],
+.cms-content [align="right"],
+.cms-content .text-right,
+.cms-content .has-text-align-right,
+.cms-content .ql-align-right {
+  text-align: right !important;
+}
+
+.cms-content [style*="text-align: justify"],
+.cms-content [style*="text-align:justify"],
+.cms-content [align="justify"],
+.cms-content .text-justify,
+.cms-content .has-text-align-justify,
+.cms-content .ql-align-justify {
+  text-align: justify !important;
+  text-justify: inter-word;
+}
+
+/* ── Legacy <font> size and color support ── */
+.cms-content font[size="1"] { font-size: 0.75rem; }
+.cms-content font[size="2"] { font-size: 0.875rem; }
+.cms-content font[size="3"] { font-size: 1rem; }
+.cms-content font[size="4"] { font-size: 1.15rem; }
+.cms-content font[size="5"] { font-size: 1.35rem; }
+.cms-content font[size="6"] { font-size: 1.75rem; }
+.cms-content font[size="7"] { font-size: 2.25rem; }
+
+/* ── Headings inside CMS ── */
+.cms-content h1 {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #2D1347;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.25;
+}
+
+.cms-content h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #2D1347;
+  margin-top: 1.25rem;
+  margin-bottom: 0.65rem;
+  line-height: 1.3;
+}
+
+.cms-content h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #2D1347;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.cms-content h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2D1347;
+  margin-top: 0.85rem;
+  margin-bottom: 0.45rem;
+}
+
+/* ── Inline Formats & Typography ── */
+.cms-content strong,
+.cms-content b {
+  font-weight: 700;
+}
+
+.cms-content em,
+.cms-content i {
+  font-style: italic;
+}
+
+.cms-content u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cms-content s,
+.cms-content strike,
+.cms-content del {
+  text-decoration: line-through;
+}
+
+.cms-content blockquote {
+  border-left: 4px solid #E91E63;
+  padding-left: 1.25rem;
+  margin: 1.25rem 0;
+  font-style: italic;
+  color: #374151;
+  background: #fdf2f8;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.cms-content hr {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.5rem 0;
+}
+
+/* ── CMS Tables ── */
+.cms-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.875rem;
+}
+
+.cms-content table th,
+.cms-content table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.cms-content table th {
+  background-color: #f9fafb;
+  font-weight: 700;
+  color: #2D1347;
+}
+
+.cms-content a {
+  color: #E91E63;
+  text-decoration: underline;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.cms-content a:hover {
+  color: #c2185b;
+}
+
+.cms-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+}

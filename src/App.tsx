@@ -22,6 +22,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import DashboardLayout from "./pages/DashboardLayout";
 import WorkPermit from "./pages/WorkPermit";
+import DocumentationPage from "./pages/DocumentationPage";
+import DocumentationDetailPage from "./pages/DocumentationDetailPage";
 
 // Page-level detail views (moved from deep component paths to pages/)
 import VideoDetail from "./pages/VideoDetail";
@@ -198,6 +200,10 @@ const MainLayout = () => {
         {/* ── WORK PERMIT ── */}
         <Route path="/work-permit" element={<WorkPermit />} />
         <Route path="/permit-details/:id" element={<WorkPermitDetail />} />
+
+        {/* ── DOCUMENTATION ── */}
+        <Route path="/documentation" element={<DocumentationPage />} />
+        <Route path="/documentation/:id" element={<DocumentationDetailPage />} />
 
         {/* ── 404 Catch-All Route ── */}
         <Route path="*" element={<NotFound />} />

@@ -8,37 +8,32 @@ import {
   MessageCircle,
   Printer,
   Zap,
-  Plane,
   Mountain,
-  Bed,
-  Car,
-  Compass,
-  ChevronRight,
   Users,
   RefreshCw,
   Share2,
   Check,
   Link2,
-  Ambulance,
-  Globe,
 } from "lucide-react";
+
 import {
   useGlobalCurrency,
   formatNPR,
   formatUSD,
   formatINR,
+  displayPrice,
 } from "../../context/CurrencyContext";
 import { InsuranceApplicationModal } from "./InsuranceApplicationModal";
-import { InsurancePlan, InsuranceCostOption, INSURANCE_PLANS } from "./insuranceData";
+import { InsurancePlan, InsuranceCostOption } from "./insuranceData";
 import {
   shareToPlatform,
   copyToClipboard,
   getCurrentUrl,
   getCrawlerSafeUrl,
-  triggerNativeShare,
-  openSharePopup,
 } from "../../utils/shareUtils";
 import Logo from "../../assets/images/Logo.png";
+import OtherServicesComponent from "../reusable/OtherServicesComponent";
+import { services } from "../../assets/data/mockData";
 
 interface InsurancePlanDetailViewProps {
   plan: InsurancePlan;
@@ -56,8 +51,8 @@ const altitudeHeroBgMap: Record<string, string> = {
 
 export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = ({
   plan,
-  allPlans,
-  onSelectPlan,
+  allPlans: _allPlans,
+  onSelectPlan: _onSelectPlan,
   onBack: _onBack,
 }) => {
   const navigate = useNavigate();
@@ -589,30 +584,14 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
         <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-              {/* Icon */}
-              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center flex-shrink-0 shadow-lg">
-                {plan.id === "plan-international" ? (
-                  <Globe size={36} className="text-white" />
-                ) : plan.id === "plan-extreme-expedition" ? (
-                  <Mountain size={36} className="text-white" />
-                ) : (
-                  <Ambulance size={36} className="text-white" />
-                )}
-              </div>
-
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight drop-shadow-sm">
                     {plan.name}
                   </h2>
-                  {plan.isPopular && (
-                    <span className="bg-[#E91E63] text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex-shrink-0">
-                      Most Popular
-                    </span>
-                  )}
                 </div>
-                <p className="text-xs sm:text-sm font-semibold text-white/70 mt-1">
-                  {plan.badge} • High-Altitude Alpine &amp; Medical Rescue Insurance
+                <p className="text-xs sm:text-sm font-medium text-white/80 mt-1 max-w-2xl leading-relaxed">
+                  {plan.subtitle}
                 </p>
               </div>
             </div>
@@ -637,23 +616,23 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             </div>
           </div>
 
-          {/* Metadata Badges */}
+          {/* Metadata Badges — matching card attributes */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <Mountain size={14} className="text-pink-300" />
-              <span>{plan.maxAltitude}</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${plan.badgeColor}`}>
+                {plan.badge}
+              </span>
+              <span>Tier</span>
             </div>
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <ShieldCheck size={14} className="text-emerald-300" />
-              <span>{plan.coverageLimit}</span>
+              <span className="text-pink-200 text-xs font-normal">Starts at:</span>
+              <span className="font-extrabold text-white">
+                {displayPrice(plan.baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+              </span>
             </div>
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
               <Calendar size={14} className="text-blue-300" />
               <span>{plan.durationCovered}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <Ambulance size={14} className="text-amber-300" />
-              <span>24/7 Rescue Desk</span>
             </div>
           </div>
         </div>
@@ -745,6 +724,47 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                   <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{inc}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Policy Exclusions — What Is Not Covered */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-rose-100 shadow-sm space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                What Is Not Covered
+              </h3>
+              <span className="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                Policy Exclusions
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-500">
+              The following situations and incidents fall outside the scope of this policy:
+            </p>
+            <div className="space-y-2.5">
+              {(plan.exclusions && plan.exclusions.length > 0
+                ? plan.exclusions
+                : [
+                    "Pre-existing chronic medical conditions not declared during application",
+                    "Participation in unguided or unauthorized solo mountaineering above permitted zone",
+                    "Losses resulting from alcohol, drugs, or illegal substance intoxication",
+                    "Personal electronic gadgets (laptops, cameras) without supplementary riders",
+                    "Self-inflicted injuries or participation in illegal activities",
+                    "Losses arising from civil conflict, war, or government-imposed travel bans",
+                  ]
+              ).map((exc, idx) => (
+                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-50 border border-rose-100/80 transition-colors">
+                  <div className="w-5 h-5 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-xs">
+                    ✕
+                  </div>
+                  <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{exc}</span>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                <strong>Note:</strong> This list is not exhaustive. Please review the full policy document or contact our team for a complete list of exclusions applicable to your specific plan.
+              </p>
             </div>
           </div>
 
@@ -878,12 +898,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                 </table>
               </div>
 
-              {/* Coverage limit badge for selected */}
-              <div className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-1.5">
-                <ShieldCheck size={12} />
-                <span>Coverage: {selectedCostOption.coverageLimit}</span>
-              </div>
-
               {/* Traveler Count Selector */}
               <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
@@ -946,98 +960,27 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             </div>
           </div>
 
-          {/* Trust/Verification Card */}
-          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 space-y-3.5">
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+
+          {/* Verified Insurer Card */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                 <ShieldCheck size={18} />
               </div>
               <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">VERIFIED INSURER</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Verified Insurance</span>
                 <p className="text-xs font-black text-[#200B3B]">Nepal-Licensed Insurance Brokers</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-pink-50 text-[#E91E63] flex items-center justify-center flex-shrink-0">
-                <Ambulance size={18} />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">RESCUE GUARANTEE</span>
-                <p className="text-xs font-black text-[#200B3B]">24/7 Helicopter Dispatch • 45 Min</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 text-[#2D1347] flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 size={18} className="text-emerald-500" />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">CASHLESS NETWORK</span>
-                <p className="text-xs font-black text-[#200B3B]">CIWEC, Swacon &amp; Era Hospitals</p>
-              </div>
-            </div>
           </div>
 
-          {/* Other Insurance Plans */}
-          {allPlans.filter((p) => p.id !== plan.id).length > 0 && (
-            <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 space-y-3">
-              <h4 className="text-xs font-black text-[#2D1347] uppercase tracking-wider">Other Plans</h4>
-              {allPlans.filter((p) => p.id !== plan.id).map((otherPlan) => (
-                <button
-                  key={otherPlan.id}
-                  type="button"
-                  onClick={() => { onSelectPlan(otherPlan); window.scrollTo({ top: 180, behavior: "smooth" }); }}
-                  className="w-full text-left p-3 rounded-xl bg-gray-50 hover:bg-purple-50 border border-gray-200 hover:border-purple-300 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-black text-[#2D1347] group-hover:text-[#E91E63] transition-colors">{otherPlan.name}</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">{otherPlan.maxAltitude} • From {getRowDisplayPrice(otherPlan.baseNPRPrice)}</p>
-                    </div>
-                    <ChevronRight size={14} className="text-gray-400 group-hover:text-[#E91E63] flex-shrink-0" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── OUR OTHER SERVICES SECTION ── */}
-      <div className="print:hidden pt-8 border-t border-gray-200 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">Our other Services:</h3>
-            <p className="text-xs text-gray-500">Complete one-stop travel logistics by Trip Himalaya</p>
-          </div>
-          <Link to="/service" className="text-xs sm:text-sm font-bold text-[#E91E63] hover:underline flex items-center gap-1 cursor-pointer">
-            <span>view all Services.</span>
-            <ChevronRight size={14} />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {[
-            { name: "Air Ticket", slug: "air-ticket", icon: Plane, desc: "Domestic & Global Flights", color: "text-blue-600 bg-blue-50" },
-            { name: "Holiday Tours", slug: "tours", icon: Compass, desc: "Heritage & Leisure Trips", color: "text-amber-600 bg-amber-50" },
-            { name: "Trekking", slug: "trekking", icon: Mountain, desc: "Himalayan Expeditions", color: "text-emerald-600 bg-emerald-50" },
-            { name: "Hotel Booking", slug: "hotel-booking", icon: Bed, desc: "Worldwide Hotel Stays", color: "text-purple-600 bg-purple-50" },
-            { name: "Visa Services", slug: "visa-services", icon: Globe, desc: "Embassy Submissions", color: "text-pink-600 bg-pink-50" },
-            { name: "Vehicle Rental", slug: "vehicle-rental", icon: Car, desc: "Luxury Tourist Vehicles", color: "text-indigo-600 bg-indigo-50" },
-          ].map((srv, idx) => {
-            const IconComp = srv.icon;
-            return (
-              <Link key={idx} to={`/service/${srv.slug}`} className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-[#E91E63] hover:shadow-md transition-all group flex flex-col items-center text-center justify-between cursor-pointer">
-                <div className={`w-11 h-11 rounded-xl ${srv.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform`}>
-                  <IconComp size={20} />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-[#2D1347] group-hover:text-[#E91E63] transition-colors leading-tight">{srv.name}</h4>
-                  <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">{srv.desc}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+      {/* ── OUR OTHER SERVICES ── */}
+      <div className="mt-10">
+        <OtherServicesComponent service={services} />
       </div>
 
       {/* ── INSURANCE APPLICATION MODAL ── */}

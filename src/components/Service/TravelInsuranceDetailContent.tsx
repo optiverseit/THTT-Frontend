@@ -48,6 +48,16 @@ export const TravelInsuranceDetailContent: React.FC = () => {
   const navigate = useNavigate();
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const [selectedPlanForModal, setSelectedPlanForModal] = useState<InsurancePlan | null>(null);
+  const INITIAL_COUNT = 9;
+  const LOAD_MORE_STEP = 15;
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_COUNT);
+
+  const displayedPlans = INSURANCE_PLANS.slice(0, visibleCount);
+  const hasMore = visibleCount < INSURANCE_PLANS.length;
+
+  const handleSeeMore = () => {
+    setVisibleCount((prev) => prev + LOAD_MORE_STEP);
+  };
 
   const formatPrice = (usdAmount: number) => {
     const nprAmount = usdAmount * nprPerOneDollar;
@@ -80,68 +90,54 @@ export const TravelInsuranceDetailContent: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-        {INSURANCE_PLANS.slice(0, 3).map((plan) => (
+        {displayedPlans.map((plan) => (
           <div
             key={plan.id}
             onClick={() => handleViewPlan(plan.id)}
-            className={`rounded-3xl border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1 ${
-              plan.isPopular
-                ? "bg-gradient-to-b from-pink-50/50 to-white border-[#E11D48] ring-2 ring-[#E11D48]/20"
-                : "bg-[#FBFBFE] border-gray-200/80 hover:border-[#E11D48]/50"
-            }`}
+            className="rounded-3xl border border-gray-200/80 bg-[#FBFBFE] hover:bg-white hover:border-[#E11D48]/50 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1"
           >
-            <div className="p-6 sm:p-7">
+            <div className="p-6 sm:p-7 pb-4">
               {/* Plan Header */}
-              <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-start justify-between gap-3 mb-3.5">
                 <div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-block mb-2 ${plan.badgeColor}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-block mb-1.5 ${plan.badgeColor}`}>
                     {plan.badge}
                   </span>
-                  <h4 className="text-lg sm:text-xl font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
+                  <h4 className="text-base sm:text-lg font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
                     {plan.name}
                   </h4>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className="font-extrabold text-base sm:text-lg text-[#E11D48] whitespace-nowrap bg-pink-50 px-3 py-1.5 rounded-2xl block shadow-2xs">
+                  <span className="font-extrabold text-sm sm:text-base text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-2xl block shadow-2xs">
                     {formatPrice(plan.priceUSD)}
                   </span>
                   <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">{plan.durationCovered}</span>
                 </div>
               </div>
 
-              {/* Altitude Limit & Coverage Tag */}
-              <div className="flex flex-wrap gap-2 mb-5">
-                <span className="bg-purple-100 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
-                  <Activity size={13} className="text-[#E11D48]" />
-                  {plan.maxAltitude}
-                </span>
-                <span className="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
-                  <ShieldCheck size={13} className="text-emerald-600" />
-                  {plan.coverageLimit}
-                </span>
+              {/* Little Plan Details */}
+              <div className="border-t border-gray-100/90 pt-2.5 mt-1">
+                <p className="text-[10.5px] text-gray-500 leading-relaxed line-clamp-2">
+                  {plan.aboutText}
+                </p>
               </div>
 
-              {/* Key Highlights */}
-              <div className="space-y-2 mb-6">
-                {plan.highlights.map((hl, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-gray-700 font-bold">
-                    <CheckCircle2 size={14} className="text-[#E11D48] mt-0.5 flex-shrink-0" />
-                    <span className="leading-tight">{hl}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Full Inclusions List */}
-              <div className="border-t border-gray-100 pt-4 space-y-1.5">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-2">
-                  POLICY INCLUSIONS
-                </span>
-                {plan.inclusions.map((inc, i) => (
-                  <div key={i} className="flex items-start gap-2 text-[11px] text-gray-500 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-1.5 flex-shrink-0" />
-                    <span>{inc}</span>
-                  </div>
-                ))}
+              {/* What Is Covered (Dynamic from plan.inclusions, compact smaller text) */}
+              <div className="border-t border-gray-100/90 pt-2.5 mt-2.5">
+                <div className="flex items-center gap-1 mb-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60 inline-flex items-center gap-1">
+                    <CheckCircle2 size={9} className="text-emerald-600" />
+                    What Is Covered
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {plan.inclusions.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-1.5 text-[9.5px] text-gray-600 font-medium leading-tight">
+                      <span className="w-1 h-1 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                      <span className="leading-tight">{item}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -173,6 +169,26 @@ export const TravelInsuranceDetailContent: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* ── SEE MORE PLANS BUTTON ── */}
+      {hasMore ? (
+        <div className="flex justify-center -mt-6 mb-4">
+          <button
+            type="button"
+            onClick={handleSeeMore}
+            className="px-8 py-3 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-xs sm:text-sm rounded-2xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+          >
+            <span>See More Plans</span>
+            <ChevronDown size={16} />
+          </button>
+        </div>
+      ) : INSURANCE_PLANS.length > INITIAL_COUNT ? (
+        <div className="text-center -mt-6 mb-4">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-purple-50 text-[#2D1347] text-xs font-bold border border-purple-100 shadow-2xs">
+            ✓ All {INSURANCE_PLANS.length} insurance tiers displayed
+          </span>
+        </div>
+      ) : null}
 
       {/* ── 4. EMERGENCY HELICOPTER EVACUATION PROTOCOL ── */}
       <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-3xl p-8 sm:p-10 shadow-xl">

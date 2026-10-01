@@ -23,33 +23,33 @@ export const googleLogin = (idToken: any) => {
 };
 
 export const forgotPassword = (email: string) => {
-    return axiosInstance.post("/auth/forgot-password", {
-        email,
-    });
+  return axiosInstance.post("/auth/forgot-password", {
+    email,
+  });
 };
 
 export const verifyResetOtp = (
-    email: string,
-    otp: string
+  email: string,
+  otp: string
 ) => {
-    return axiosInstance.post("/auth/verify-reset-otp", {
-        email,
-        otp,
-    });
+  return axiosInstance.post("/auth/verify-reset-otp", {
+    email,
+    otp,
+  });
 };
 
 export const resetPassword = (
-    email: string,
-    resetToken: string,
-    password: string,
-    passwordConfirmation: string
+  email: string,
+  resetToken: string,
+  password: string,
+  passwordConfirmation: string
 ) => {
-    return axiosInstance.post("/auth/reset-password", {
-        email,
-        reset_token: resetToken,
-        password,
-        password_confirmation: passwordConfirmation,
-    });
+  return axiosInstance.post("/auth/reset-password", {
+    email,
+    reset_token: resetToken,
+    password,
+    password_confirmation: passwordConfirmation,
+  });
 };
 
 
@@ -82,6 +82,7 @@ export const getMyBookings = (page = 1) => {
 export const initiatePayment = (data: {
   booking_id?: number;
   work_permit_id?: number;
+  visa_application_id?: number;
   provider: "ESEWA" | "KHALTI" | "PAYLATER";
 }) => {
   return axiosInstance.post("/payments/initiate", data);
@@ -260,31 +261,41 @@ export const createWorkPermitApplication = (data: FormData) => {
 // ============================================
 
 export const getVisaCategories = () => {
-    return axiosInstance.get("/visa-categories");
+  return axiosInstance.get("/visa-categories");
 };
 
 export const getVisaPublicDocumentRequirements = (
-    visaCategoryId: number | string
+  visaCategoryId: number | string
 ) => {
-    return axiosInstance.get(
-        `/visa-public-document-requirements/${visaCategoryId}`
-    );
+  return axiosInstance.get(
+    `/visa-public-document-requirements/${visaCategoryId}`
+  );
 };
 
 export const getVisaPublicInformation = (
-    visaCategoryId: number | string
+  visaCategoryId: number | string
 ) => {
-    return axiosInstance.get(
-        `/visa-public-information/${visaCategoryId}`
-    );
+  return axiosInstance.get(
+    `/visa-public-information/${visaCategoryId}`
+  );
 };
 
 export const getVisaPublicPricingTiers = (
-    visaCategoryId: number | string
+  visaCategoryId: number | string
 ) => {
-    return axiosInstance.get(
-        `/visa-public-pricing-tiers/${visaCategoryId}`
-    );
+  return axiosInstance.get(
+    `/visa-public-pricing-tiers/${visaCategoryId}`
+  );
+};
+
+export const storeVisaApplication = (data: FormData) => {
+  return axiosInstance.post("/visa-applications/store", data,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
 };
 
 

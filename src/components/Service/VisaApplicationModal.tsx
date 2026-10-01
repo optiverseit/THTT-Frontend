@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   FileText,
@@ -22,6 +22,7 @@ import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { PaymentMethod } from "../reusable/PaymentMethod";
+import { initiatePayment, storeVisaApplication } from "../../api/BackendApi";
 export { COUNTRY_CODES, isoToFlag };
 
 export interface VisaApplicationModalProps {
@@ -30,13 +31,30 @@ export interface VisaApplicationModalProps {
   country: string;
   countryCode: string;
   visaType: string;
+  countryId: number | string;
+  visaCategoryId: number | string;
   selectedOption: {
     name: string;
     days: string;
     nprPrice: number;
     entryType: string;
+    visaPricingTierId?: number | string;
   };
   numberOfGuests?: number;
+  documentRequirements: VisaDocumentRequirement[];
+  documentsLoading?: boolean;
+}
+
+export interface VisaDocumentRequirement {
+  id: number | string;
+  visa_category_id?: number | string;
+  title?: string;
+  name?: string;
+  document_type?: string;
+  description?: string | null;
+  is_required: boolean;
+  status?: string;
+  display_order?: number;
 }
 
 export interface ApplicantData {
@@ -48,8 +66,7 @@ export interface ApplicantData {
   passportNumber: string;
   passportExpiry: string;
   travelDate: string;
-  passportFile: File | null;
-  photoFile: File | null;
+  documentFiles: Record<string, File | null>;
 }
 
 const createDefaultApplicant = (): ApplicantData => ({
@@ -61,8 +78,7 @@ const createDefaultApplicant = (): ApplicantData => ({
   passportNumber: "",
   passportExpiry: "",
   travelDate: "",
-  passportFile: null,
-  photoFile: null,
+  documentFiles: {},
 });
 
 export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
@@ -71,8 +87,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   country,
   countryCode,
   visaType,
+  countryId,
+  visaCategoryId,
   selectedOption,
   numberOfGuests = 1,
+  documentRequirements,
+  documentsLoading = false,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
@@ -100,20 +120,15 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       setPaymentStatus("unpaid");
       setSelectedPaymentMethod("esewa");
       setIsProcessingPayment(false);
+      setIsSubmittingApplication(false);
+      setVisaApplicationId(null);
+      setSubmissionId("");
     }
   }, [guests, isOpen]);
 
-  // Shared booking documents & notes
-  const [flightFile, setFlightFile] = useState<File | null>(null);
-  const [hotelFile, setHotelFile] = useState<File | null>(null);
+  // Shared notes
   const [specialNotes, setSpecialNotes] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
-
-  // File input refs
-  const passportRef = useRef<HTMLInputElement>(null);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const flightRef = useRef<HTMLInputElement>(null);
-  const hotelRef = useRef<HTMLInputElement>(null);
 
   const [currentStep, setCurrentStep] = useState<"form" | "payment" | "submitted">("form");
   const [submissionId, setSubmissionId] = useState("");
@@ -122,6 +137,8 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
+  const [visaApplicationId, setVisaApplicationId] = useState<number | null>(null);
 
   if (!isOpen) return null;
 
@@ -154,38 +171,31 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
     });
   };
 
-  const handlePassportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({ passportFile: e.target.files[0] });
-    }
-    e.target.value = "";
+  const handleDocumentChange = (requirementId: number | string, file: File | null) => {
+    setApplicants((prev) => {
+      const updated = [...prev];
+      const applicant = updated[activeApplicantIndex];
+      if (!applicant) return prev;
+      updated[activeApplicantIndex] = {
+        ...applicant,
+        documentFiles: { ...applicant.documentFiles, [String(requirementId)]: file },
+      };
+      return updated;
+    });
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({ photoFile: e.target.files[0] });
+  const getApiErrorMessage = (error: any, fallback: string) => {
+    const errors = error?.response?.data?.errors;
+    if (errors && typeof errors === "object") {
+      const firstError = Object.values(errors).flat()[0];
+      if (firstError) return String(firstError);
     }
-    e.target.value = "";
+    return error?.response?.data?.message || error?.message || fallback;
   };
 
-  const handleFlightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFlightFile(e.target.files[0]);
-    }
-    e.target.value = "";
-  };
-
-  const handleHotelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setHotelFile(e.target.files[0]);
-    }
-    e.target.value = "";
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate details for every applicant
     for (let i = 0; i < guests; i++) {
       const app = applicants[i];
       if (!app || !app.fullName.trim()) {
@@ -223,15 +233,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         alert(`Please enter Intended Travel Date for Applicant ${i + 1}.`);
         return;
       }
-      if (!app.passportFile) {
-        setActiveApplicantIndex(i);
-        alert(`Please attach Passport / National ID for Applicant ${i + 1}.`);
-        return;
-      }
-      if (!app.photoFile) {
-        setActiveApplicantIndex(i);
-        alert(`Please attach Passport Size Photo for Applicant ${i + 1}.`);
-        return;
+      for (const requirement of documentRequirements) {
+        if (requirement.is_required && !app.documentFiles[String(requirement.id)]) {
+          setActiveApplicantIndex(i);
+          alert(`Please attach ${requirement.title || requirement.document_type || "required document"} for Applicant ${i + 1}.`);
+          return;
+        }
       }
     }
 
@@ -240,37 +247,169 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       return;
     }
 
-    // Generate unique submission tracking number on every submit
-    const randomDigits = Math.floor(100000 + Math.random() * 900000);
-    const code = (countryCode || "VISA").toUpperCase().slice(0, 3);
-    const generatedId = `THTT-${code}-${randomDigits}`;
+    if (!countryId || !visaCategoryId) {
+      alert("Visa country or category information is missing.");
+      return;
+    }
 
-    const now = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
+    if (!selectedOption.visaPricingTierId) {
+      alert("Please select a valid visa pricing option.");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("country_id", String(countryId));
+    formData.append("visa_category_id", String(visaCategoryId));
+    formData.append("visa_pricing_tier_id", String(selectedOption.visaPricingTierId));
+    formData.append("intended_travel_date", applicants[0]?.travelDate || "");
+
+    applicants.forEach((applicant, applicantIndex) => {
+      formData.append(
+        `applicants[${applicantIndex}][applicant_full_name]`,
+        applicant.fullName
+      );
+      formData.append(
+        `applicants[${applicantIndex}][nationality]`,
+        applicant.nationality
+      );
+      formData.append(
+        `applicants[${applicantIndex}][email]`,
+        applicant.email
+      );
+      formData.append(
+        `applicants[${applicantIndex}][country_code]`,
+        applicant.phoneCode
+      );
+      formData.append(
+        `applicants[${applicantIndex}][phone_number]`,
+        applicant.phone
+      );
+      formData.append(
+        `applicants[${applicantIndex}][passport_number]`,
+        applicant.passportNumber
+      );
+      formData.append(
+        `applicants[${applicantIndex}][passport_expiry_date]`,
+        applicant.passportExpiry
+      );
+
+      let documentIndex = 0;
+      documentRequirements.forEach((requirement) => {
+        const file = applicant.documentFiles[String(requirement.id)];
+        if (!file) return;
+        formData.append(`applicants[${applicantIndex}][documents][${documentIndex}][visa_document_requirement_id]`, String(requirement.id));
+        formData.append(`applicants[${applicantIndex}][documents][${documentIndex}][file]`, file);
+        documentIndex++;
+      });
     });
 
-    setSubmissionId(generatedId);
-    setSubmittedAt(now);
-    setCurrentStep("payment");
+    try {
+      setIsSubmittingApplication(true);
+
+      const response = await storeVisaApplication(formData);
+      const application = response?.data?.data;
+
+      if (!response?.data?.status || !application?.id) {
+        throw new Error(response?.data?.message || "Failed to create visa application.");
+      }
+
+      setVisaApplicationId(Number(application.id));
+      setSubmissionId(
+        application.application_number || `VISA-${application.id}`
+      );
+      setSubmittedAt(
+        new Date().toLocaleString("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      );
+      setCurrentStep("payment");
+    } catch (error: any) {
+      console.error("Visa application submission failed:", error);
+      alert(getApiErrorMessage(error, "Failed to submit visa application."));
+    } finally {
+      setIsSubmittingApplication(false);
+    }
   };
 
-  // ── eSewa mock payment handler ──
-  const handleEsewaPayment = () => {
-    setIsProcessingPayment(true);
-    setTimeout(() => {
+  const redirectToEsewa = (paymentData: any) => {
+    if (!paymentData?.payment_url) {
+      throw new Error("eSewa payment URL was not returned by the server.");
+    }
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = paymentData.payment_url;
+
+    Object.entries(paymentData).forEach(([key, value]) => {
+      if (key === "payment_url" || value === undefined || value === null) return;
+
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = String(value);
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const handleEsewaPayment = async () => {
+    if (!visaApplicationId) {
+      alert("Visa application ID is missing. Please submit the application again.");
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
       setSelectedPaymentMethod("esewa");
-      setPaymentStatus("paid");
-      setCurrentStep("submitted");
+
+      const response = await initiatePayment({
+        visa_application_id: visaApplicationId,
+        provider: "ESEWA",
+      });
+
+      if (!response?.data?.status) {
+        throw new Error(response?.data?.message || "Unable to initiate eSewa payment.");
+      }
+
+      redirectToEsewa(response.data.data);
+    } catch (error: any) {
+      console.error("eSewa payment initiation failed:", error);
+      alert(getApiErrorMessage(error, "Unable to initiate eSewa payment."));
       setIsProcessingPayment(false);
-    }, 1500);
+    }
   };
 
-  // ── Pay Later handler ──
-  const handlePayLater = () => {
-    setSelectedPaymentMethod("pay_later");
-    setPaymentStatus("unpaid");
-    setCurrentStep("submitted");
+  const handlePayLater = async () => {
+    if (!visaApplicationId) {
+      alert("Visa application ID is missing. Please submit the application again.");
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      setSelectedPaymentMethod("pay_later");
+
+      const response = await initiatePayment({
+        visa_application_id: visaApplicationId,
+        provider: "PAYLATER",
+      });
+
+      if (!response?.data?.status) {
+        throw new Error(response?.data?.message || "Unable to select Pay Later.");
+      }
+
+      setPaymentStatus("unpaid");
+      setCurrentStep("submitted");
+    } catch (error: any) {
+      console.error("Pay Later initiation failed:", error);
+      alert(getApiErrorMessage(error, "Unable to select Pay Later."));
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handleCopyId = () => {
@@ -284,30 +423,28 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
     const applicantsList = applicants
       .map(
         (a, i) =>
-          `  ${i + 1}. *${a.fullName || `Applicant ${i + 1}`}* (${
-            a.nationality || "—"
+          `  ${i + 1}. *${a.fullName || `Applicant ${i + 1}`}* (${a.nationality || "—"
           }) — Pass: ${a.passportNumber || "—"}`
       )
       .join("\n");
 
     const msg = encodeURIComponent(
       `*Official Visa Application Confirmation*\n\n` +
-        `📌 *Submission Number:* ${submissionId}\n` +
-        `🌍 *Destination:* ${country} (${visaType})\n` +
-        `📋 *Option:* ${selectedOption.name} (${selectedOption.days})\n` +
-        `👥 *Number of Applicants:* ${guests}\n` +
-        `👤 *Applicant List:*\n${applicantsList}\n\n` +
-        `📅 *Travel Date:* ${lead.travelDate || "Flexible"}\n` +
-        `📞 *Lead Contact:* ${lead.phone ? `${lead.phoneCode} ${lead.phone}` : "—"}\n` +
-        `✉️ *Lead Email:* ${lead.email || "—"}\n` +
-        `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
-        `💰 *Total Processing Fee (${guests} applicant${
-          guests > 1 ? "s" : ""
-        }):* ${formattedFee}\n` +
-        `💳 *Payment Method:* ${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later"}\n` +
-        `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
-        `🔍 *Payment Verification:* PENDING\n\n` +
-        `Hello Trip Himalaya (Visa & Documentation Team), I have submitted my visa application online. Please confirm document receipt and advise on embassy processing.`
+      `📌 *Submission Number:* ${submissionId}\n` +
+      `🌍 *Destination:* ${country} (${visaType})\n` +
+      `📋 *Option:* ${selectedOption.name} (${selectedOption.days})\n` +
+      `👥 *Number of Applicants:* ${guests}\n` +
+      `👤 *Applicant List:*\n${applicantsList}\n\n` +
+      `📅 *Travel Date:* ${lead.travelDate || "Flexible"}\n` +
+      `📞 *Lead Contact:* ${lead.phone ? `${lead.phoneCode} ${lead.phone}` : "—"}\n` +
+      `✉️ *Lead Email:* ${lead.email || "—"}\n` +
+      `💵 *Per Person Fee:* ${formattedPerPerson}\n` +
+      `💰 *Total Processing Fee (${guests} applicant${guests > 1 ? "s" : ""
+      }):* ${formattedFee}\n` +
+      `💳 *Payment Method:* ${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later"}\n` +
+      `📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n` +
+      `🔍 *Payment Verification:* PENDING\n\n` +
+      `Hello Trip Himalaya (Visa & Documentation Team), I have submitted my visa application online. Please confirm document receipt and advise on embassy processing.`
     );
     window.open(
       `https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`,
@@ -561,17 +698,15 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
           <!-- APPLICANT DETAILS SECTION -->
           <div class="section-heading">
-            <div class="sh-text">${
-              guests > 1
-                ? `Applicant Details (${guests} Applicants Registered)`
-                : "Applicant &amp; Passport Details"
-            }</div>
+            <div class="sh-text">${guests > 1
+        ? `Applicant Details (${guests} Applicants Registered)`
+        : "Applicant &amp; Passport Details"
+      }</div>
             <div class="sh-line"></div>
           </div>
 
-          ${
-            guests === 1
-              ? `
+          ${guests === 1
+        ? `
           <table class="detail-table">
             <tr>
               <td class="td-label">Full Name</td>
@@ -596,14 +731,19 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <td class="td-value">${lead.travelDate || "—"}</td>
               <td class="td-label">Documents Submitted</td>
               <td class="td-value" style="font-size:8.5px; color:#15803d; font-weight:600;">
-                ✓ Passport / National ID &nbsp;|&nbsp; ✓ Photo
-                ${flightFile ? '<br/>✓ Return Flight Ticket' : ''}
-                ${hotelFile ? '<br/>✓ Hotel Reservation' : ''}
+                ${documentRequirements
+                  .map((requirement) => {
+                    const file = lead.documentFiles[String(requirement.id)];
+                    if (!file) return "";
+                    return `✓ ${requirement.title || requirement.document_type || requirement.name || "Document"} (${file.name})`;
+                  })
+                  .filter(Boolean)
+                  .join("<br/>")}
               </td>
             </tr>
           </table>
           `
-              : `
+        : `
           <table class="detail-table">
             <thead>
               <tr style="background:#f1f5f9;">
@@ -619,46 +759,39 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             </thead>
             <tbody>
               ${applicants
-                .map(
-                  (a, i) => `
+          .map(
+            (a, i) => `
                 <tr>
                   <td style="text-align:center; font-weight:800; font-size:8.5px;">
                     ${i + 1}
                   </td>
-                  <td style="font-weight:700; color:#0f172a; font-size:8.5px;">${
-                    a.fullName || "—"
-                  }</td>
-                  <td style="font-family:monospace; font-weight:700; font-size:8.5px;">${
-                    a.passportNumber || "—"
-                  }</td>
+                  <td style="font-weight:700; color:#0f172a; font-size:8.5px;">${a.fullName || "—"
+              }</td>
+                  <td style="font-family:monospace; font-weight:700; font-size:8.5px;">${a.passportNumber || "—"
+              }</td>
                   <td style="font-size:8.5px;">${a.nationality || "—"}</td>
                   <td style="font-size:8.5px;">${a.passportExpiry || "—"}</td>
                   <td style="font-size:8.5px;">${a.travelDate || "—"}</td>
-                  <td style="font-size:8px;">${a.phone ? `${a.phoneCode} ${a.phone}` : "—"}<br/><span style="color:#64748b;">${
-                    a.email || "—"
-                  }</span></td>
+                  <td style="font-size:8px;">${a.phone ? `${a.phoneCode} ${a.phone}` : "—"}<br/><span style="color:#64748b;">${a.email || "—"
+              }</span></td>
                   <td style="font-size:8px; color:#15803d; font-weight:600;">
-                    ✓ Passport<br/>✓ Photo
+                    ${documentRequirements
+                      .map((requirement) => {
+                        const file = a.documentFiles[String(requirement.id)];
+                        if (!file) return "";
+                        return `✓ ${requirement.title || requirement.document_type || requirement.name || "Document"}`;
+                      })
+                      .filter(Boolean)
+                      .join("<br/>")}
                   </td>
                 </tr>
               `
-                )
-                .join("")}
+          )
+          .join("")}
             </tbody>
           </table>
-          ${
-            flightFile || hotelFile
-              ? `
-          <div style="margin-top:6px; font-size:8.5px; color:#334155; background:#f8fafc; padding:5px 8px; border:1px solid #e2e8f0; border-radius:4px;">
-            <strong>Booking Proofs:</strong> 
-            ${flightFile ? `• Return Flight Ticket (${flightFile.name}) &nbsp; ` : ""}
-            ${hotelFile ? `• Hotel/Residency Proof (${hotelFile.name})` : ""}
-          </div>
           `
-              : ""
-          }
-          `
-          }
+      }
 
           <!-- VISA SERVICE DETAILS -->
           <div class="section-heading">
@@ -680,18 +813,16 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
             </tr>
             <tr>
               <td class="td-label">Number of Applicants</td>
-              <td class="td-value">${guests} ${
-      guests === 1 ? "Applicant" : "Applicants"
-    }</td>
+              <td class="td-value">${guests} ${guests === 1 ? "Applicant" : "Applicants"
+      }</td>
               <td class="td-label">Fee Per Person</td>
               <td class="td-value">${formattedPerPerson}</td>
             </tr>
             <tr>
               <td class="td-label" style="background:#fdf2f8; border-color:#f9a8d4;">Total Processing Fee</td>
               <td class="td-value fee" colspan="3" style="background:#fdf2f8; border-color:#f9a8d4;">
-                ${formattedFee} &nbsp;<span style="font-size:8.5px;font-weight:600;color:#9D174D;">(${guests} applicant${
-      guests > 1 ? "s" : ""
-    } × ${formattedPerPerson}/person, inclusive of all service charges)</span>
+                ${formattedFee} &nbsp;<span style="font-size:8.5px;font-weight:600;color:#9D174D;">(${guests} applicant${guests > 1 ? "s" : ""
+      } × ${formattedPerPerson}/person, inclusive of all service charges)</span>
               </td>
             </tr>
           </table>
@@ -704,29 +835,25 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
           <table class="detail-table">
             <tr>
               <td class="td-label">Payment Method</td>
-              <td class="td-value" style="font-weight:700;">${
-                selectedPaymentMethod === "esewa"
-                  ? "eSewa Digital Wallet"
-                  : "Pay Later (Deferred / Pay at Office)"
-              }</td>
+              <td class="td-value" style="font-weight:700;">${selectedPaymentMethod === "esewa"
+        ? "eSewa Digital Wallet"
+        : "Pay Later (Deferred / Pay at Office)"
+      }</td>
               <td class="td-label">Total Processing Fee</td>
               <td class="td-value fee">${formattedFee}</td>
             </tr>
             <tr>
               <td class="td-label">Amount Paid</td>
-              <td class="td-value fee" style="color:${
-                paymentStatus === "paid" ? "#047857" : "#b45309"
-              };">${
-                paymentStatus === "paid"
-                  ? formattedFee
-                  : selectedCurrency
-                  ? `${selectedCurrency} 0 (Pay Later)`
-                  : "NPR 0 (Pay Later)"
-              }</td>
+              <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"
+      };">${paymentStatus === "paid"
+        ? formattedFee
+        : selectedCurrency
+          ? `${selectedCurrency} 0 (Pay Later)`
+          : "NPR 0 (Pay Later)"
+      }</td>
               <td class="td-label">Payment Status</td>
-              <td class="td-value" style="font-weight:900; font-size:10px; color:${
-                paymentStatus === "paid" ? "#047857" : "#b45309"
-              };">${paymentStatus.toUpperCase()}</td>
+              <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"
+      };">${paymentStatus.toUpperCase()}</td>
             </tr>
             <tr>
               <td class="td-label">Payment Verification</td>
@@ -795,13 +922,15 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
     setPaymentStatus("unpaid");
     setSelectedPaymentMethod("esewa");
     setIsProcessingPayment(false);
+    setIsSubmittingApplication(false);
+    setVisaApplicationId(null);
     onClose();
   };
 
   return (
     <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[92vh]">
-        
+
         {/* ── MODAL TOP HEADER ── */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#200B3B] via-[#3B145C] to-[#200B3B] text-white flex items-center justify-between border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -821,8 +950,8 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                 {currentStep === "payment"
                   ? "Select Payment Option"
                   : currentStep === "submitted"
-                  ? "Submission Confirmed"
-                  : "Official Visa Application"}
+                    ? "Submission Confirmed"
+                    : "Official Visa Application"}
               </span>
               <h3 className="text-sm sm:text-base font-black tracking-tight leading-tight text-white">
                 {currentStep === "payment" ? "Payment Method" : `${country} – ${visaType}`}
@@ -916,22 +1045,20 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                CONFIRMATION & RECEIPT VIEW
                ======================================================================= */
             <div className="space-y-3 text-center animate-in fade-in zoom-in-95 duration-200">
-              
+
               {/* Top Greeting & Status */}
               <div className="space-y-1.5 pt-0.5">
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${
-                  paymentStatus === "paid"
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${paymentStatus === "paid"
                     ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
                     : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
-                }`}>
+                  }`}>
                   <CheckCircle2 size={26} className="stroke-[2.5]" />
                 </div>
                 <div>
-                  <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    paymentStatus === "paid"
+                  <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${paymentStatus === "paid"
                       ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                       : "bg-amber-100 text-amber-800 border border-amber-200"
-                  }`}>
+                    }`}>
                     {paymentStatus === "paid" ? "Payment Received • Application Registered" : "Application Registered • Payment Pending"}
                   </span>
                 </div>
@@ -969,7 +1096,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
               {/* Official Digital E-Receipt Voucher Card */}
               <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
-                
+
                 {/* Submission Reference ID Header Strip */}
                 <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70 flex items-center justify-between">
                   <div>
@@ -1110,10 +1237,17 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 pt-0.5 text-[9.5px] text-emerald-700 font-semibold">
-                            <span>✓ Passport: {app.passportFile ? app.passportFile.name : "Attached"}</span>
-                            <span>•</span>
-                            <span>✓ Photo: {app.photoFile ? app.photoFile.name : "Attached"}</span>
+                          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[9.5px] text-emerald-700 font-semibold">
+                            {documentRequirements.map((requirement) => {
+                              const file = app.documentFiles[String(requirement.id)];
+                              if (!file) return null;
+
+                              return (
+                                <span key={requirement.id}>
+                                  ✓ {requirement.title || requirement.document_type}: {file.name}
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
@@ -1190,22 +1324,20 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                           key={idx}
                           type="button"
                           onClick={() => setActiveApplicantIndex(idx)}
-                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 border ${
-                            isActive
+                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 border ${isActive
                               ? "bg-gradient-to-r from-[#200B3B] to-[#E91E63] text-white border-transparent shadow-sm shadow-pink-500/25"
                               : isFilled
-                              ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                              : "bg-white text-gray-700 border-gray-200 hover:bg-purple-50 hover:border-purple-300"
-                          }`}
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-purple-50 hover:border-purple-300"
+                            }`}
                         >
                           <span
-                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                              isActive
+                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${isActive
                                 ? "bg-white/20 text-white"
                                 : isFilled
-                                ? "bg-emerald-200 text-emerald-800"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
+                                  ? "bg-emerald-200 text-emerald-800"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
                           >
                             {idx + 1}
                           </span>
@@ -1413,164 +1545,42 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   Attach files for Applicant {activeApplicantIndex + 1} or send later via WhatsApp. Accepted: PDF, JPG, PNG (max 10 MB each).
                 </p>
 
-                {/* Hidden file inputs */}
-                <input
-                  ref={passportRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handlePassportChange}
-                  className="hidden"
-                />
-                <input
-                  ref={photoRef}
-                  type="file"
-                  accept=".jpg,.jpeg,.png"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
-                <input
-                  ref={flightRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFlightChange}
-                  className="hidden"
-                />
-                <input
-                  ref={hotelRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleHotelChange}
-                  className="hidden"
-                />
-
                 <div className="space-y-2.5">
-                  {([
-                    {
-                      label:
-                        guests > 1
-                          ? `Passport / National ID (Applicant ${
-                              activeApplicantIndex + 1
-                            })`
-                          : "Passport / National ID",
-                      required: true,
-                      ref: passportRef,
-                      file: currentApplicant.passportFile,
-                      clear: () =>
-                        updateCurrentApplicant({ passportFile: null }),
-                      hint: `Clear color copy of Applicant ${
-                        activeApplicantIndex + 1
-                      }'s passport (valid ≥ 6 months)`,
-                    },
-                    {
-                      label:
-                        guests > 1
-                          ? `Passport Size Photo (Applicant ${
-                              activeApplicantIndex + 1
-                            })`
-                          : "Passport Size Photo",
-                      required: true,
-                      ref: photoRef,
-                      file: currentApplicant.photoFile,
-                      clear: () => updateCurrentApplicant({ photoFile: null }),
-                      hint: `White background, digital copy for Applicant ${
-                        activeApplicantIndex + 1
-                      }`,
-                    },
-                    {
-                      label: "Confirmed Return Flight Ticket",
-                      required: false,
-                      ref: flightRef,
-                      file: flightFile,
-                      clear: () => setFlightFile(null),
-                      hint: "PDF or screenshot of round-trip reservation",
-                    },
-                    {
-                      label: "Hotel Reservation / Residency Proof",
-                      required: false,
-                      ref: hotelRef,
-                      file: hotelFile,
-                      clear: () => setHotelFile(null),
-                      hint: "Hotel booking confirmation or host address proof",
-                    },
-                  ] as Array<{
-                    label: string;
-                    required: boolean;
-                    ref: React.RefObject<HTMLInputElement>;
-                    file: File | null;
-                    clear: () => void;
-                    hint: string;
-                  }>).map((field) => (
-                    <div
-                      key={field.label}
-                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
-                        field.file
-                          ? "bg-emerald-50/60 border-emerald-200"
-                          : field.required
-                          ? "bg-white border-gray-200 hover:border-[#E91E63]"
-                          : "bg-white border-gray-200 hover:border-purple-300"
-                      } transition-all`}
-                    >
-                      {/* Left: icon + label */}
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            field.file
-                              ? "bg-emerald-100 text-emerald-600"
-                              : "bg-pink-50 text-[#E91E63]"
-                          }`}
-                        >
-                          {field.file ? (
-                            <CheckCircle2 size={16} />
+                  {documentsLoading ? (
+                    <div className="py-4 text-center text-xs font-semibold text-gray-400">Loading document requirements...</div>
+                  ) : documentRequirements.length > 0 ? (
+                    documentRequirements.map((requirement) => {
+                      const requirementId = String(requirement.id);
+                      const file = currentApplicant.documentFiles[requirementId] || null;
+                      const inputId = `visa-document-${activeApplicantIndex}-${requirement.id}`;
+                      return (
+                        <div key={requirement.id} className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${file ? "bg-emerald-50/60 border-emerald-200" : requirement.is_required ? "bg-white border-gray-200 hover:border-[#E91E63]" : "bg-white border-gray-200 hover:border-purple-300"} transition-all`}>
+                          <input id={inputId} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => { handleDocumentChange(requirement.id, e.target.files?.[0] || null); e.target.value = ""; }} />
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E91E63]"}`}>{file ? <CheckCircle2 size={16} /> : <FileText size={15} />}</div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
+                                {requirement.title || requirement.document_type || requirement.name || "Document"}
+                                {requirement.is_required ? <span className="text-[#E91E63] font-black">*</span> : <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>}
+                              </p>
+                              {file ? (
+                                <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">{file.name} <span className="text-emerald-500 font-normal">({(file.size / 1024).toFixed(0)} KB)</span></p>
+                              ) : (
+                                <p className="text-[10px] text-gray-400">{requirement.description || requirement.document_type || "Attach required document"}</p>
+                              )}
+                            </div>
+                          </div>
+                          {file ? (
+                            <button type="button" onClick={() => handleDocumentChange(requirement.id, null)} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"><Trash2 size={11} />Remove</button>
                           ) : (
-                            <FileText size={15} />
+                            <label htmlFor={inputId} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E91E63] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"><UploadCloud size={12} />Attach</label>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
-                            {field.label}
-                            {field.required ? (
-                              <span className="text-[#E91E63] font-black">*</span>
-                            ) : (
-                              <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                                Optional
-                              </span>
-                            )}
-                          </p>
-                          {field.file ? (
-                            <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">
-                              {field.file.name}{" "}
-                              <span className="text-emerald-500 font-normal">
-                                ({(field.file.size / 1024).toFixed(0)} KB)
-                              </span>
-                            </p>
-                          ) : (
-                            <p className="text-[10px] text-gray-400">{field.hint}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: attach / remove */}
-                      {field.file ? (
-                        <button
-                          type="button"
-                          onClick={field.clear}
-                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={11} />
-                          Remove
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => field.ref.current?.click()}
-                          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E91E63] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"
-                        >
-                          <UploadCloud size={12} />
-                          Attach
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                      );
+                    })
+                  ) : (
+                    <div className="py-4 text-center text-xs font-semibold text-gray-400">No document requirements available.</div>
+                  )}
                 </div>
               </div>
 
@@ -1615,9 +1625,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
                 <button
                   type="submit"
-                  className="px-7 py-2.5 bg-gradient-to-r from-[#200B3B] to-[#E91E63] hover:from-[#2D1347] hover:to-pink-600 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 active:scale-98 transition-all cursor-pointer flex items-center gap-2"
+                  disabled={isSubmittingApplication}
+                  className="px-7 py-2.5 bg-gradient-to-r from-[#200B3B] to-[#E91E63] hover:from-[#2D1347] hover:to-pink-600 text-white font-black text-xs sm:text-sm rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 active:scale-98 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <span>Submit Application ({guests} Pax)</span>
+                  <span>{isSubmittingApplication ? "Submitting..." : `Submit Application (${guests} Pax)`}</span>
                   <ArrowRight size={14} />
                 </button>
               </div>

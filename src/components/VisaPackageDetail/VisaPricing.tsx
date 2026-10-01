@@ -98,11 +98,10 @@ const VisaPricing: React.FC<VisaPricingProps> = ({ pkg }) => {
                 key={c.id}
                 type="button"
                 onClick={() => setSelectedCurrency(c.id)}
-                className={`py-2 px-1 rounded-xl text-center transition-all cursor-pointer ${
-                  selectedCurrency === c.id
+                className={`py-2 px-1 rounded-xl text-center transition-all cursor-pointer ${selectedCurrency === c.id
                     ? "bg-white text-[#200B3B] font-black shadow-sm ring-1 ring-black/5"
                     : "text-gray-500 hover:text-gray-900 font-semibold"
-                }`}
+                  }`}
               >
                 <div className="text-xs font-black">{c.label}</div>
                 <div className="text-[9px] opacity-70">{c.sub}</div>
@@ -208,13 +207,17 @@ const VisaPricing: React.FC<VisaPricingProps> = ({ pkg }) => {
           country={pkg.title || pkg.country || "Destination"}
           countryCode={pkg.countryCode || "NP"}
           visaType={pkg.categoryLabel || "Tourist Visa"}
+          countryId={pkg.countryId}
+          visaCategoryId={pkg.visaCategoryId}
           selectedOption={{
             name: pkg.title || "Tourist Visa",
             days: pkg.duration || "15-30 Days",
             nprPrice: priceInNPR,
             entryType: pkg.entryType || "Single Entry",
+            visaPricingTierId: pkg.visaPricingTierId,
           }}
           numberOfGuests={numberOfApplicants}
+          documentRequirements={pkg.documentRequirements || []}
         />
       )}
     </div>

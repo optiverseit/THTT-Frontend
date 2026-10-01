@@ -5,6 +5,7 @@ import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency } from "../../context/CurrencyContext";
 import ShareModal from "../reusable/ShareModal";
 import Logo from "../../assets/images/Logo.png";
+import HotelBookingModal from "./HotelBookingModal";
 
 interface PackageProp {
   pkg: any;
@@ -17,6 +18,7 @@ const HotelImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
 
   const handlePrint = () => {
     const originalTitle = document.title;
@@ -690,10 +692,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               <span className="text-xl sm:text-2xl font-black text-[#E91E63]">{startsFromDisplayPrice}</span>
             </div>
             <button
-              onClick={() => {
-                const el = document.getElementById("pricing-section");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }}
+              onClick={() => setIsBookingModalOpen(true)}
               className="px-6 sm:px-8 py-3 rounded-full text-xs font-black uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-lg shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
             >
               BOOK NOW
@@ -731,6 +730,16 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           image: pkg.image || galleryImages[0],
           url: shareUrl,
         }}
+      />
+
+      {/* Booking Modal — opened by BOOK NOW in hero nav bar */}
+      <HotelBookingModal
+        pkg={pkg}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        initialTierIndex={0}
+        initialGuests={1}
+        pricingSource="tier"
       />
     </div>
   );

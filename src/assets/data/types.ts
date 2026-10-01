@@ -85,6 +85,14 @@ export interface Hotel {
   features: string[];
   description?: string;
   isFeatured?: boolean;
+  badge?: "Featured" | "Popular" | "Best Value" | "Top Rated" | string;
+  roomTypes?: string[];
+  breakfastIncluded?: boolean;
+  availableFrom?: string;
+  availableTo?: string;
+  availability?: "Available" | "Limited" | "Not Available";
+  days?: number;
+  tier?: "Luxury" | "Deluxe" | "Standard" | string;
 }
 
 export interface Vehicle {

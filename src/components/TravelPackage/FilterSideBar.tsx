@@ -1,4 +1,4 @@
-import { Filter, Star, Tag } from "lucide-react";
+import { Filter, Star, Tag, Award } from "lucide-react";
 import React from "react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
 
@@ -10,6 +10,8 @@ interface FilterSideBarProps {
   selectedRating: number;
   setSelectedRating: React.Dispatch<React.SetStateAction<number>>;
   customKeywords?: string[];
+  selectedBadges?: string[];
+  setSelectedBadges?: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const FilterSideBar: React.FC<FilterSideBarProps> = ({
@@ -20,6 +22,8 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
   selectedRating,
   setSelectedRating,
   customKeywords,
+  selectedBadges = [],
+  setSelectedBadges,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const ratings = [5, 4, 3, 2, 1];
@@ -43,6 +47,7 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
     setSelectedRating(0);
     setSelectedKeywords([]);
     setPriceRange(5000);
+    if (setSelectedBadges) setSelectedBadges([]);
   };
 
   return (
@@ -158,6 +163,42 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
           })}
         </div>
       </div>
+
+      {/* ── 4. BADGE FILTER ── */}
+      {setSelectedBadges && (
+        <div className="pt-5 border-t border-gray-100 mt-6">
+          <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
+            <Award size={12} className="text-[#E91E63]" />
+            <span>HIGHLIGHTS</span>
+          </label>
+          <div className="flex flex-col gap-0.5">
+            {[
+              { label: "Featured",   color: "bg-[#E91E63] text-white",          ring: "ring-[#E91E63]" },
+              { label: "Popular",    color: "bg-[#2D1347] text-white",          ring: "ring-[#2D1347]" },
+              { label: "Best Value", color: "bg-white text-[#2D1347] border border-gray-300", ring: "ring-gray-400" },
+            ].map(({ label, color, ring }) => {
+              const isSelected = selectedBadges.includes(label);
+              return (
+                <button
+                  key={label}
+                  onClick={() =>
+                    setSelectedBadges((prev) =>
+                      prev.includes(label) ? [] : [label]
+                    )
+                  }
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-full transition-all text-xs font-bold cursor-pointer ${
+                    isSelected
+                      ? `${color} ring-1 ${ring} shadow-sm`
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100"
+                  }`}
+                >
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

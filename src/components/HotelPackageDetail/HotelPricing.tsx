@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import HotelVerificationCard from "./HotelVerificationCard";
-import BookingModal from "../reusable/packages/BookingModal";
+import HotelBookingModal from "./HotelBookingModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
 
@@ -182,7 +182,7 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
         <HotelVerificationCard />
       </div>
 
-      <BookingModal
+      <HotelBookingModal
         pkg={pkg}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}

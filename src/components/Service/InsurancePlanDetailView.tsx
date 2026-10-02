@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Calendar, CheckCircle2, AlertCircle, ShieldCheck, MessageCircle, Printer, Zap, Users, RefreshCw, Share2, Check, Link2 } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR, displayPrice } from "../../context/CurrencyContext";
-import { InsuranceApplicationModal } from "./InsuranceApplicationModal";
-import { getInsurancePlanById } from "../../api/BackendApi";
+import { InsuranceApplicationModal, InsuranceRequirementField } from "./InsuranceApplicationModal";
+import { getInsurancePlanById, getInsuranceDynamicFieldsByPlan } from "../../api/BackendApi";
 import { shareToPlatform, copyToClipboard, getCurrentUrl, getCrawlerSafeUrl } from "../../utils/shareUtils";
 import Logo from "../../assets/images/Logo.png";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
@@ -42,6 +42,7 @@ interface InsurancePlanView {
     description?: string | null;
     is_required: boolean;
   }[];
+  dynamicRequirements: InsuranceRequirementField[];
   termsAndConditions: string[];
   costOptions: InsuranceCostOption[];
   emergencyHelpline?: string;
@@ -49,6 +50,27 @@ interface InsurancePlanView {
 }
 const toArray = (value: any) => Array.isArray(value) ? value : [];
 const sortByDisplayOrder = (items: any[]) => [...items].sort((a, b) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0));
+const normalizeDynamicFieldType = (value: any): InsuranceRequirementField["type"] => {
+  const type = String(value || "TEXT").toUpperCase();
+  if (type === "NUMBER") return "number";
+  if (type === "DATE") return "date";
+  if (type === "TEXTAREA") return "textarea";
+  if (type === "SELECT") return "select";
+  if (type === "CHECKBOX") return "checkbox";
+  if (type === "RADIO") return "radio";
+  return "text";
+};
+const normalizeDynamicOptions = (value: any): string[] => {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {}
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+};
 export const InsurancePlanDetailView: React.FC = () => {
   const navigate = useNavigate();
   const { insuranceId } = useParams<{ insuranceId: string }>();
@@ -72,12 +94,28 @@ export const InsurancePlanDetailView: React.FC = () => {
       try {
         setLoading(true);
         setLoadError("");
-        const response = await getInsurancePlanById(insuranceId);
+        const [response, dynamicFieldsResponse] = await Promise.all([
+          getInsurancePlanById(insuranceId),
+          getInsuranceDynamicFieldsByPlan(insuranceId),
+        ]);
         const raw = response?.data?.data;
         if (!response?.data?.status || !raw) throw new Error(response?.data?.message || "Insurance plan not found");
         const pricingTiers = sortByDisplayOrder(toArray(raw.pricing_tiers ?? raw.pricingTiers).filter((item: any) => !item?.status || item.status === "ACTIVE"));
         const information = sortByDisplayOrder(toArray(raw.information).filter((item: any) => !item?.status || item.status === "ACTIVE"));
         const documentRequirements = sortByDisplayOrder(toArray(raw.document_requirements ?? raw.documentRequirements).filter((item: any) => !item?.status || item.status === "ACTIVE"));
+        const dynamicFieldsData = dynamicFieldsResponse?.data?.data;
+        const dynamicFieldsSource = Array.isArray(dynamicFieldsData) ? dynamicFieldsData : toArray(dynamicFieldsData?.data);
+        const dynamicFields = sortByDisplayOrder(dynamicFieldsSource.filter((item: any) => !item?.status || item.status === "ACTIVE"));
+        const dynamicRequirements: InsuranceRequirementField[] = dynamicFields
+          .filter((field: any) => field?.field_name)
+          .map((field: any) => ({
+            id: String(field.field_name),
+            name: field.field_label || field.field_name,
+            placeholder: field.placeholder || "",
+            required: field.is_required === true || field.is_required === 1,
+            type: normalizeDynamicFieldType(field.field_type),
+            options: normalizeDynamicOptions(field.options),
+          }));
         const coverage = information.filter((item: any) => item.type === "COVERAGE").map((item: any) => item.content).filter(Boolean);
         const exclusions = information.filter((item: any) => item.type === "EXCLUSION").map((item: any) => item.content).filter(Boolean);
         const policy = information.filter((item: any) => item.type === "POLICY").map((item: any) => item.content).filter(Boolean);
@@ -118,6 +156,7 @@ export const InsurancePlanDetailView: React.FC = () => {
             description: doc.description || null,
             is_required: doc.is_required === true || doc.is_required === 1,
           })),
+          dynamicRequirements,
           termsAndConditions: [...policy, ...terms],
           costOptions,
         };
@@ -890,6 +929,7 @@ export const InsurancePlanDetailView: React.FC = () => {
           selectedOption={selectedCostOption}
           numberOfTravelers={numberOfTravelers}
           documentConfig={plan.documentRequirements.map((doc) => ({ id: String(doc.id), title: doc.title, required: doc.is_required })) as any}
+          requirementConfig={plan.dynamicRequirements}
         />
       )}
     </div>

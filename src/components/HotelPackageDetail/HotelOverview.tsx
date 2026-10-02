@@ -42,10 +42,15 @@ const HotelOverview: React.FC = () => {
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 mt-4 leading-relaxed font-medium">
-              {pkg.description ||
-                `Experience the finest hospitality at ${pkg.title}. Designed with comfort, luxury, and unforgettable memories in mind.`}
-            </p>
+            <div className="text-xs sm:text-sm text-gray-600 mt-4 leading-relaxed font-medium space-y-2.5">
+              <p>
+                {pkg.description ||
+                  `Experience the finest hospitality at ${pkg.title}. Designed with comfort, luxury, and unforgettable memories in mind.`}
+              </p>
+              <p>
+                Guests can look forward to personalized concierge attention, daily gourmet breakfast, and seamless check-in assistance. Whether you are unwinding after Himalayan excursions or enjoying quiet moments amidst authentic heritage settings, our handpicked suites provide the pinnacle of comfort, discretion, and Nepali warmth.
+              </p>
+            </div>
           </div>
 
           {/* Amenities / Highlights Card */}
@@ -70,7 +75,7 @@ const HotelOverview: React.FC = () => {
         </div>
 
         {/* ── RIGHT STICKY PRICING SIDEBAR (4 cols) ── */}
-        <div id="pricing-section" className="lg:col-span-4 lg:sticky lg:top-[220px] self-start space-y-6">
+        <div id="pricing-section" className="lg:col-span-4 lg:sticky lg:top-[135px] self-start space-y-6">
           <HotelPricing pkg={pkg} />
         </div>
       </div>

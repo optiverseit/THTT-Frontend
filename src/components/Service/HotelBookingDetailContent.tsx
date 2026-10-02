@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { hotels } from "../../assets/data/mockData";
+import { useNavigate } from "react-router-dom";
+import { hotels, getHotelPricingTiers } from "../../assets/data/mockData";
 import type { Hotel, Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import FilterSideBar from "../TravelPackage/FilterSiderBar";
-import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
-import BookingModal, { BookingItem } from "../reusable/packages/BookingModal";
+import HotelBookingSection from "./HotelBookingSection";
+import HotelBookingModal, { HotelBookingItem } from "../HotelPackageDetail/HotelBookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import {
   Star,
@@ -52,17 +53,18 @@ const HOTEL_FAQS = [
 
 
 export const HotelBookingDetailContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const navigate = useNavigate();
   const [priceRange, setPriceRange] = useState<number>(5000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
-  const [selectedBookingItem, setSelectedBookingItem] = useState<BookingItem | null>(null);
+  const [selectedBookingItem, setSelectedBookingItem] = useState<HotelBookingItem | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   const formatPrice = (usdAmount: number) => {
-    const nprAmount = usdAmount * nprPerOneDollar;
+    const nprAmount = usdAmount * (nprPerOneDollar || 133);
     return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
   };
 
@@ -81,40 +83,14 @@ export const HotelBookingDetailContent: React.FC = () => {
     "MOUNTAIN VIEW",
   ];
 
-  // Convert hotels into standard Package format for consistent card rendering
-  const hotelPackages: Package[] = hotels.map((h) => ({
-    id: h.id,
-    title: h.name,
-    slug: h.slug,
-    duration: "Per Night Stay",
-    highlights: h.amenities || h.features || [],
-    price: `$${h.priceUSD}`,
-    image: h.image,
-    category: "domestic",
-    type: "activity",
-    isFeatured: Boolean(h.isFeatured),
-    description:
-      h.description ||
-      `${h.tierLabel} in ${h.location || h.city}. Handcrafted comfort, premium hospitality, and verified contract rates.`,
-    location: h.location || h.city,
-    rating: h.rating,
-    reviewsCount: h.reviewsCount,
-    tierLabel: h.tierLabel,
-    priceUnit: "per night",
-  } as any));
-
-  const filteredHotels = hotelPackages.filter((pkg) => {
-    const rawHotel = hotels.find((h) => h.id === pkg.id);
-
-    // 1. Category Tab Filter
-    if (activeTab !== "all" && rawHotel?.category !== activeTab) return false;
-
-    // 2. Price Range Filter
-    const priceNum = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
-    const matchesPrice = priceNum === 0 || priceNum <= priceRange;
+  const filteredHotels = hotels.filter((hotel) => {
+    // 2. Price Range Filter (priceRange slider is in USD, converted to NPR)
+    const maxNpr = priceRange * (nprPerOneDollar || 133);
+    const hotelNpr = Math.round((hotel.priceUSD || 0) * (nprPerOneDollar || 133));
+    const matchesPrice = hotelNpr === 0 || hotelNpr <= maxNpr;
 
     // 3. Ratings Filter
-    const matchesRating = selectedRating === 0 || Math.round(pkg.rating || 5) >= selectedRating;
+    const matchesRating = selectedRating === 0 || Math.round(hotel.rating || 5) >= selectedRating;
 
     // 4. Keywords Filter
     const matchesKeywords =
@@ -123,78 +99,78 @@ export const HotelBookingDetailContent: React.FC = () => {
         : selectedKeywords.some((keyword) => {
             const kw = keyword.toLowerCase();
             return (
-              pkg.title?.toLowerCase().includes(kw) ||
-              pkg.location?.toLowerCase().includes(kw) ||
-              rawHotel?.tierLabel?.toLowerCase().includes(kw) ||
-              rawHotel?.amenities?.some((a) => a.toLowerCase().includes(kw)) ||
-              rawHotel?.features?.some((f) => f.toLowerCase().includes(kw))
+              hotel.name?.toLowerCase().includes(kw) ||
+              hotel.location?.toLowerCase().includes(kw) ||
+              hotel.city?.toLowerCase().includes(kw) ||
+              hotel.tierLabel?.toLowerCase().includes(kw) ||
+              hotel.amenities?.some((a) => a.toLowerCase().includes(kw)) ||
+              hotel.features?.some((f) => f.toLowerCase().includes(kw))
             );
           });
 
-    return matchesPrice && matchesRating && matchesKeywords;
+    // 5. Badge Filter (Featured, Popular, Best Value)
+    const hotelBadge =
+      hotel.badge ||
+      (hotel.isFeatured ? "Featured" : hotel.rating >= 4.9 ? "Popular" : "Best Value");
+    const matchesBadge =
+      selectedBadges.length === 0 ||
+      selectedBadges.some((b) => hotelBadge.toLowerCase().includes(b.toLowerCase()));
+
+    return matchesPrice && matchesRating && matchesKeywords && matchesBadge;
+  // Enrich each hotel with roomTypes from the price tier names so the card pills
+  // always match the modal's pricing table — no extra file needed.
+  }).map((hotel) => {
+    const tiers = getHotelPricingTiers(hotel);
+    return { ...hotel, roomTypes: tiers.map((t) => t.service) };
   });
 
-  const handleBookHotel = (pkg: Package) => {
+  const handleBookHotel = (hotel: Hotel) => {
+    const rate = nprPerOneDollar || 133;
+    const baseUSD = hotel.priceUSD || 120;
+    const basePriceNPR = Math.round(baseUSD * rate);
+    const tiers = getHotelPricingTiers(hotel);
+    const pricingTable = tiers.map((tier) => ({
+      id: tier.id,
+      service: tier.service,
+      ageGroup: tier.ageGroup,
+      priceNepali: String(Math.round(basePriceNPR * tier.priceMultiplier)),
+      priceForeigner: String(Math.round(baseUSD * tier.priceMultiplier)),
+    }));
+
     setSelectedBookingItem({
-      id: pkg.id,
-      title: pkg.title,
-      location: pkg.location || "Nepal",
+      id: hotel.id,
+      title: hotel.name,
+      location: hotel.location || "Nepal",
       duration: "Per Night Stay",
-      price: pkg.price || "$0",
-      image: pkg.image,
+      price: String(basePriceNPR),
+      image: hotel.image,
+      pricingTable,
+      type: "hotel",
+      category: "hotel",
     });
     setIsBookingModalOpen(true);
   };
 
-  const handleFullDetails = (pkg: Package) => {
-    const priceStr = pkg.price || "$0";
-    const baseUSD = Number(priceStr.replace(/[^0-9]/g, "") || 0);
-    const priceFormatted = formatPrice(baseUSD);
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! Please share full details, room photos, amenities, and policies for "${pkg.title}" in ${pkg.location} (${priceFormatted}/night).`
-    );
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+  const handleFullDetails = (hotel: Hotel) => {
+    // Redirect directly to the hotel details page
+    navigate(`/hotel-details/${hotel.id}`);
   };
 
   return (
     <div className="space-y-12">
 
-      {/* ── HEADER & FILTER PILLS ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
-        <div>
-          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
-            Featured Luxury &amp; Boutique Hotels
-          </h3>
-          <p className="text-xs text-gray-500 font-medium mt-1">
-            Browse 5-star heritage hotels, lakeside boutique stays, jungle safari eco-resorts, and mountain lodges.
-          </p>
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: "all", label: `All Stays (${hotels.length})` },
-            { id: "luxury", label: "5-Star Heritage" },
-            { id: "boutique", label: "Lakeside Boutique" },
-            { id: "resort", label: "Safari & Resorts" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeTab === tab.id
-                  ? "bg-[#2D1347] text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* ── HEADER ── */}
+      <div className="px-1">
+        <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+          Featured Luxury &amp; Boutique Hotels
+        </h3>
+        <p className="text-xs text-gray-500 font-medium mt-1">
+          Browse 5-star heritage hotels, lakeside boutique stays, jungle safari eco-resorts, and mountain lodges.
+        </p>
       </div>
 
-      {/* ── MAIN CONTENT: SIDEBAR + PACKAGES LIST (EXACTLY SAME AS PACKAGES PAGE) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      {/* ── MAIN CONTENT: SIDEBAR + HOTEL BOOKING CARDS ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start mt-6">
         {/* Left: Filter Sidebar */}
         <div className="lg:col-span-1">
           <FilterSideBar
@@ -205,16 +181,18 @@ export const HotelBookingDetailContent: React.FC = () => {
             selectedKeywords={selectedKeywords}
             setSelectedKeywords={setSelectedKeywords}
             customKeywords={hotelKeywords}
+            selectedBadges={selectedBadges}
+            setSelectedBadges={setSelectedBadges}
           />
         </div>
 
-        {/* Right: Package Details Cards */}
+        {/* Right: Hotel Booking Cards */}
         <div className="lg:col-span-3">
-          <PackageDetailsSection
-            pkgs={filteredHotels}
+          <HotelBookingSection
+            hotels={filteredHotels}
             onBook={handleBookHotel}
             onDetails={handleFullDetails}
-            priceUnit="per night"
+            priceUnit="per day"
             itemsPerPage={12}
           />
         </div>
@@ -338,11 +316,14 @@ export const HotelBookingDetailContent: React.FC = () => {
         subtitle="Common questions answered by our reservation specialists"
       />
 
-      {/* ── BOOKING MODAL POPUP ── */}
-      <BookingModal
+      {/* ── HOTEL BOOKING MODAL POPUP ── */}
+      <HotelBookingModal
         pkg={selectedBookingItem}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
+        pricingSource="tier"
+        initialTierIndex={0}
+        initialGuests={1}
       />
     </div>
   );

@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from "react";
 import PackageImageGrid from "./PackageImageGrid";
-
 import {
   Outlet,
   useParams,
   Link,
 } from "react-router-dom";
-
 import PreFooter from "../../reusable/PreFooter";
-
 import { Compass } from "lucide-react";
-
 import {
   getPackageById,
   getPackageInclusions,
@@ -22,266 +18,202 @@ import {
   getPackageItineraries,
   getPackageHighlights,
 } from "../../../api/BackendApi";
-
-
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
-
   // ============================================================
   // STATE
   // ============================================================
-
   const [backendPackage, setBackendPackage] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [packageLoadFinished, setPackageLoadFinished] = useState(false);
-
-
   // ============================================================
   // NUMERIC BACKEND PACKAGE
   // ============================================================
-
   const isNumericPackageId =
     !!packageId && /^\d+$/.test(packageId);
-
-
   // ============================================================
   // FETCH PACKAGE AND RELATED DATA
   // ============================================================
-
   useEffect(() => {
-    if (
-      !packageId ||
-      !isNumericPackageId
-    ) {
+    if (!packageId || !isNumericPackageId) {
       setPackageLoadFinished(true);
       return;
     }
-
+    let cancelled = false;
+    const updateRelatedData = (key: string, data: any[]) => {
+      if (cancelled) return;
+      setBackendPackage((prev: any) => {
+        if (!prev) return prev;
+        return { ...prev, [key]: data };
+      });
+    };
     const fetchPackageDetails = async () => {
       try {
         setLoading(true);
         setPackageLoadFinished(false);
-
-        const [
-          packageResponse,
-          inclusionsResponse,
-          exclusionsResponse,
-          restrictionsResponse,
-          whatToBringResponse,
-          faqsResponse,
-          pricingResponse,
-          itinerariesResponse,
-          highlightsResponse,
-        ] = await Promise.all([
-          getPackageById(packageId),
-          getPackageInclusions(packageId),
-          getPackageExclusions(packageId),
-          getPackageRestrictions(packageId),
-          getPackageWhatToBring(packageId),
-          getPackageFaqs(packageId),
-          getPackagePricingTiers(packageId),
-          getPackageItineraries(packageId),
-          getPackageHighlights(packageId),
-        ]);
-
-
-        // ======================================================
-        // EXACT API RESPONSE FORMAT:
-        //
-        // {
-        //   status: true,
-        //   message: "...",
-        //   data: [...]
-        // }
-        // ======================================================
-
-        const packageData =
-          packageResponse.data?.data ?? null;
-
-        const inclusions =
-          Array.isArray(inclusionsResponse.data?.data)
-            ? inclusionsResponse.data.data
-            : [];
-
-        const exclusions =
-          Array.isArray(exclusionsResponse.data?.data)
-            ? exclusionsResponse.data.data
-            : [];
-
-        const restrictions =
-          Array.isArray(restrictionsResponse.data?.data)
-            ? restrictionsResponse.data.data
-            : [];
-
-        const whatToBring =
-          Array.isArray(whatToBringResponse.data?.data)
-            ? whatToBringResponse.data.data
-            : [];
-
-        const faqs =
-          Array.isArray(faqsResponse.data?.data)
-            ? faqsResponse.data.data
-            : [];
-
-        const pricingTiers =
-          Array.isArray(pricingResponse.data?.data)
-            ? pricingResponse.data.data
-            : [];
-
-        const itineraries =
-          Array.isArray(itinerariesResponse.data?.data)
-            ? itinerariesResponse.data.data
-            : [];
-
-        const highlights =
-          Array.isArray(highlightsResponse.data?.data)
-            ? highlightsResponse.data.data
-            : [];
-
-
-        console.log("PACKAGE:", packageData);
-        console.log("INCLUSIONS:", inclusions);
-        console.log("EXCLUSIONS:", exclusions);
-        console.log("RESTRICTIONS:", restrictions);
-        console.log("WHAT TO BRING:", whatToBring);
-        console.log("FAQS:", faqs);
-        console.log("PRICING TIERS:", pricingTiers);
-        console.log("ITINERARIES:", itineraries);
-        console.log("HIGHLIGHTS:", highlights);
-
-
-        // ======================================================
-        // COMBINE ALL BACKEND DATA
-        // ======================================================
-
-        setBackendPackage({
-          ...packageData,
-
-          inclusions,
-          exclusions,
-          restrictions,
-
-          what_to_bring: whatToBring,
-
-          faqs,
-
-          pricing_tiers: pricingTiers,
-
-          itineraries,
-
-          highlights,
-        });
-
-      } catch (error) {
-        console.error(
-          "Error fetching package details:",
-          error
-        );
-
         setBackendPackage(null);
+        const packageRequest = getPackageById(packageId);
+        const pricingRequest = getPackagePricingTiers(packageId);
+        const itinerariesRequest = getPackageItineraries(packageId);
+        const inclusionsRequest = getPackageInclusions(packageId);
+        const exclusionsRequest = getPackageExclusions(packageId);
+        const restrictionsRequest = getPackageRestrictions(packageId);
+        const whatToBringRequest = getPackageWhatToBring(packageId);
+        const faqsRequest = getPackageFaqs(packageId);
 
-      } finally {
+        const highlightsRequest = getPackageHighlights(packageId);
+        inclusionsRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("INCLUSIONS:", data);
+            updateRelatedData("inclusions", data);
+          })
+          .catch((error) => console.error("Error fetching package inclusions:", error));
+        exclusionsRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("EXCLUSIONS:", data);
+            updateRelatedData("exclusions", data);
+          })
+          .catch((error) => console.error("Error fetching package exclusions:", error));
+        restrictionsRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("RESTRICTIONS:", data);
+            updateRelatedData("restrictions", data);
+          })
+          .catch((error) => console.error("Error fetching package restrictions:", error));
+        whatToBringRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("WHAT TO BRING:", data);
+            updateRelatedData("what_to_bring", data);
+          })
+          .catch((error) => console.error("Error fetching what to bring:", error));
+        faqsRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("FAQS:", data);
+            updateRelatedData("faqs", data);
+          })
+          .catch((error) => console.error("Error fetching package FAQs:", error));
+        pricingRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("PRICING TIERS:", data);
+            updateRelatedData("pricing_tiers", data);
+          })
+          .catch((error) => console.error("Error fetching package pricing tiers:", error));
+        itinerariesRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("ITINERARIES:", data);
+            updateRelatedData("itineraries", data);
+          })
+          .catch((error) => console.error("Error fetching package itineraries:", error));
+        highlightsRequest
+          .then((response) => {
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            console.log("HIGHLIGHTS:", data);
+            updateRelatedData("highlights", data);
+          })
+          .catch((error) => console.error("Error fetching package highlights:", error));
+        const packageResponse = await packageRequest;
+        const packageData = packageResponse.data?.data ?? null;
+        if (cancelled) return;
+        if (!packageData) {
+          setBackendPackage(null);
+          setLoading(false);
+          setPackageLoadFinished(true);
+          return;
+        }
+        console.log("PACKAGE:", packageData);
+        setBackendPackage((prev: any) => ({
+          ...packageData,
+          inclusions: prev?.inclusions ?? [],
+          exclusions: prev?.exclusions ?? [],
+          restrictions: prev?.restrictions ?? [],
+          what_to_bring: prev?.what_to_bring ?? [],
+          faqs: prev?.faqs ?? [],
+          pricing_tiers: prev?.pricing_tiers ?? [],
+          itineraries: prev?.itineraries ?? [],
+          highlights: prev?.highlights ?? [],
+        }));
+        setLoading(false);
+        setPackageLoadFinished(true);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error fetching package details:", error);
+        setBackendPackage(null);
         setLoading(false);
         setPackageLoadFinished(true);
       }
     };
-
-
     fetchPackageDetails();
-
+    return () => {
+      cancelled = true;
+    };
   }, [packageId]);
-
-
   // ============================================================
   // LOADING
   // ============================================================
-
   if (isNumericPackageId && loading) {
     return (
       <div className="min-h-[65vh] flex items-center justify-center bg-gray-50">
-
         <div className="text-center">
-
           <div className="w-10 h-10 border-4 border-gray-200 border-t-[#E91E63] rounded-full animate-spin mx-auto" />
-
           <p className="text-sm font-semibold text-gray-500 mt-4">
             Loading package details...
           </p>
-
         </div>
-
       </div>
     );
   }
-
-
   // ============================================================
   // PACKAGE
   // ============================================================
-
   let pkg: any =
     isNumericPackageId
       ? backendPackage
       : null;
-
-
   // ============================================================
   // NOT FOUND
   // ============================================================
-
   if (
     !pkg &&
     packageLoadFinished
   ) {
     return (
       <div className="min-h-[65vh] flex flex-col items-center justify-center py-24 px-4 bg-gray-50 text-center font-sans">
-
         <div className="w-20 h-20 rounded-3xl bg-pink-50 text-[#E91E63] flex items-center justify-center mb-6 shadow-sm border border-pink-100 ring-8 ring-pink-50/50">
-
           <Compass size={40} />
-
         </div>
-
-
         <h2 className="text-3xl font-black text-[#2D1347]">
           Package Not Found
         </h2>
-
-
         <p className="text-gray-500 text-sm mt-2 max-w-md">
           We couldn't find the requested travel or trekking package.
         </p>
-
-
         <div className="flex gap-3 mt-8">
-
           <Link
             to="/packages"
             className="px-6 py-3 bg-[#E91E63] hover:bg-pink-600 text-white rounded-full font-bold text-xs uppercase tracking-wider shadow-md transition-all"
           >
             Explore All Packages
           </Link>
-
-
           <Link
             to="/"
             className="px-6 py-3 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-full font-bold text-xs uppercase tracking-wider transition-all"
           >
             Return Home
           </Link>
-
         </div>
-
       </div>
     );
   }
-
-
   if (!pkg) {
     return null;
   }
-
-
   // ============================================================
   // CATEGORY
   //
@@ -292,7 +224,6 @@ const PackageDetails: React.FC = () => {
   //   name: "Trekking"
   // }
   // ============================================================
-
   const normalizedCategory =
     typeof pkg.category === "string"
       ? pkg.category
@@ -300,34 +231,25 @@ const PackageDetails: React.FC = () => {
       pkg.category?.title ||
       pkg.category?.slug ||
       "";
-
-
   // ============================================================
   // IMAGE
   // ============================================================
-
   const packageImage =
     pkg.image ||
     pkg.image_url ||
     pkg.thumbnail ||
     "";
-
-
   // ============================================================
   // PRICE
   // ============================================================
-
   const packagePrice =
     pkg.price !== undefined &&
       pkg.price !== null
       ? String(pkg.price)
       : "";
-
-
   // ============================================================
   // GALLERY
   // ============================================================
-
   const backendGallery =
     Array.isArray(pkg.gallery)
       ? pkg.gallery
@@ -335,7 +257,6 @@ const PackageDetails: React.FC = () => {
           if (typeof item === "string") {
             return item;
           }
-
           return (
             item.image ||
             item.image_url ||
@@ -345,8 +266,6 @@ const PackageDetails: React.FC = () => {
         })
         .filter(Boolean)
       : [];
-
-
   // ============================================================
   // ITINERARIES
   //
@@ -360,7 +279,6 @@ const PackageDetails: React.FC = () => {
   //
   // Existing UI may use `desc`, therefore both are provided.
   // ============================================================
-
   const normalizedItinerary =
     Array.isArray(pkg.itineraries)
       ? [...pkg.itineraries]
@@ -372,31 +290,22 @@ const PackageDetails: React.FC = () => {
         .map((item: any) => ({
           id:
             item.id,
-
           package_id:
             item.package_id,
-
           day:
             item.day ?? "",
-
           title:
             item.title ?? "",
-
           description:
             item.description ?? "",
-
           desc:
             item.description ?? "",
-
           display_order:
             item.display_order ?? 0,
-
           status:
             item.status,
         }))
       : [];
-
-
   // ============================================================
   // INCLUSIONS
   //
@@ -410,7 +319,6 @@ const PackageDetails: React.FC = () => {
   //
   // ["airport ticket and drop1"]
   // ============================================================
-
   const normalizedIncludes =
     Array.isArray(pkg.inclusions)
       ? [...pkg.inclusions]
@@ -423,17 +331,13 @@ const PackageDetails: React.FC = () => {
           if (typeof item === "string") {
             return item;
           }
-
           return item.item ?? "";
         })
         .filter(Boolean)
       : [];
-
-
   // ============================================================
   // EXCLUSIONS
   // ============================================================
-
   const normalizedExcludes =
     Array.isArray(pkg.exclusions)
       ? [...pkg.exclusions]
@@ -446,13 +350,10 @@ const PackageDetails: React.FC = () => {
           if (typeof item === "string") {
             return item;
           }
-
           return item.item ?? "";
         })
         .filter(Boolean)
       : [];
-
-
   // ============================================================
   // RESTRICTIONS
   //
@@ -462,7 +363,6 @@ const PackageDetails: React.FC = () => {
   //   restriction: "..."
   // }
   // ============================================================
-
   const normalizedRestrictions =
     Array.isArray(pkg.restrictions)
       ? pkg.restrictions
@@ -470,7 +370,6 @@ const PackageDetails: React.FC = () => {
           if (typeof item === "string") {
             return item;
           }
-
           return (
             item.restriction ||
             item.item ||
@@ -479,8 +378,6 @@ const PackageDetails: React.FC = () => {
         })
         .filter(Boolean)
       : [];
-
-
   // ============================================================
   // WHAT TO BRING
   //
@@ -490,7 +387,6 @@ const PackageDetails: React.FC = () => {
   //   item: "warm jacket1"
   // }
   // ============================================================
-
   const normalizedWhatToBring =
     Array.isArray(pkg.what_to_bring)
       ? pkg.what_to_bring
@@ -498,17 +394,13 @@ const PackageDetails: React.FC = () => {
           if (typeof item === "string") {
             return item;
           }
-
           return item.item ?? "";
         })
         .filter(Boolean)
       : [];
-
-
   // ============================================================
   // FAQS
   // ============================================================
-
   const normalizedFaqs =
     Array.isArray(pkg.faqs)
       ? [...pkg.faqs]
@@ -520,22 +412,16 @@ const PackageDetails: React.FC = () => {
         .map((faq: any) => ({
           id:
             faq.id,
-
           question:
             faq.question ?? "",
-
           answer:
             faq.answer ?? "",
-
           display_order:
             faq.display_order ?? 0,
-
           displayOrder:
             faq.display_order ?? 0,
         }))
       : [];
-
-
   // ============================================================
   // PRICING TIERS
   //
@@ -551,32 +437,23 @@ const PackageDetails: React.FC = () => {
   // priceNepali
   // priceForeigner
   // ============================================================
-
   const normalizedPricingTable =
     Array.isArray(pkg.pricing_tiers)
       ? pkg.pricing_tiers.map((row: any) => ({
         id: row.id,
-
         service: row.service ?? "",
-
         ageGroup:
           row.age_group ??
           row.ageGroup ??
           "",
-
         // Keep prices as NUMBERS
         priceNepali: Number(row.price_npr ?? 0),
-
         priceForeigner: Number(row.price_usd ?? 0),
-
         // Keep original backend fields too
         price_npr: Number(row.price_npr ?? 0),
-
         price_usd: Number(row.price_usd ?? 0),
       }))
       : [];
-
-
   // ============================================================
   // HIGHLIGHT DETAILS
   //
@@ -588,7 +465,6 @@ const PackageDetails: React.FC = () => {
   //
   // These can later be used by a dedicated Highlights component.
   // ============================================================
-
   const highlightDetails =
     Array.isArray(pkg.highlights)
       ? [...pkg.highlights]
@@ -600,28 +476,20 @@ const PackageDetails: React.FC = () => {
         .map((item: any) => ({
           id:
             item.id,
-
           package_id:
             item.package_id,
-
           highlight:
             item.highlight ?? "",
-
           image:
             item.image ?? "",
-
           display_order:
             item.display_order ?? 0,
-
           status:
             item.status ?? "ACTIVE",
-
           image_public_id:
             item.image_public_id ?? null,
         }))
       : [];
-
-
   // ============================================================
   // IMPORTANT:
   //
@@ -630,221 +498,145 @@ const PackageDetails: React.FC = () => {
   //
   // DO NOT pass highlight objects to pkg.highlights.
   // ============================================================
-
   const normalizedHighlights =
     highlightDetails
       .map((item: any) => item.highlight)
       .filter(Boolean);
-
-
   // ============================================================
   // NORMALIZED PACKAGE
   // ============================================================
-
   const normalizedPkg = {
     ...pkg,
-
     image:
       packageImage,
-
     price:
       packagePrice,
-
     category:
       normalizedCategory,
-
     adventureCategory:
       pkg.adventure_category ??
       pkg.adventureCategory,
-
     pricingTable:
       normalizedPricingTable,
-
     itinerary:
       normalizedItinerary,
-
     includes:
       normalizedIncludes,
-
     excludes:
       normalizedExcludes,
-
     restrictions:
       normalizedRestrictions,
-
     whatToBring:
       normalizedWhatToBring,
-
     faqs:
       normalizedFaqs,
-
     // IMPORTANT:
     // string[] for old PackageImageGrid
     highlights:
       normalizedHighlights,
-
     // Complete backend objects
     highlightDetails:
       highlightDetails,
   };
-
-
   // ============================================================
   // GALLERY
   // ============================================================
-
   const defaultGallery = [
     normalizedPkg.image ||
     "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
-
     "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
-
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800",
   ];
-
-
   const gallery =
     backendGallery.length > 0
       ? backendGallery
       : defaultGallery;
-
-
   // ============================================================
   // FINAL CHILD DATA
   // ============================================================
-
   const allItenary =
     normalizedItinerary;
-
   const allIncludes =
     normalizedIncludes;
-
   const allExcludes =
     normalizedExcludes;
-
   const restrictions =
     normalizedRestrictions;
-
   const whatToBring =
     normalizedWhatToBring;
-
   const allfaqs =
     normalizedFaqs;
-
   const allTestimonies =
     Array.isArray(pkg.testimonies)
       ? pkg.testimonies
       : [];
-
   const pricingTable =
     normalizedPricingTable;
-
-
   // ============================================================
   // ENRICHED PACKAGE
   // ============================================================
-
   const enrichedPkg = {
     ...normalizedPkg,
-
     gallery,
-
     pricingTable,
-
     allItenary,
-
     allIncludes,
-
     allExcludes,
-
     restrictions,
-
     whatToBring,
-
     allfaqs,
-
     highlightDetails,
   };
-
-
   // ============================================================
   // PAGE
   // ============================================================
-
   return (
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-0 print:min-h-0 print:bg-white">
-
       {/* ======================================================
           PACKAGE HERO / IMAGE GRID
       ====================================================== */}
-
       <div className="w-full">
-
         <PackageImageGrid
           pkg={enrichedPkg}
         />
-
       </div>
-
-
       {/* ======================================================
           CHILD ROUTES
       ====================================================== */}
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-12 sm:pb-16 print:hidden">
-
         <Outlet
           context={{
             pkg:
               enrichedPkg,
-
             allItenary,
-
             allIncludes,
-
             allExcludes,
-
             restrictions,
-
             whatToBring,
-
             allfaqs,
-
             allTestimonies,
-
             pricingTable,
-
             // Strings if an existing component needs them
             highlights:
               normalizedHighlights,
-
             // Full objects including Cloudinary images
             highlightDetails:
               highlightDetails,
           }}
         />
-
       </div>
-
-
       {/* ======================================================
           PRE FOOTER
       ====================================================== */}
-
       <div className="print:hidden">
-
         <PreFooter
           title="Ready to Experience This Adventure?"
           description="Connect with our Himalayan travel specialists for tailored dates, group discounts, and custom arrangements."
           btn1="Call Us Now"
           btn2="Request Custom Quote"
         />
-
       </div>
-
     </div>
   );
 };
-
-
 export default PackageDetails;

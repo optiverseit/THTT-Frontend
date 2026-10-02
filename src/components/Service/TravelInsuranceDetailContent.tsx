@@ -1,25 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
-import {
-  Shield,
-  ShieldCheck,
-  Activity,
-  HelpCircle,
-  ChevronDown,
-  MessageCircle,
-  CheckCircle2,
-  FileCheck2,
-  Clock,
-  Zap,
-  Globe2,
-  Stethoscope,
-  CalendarCheck,
-} from "lucide-react";
+import { useGlobalCurrency } from "../../context/CurrencyContext";
+import { ChevronDown, MessageCircle, CheckCircle2, CalendarCheck } from "lucide-react";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
-import { INSURANCE_PLANS, InsurancePlan } from "./insuranceData";
-import { InsuranceApplicationModal } from "./InsuranceApplicationModal";
+import { getInsurancePlans } from "../../api/BackendApi";
 
+interface InsurancePlan {
+  id: number;
+  name: string;
+  short_description?: string | null;
+  description?: string | null;
+  insurance_image?: string | null;
+  insurance_image_public_id?: string | null;
+  processing_time?: string | null;
+  status?: "ACTIVE" | "INACTIVE";
+  display_order?: number;
+}
 
 const INSURANCE_FAQS = [
   {
@@ -46,35 +42,64 @@ const INSURANCE_FAQS = [
 
 export const TravelInsuranceDetailContent: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-  const [selectedPlanForModal, setSelectedPlanForModal] = useState<InsurancePlan | null>(null);
+  const { selectedCurrency } = useGlobalCurrency();
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [loading, setLoading] = useState(true);
   const INITIAL_COUNT = 9;
   const LOAD_MORE_STEP = 15;
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_COUNT);
 
-  const displayedPlans = INSURANCE_PLANS.slice(0, visibleCount);
-  const hasMore = visibleCount < INSURANCE_PLANS.length;
+  useEffect(() => {
+    fetchInsurancePlans();
+  }, []);
+
+  const fetchInsurancePlans = async () => {
+    try {
+      setLoading(true);
+      const response = await getInsurancePlans();
+      console.log("INSURANCE PLANS:", response.data);
+      if (response.data?.status) {
+        setInsurancePlans(Array.isArray(response.data.data) ? response.data.data : []);
+      } else {
+        setInsurancePlans([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch insurance plans:", error);
+      setInsurancePlans([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayedPlans = insurancePlans.slice(0, visibleCount);
+  const hasMore = visibleCount < insurancePlans.length;
 
   const handleSeeMore = () => {
     setVisibleCount((prev) => prev + LOAD_MORE_STEP);
   };
 
-  const formatPrice = (usdAmount: number) => {
-    const nprAmount = usdAmount * nprPerOneDollar;
-    return displayPrice(nprAmount, selectedCurrency, nprPerOneDollar, nprPerOneINR);
-  };
-
-  const handleInquiry = (planName: string, priceUSD: number) => {
-    const priceFormatted = formatPrice(priceUSD);
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I would like to inquire about the "${planName}" (${priceFormatted}). Please share policy details, altitude coverage verification, and issuance steps.`
-    );
+  const handleInquiry = (planName: string) => {
+    const msg = encodeURIComponent(`Hello Trip Himalaya! I would like to inquire about the "${planName}" insurance plan. Please share pricing, policy details, coverage verification, and issuance steps.`);
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
-  // Navigate to the insurance plan detail page
-  const handleViewPlan = (planId: string) => {
+  const handleViewPlan = (planId: number) => {
     navigate(`/insurance-details/${planId}`);
+  };
+
+  const getPlanBadge = (index: number) => {
+    const badges = ["SILVER", "GOLD", "PLATINUM", "PREMIUM"];
+    return badges[index % badges.length];
+  };
+
+  const getPlanBadgeClass = (index: number) => {
+    const classes = [
+      "bg-slate-100 text-slate-800 border border-slate-300",
+      "bg-amber-100 text-amber-900 border border-amber-300",
+      "bg-indigo-100 text-indigo-900 border border-indigo-300",
+      "bg-rose-100 text-[#E11D48] border border-rose-300",
+    ];
+    return classes[index % classes.length];
   };
 
   return (
@@ -89,89 +114,108 @@ export const TravelInsuranceDetailContent: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-        {displayedPlans.map((plan) => (
-          <div
-            key={plan.id}
-            onClick={() => handleViewPlan(plan.id)}
-            className="rounded-3xl border border-gray-200/80 bg-[#FBFBFE] hover:bg-white hover:border-[#E11D48]/50 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1"
-          >
-            <div className="p-6 sm:p-7 pb-4">
-              {/* Plan Header */}
-              <div className="flex items-start justify-between gap-3 mb-3.5">
-                <div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-block mb-1.5 ${plan.badgeColor}`}>
-                    {plan.badge}
-                  </span>
-                  <h4 className="text-base sm:text-lg font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
-                    {plan.name}
-                  </h4>
+      {loading ? (
+        <div className="py-16 text-center">
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-[#E11D48] rounded-full animate-spin mx-auto" />
+          <p className="text-sm font-semibold text-gray-500 mt-4">Loading insurance plans...</p>
+        </div>
+      ) : displayedPlans.length === 0 ? (
+        <div className="py-16 text-center">
+          <p className="text-sm font-bold text-gray-500">No insurance plans available.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          {displayedPlans.map((plan, index) => (
+            <div
+              key={plan.id}
+              onClick={() => handleViewPlan(plan.id)}
+              className="rounded-3xl border border-gray-200/80 bg-[#FBFBFE] hover:bg-white hover:border-[#E11D48]/50 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1"
+            >
+              <div className="p-6 sm:p-7 pb-4">
+                {/* Plan Header */}
+                <div className="flex items-start justify-between gap-3 mb-3.5">
+                  <div>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-block mb-1.5 ${getPlanBadgeClass(index)}`}>
+                      {getPlanBadge(index)}
+                    </span>
+                    <h4 className="text-base sm:text-lg font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
+                      {plan.name}
+                    </h4>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="font-extrabold text-sm sm:text-base text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-2xl block shadow-2xs">
+                      View Pricing
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">
+                      {plan.processing_time || "Processing time varies"}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <span className="font-extrabold text-sm sm:text-base text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-2xl block shadow-2xs">
-                    {formatPrice(plan.priceUSD)}
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">{plan.durationCovered}</span>
-                </div>
-              </div>
 
-              {/* Little Plan Details */}
-              <div className="border-t border-gray-100/90 pt-2.5 mt-1">
-                <p className="text-[10.5px] text-gray-500 leading-relaxed line-clamp-2">
-                  {plan.aboutText}
-                </p>
-              </div>
-
-              {/* What Is Covered (Dynamic from plan.inclusions, compact smaller text) */}
-              <div className="border-t border-gray-100/90 pt-2.5 mt-2.5">
-                <div className="flex items-center gap-1 mb-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60 inline-flex items-center gap-1">
-                    <CheckCircle2 size={9} className="text-emerald-600" />
-                    What Is Covered
-                  </span>
+                {/* Little Plan Details */}
+                <div className="border-t border-gray-100/90 pt-2.5 mt-1">
+                  <p className="text-[10.5px] text-gray-500 leading-relaxed line-clamp-2">
+                    {plan.short_description || plan.description || "Travel insurance protection for your journey."}
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  {plan.inclusions.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-1.5 text-[9.5px] text-gray-600 font-medium leading-tight">
+
+                {/* What Is Covered */}
+                <div className="border-t border-gray-100/90 pt-2.5 mt-2.5">
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60 inline-flex items-center gap-1">
+                      <CheckCircle2 size={9} className="text-emerald-600" />
+                      What Is Covered
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-1.5 text-[9.5px] text-gray-600 font-medium leading-tight">
                       <span className="w-1 h-1 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
-                      <span className="leading-tight">{item}</span>
+                      <span className="leading-tight">View complete policy coverage and benefits</span>
                     </div>
-                  ))}
+                    <div className="flex items-start gap-1.5 text-[9.5px] text-gray-600 font-medium leading-tight">
+                      <span className="w-1 h-1 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                      <span className="leading-tight">View pricing options and available durations</span>
+                    </div>
+                    <div className="flex items-start gap-1.5 text-[9.5px] text-gray-600 font-medium leading-tight">
+                      <span className="w-1 h-1 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                      <span className="leading-tight">View required documents and policy conditions</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="p-5 sm:p-6 pt-0 border-t border-gray-100 flex items-center justify-between gap-2 mt-auto">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleInquiry(plan.name, plan.priceUSD);
-                }}
-                className="flex-1 bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-[11px] sm:text-xs py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-pink-900/20 whitespace-nowrap"
-              >
-                <MessageCircle size={15} />
-                <span>Inquiry</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedPlanForModal(plan);
-                }}
-                className="flex-1 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-[11px] sm:text-xs py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap"
-              >
-                <CalendarCheck size={14} className="text-pink-400" />
-                <span>Apply for Insurance</span>
-              </button>
+              {/* Action Buttons */}
+              <div className="p-5 sm:p-6 pt-0 border-t border-gray-100 flex items-center justify-between gap-2 mt-auto">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInquiry(plan.name);
+                  }}
+                  className="flex-1 bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-[11px] sm:text-xs py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-pink-900/20 whitespace-nowrap"
+                >
+                  <MessageCircle size={15} />
+                  <span>Inquiry</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewPlan(plan.id);
+                  }}
+                  className="flex-1 bg-[#2D1347] hover:bg-[#3B145C] text-white font-bold text-[11px] sm:text-xs py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap"
+                >
+                  <CalendarCheck size={14} className="text-pink-400" />
+                  <span>Apply for Insurance</span>
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ── SEE MORE PLANS BUTTON ── */}
-      {hasMore ? (
+      {!loading && hasMore ? (
         <div className="flex justify-center -mt-6 mb-4">
           <button
             type="button"
@@ -182,10 +226,10 @@ export const TravelInsuranceDetailContent: React.FC = () => {
             <ChevronDown size={16} />
           </button>
         </div>
-      ) : INSURANCE_PLANS.length > INITIAL_COUNT ? (
+      ) : !loading && insurancePlans.length > INITIAL_COUNT ? (
         <div className="text-center -mt-6 mb-4">
           <span className="inline-block px-4 py-1.5 rounded-full bg-purple-50 text-[#2D1347] text-xs font-bold border border-purple-100 shadow-2xs">
-            ✓ All {INSURANCE_PLANS.length} insurance tiers displayed
+            ✓ All {insurancePlans.length} insurance tiers displayed
           </span>
         </div>
       ) : null}
@@ -203,7 +247,6 @@ export const TravelInsuranceDetailContent: React.FC = () => {
             In remote Himalayan terrain, minutes matter. Our direct satellite and radio link ensures the fastest evacuation in Nepal.
           </p>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {[
             {
@@ -237,7 +280,6 @@ export const TravelInsuranceDetailContent: React.FC = () => {
       </div>
 
       {/* ── 5. TRAVEL INSURANCE FAQS ── */}
-      {/* ── 5. TRAVEL INSURANCE FAQS ── */}
       <DynamicFaqSection
         targetType="service"
         targetId="travel-insurance"
@@ -245,17 +287,6 @@ export const TravelInsuranceDetailContent: React.FC = () => {
         title="Trekking & Travel Insurance FAQ"
         subtitle="Critical information for high-altitude trekking safety"
       />
-
-      {/* ── INSURANCE APPLICATION MODAL ── */}
-      {selectedPlanForModal && (
-        <InsuranceApplicationModal
-          isOpen={Boolean(selectedPlanForModal)}
-          onClose={() => setSelectedPlanForModal(null)}
-          plan={selectedPlanForModal}
-          selectedOption={selectedPlanForModal.costOptions[0]}
-          numberOfTravelers={1}
-        />
-      )}
     </div>
   );
 };

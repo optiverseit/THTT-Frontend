@@ -83,6 +83,7 @@ export const initiatePayment = (data: {
   booking_id?: number;
   work_permit_id?: number;
   visa_application_id?: number;
+  insurance_application_id?: number;
   provider: "ESEWA" | "KHALTI" | "PAYLATER";
 }) => {
   return axiosInstance.post("/payments/initiate", data);
@@ -298,5 +299,87 @@ export const storeVisaApplication = (data: FormData) => {
   );
 };
 
+
+// ======================================================
+// INSURANCE PUBLIC APIs
+// ======================================================
+
+export const getInsurancePlans = () => {
+  return axiosInstance.get(
+    "/insurance-plans"
+  );
+};
+
+export const getInsurancePlanById = (
+  id: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-plans/show/${id}`
+  );
+};
+
+export const getInsurancePricingTiersByPlan = (
+  insurancePlanId: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-pricing-tiers/plan/${insurancePlanId}`
+  );
+};
+
+export const getInsurancePricingTierById = (
+  id: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-pricing-tiers/show/${id}`
+  );
+};
+
+export const getInsuranceDocumentRequirementsByPlan = (
+  insurancePlanId: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-document-requirements/plan/${insurancePlanId}`
+  );
+};
+
+export const getInsuranceDocumentRequirementById = (
+  id: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-document-requirements/show/${id}`
+  );
+};
+
+export const getInsuranceInformationByPlan = (
+  insurancePlanId: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-information/plan/${insurancePlanId}`
+  );
+};
+
+export const getInsuranceInformationById = (
+  id: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-information/show/${id}`
+  );
+};
+
+export const getInsuranceDynamicFieldsByPlan = (
+  insurancePlanId: number | string
+) => {
+  return axiosInstance.get(
+    `/insurance-dynamic-fields/plan/${insurancePlanId}`
+  );
+};
+
+export const createInsuranceApplication = (formData: FormData) => {
+  return axiosInstance.post("/insurance-applications/store", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
 
 

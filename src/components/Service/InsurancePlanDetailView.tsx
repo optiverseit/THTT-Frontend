@@ -1,138 +1,162 @@
-import React, { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-  ShieldCheck,
-  MessageCircle,
-  Printer,
-  Zap,
-  Mountain,
-  Users,
-  RefreshCw,
-  Share2,
-  Check,
-  Link2,
-} from "lucide-react";
-
-import {
-  useGlobalCurrency,
-  formatNPR,
-  formatUSD,
-  formatINR,
-  displayPrice,
-} from "../../context/CurrencyContext";
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Calendar, CheckCircle2, AlertCircle, ShieldCheck, MessageCircle, Printer, Zap, Users, RefreshCw, Share2, Check, Link2 } from "lucide-react";
+import { useGlobalCurrency, formatNPR, formatUSD, formatINR, displayPrice } from "../../context/CurrencyContext";
 import { InsuranceApplicationModal } from "./InsuranceApplicationModal";
-import { InsurancePlan, InsuranceCostOption } from "./insuranceData";
-import {
-  shareToPlatform,
-  copyToClipboard,
-  getCurrentUrl,
-  getCrawlerSafeUrl,
-} from "../../utils/shareUtils";
+import { getInsurancePlanById } from "../../api/BackendApi";
+import { shareToPlatform, copyToClipboard, getCurrentUrl, getCrawlerSafeUrl } from "../../utils/shareUtils";
 import Logo from "../../assets/images/Logo.png";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
-
-interface InsurancePlanDetailViewProps {
-  plan: InsurancePlan;
-  allPlans: InsurancePlan[];
-  onSelectPlan: (plan: InsurancePlan) => void;
-  onBack?: () => void;
+interface InsuranceCostOption {
+  id?: number;
+  name: string;
+  days: string;
+  nprPrice: number;
+  usdPrice: number;
+  coverageLimit: string;
+  description: string;
 }
-
-const altitudeHeroBgMap: Record<string, string> = {
-  "plan-trek-standard": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1400",
-  "plan-high-altitude": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&q=80&w=1400",
-  "plan-extreme-expedition": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1400",
-  "plan-international": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&q=80&w=1400",
-};
-
-export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = ({
-  plan,
-  allPlans: _allPlans,
-  onSelectPlan: _onSelectPlan,
-  onBack: _onBack,
-}) => {
+interface InsurancePlanView {
+  id: string;
+  backendId: number;
+  name: string;
+  subtitle: string;
+  badge: string;
+  badgeColor: string;
+  maxAltitude: string;
+  priceUSD: number;
+  baseNPRPrice: number;
+  durationCovered: string;
+  coverageLimit: string;
+  highlights: string[];
+  inclusions: string[];
+  exclusions: string[];
+  heroImage: string;
+  aboutText: string;
+  requirementDocuments: string[];
+  documentRequirements: {
+    id: number;
+    document_type: string;
+    title: string;
+    description?: string | null;
+    is_required: boolean;
+  }[];
+  termsAndConditions: string[];
+  costOptions: InsuranceCostOption[];
+  emergencyHelpline?: string;
+  claimSettlement?: string;
+}
+const toArray = (value: any) => Array.isArray(value) ? value : [];
+const sortByDisplayOrder = (items: any[]) => [...items].sort((a, b) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0));
+export const InsurancePlanDetailView: React.FC = () => {
   const navigate = useNavigate();
-
-  const {
-    selectedCurrency,
-    setSelectedCurrency,
-    nprPerOneDollar,
-    nprPerOneINR,
-    isRateLoading,
-    rateLoadFailed,
-  } = useGlobalCurrency();
-
-  const defaultOption: InsuranceCostOption =
-    plan.costOptions && plan.costOptions.length > 0
-      ? plan.costOptions[0]
-      : {
-          name: plan.durationCovered,
-          days: plan.durationCovered,
-          nprPrice: plan.baseNPRPrice,
-          usdPrice: plan.priceUSD,
-          coverageLimit: plan.coverageLimit,
-          description: plan.name,
-        };
-
-  const [selectedCostOption, setSelectedCostOption] = useState<InsuranceCostOption>(defaultOption);
+  const { insuranceId } = useParams<{ insuranceId: string }>();
+  const { selectedCurrency, setSelectedCurrency, nprPerOneDollar, nprPerOneINR, isRateLoading, rateLoadFailed } = useGlobalCurrency();
+  const [plan, setPlan] = useState<InsurancePlanView | null>(null);
+  const [selectedCostOption, setSelectedCostOption] = useState<InsuranceCostOption | null>(null);
   const [numberOfTravelers, setNumberOfTravelers] = useState<number>(1);
   const [isAppModalOpen, setIsAppModalOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const shareRef = useRef<HTMLDivElement>(null);
-
-  // Update selected option when plan changes
-  React.useEffect(() => {
-    if (plan.costOptions && plan.costOptions.length > 0) {
-      setSelectedCostOption(plan.costOptions[0]);
-    } else {
-      setSelectedCostOption({
-        name: plan.durationCovered,
-        days: plan.durationCovered,
-        nprPrice: plan.baseNPRPrice,
-        usdPrice: plan.priceUSD,
-        coverageLimit: plan.coverageLimit,
-        description: plan.name,
-      });
-    }
-    setNumberOfTravelers(1);
-  }, [plan]);
-
-  // Close share popup on outside click
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
-        setIsShareOpen(false);
+  useEffect(() => {
+    const fetchPlan = async () => {
+      if (!insuranceId) {
+        setLoadError("Insurance plan not found.");
+        setLoading(false);
+        return;
       }
+      try {
+        setLoading(true);
+        setLoadError("");
+        const response = await getInsurancePlanById(insuranceId);
+        const raw = response?.data?.data;
+        if (!response?.data?.status || !raw) throw new Error(response?.data?.message || "Insurance plan not found");
+        const pricingTiers = sortByDisplayOrder(toArray(raw.pricing_tiers ?? raw.pricingTiers).filter((item: any) => !item?.status || item.status === "ACTIVE"));
+        const information = sortByDisplayOrder(toArray(raw.information).filter((item: any) => !item?.status || item.status === "ACTIVE"));
+        const documentRequirements = sortByDisplayOrder(toArray(raw.document_requirements ?? raw.documentRequirements).filter((item: any) => !item?.status || item.status === "ACTIVE"));
+        const coverage = information.filter((item: any) => item.type === "COVERAGE").map((item: any) => item.content).filter(Boolean);
+        const exclusions = information.filter((item: any) => item.type === "EXCLUSION").map((item: any) => item.content).filter(Boolean);
+        const policy = information.filter((item: any) => item.type === "POLICY").map((item: any) => item.content).filter(Boolean);
+        const terms = information.filter((item: any) => item.type === "TERMS_CONDITION").map((item: any) => item.content).filter(Boolean);
+        const rate = Number(nprPerOneDollar) > 0 ? Number(nprPerOneDollar) : 151.09;
+        const costOptions: InsuranceCostOption[] = pricingTiers.map((tier: any) => ({
+          id: Number(tier.id),
+          name: tier.title || "Insurance Plan",
+          days: `${Number(tier.duration_days || 0)} Days`,
+          nprPrice: Number(tier.price_npr || 0),
+          usdPrice: Number(tier.price_npr || 0) / rate,
+          coverageLimit: "Policy Coverage",
+          description: tier.title || raw.name || "Insurance Plan",
+        }));
+        const firstOption = costOptions[0];
+        const mappedPlan: InsurancePlanView = {
+          id: String(raw.id),
+          backendId: Number(raw.id),
+          name: raw.name || "Insurance Plan",
+          subtitle: raw.short_description || "",
+          badge: "Insurance",
+          badgeColor: "bg-pink-100 text-[#E11D48] border border-pink-300",
+          maxAltitude: "See Policy Details",
+          priceUSD: firstOption?.usdPrice || 0,
+          baseNPRPrice: firstOption?.nprPrice || 0,
+          durationCovered: firstOption?.days || raw.processing_time || "See Pricing",
+          coverageLimit: "See Policy Details",
+          highlights: coverage.slice(0, 4),
+          inclusions: coverage,
+          exclusions,
+          heroImage: raw.insurance_image || "",
+          aboutText: raw.description || raw.short_description || "",
+          requirementDocuments: documentRequirements.map((doc: any) => doc.title || doc.document_type).filter(Boolean),
+          documentRequirements: documentRequirements.map((doc: any) => ({
+            id: Number(doc.id),
+            document_type: doc.document_type || "",
+            title: doc.title || doc.document_type || "Document",
+            description: doc.description || null,
+            is_required: doc.is_required === true || doc.is_required === 1,
+          })),
+          termsAndConditions: [...policy, ...terms],
+          costOptions,
+        };
+        setPlan(mappedPlan);
+        setSelectedCostOption(firstOption || null);
+        setNumberOfTravelers(1);
+      } catch (error: any) {
+        console.error("Failed to fetch insurance plan:", error);
+        setLoadError(error?.response?.data?.message || error?.message || "Failed to load insurance plan.");
+        setPlan(null);
+        setSelectedCostOption(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlan();
+  }, [insuranceId]);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setIsShareOpen(false);
     };
     if (isShareOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isShareOpen]);
-
-  const costOptionsList: InsuranceCostOption[] =
-    plan.costOptions && plan.costOptions.length > 0
-      ? plan.costOptions
-      : [defaultOption];
-
+  if (loading) return <div className="min-h-[50vh] flex items-center justify-center"><div className="w-10 h-10 border-4 border-gray-200 border-t-[#E91E63] rounded-full animate-spin" /></div>;
+  if (loadError || !plan) return <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-center px-4"><p className="text-sm font-bold text-gray-600">{loadError || "Insurance plan not found."}</p><button type="button" onClick={() => navigate(-1)} className="px-5 py-2.5 rounded-xl bg-[#2D1347] text-white text-xs font-bold cursor-pointer">Go Back</button></div>;
+  const costOptionsList = plan.costOptions;
   const getRowDisplayPrice = (nprPrice: number): string => {
     if (selectedCurrency === "nepali") return formatNPR(nprPrice);
     if (selectedCurrency === "inr") return formatINR(nprPrice / nprPerOneINR);
     return formatUSD(nprPrice / nprPerOneDollar);
   };
-
-  const unitPrice = selectedCostOption.nprPrice;
+  const unitPrice = selectedCostOption?.nprPrice || 0;
   const estimatedTotalPrice = unitPrice * numberOfTravelers;
-
   const getFormattedEstimatedTotal = (): string => {
     if (selectedCurrency === "nepali") return formatNPR(estimatedTotalPrice);
     if (selectedCurrency === "inr") return formatINR(estimatedTotalPrice / nprPerOneINR);
     return formatUSD(estimatedTotalPrice / nprPerOneDollar);
   };
-
   const handlePrint = () => {
     document.body.classList.remove("printing-modal-slip");
     const originalTitle = document.title;
@@ -141,84 +165,31 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
     window.addEventListener("afterprint", () => { document.title = originalTitle; }, { once: true });
     setTimeout(() => { document.title = originalTitle; }, 2000);
   };
-
   const handleWhatsAppInquiry = () => {
-    const currencyText =
-      selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
+    const currencyText = selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
     const totalFormatted = getFormattedEstimatedTotal();
-    const msg = encodeURIComponent(
-      `Hello Trip Himalaya (Insurance Team)! I am inquiring about travel insurance for "${plan.name}" (${plan.maxAltitude}). Option: ${selectedCostOption.name} (${selectedCostOption.days}) for ${numberOfTravelers} traveler(s). Coverage: ${selectedCostOption.coverageLimit}. Estimated Premium: ${totalFormatted} (${currencyText}). Please guide me through the next steps.`
-    );
-    window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
+    const optionText = selectedCostOption ? ` Option: ${selectedCostOption.name} (${selectedCostOption.days}).` : "";
+    const msg = encodeURIComponent(`Hello Trip Himalaya (Insurance Team)! I am inquiring about travel insurance for "${plan.name}".${optionText} For ${numberOfTravelers} traveler(s). Estimated Premium: ${selectedCostOption ? totalFormatted : "Not available"} (${currencyText}). Please guide me through the next steps.`);
+    window.open(`https\://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
-
-  // Share helpers
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
-  const shareTitle = `${plan.name} | Trip Himalaya Travel Insurance`;
-  const shareText = `Check out ${plan.name} (${plan.maxAltitude}) - ${plan.coverageLimit} starting from ${getFormattedEstimatedTotal()} on Trip Himalaya!`;
-  const shareData = {
-    title: shareTitle,
-    text: shareText,
-    url: currentUrl,
-    image: altitudeHeroBgMap[plan.id] || plan.heroImage,
-  };
-
+  const shareData = { title: `${plan.name} | Trip Himalaya Travel Insurance`, text: `Check out ${plan.name} starting from ${selectedCostOption ? getFormattedEstimatedTotal() : "Not Available"} on Trip Himalaya!`, url: currentUrl, image: plan.heroImage };
   const shareButtons = [
-    {
-      name: "Facebook",
-      action: () => shareToPlatform("facebook", shareData),
-      bg: "#1877F2",
-      svg: (
-        <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
-      ),
-    },
-    {
-      name: "WhatsApp",
-      action: () => shareToPlatform("whatsapp", shareData),
-      bg: "#25D366",
-      svg: (
-        <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.5 2a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm0 17.5a8 8 0 110-16 8 8 0 010 16z"/></svg>
-      ),
-    },
-    {
-      name: "Twitter/X",
-      action: () => shareToPlatform("twitter", shareData),
-      bg: "#000000",
-      svg: (
-        <svg viewBox="0 0 24 24" fill="white" width="14" height="14"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.259 5.626L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
-      ),
-    },
-    {
-      name: "Telegram",
-      action: () => shareToPlatform("telegram", shareData),
-      bg: "#229ED9",
-      svg: (
-        <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-      ),
-    },
+    { name: "Facebook", action: () => shareToPlatform("facebook", shareData), bg: "#1877F2", svg: <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" /></svg> },
+    { name: "WhatsApp", action: () => shareToPlatform("whatsapp", shareData), bg: "#25D366", svg: <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M11.5 2a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm0 17.5a8 8 0 110-16 8 8 0 010 16z" /></svg> },
+    { name: "Twitter/X", action: () => shareToPlatform("twitter", shareData), bg: "#000000", svg: <svg viewBox="0 0 24 24" fill="white" width="14" height="14"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.259 5.626L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" /></svg> },
+    { name: "Telegram", action: () => shareToPlatform("telegram", shareData), bg: "#229ED9", svg: <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg> },
   ];
-
   const handleCopyLink = async () => {
     const success = await copyToClipboard(getCrawlerSafeUrl(getCurrentUrl()));
-    if (success) {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    }
+    if (success) { setIsCopied(true); setTimeout(() => setIsCopied(false), 2000); }
   };
-
-  // Print document pre-compute values
   const printNPRTotal = formatNPR(estimatedTotalPrice);
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
-
-  const heroBg = altitudeHeroBgMap[plan.id] || plan.heroImage;
-
+  const heroBg = plan.heroImage;
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-
-      {/* ══════════════════════════════════════════════════════════════════
-          COMPREHENSIVE PRINT-ONLY QUOTATION DOCUMENT (FULL-PAGE BALANCED)
-          ══════════════════════════════════════════════════════════════════ */}
       <div
         className="hidden print:flex flex-col justify-between font-sans relative print-page-container insurance-plan-quotation-print"
         style={{
@@ -254,11 +225,9 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               print-color-adjust: exact !important;
               color-adjust: exact !important;
             }
-            /* When printing modal slip, HIDE this quotation completely */
             body.printing-modal-slip .insurance-plan-quotation-print {
               display: none !important;
             }
-            /* When printing quotation, HIDE modal slip completely */
             body:not(.printing-modal-slip) .insurance-modal-slip-print {
               display: none !important;
             }
@@ -272,7 +241,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            /* Force gradient/colored headers to print */
             .print-header-main {
               background: #2D1347 !important;
               -webkit-print-color-adjust: exact !important;
@@ -310,9 +278,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             }
           }
         `}</style>
-
-
-        {/* Watermark — CSS flexbox centered, rotates around its own center, text color always prints */}
         <div
           aria-hidden="true"
           style={{
@@ -342,9 +307,7 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             Trip Himalaya Tours and Travels
           </div>
         </div>
-
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-          {/* Top Block: Letterhead + Divider */}
           <div>
             <div className="print-header-main" style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "8px 8px 0 0", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -362,14 +325,14 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                     <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "2px" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                          <circle cx="12" cy="10" r="3"/>
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
                         </svg>
                         Airport, Shambhu Marg, Road No. 04, Kathmandu
                       </span>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z" />
                         </svg>
                         +977 9851420882
                       </span>
@@ -377,16 +340,16 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                     <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                          <polyline points="22,6 12,13 2,6"/>
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                          <polyline points="22,6 12,13 2,6" />
                         </svg>
                         dev.triphimalayatt@gmail.com
                       </span>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"/>
-                          <line x1="2" y1="12" x2="22" y2="12"/>
-                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                         </svg>
                         www.triphimalaya.com.np
                       </span>
@@ -402,16 +365,12 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                   Date: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                 </div>
                 <div style={{ fontSize: "8px", color: "#cbd5e1", fontFamily: "monospace" }}>
-                  REF: THTT-INS-{plan.id.replace("plan-", "").toUpperCase()}-{new Date().getFullYear()}
+                  REF: THTT-INS-{String(plan.id).replace("plan-", "").toUpperCase()}-{new Date().getFullYear()}
                 </div>
               </div>
             </div>
             <div style={{ height: "3.5px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)" }} />
           </div>
-
-          {/* ══════════════════════════════════════════════════════════════
-              1. APPLIED DETAILS FIRST
-              ══════════════════════════════════════════════════════════════ */}
           <div style={{ border: "1px solid #cbd5e1", borderRadius: "7px", overflow: "hidden", background: "#ffffff" }}>
             <div className="print-header-main" style={{ background: "#2D1347", color: "#ffffff", padding: "4.5px 10px", fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>1. Applied Policy &amp; Coverage Details</span>
@@ -419,8 +378,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                 Status: Applied / Quotation Confirmed
               </span>
             </div>
-
-            {/* Applied Summary Hero Strip */}
             <div className="print-highlight-row" style={{ background: "#fdf4ff", padding: "10px 14px", borderBottom: "1px solid #f3e8ff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "14px" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -432,25 +389,21 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                   </span>
                 </div>
                 <div style={{ fontSize: "9px", color: "#6b21a8", marginTop: "3px", fontWeight: 600, lineHeight: 1.35 }}>
-                  Applied Option: <strong style={{ color: "#2D1347" }}>{selectedCostOption.name} ({selectedCostOption.days})</strong> • Max Altitude: <strong style={{ color: "#be123c" }}>{plan.maxAltitude}</strong> • Medical Limit: <strong style={{ color: "#047857" }}>{selectedCostOption.coverageLimit}</strong>
+                  Applied Option: <strong style={{ color: "#2D1347" }}>{selectedCostOption ? `${selectedCostOption.name} (${selectedCostOption.days})` : "Not Available"}</strong> • Max Altitude: <strong style={{ color: "#be123c" }}>{plan.maxAltitude}</strong> • Medical Limit: <strong style={{ color: "#047857" }}>{selectedCostOption?.coverageLimit || "Not Available"}</strong>
                 </div>
               </div>
-
-              {/* Applied Price Highlight Box — Pinned to Right Side */}
               <div style={{ textAlign: "right", background: "#ffffff", border: "1.5px solid #c084fc", borderRadius: "6px", padding: "5px 14px", flexShrink: 0 }}>
                 <div style={{ fontSize: "8px", fontWeight: 800, color: "#7e22ce", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                   Total Estimated Premium ({numberOfTravelers} {numberOfTravelers === 1 ? "Traveler" : "Travelers"})
                 </div>
                 <div style={{ fontSize: "16px", fontWeight: 900, color: "#2D1347", lineHeight: 1.15, margin: "2px 0" }}>
-                  {printNPRTotal}
+                  {selectedCostOption ? printNPRTotal : "Not Available"}
                 </div>
                 <div style={{ fontSize: "8.5px", color: "#6b7280" }}>
-                  ≈ {printUSDTotal} &nbsp;|&nbsp; ≈ {printINRTotal}
+                  {selectedCostOption ? <>≈ {printUSDTotal} &nbsp;|&nbsp; ≈ {printINRTotal}</> : ""}
                 </div>
               </div>
             </div>
-
-            {/* Pricing Schedule & Alternative Durations Table */}
             <table style={{ width: "100%", fontSize: "9px", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
@@ -462,8 +415,10 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                 </tr>
               </thead>
               <tbody>
-                {costOptionsList.map((opt, idx) => {
-                  const isSelected = opt.name === selectedCostOption.name;
+                {costOptionsList.length === 0 ? (
+                  <tr><td colSpan={5} style={{ padding: "10px", textAlign: "center", color: "#64748b" }}>No pricing tier available</td></tr>
+                ) : costOptionsList.map((opt, idx) => {
+                  const isSelected = opt.name === selectedCostOption?.name;
                   return (
                     <tr
                       key={idx}
@@ -493,10 +448,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </tbody>
             </table>
           </div>
-
-          {/* ══════════════════════════════════════════════════════════════
-              2. REQUIRED DOCUMENTS CHECKLIST
-              ══════════════════════════════════════════════════════════════ */}
           <div style={{ border: "1px solid #cbd5e1", borderRadius: "7px", overflow: "hidden", background: "#ffffff" }}>
             <div className="print-header-dark" style={{ background: "#1e293b", color: "#ffffff", padding: "4.5px 10px", fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>
               2. Required Documents Checklist
@@ -510,10 +461,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               <div>☑ Alpine Fitness &amp; Altitude Self-Declaration</div>
             </div>
           </div>
-
-          {/* ══════════════════════════════════════════════════════════════
-              3. TERMS & POLICY CONDITIONS
-              ══════════════════════════════════════════════════════════════ */}
           <div style={{ border: "1px solid #cbd5e1", borderRadius: "7px", overflow: "hidden", background: "#ffffff" }}>
             <div className="print-header-slate" style={{ background: "#334155", color: "#ffffff", padding: "4.5px 10px", fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>
               3. Terms &amp; Policy Conditions
@@ -527,10 +474,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               <div>• <strong>Policy Validity:</strong> Certification issued upon document verification and premium settlement prior to trek departure date.</div>
             </div>
           </div>
-
-          {/* ══════════════════════════════════════════════════════════════
-              4. EMERGENCY CONTACTS & 24/7 RESCUE ASSISTANCE
-              ══════════════════════════════════════════════════════════════ */}
           <div style={{ border: "1px solid #cbd5e1", borderRadius: "7px", overflow: "hidden", background: "#ffffff" }}>
             <div className="print-header-red" style={{ background: "linear-gradient(90deg, #be123c, #9d174d)", color: "#ffffff", padding: "4.5px 10px", fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>4. Emergency Assistance &amp; 24/7 SOS Contacts</span>
@@ -561,8 +504,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </div>
             </div>
           </div>
-
-          {/* Corporate Footer Bar */}
           <div className="print-footer-bar" style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "7px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8px", color: "#ffffff" }}>
             <div><strong>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> • Nepal Govt. Reg. No. 2490 • Shambhu Marg, Kathmandu</div>
             <div style={{ color: "#fce7f3" }}>24/7 SOS: +977 9851420882 • Cashless Heli Guarantee</div>
@@ -570,17 +511,12 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
           </div>
         </div>
       </div>
-
-      {/* ── HERO HEADER BANNER ── */}
       <div
         className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end"
         style={{ backgroundImage: `url('${heroBg}')`, backgroundSize: "cover", backgroundPosition: "center" }}
       >
-        {/* Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
-
-        {/* Content */}
         <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
@@ -595,8 +531,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                 </p>
               </div>
             </div>
-
-            {/* Action buttons */}
             <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-12">
               <button
                 onClick={handleWhatsAppInquiry}
@@ -615,8 +549,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </button>
             </div>
           </div>
-
-          {/* Metadata Badges — matching card attributes */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${plan.badgeColor}`}>
@@ -627,7 +559,7 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
               <span className="text-pink-200 text-xs font-normal">Starts at:</span>
               <span className="font-extrabold text-white">
-                {displayPrice(plan.baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                {selectedCostOption ? displayPrice(plan.baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR) : "Not Available"}
               </span>
             </div>
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
@@ -636,8 +568,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             </div>
           </div>
         </div>
-
-        {/* Share Button — top-right */}
         <div ref={shareRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-20">
           {isShareOpen && (
             <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
@@ -671,13 +601,8 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
           </button>
         </div>
       </div>
-
-      {/* ── MAIN 2-COLUMN SECTION ── */}
       <div className="print:hidden grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* LEFT: About, Coverage Benefits, Required Docs, Terms */}
         <div className="lg:col-span-2 space-y-8">
-
-          {/* About the Plan */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
             <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
               About {plan.name}
@@ -685,8 +610,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             <div className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-3">
               <p>{plan.aboutText}</p>
             </div>
-
-            {/* Coverage Highlights */}
             <div className="pt-4 border-t border-gray-100">
               <span className="text-[11px] font-black uppercase text-gray-400 tracking-wider block mb-2.5">
                 Key Coverage Highlights:
@@ -701,8 +624,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </div>
             </div>
           </div>
-
-          {/* Policy Inclusions — Full List */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
@@ -726,8 +647,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               ))}
             </div>
           </div>
-
-          {/* Policy Exclusions — What Is Not Covered */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-rose-100 shadow-sm space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
@@ -744,13 +663,13 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               {(plan.exclusions && plan.exclusions.length > 0
                 ? plan.exclusions
                 : [
-                    "Pre-existing chronic medical conditions not declared during application",
-                    "Participation in unguided or unauthorized solo mountaineering above permitted zone",
-                    "Losses resulting from alcohol, drugs, or illegal substance intoxication",
-                    "Personal electronic gadgets (laptops, cameras) without supplementary riders",
-                    "Self-inflicted injuries or participation in illegal activities",
-                    "Losses arising from civil conflict, war, or government-imposed travel bans",
-                  ]
+                  "Pre-existing chronic medical conditions not declared during application",
+                  "Participation in unguided or unauthorized solo mountaineering above permitted zone",
+                  "Losses resulting from alcohol, drugs, or illegal substance intoxication",
+                  "Personal electronic gadgets (laptops, cameras) without supplementary riders",
+                  "Self-inflicted injuries or participation in illegal activities",
+                  "Losses arising from civil conflict, war, or government-imposed travel bans",
+                ]
               ).map((exc, idx) => (
                 <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-50 border border-rose-100/80 transition-colors">
                   <div className="w-5 h-5 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-xs">
@@ -767,8 +686,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </p>
             </div>
           </div>
-
-          {/* Required Documents */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
@@ -798,8 +715,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </p>
             </div>
           </div>
-
-          {/* Terms & Conditions */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
             <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
               Policy Terms &amp; Conditions
@@ -814,18 +729,13 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
             </div>
           </div>
         </div>
-
-        {/* RIGHT: Sticky Pricing Card */}
         <div id="pricing-section" className="space-y-4 lg:sticky lg:top-[150px] self-start">
-          {/* Main Pricing Card */}
           <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* Card Header */}
             <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-sm font-black">Coverage &amp; Pricing</h2>
                 <p className="text-[9px] text-gray-300 font-medium">Select your duration plan</p>
               </div>
-              {/* Currency Toggle */}
               <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
                 <button
                   type="button"
@@ -844,8 +754,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                 >INR (₹)</button>
               </div>
             </div>
-
-            {/* Exchange Rate Banner */}
             {selectedCurrency !== "nepali" && (
               <div className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                 <div className="flex items-center gap-1">
@@ -859,10 +767,7 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                 {!isRateLoading && <span className="text-[8px] opacity-60">Live Exchange Rate</span>}
               </div>
             )}
-
-            {/* Pricing Table + Controls */}
             <div className="p-3 sm:p-3.5 space-y-2.5">
-              {/* Pricing Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
@@ -873,8 +778,10 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100/60">
-                    {costOptionsList.map((opt, rowIndex) => {
-                      const isSelected = selectedCostOption.name === opt.name;
+                    {costOptionsList.length === 0 ? (
+                      <tr><td colSpan={3} className="py-5 text-center text-xs font-semibold text-gray-400">No pricing tier available</td></tr>
+                    ) : costOptionsList.map((opt, rowIndex) => {
+                      const isSelected = selectedCostOption?.name === opt.name;
                       return (
                         <tr
                           key={rowIndex}
@@ -897,8 +804,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                   </tbody>
                 </table>
               </div>
-
-              {/* Traveler Count Selector */}
               <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Users size={13} className="text-[#E91E63]" />
@@ -922,15 +827,13 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                   >+</button>
                 </div>
               </div>
-
-              {/* Estimated Total */}
               <div className="flex items-center justify-between pt-0.5">
                 <div>
                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
                     Estimated Premium ({numberOfTravelers} {numberOfTravelers === 1 ? "traveler" : "travelers"})
                   </span>
                   <span className="text-lg font-black text-[#200B3B]">
-                    {getFormattedEstimatedTotal()}
+                    {selectedCostOption ? getFormattedEstimatedTotal() : "Not Available"}
                   </span>
                 </div>
                 <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -938,15 +841,19 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
                   Best Rate
                 </span>
               </div>
-
-              {/* CTA Buttons */}
               <div className="space-y-1.5 pt-0.5">
                 <button
                   type="button"
-                  onClick={() => setIsAppModalOpen(true)}
-                  className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
+                  onClick={() => {
+                    if (selectedCostOption) setIsAppModalOpen(true);
+                  }}
+                  disabled={!selectedCostOption}
+                  className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm ${selectedCostOption
+                      ? "cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
+                      : "cursor-not-allowed bg-gray-200 text-gray-400"
+                    }`}
                 >
-                  <span>Apply for Insurance Now</span>
+                  <span>{selectedCostOption ? "Apply for Insurance Now" : "Pricing Not Available"}</span>
                 </button>
                 <button
                   type="button"
@@ -959,9 +866,6 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </div>
             </div>
           </div>
-
-
-          {/* Verified Insurer Card */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
@@ -973,26 +877,22 @@ export const InsurancePlanDetailView: React.FC<InsurancePlanDetailViewProps> = (
               </div>
             </div>
           </div>
-
         </div>
       </div>
-
-
-      {/* ── OUR OTHER SERVICES ── */}
       <div className="mt-10">
         <OtherServicesComponent service={services} />
       </div>
-
-      {/* ── INSURANCE APPLICATION MODAL ── */}
-      <InsuranceApplicationModal
-        isOpen={isAppModalOpen}
-        onClose={() => setIsAppModalOpen(false)}
-        plan={plan}
-        selectedOption={selectedCostOption}
-        numberOfTravelers={numberOfTravelers}
-      />
+      {isAppModalOpen && selectedCostOption && (
+        <InsuranceApplicationModal
+          isOpen={isAppModalOpen}
+          onClose={() => setIsAppModalOpen(false)}
+          plan={plan as any}
+          selectedOption={selectedCostOption}
+          numberOfTravelers={numberOfTravelers}
+          documentConfig={plan.documentRequirements.map((doc) => ({ id: String(doc.id), title: doc.title, required: doc.is_required })) as any}
+        />
+      )}
     </div>
   );
 };
-
 export default InsurancePlanDetailView;

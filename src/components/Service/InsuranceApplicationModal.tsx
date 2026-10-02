@@ -26,6 +26,7 @@ import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { InsurancePlan, InsuranceCostOption } from "./insuranceData";
 import { InsuranceDocumentField, DEFAULT_DOCUMENT_CONFIG, buildEmptyDocumentFiles } from "./insuranceDocumentConfig";
+import { createInsuranceApplication, initiatePayment } from "../../api/BackendApi";
 
 /** Dynamic insurance requirement field definition (can be loaded from API/database) */
 export interface InsuranceRequirementField {
@@ -52,8 +53,8 @@ export const DEFAULT_REQUIREMENT_CONFIG: InsuranceRequirementField[] = [
 export interface InsuranceApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  plan: InsurancePlan;
-  selectedOption: InsuranceCostOption;
+  plan: InsurancePlan & { backendId?: number };
+  selectedOption: InsuranceCostOption & { id?: number };
   numberOfTravelers?: number;
   /** Optional document config override from admin panel / API */
   documentConfig?: InsuranceDocumentField[];
@@ -132,6 +133,11 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   const [submissionId, setSubmissionId] = useState("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [insuranceApplicationId, setInsuranceApplicationId] = useState<number | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later" | "">("");
 
   // File input refs — one per document config slot (dynamic)
   const fileRefs = useRef<Record<string, React.RefObject<HTMLInputElement | null>>>({});
@@ -200,92 +206,88 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validate applicants
+    const planId = Number((plan as any).backendId || plan.id);
+    const pricingTierId = Number(selectedOption.id);
+    if (!Number.isFinite(planId) || planId <= 0) { alert("Insurance plan ID is missing."); return; }
+    if (!Number.isFinite(pricingTierId) || pricingTierId <= 0) { alert("Insurance pricing tier ID is missing."); return; }
+    if (documentConfig.length === 0) { alert("No document requirements are configured for this insurance plan."); return; }
     for (let i = 0; i < travelersCount; i++) {
       const app = applicants[i];
-      if (!app || !app.fullName.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Full Name for Traveler ${i + 1}.`);
-        return;
-      }
-      if (!app.nationality.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Nationality for Traveler ${i + 1}.`);
-        return;
-      }
-
-      // Date of Birth validation: cannot be in the future, must be >= 18
-      if (!app.dateOfBirth) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Date of Birth for Traveler ${i + 1}.`);
-        return;
-      }
+      if (!app || !app.fullName.trim()) { setActiveApplicantIndex(i); alert(`Please enter Full Name for Traveler ${i + 1}.`); return; }
+      if (!app.nationality.trim()) { setActiveApplicantIndex(i); alert(`Please enter Nationality for Traveler ${i + 1}.`); return; }
+      if (!app.dateOfBirth) { setActiveApplicantIndex(i); alert(`Please enter Date of Birth for Traveler ${i + 1}.`); return; }
       const dob = new Date(app.dateOfBirth);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const dobDate = new Date(dob.getFullYear(), dob.getMonth(), dob.getDate());
-      if (dobDate > today) {
-        setActiveApplicantIndex(i);
-        alert(`Date of Birth cannot be in the future for Traveler ${i + 1}.`);
-        return;
-      }
+      if (dobDate >= today) { setActiveApplicantIndex(i); alert(`Date of Birth must be before today for Traveler ${i + 1}.`); return; }
       let age = today.getFullYear() - dob.getFullYear();
       const monthDiff = today.getMonth() - dob.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-        age--;
-      }
-      if (age < 18) {
-        setActiveApplicantIndex(i);
-        alert(`Traveler ${i + 1} must be at least 18 years old to apply for insurance.`);
-        return;
-      }
 
-      // Passport / NID / Citizenship Number
-      if (!app.passportNumber.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Passport, NID, or Citizenship Number for Traveler ${i + 1}.`);
-        return;
-      }
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
+      if (age < 18) { setActiveApplicantIndex(i); alert(`Traveler ${i + 1} must be at least 18 years old to apply for insurance.`); return; }
+      if (!app.passportNumber.trim()) { setActiveApplicantIndex(i); alert(`Please enter Passport, NID, or Citizenship Number for Traveler ${i + 1}.`); return; }
+      if (!app.passportExpiry) { setActiveApplicantIndex(i); alert(`Please enter Passport Expiry or NID/Citizenship Issued Date for Traveler ${i + 1}.`); return; }
+      if (!app.email.trim()) { setActiveApplicantIndex(i); alert(`Please enter Email Address for Traveler ${i + 1}.`); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(app.email.trim())) { setActiveApplicantIndex(i); alert(`Please enter a valid email address for Traveler ${i + 1}.`); return; }
+      if (!app.phone.trim()) { setActiveApplicantIndex(i); alert(`Please enter WhatsApp / Mobile Number for Traveler ${i + 1}.`); return; }
+      if (app.phone.replace(/\D/g, "").length !== 10) { setActiveApplicantIndex(i); alert(`Phone number must be exactly 10 digits for Traveler ${i + 1}.`); return; }
 
-
-      // Email validation
-      if (!app.email.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Email Address for Traveler ${i + 1}.`);
-        return;
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(app.email.trim())) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter a valid email address for Traveler ${i + 1}.`);
-        return;
-      }
-
-      // Phone number 10-digit validation
-      if (!app.phone.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter WhatsApp / Mobile Number for Traveler ${i + 1}.`);
-        return;
-      }
-      const phoneDigits = app.phone.replace(/\D/g, "");
-      if (phoneDigits.length !== 10) {
-        setActiveApplicantIndex(i);
-        alert(`Phone number must be exactly 10 digits for Traveler ${i + 1}.`);
-        return;
-      }
-
-      // Documents validation — driven by documentConfig
       for (const field of documentConfig) {
-        if (field.required && !app.files[field.id]) {
-          setActiveApplicantIndex(i);
-          alert(`Please upload "${field.title}" for Traveler ${i + 1}.`);
-          return;
-        }
+        const file = app.files[field.id];
+        if (field.required && !file) { setActiveApplicantIndex(i); alert(`Please upload "${field.title}" for Traveler ${i + 1}.`); return; }
+        if (file && file.size > 5 * 1024 * 1024) { setActiveApplicantIndex(i); alert(`"${field.title}" for Traveler ${i + 1} must be 5 MB or smaller.`); return; }
       }
     }
+
+    if (!emergencyContactPhone.trim()) { alert("Please enter Emergency Contact Number for Healthcare & Emergency Contact (Section 2)."); return; }
+    if (!startDate) { alert("Please select the Policy Expected Start Date (Section 3)."); return; }
+    if (!endDate) { alert("Please select the Policy Expected End Date (Section 3)."); return; }
+    const todayString = new Date().toISOString().split("T")[0];
+    if (startDate < todayString) { alert("Policy Expected Start Date cannot be before today."); return; }
+    if (endDate < startDate) { alert("Policy Expected End Date cannot be earlier than Policy Expected Start Date."); return; }
+    if (!termsAgreed) { alert("Please accept the insurance terms and conditions to proceed."); return; }
+    try {
+      setIsSubmittingApplication(true);
+      const formData = new FormData();
+      formData.append("insurance_plan_id", String(planId));
+      formData.append("insurance_pricing_tier_id", String(pricingTierId));
+      formData.append("start_date", startDate);
+      formData.append("end_date", endDate);
+      applicants.forEach((app, applicantIndex) => {
+        formData.append(`applicants[${applicantIndex}][applicant_full_name]`, app.fullName.trim());
+        formData.append(`applicants[${applicantIndex}][date_of_birth]`, app.dateOfBirth);
+        formData.append(`applicants[${applicantIndex}][nationality]`, app.nationality.trim());
+        if (app.email.trim()) formData.append(`applicants[${applicantIndex}][email]`, app.email.trim());
+        if (app.phoneCode) formData.append(`applicants[${applicantIndex}][country_code]`, app.phoneCode);
+        if (app.phone.trim()) formData.append(`applicants[${applicantIndex}][phone_number]`, app.phone.trim());
+        formData.append(`applicants[${applicantIndex}][passport_number]`, app.passportNumber.trim());
+        if (emergencyContactPhone.trim()) formData.append(`applicants[${applicantIndex}][emergency_contact_number]`, emergencyContactPhone.trim());
+        let documentIndex = 0;
+        documentConfig.forEach((field) => {
+          const file = app.files[field.id];
+          if (!file) return;
+          formData.append(`applicants[${applicantIndex}][documents][${documentIndex}][insurance_document_requirement_id]`, String(field.id));
+          formData.append(`applicants[${applicantIndex}][documents][${documentIndex}][file]`, file);
+          documentIndex++;
+        });
+      });
+      const response = await createInsuranceApplication(formData);
+      const application = response?.data?.data;
+      if (!response?.data?.status || !application?.id) throw new Error(response?.data?.message || "Failed to create insurance application.");
+      setInsuranceApplicationId(Number(application.id));
+      setSubmissionId(application.application_number || `INS-${application.id}`);
+      setSubmittedAt(new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }));
+      setShowPaymentStep(true);
+    } catch (error: any) {
+      console.error("Insurance application submission failed:", error);
+      const errors = error?.response?.data?.errors;
+      const firstError = errors ? Object.values(errors).flat()?.[0] : null;
+      alert(String(firstError || error?.response?.data?.message || error?.message || "Failed to create insurance application."));
+    } finally {
+      setIsSubmittingApplication(false);
 
     // Section 2: Dynamic Insurance Requirements validation
     for (const field of safeRequirementConfig) {
@@ -294,38 +296,56 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         return;
       }
     }
+  };
 
-    // Start Date & End Date validation
-    if (!startDate) {
-      alert("Please select the Start Date.");
-      return;
-    }
-    if (!endDate) {
-      alert("Please select the End Date.");
-      return;
-    }
-    if (new Date(endDate) < new Date(startDate)) {
-      alert("End Date cannot be earlier than Start Date.");
-      return;
-    }
 
-    if (!termsAgreed) {
-      alert("Please accept the insurance terms and conditions to proceed.");
-      return;
-    }
+  const redirectToEsewa = (paymentData: any) => {
+    if (!paymentData?.payment_url) throw new Error("eSewa payment URL was not returned by the server.");
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = paymentData.payment_url;
+    Object.entries(paymentData).forEach(([key, value]) => {
+      if (key === "payment_url" || value === undefined || value === null) return;
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = String(value);
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  };
 
-    const randomRef = `THTT-INS-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-    setSubmissionId(randomRef);
-    setSubmittedAt(
-      new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
-    setSubmitted(true);
+  const handleEsewaPayment = async () => {
+    if (!insuranceApplicationId) { alert("Insurance application ID is missing. Please submit the application again."); return; }
+    try {
+      setIsProcessingPayment(true);
+      setSelectedPaymentMethod("esewa");
+      const response = await initiatePayment({ insurance_application_id: insuranceApplicationId, provider: "ESEWA" });
+      if (!response?.data?.status) throw new Error(response?.data?.message || "Unable to initiate eSewa payment.");
+      redirectToEsewa(response.data.data);
+    } catch (error: any) {
+      console.error("eSewa payment initiation failed:", error);
+      alert(error?.response?.data?.message || error?.message || "Unable to initiate eSewa payment.");
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handlePayLater = async () => {
+    if (!insuranceApplicationId) { alert("Insurance application ID is missing. Please submit the application again."); return; }
+    try {
+      setIsProcessingPayment(true);
+      setSelectedPaymentMethod("pay_later");
+      const response = await initiatePayment({ insurance_application_id: insuranceApplicationId, provider: "PAYLATER" });
+      if (!response?.data?.status) throw new Error(response?.data?.message || "Unable to select Pay Later.");
+      setShowPaymentStep(false);
+      setSubmitted(true);
+    } catch (error: any) {
+      console.error("Pay Later initiation failed:", error);
+      alert(error?.response?.data?.message || error?.message || "Unable to select Pay Later.");
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handlePrintSlip = () => {
@@ -381,7 +401,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-black text-white truncate mt-0.5">
-                {submitted ? "Insurance Application Confirmed" : `Apply for ${plan.name}`}
+                {submitted ? "Insurance Application Confirmed" : showPaymentStep ? "Choose Payment Method" : `Apply for ${plan.name}`}
               </h2>
               <p className="text-xs text-white/80 font-semibold mt-0.5">
                 {selectedOption.name} ({selectedOption.days})
@@ -399,7 +419,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
             >
               <X size={16} />
             </button>
-            {!submitted && (
+            {!submitted && !showPaymentStep && (
               <div className="bg-[#E11D48] text-white text-xs font-black px-2.5 py-1 rounded-xl shadow-md whitespace-nowrap mt-3.5">
                 {displayPrice(selectedOption.nprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}{" "}
                 <span className="text-[10px] font-semibold text-white/90">/Person</span>
@@ -896,10 +916,29 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               </div> {/* end content wrapper */}
             </div>
           </div>
+        ) : showPaymentStep ? (
+          <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-[#2D1347]"><Lock size={22} /></div>
+              <h3 className="text-lg font-black text-[#2D1347]">Choose Payment Method</h3>
+              <p className="text-xs text-gray-500">Application <span className="font-bold text-[#2D1347]">{submissionId}</span> has been created. Select how you want to continue.</p>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <div><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Premium</span><span className="text-sm font-black text-[#2D1347]">{plan.name}</span><span className="text-[11px] text-gray-500 block">{selectedOption.name} • {travelersCount} {travelersCount === 1 ? "Traveler" : "Travelers"}</span></div>
+              <div className="text-right"><span className="text-lg font-black text-[#E11D48]">{displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}</span><span className="text-[10px] text-gray-400 block">Total Amount</span></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button type="button" onClick={handleEsewaPayment} disabled={isProcessingPayment} className="p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-300 transition-all text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                <div className="flex items-center justify-between gap-2"><div><span className="text-sm font-black text-emerald-800 block">Pay with eSewa</span><span className="text-[11px] text-emerald-700">Secure online payment</span></div><ArrowRight size={17} className="text-emerald-700" /></div>
+              </button>
+              <button type="button" onClick={handlePayLater} disabled={isProcessingPayment} className="p-4 rounded-2xl border-2 border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-300 transition-all text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                <div className="flex items-center justify-between gap-2"><div><span className="text-sm font-black text-[#2D1347] block">Pay Later</span><span className="text-[11px] text-purple-700">Continue with payment pending</span></div><ArrowRight size={17} className="text-[#2D1347]" /></div>
+              </button>
+            </div>
+            {isProcessingPayment && <div className="text-center text-xs font-bold text-gray-500">Processing payment...</div>}
+            <button type="button" onClick={() => setShowPaymentStep(false)} disabled={isProcessingPayment} className="w-full py-2 text-xs font-bold text-gray-500 hover:text-gray-700 cursor-pointer disabled:cursor-not-allowed">Back to Application</button>
+          </div>
         ) : (
-          /* ══════════════════════════════════════════════════════════════════
-              MAIN FORM VIEW WITH APPLICANTS & REQUIRED DOCUMENTS
-              ══════════════════════════════════════════════════════════════════ */
           <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4">
 
             {/* If multiple travelers, show Applicant tabs */}
@@ -1187,7 +1226,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               </div>
 
               <p className="text-[11px] text-gray-400 -mt-1">
-                Attach for Traveler {travelersCount > 1 ? activeApplicantIndex + 1 : "1"} ({currentApplicant.fullName || "Current"}). PDF, JPG, PNG (max 10 MB each).
+                Attach for Traveler {travelersCount > 1 ? activeApplicantIndex + 1 : "1"} ({currentApplicant.fullName || "Current"}). PDF, JPG, PNG, WEBP (max 5 MB each).
               </p>
 
               {/* Hidden file inputs — one per document config entry */}
@@ -1325,12 +1364,9 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 <div className="text-[10px] text-gray-400 font-medium mb-0.5">
                   {travelersCount} {travelersCount === 1 ? "Applicant" : "Applicants"}
                 </div>
-                <button
-                  type="submit"
-                  className="px-7 py-2.5 bg-gradient-to-r from-[#2D1347] to-[#E11D48] hover:from-[#3B145C] hover:to-pink-600 text-white font-black text-xs rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 active:scale-98 transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <span>Submit Application ({travelersCount} Pax)</span>
-                  <ArrowRight size={14} />
+                <button type="submit" disabled={isSubmittingApplication} className="px-7 py-2.5 bg-gradient-to-r from-[#2D1347] to-[#E11D48] hover:from-[#3B145C] hover:to-pink-600 text-white font-black text-xs rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 active:scale-98 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                  <span>{isSubmittingApplication ? "Submitting..." : `Submit Application (${travelersCount} Pax)`}</span>
+                  {!isSubmittingApplication && <ArrowRight size={14} />}
                 </button>
               </div>
             </div>

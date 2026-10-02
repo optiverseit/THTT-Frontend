@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Mountain,
   AlertCircle,
-  Lock,
   Users,
   HeartPulse,
 } from "lucide-react";
@@ -27,6 +26,7 @@ import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { InsurancePlan, InsuranceCostOption } from "./insuranceData";
 import { InsuranceDocumentField, DEFAULT_DOCUMENT_CONFIG, buildEmptyDocumentFiles } from "./insuranceDocumentConfig";
 import { createInsuranceApplication, initiatePayment } from "../../api/BackendApi";
+import { PaymentMethod } from "../reusable/PaymentMethod";
 
 /** Dynamic insurance requirement field definition (can be loaded from API/database) */
 export interface InsuranceRequirementField {
@@ -34,21 +34,13 @@ export interface InsuranceRequirementField {
   name: string;
   placeholder?: string;
   required?: boolean;
-  type?: "text" | "number" | "date" | "select";
+  type?: "text" | "number" | "date" | "textarea" | "select" | "checkbox" | "radio";
   options?: string[];
   defaultValue?: string;
 }
 
 /** Default requirement configuration (1 input field for now, extensible dynamically via API/database) */
-export const DEFAULT_REQUIREMENT_CONFIG: InsuranceRequirementField[] = [
-  {
-    id: "trekDestination",
-    name: "Trek Destination / Route",
-    placeholder: "e.g. Everest Base Camp, Annapurna Circuit",
-    required: false,
-    type: "text",
-  },
-];
+export const DEFAULT_REQUIREMENT_CONFIG: InsuranceRequirementField[] = [];
 
 export interface InsuranceApplicationModalProps {
   isOpen: boolean;
@@ -137,7 +129,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [insuranceApplicationId, setInsuranceApplicationId] = useState<number | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later" | "">("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
 
   // File input refs — one per document config slot (dynamic)
   const fileRefs = useRef<Record<string, React.RefObject<HTMLInputElement | null>>>({});
@@ -213,23 +205,26 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
     if (!Number.isFinite(planId) || planId <= 0) { alert("Insurance plan ID is missing."); return; }
     if (!Number.isFinite(pricingTierId) || pricingTierId <= 0) { alert("Insurance pricing tier ID is missing."); return; }
     if (documentConfig.length === 0) { alert("No document requirements are configured for this insurance plan."); return; }
+
     for (let i = 0; i < travelersCount; i++) {
       const app = applicants[i];
       if (!app || !app.fullName.trim()) { setActiveApplicantIndex(i); alert(`Please enter Full Name for Traveler ${i + 1}.`); return; }
       if (!app.nationality.trim()) { setActiveApplicantIndex(i); alert(`Please enter Nationality for Traveler ${i + 1}.`); return; }
       if (!app.dateOfBirth) { setActiveApplicantIndex(i); alert(`Please enter Date of Birth for Traveler ${i + 1}.`); return; }
+
       const dob = new Date(app.dateOfBirth);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const dobDate = new Date(dob.getFullYear(), dob.getMonth(), dob.getDate());
+
       if (dobDate >= today) { setActiveApplicantIndex(i); alert(`Date of Birth must be before today for Traveler ${i + 1}.`); return; }
+
       let age = today.getFullYear() - dob.getFullYear();
       const monthDiff = today.getMonth() - dob.getMonth();
-
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
+
       if (age < 18) { setActiveApplicantIndex(i); alert(`Traveler ${i + 1} must be at least 18 years old to apply for insurance.`); return; }
       if (!app.passportNumber.trim()) { setActiveApplicantIndex(i); alert(`Please enter Passport, NID, or Citizenship Number for Traveler ${i + 1}.`); return; }
-      if (!app.passportExpiry) { setActiveApplicantIndex(i); alert(`Please enter Passport Expiry or NID/Citizenship Issued Date for Traveler ${i + 1}.`); return; }
       if (!app.email.trim()) { setActiveApplicantIndex(i); alert(`Please enter Email Address for Traveler ${i + 1}.`); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(app.email.trim())) { setActiveApplicantIndex(i); alert(`Please enter a valid email address for Traveler ${i + 1}.`); return; }
       if (!app.phone.trim()) { setActiveApplicantIndex(i); alert(`Please enter WhatsApp / Mobile Number for Traveler ${i + 1}.`); return; }
@@ -242,20 +237,30 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
       }
     }
 
-    if (!emergencyContactPhone.trim()) { alert("Please enter Emergency Contact Number for Healthcare & Emergency Contact (Section 2)."); return; }
-    if (!startDate) { alert("Please select the Policy Expected Start Date (Section 3)."); return; }
-    if (!endDate) { alert("Please select the Policy Expected End Date (Section 3)."); return; }
+    for (const field of safeRequirementConfig) {
+      if (field.required && !requirementValues[field.id]?.trim()) {
+        alert(`Please enter ${field.name}.`);
+        return;
+      }
+    }
+
+    if (!startDate) { alert("Please select the Policy Expected Start Date."); return; }
+    if (!endDate) { alert("Please select the Policy Expected End Date."); return; }
+
     const todayString = new Date().toISOString().split("T")[0];
     if (startDate < todayString) { alert("Policy Expected Start Date cannot be before today."); return; }
     if (endDate < startDate) { alert("Policy Expected End Date cannot be earlier than Policy Expected Start Date."); return; }
     if (!termsAgreed) { alert("Please accept the insurance terms and conditions to proceed."); return; }
+
     try {
       setIsSubmittingApplication(true);
+
       const formData = new FormData();
       formData.append("insurance_plan_id", String(planId));
       formData.append("insurance_pricing_tier_id", String(pricingTierId));
       formData.append("start_date", startDate);
       formData.append("end_date", endDate);
+
       applicants.forEach((app, applicantIndex) => {
         formData.append(`applicants[${applicantIndex}][applicant_full_name]`, app.fullName.trim());
         formData.append(`applicants[${applicantIndex}][date_of_birth]`, app.dateOfBirth);
@@ -264,19 +269,41 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         if (app.phoneCode) formData.append(`applicants[${applicantIndex}][country_code]`, app.phoneCode);
         if (app.phone.trim()) formData.append(`applicants[${applicantIndex}][phone_number]`, app.phone.trim());
         formData.append(`applicants[${applicantIndex}][passport_number]`, app.passportNumber.trim());
-        if (emergencyContactPhone.trim()) formData.append(`applicants[${applicantIndex}][emergency_contact_number]`, emergencyContactPhone.trim());
+        if (emergencyContactPhone.trim()) {
+          formData.append(`applicants[${applicantIndex}][emergency_contact_number]`, emergencyContactPhone.trim());
+        }
+
+        safeRequirementConfig.forEach((field) => {
+          const value = requirementValues[field.id];
+          if (value !== undefined && value !== "") {
+            formData.append(`applicants[${applicantIndex}][dynamic_fields][${field.id}]`, value);
+          }
+        });
+
         let documentIndex = 0;
         documentConfig.forEach((field) => {
           const file = app.files[field.id];
           if (!file) return;
-          formData.append(`applicants[${applicantIndex}][documents][${documentIndex}][insurance_document_requirement_id]`, String(field.id));
-          formData.append(`applicants[${applicantIndex}][documents][${documentIndex}][file]`, file);
+
+          formData.append(
+            `applicants[${applicantIndex}][documents][${documentIndex}][insurance_document_requirement_id]`,
+            String(field.id)
+          );
+          formData.append(
+            `applicants[${applicantIndex}][documents][${documentIndex}][file]`,
+            file
+          );
           documentIndex++;
         });
       });
+
       const response = await createInsuranceApplication(formData);
       const application = response?.data?.data;
-      if (!response?.data?.status || !application?.id) throw new Error(response?.data?.message || "Failed to create insurance application.");
+
+      if (!response?.data?.status || !application?.id) {
+        throw new Error(response?.data?.message || "Failed to create insurance application.");
+      }
+
       setInsuranceApplicationId(Number(application.id));
       setSubmissionId(application.application_number || `INS-${application.id}`);
       setSubmittedAt(new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }));
@@ -288,16 +315,8 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
       alert(String(firstError || error?.response?.data?.message || error?.message || "Failed to create insurance application."));
     } finally {
       setIsSubmittingApplication(false);
-
-    // Section 2: Dynamic Insurance Requirements validation
-    for (const field of safeRequirementConfig) {
-      if (field.required && !requirementValues[field.id]?.trim()) {
-        alert(`Please enter ${field.name}.`);
-        return;
-      }
     }
   };
-
 
   const redirectToEsewa = (paymentData: any) => {
     if (!paymentData?.payment_url) throw new Error("eSewa payment URL was not returned by the server.");
@@ -917,26 +936,34 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
             </div>
           </div>
         ) : showPaymentStep ? (
-          <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
-            <div className="text-center space-y-1">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-[#2D1347]"><Lock size={22} /></div>
-              <h3 className="text-lg font-black text-[#2D1347]">Choose Payment Method</h3>
-              <p className="text-xs text-gray-500">Application <span className="font-bold text-[#2D1347]">{submissionId}</span> has been created. Select how you want to continue.</p>
+          <div className="p-5 sm:p-6 overflow-y-auto">
+            <div className="space-y-3">
+              <PaymentMethod
+                bookingReference={submissionId}
+                packageTitle={plan.name}
+                category="Travel Insurance"
+                tierName={selectedOption.name}
+                guestsCount={travelersCount}
+                unitPriceFormatted={displayPrice(selectedOption.nprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                totalPriceFormatted={displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                travelDate={startDate && endDate ? `${startDate} to ${endDate}` : undefined}
+                isProcessingPayment={isProcessingPayment}
+                initialMethod={selectedPaymentMethod}
+                onMethodChange={setSelectedPaymentMethod}
+                onPayWithEsewa={handleEsewaPayment}
+                onPayLater={handlePayLater}
+              />
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentStep(false)}
+                  disabled={isProcessingPayment}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium underline transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  ← Edit Application Details
+                </button>
+              </div>
             </div>
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <div><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Premium</span><span className="text-sm font-black text-[#2D1347]">{plan.name}</span><span className="text-[11px] text-gray-500 block">{selectedOption.name} • {travelersCount} {travelersCount === 1 ? "Traveler" : "Travelers"}</span></div>
-              <div className="text-right"><span className="text-lg font-black text-[#E11D48]">{displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}</span><span className="text-[10px] text-gray-400 block">Total Amount</span></div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button type="button" onClick={handleEsewaPayment} disabled={isProcessingPayment} className="p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-300 transition-all text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                <div className="flex items-center justify-between gap-2"><div><span className="text-sm font-black text-emerald-800 block">Pay with eSewa</span><span className="text-[11px] text-emerald-700">Secure online payment</span></div><ArrowRight size={17} className="text-emerald-700" /></div>
-              </button>
-              <button type="button" onClick={handlePayLater} disabled={isProcessingPayment} className="p-4 rounded-2xl border-2 border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-300 transition-all text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                <div className="flex items-center justify-between gap-2"><div><span className="text-sm font-black text-[#2D1347] block">Pay Later</span><span className="text-[11px] text-purple-700">Continue with payment pending</span></div><ArrowRight size={17} className="text-[#2D1347]" /></div>
-              </button>
-            </div>
-            {isProcessingPayment && <div className="text-center text-xs font-bold text-gray-500">Processing payment...</div>}
-            <button type="button" onClick={() => setShowPaymentStep(false)} disabled={isProcessingPayment} className="w-full py-2 text-xs font-bold text-gray-500 hover:text-gray-700 cursor-pointer disabled:cursor-not-allowed">Back to Application</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4">
@@ -1137,8 +1164,11 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Dynamic Requirement Inputs (Supports 0, 1, 2, or more fields from database/API) */}
-                {safeRequirementConfig.map((field) => (
+                {safeRequirementConfig.length === 0 ? (
+                  <div className="sm:col-span-2 text-xs text-gray-400 py-1">
+                    No additional insurance requirements for this plan.
+                  </div>
+                ) : safeRequirementConfig.map((field) => (
                   <div key={field.id} className={safeRequirementConfig.length === 1 ? "sm:col-span-2" : ""}>
                     <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
                       <span>{field.name}</span>
@@ -1148,31 +1178,61 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                         <span className="text-gray-400 font-normal text-[10px]">(Optional)</span>
                       )}
                     </label>
-                    {field.type === "select" && field.options ? (
-                      <select
-                        required={field.required}
-                        value={requirementValues[field.id] || ""}
-                        onChange={(e) =>
-                          setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))
-                        }
-                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all cursor-pointer"
-                      >
-                        <option value="">Select {field.name}...</option>
-                        {field.options.map((opt, i) => (
-                          <option key={i} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={field.type || "text"}
+
+                    {field.type === "textarea" ? (
+                      <textarea
                         required={field.required}
                         placeholder={field.placeholder || `Enter ${field.name.toLowerCase()}`}
                         value={requirementValues[field.id] || ""}
-                        onChange={(e) =>
-                          setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))
-                        }
+                        onChange={(e) => setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                        rows={3}
+                        className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all resize-none"
+                      />
+                    ) : field.type === "select" ? (
+                      <select
+                        required={field.required}
+                        value={requirementValues[field.id] || ""}
+                        onChange={(e) => setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all cursor-pointer"
+                      >
+                        <option value="">Select {field.name}...</option>
+                        {(field.options || []).map((opt, i) => (
+                          <option key={i} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : field.type === "radio" ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(field.options || []).map((opt, i) => (
+                          <label key={i} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`insurance_requirement_${field.id}`}
+                              value={opt}
+                              checked={requirementValues[field.id] === opt}
+                              onChange={(e) => setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                              required={field.required}
+                            />
+                            <span>{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : field.type === "checkbox" ? (
+                      <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={requirementValues[field.id] === "1"}
+                          onChange={(e) => setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.checked ? "1" : "" }))}
+                          required={field.required}
+                        />
+                        <span>{field.placeholder || field.name}</span>
+                      </label>
+                    ) : (
+                      <input
+                        type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                        required={field.required}
+                        placeholder={field.placeholder || `Enter ${field.name.toLowerCase()}`}
+                        value={requirementValues[field.id] || ""}
+                        onChange={(e) => setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))}
                         className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                       />
                     )}

@@ -2189,9 +2189,23 @@ export const hotels: Hotel[] = [
     priceUSD: 240,
     image:
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Featured",
+    roomTypes: ["Royal Suite", "Heritage Deluxe", "Executive King"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 05, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["Free High-Speed Wi-Fi", "Historic Courtyard", "Luxury Spa", "Organic Dining", "Airport Limousine"],
     features: ["Authentic 15th-century Newari woodwork", "Complimentary heritage tour", "Handcrafted terracotta suites"],
-    description: "A living museum of Nepali architecture offering world-class luxury and timeless cultural heritage.",
+    description:
+      "A living museum of Nepali architecture offering world-class luxury and timeless cultural heritage. Built with salvaged 15th-century woodcarvings and traditional terracotta brickwork, each suite reflects centuries of royal Newari craftsmanship. Guests enjoy tranquil interior courtyards, award-winning authentic dining at Krishnarpan, and an oasis of serene Himalayan hospitality right in the heart of Kathmandu valley.",
     isFeatured: true,
   },
   {
@@ -2207,6 +2221,19 @@ export const hotels: Hotel[] = [
     priceUSD: 110,
     image:
       "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Popular",
+    roomTypes: ["Deluxe Lake View", "Junior Suite", "Standard Boutique"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 08, 2026",
+    availableTo: "Jan 15, 2027",
+    availability: "Available",
     amenities: ["Infinity Pool", "Phewa Lake View", "Ayurvedic Spa", "Garden Bar", "Free Breakfast"],
     features: ["5 minutes walk to Phewa Lake", "Mountain view private balconies", "Fresh local Himalayan teas"],
     description: "Tranquil boutique accommodation combining Western comforts with charming Himalayan lodge architecture.",
@@ -2225,6 +2252,19 @@ export const hotels: Hotel[] = [
     priceUSD: 175,
     image:
       "https://images.unsplash.com/photo-1533130061792-64b345e4a833?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1533130061792-64b345e4a833?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Best Value",
+    roomTypes: ["Riverfront Cottage", "Luxury Safari Tent", "Family Villa"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 10, 2026",
+    availableTo: "Dec 25, 2026",
+    availability: "Available",
     amenities: ["Riverfront Deck", "All Meals Included", "Infinity Pool", "Naturalist Guides", "Safari Transfers"],
     features: ["Direct Rapti river sunset views", "Private cottage balconies", "Tharu cultural musical evenings"],
     description: "Luxury eco-haven situated right on the banks of Rapti river overlooking pristine Chitwan wilderness.",
@@ -2243,6 +2283,19 @@ export const hotels: Hotel[] = [
     priceUSD: 95,
     image:
       "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Popular",
+    roomTypes: ["Panorama King Room", "Deluxe Sunrise Suite", "Standard Hill Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 12, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["360° Himalayan View", "Indoor Heated Pool", "Observatory Deck", "Buffet Breakfast", "Free Parking"],
     features: ["Uninterrupted Everest sunrise panorama", "Helipad access on-site", "Cozy fireplace lounge"],
     description: "Perched atop Nagarkot ridge offering 360-degree vistas stretching from Annapurna to Mt. Everest.",
@@ -2261,6 +2314,19 @@ export const hotels: Hotel[] = [
     priceUSD: 135,
     image:
       "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Featured",
+    roomTypes: ["Urban King Room", "Breezy Suite", "Aloft Twin Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 05, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["Rooftop Infinity Pool", "W XYZ Bar", "24/7 Fitness Hub", "Buffet Breakfast", "Soundproof Rooms"],
     features: ["Located in the heart of Thamel shopping", "Vibrant rooftop lounge & nightlife", "State-of-the-art tech rooms"],
     description: "Modern Marriott lifestyle hotel right inside Thamel's premier shopping and entertainment center.",
@@ -2279,6 +2345,19 @@ export const hotels: Hotel[] = [
     priceUSD: 70,
     image:
       "https://images.unsplash.com/photo-1502444330042-d1a1ddf9bb5b?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1502444330042-d1a1ddf9bb5b?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Best Value",
+    roomTypes: ["Zen Garden Villa", "Deluxe Peace Room", "Standard Sanctuary"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 15, 2026",
+    availableTo: "Nov 30, 2026",
+    availability: "Limited",
     amenities: ["Meditation Gardens", "Vegetarian Cuisine", "Bicycle Rental", "Free Wi-Fi", "Monastery Transfers"],
     features: ["Adjacent to Maya Devi Temple gates", "Peaceful lotus pond surroundings", "Eco-friendly solar powered"],
     description: "A peaceful sanctuary nestled near the birthplace of Lord Buddha, ideal for spiritual pilgrims.",
@@ -2297,6 +2376,19 @@ export const hotels: Hotel[] = [
     priceUSD: 310,
     image:
       "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Featured",
+    roomTypes: ["Everest Panorama Suite", "Heated Sherpa Room", "Luxury Mountain Cabin"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 10, 2026",
+    availableTo: "Dec 15, 2026",
+    availability: "Limited",
     amenities: ["Heated Electric Bedding", "Helipad Access", "Sherpa Hospitality", "Oxygen Concentrators", "Gourmet Meals"],
     features: ["Direct eye-level panoramic view of Mt. Everest & Ama Dablam", "Highest luxury lodge on earth", "Fine dining at 4,250m"],
     description: "The most spectacular high-altitude wilderness lodge in the Himalayas with direct views of Everest.",
@@ -2315,6 +2407,19 @@ export const hotels: Hotel[] = [
     priceUSD: 105,
     image:
       "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Popular",
+    roomTypes: ["Fishtail View Deluxe", "Sarangkot Sunrise Suite", "Standard Valley Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 05, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["Sunrise View Deck", "Rooftop Restaurant", "Paragliding Landing Nearby", "Free Breakfast", "Mini Bar"],
     features: ["Wake up to Machhapuchhre fishtail peak outside your window", "Private terrace with telescope", "Quiet hilltop setting"],
     description: "Unparalleled Annapurna and Fishtail sunrise panoramas right from your bed.",
@@ -2333,6 +2438,19 @@ export const hotels: Hotel[] = [
     priceUSD: 190,
     image:
       "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1533130061792-64b345e4a833?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Featured",
+    roomTypes: ["Traditional Tharu Cottage", "Wilderness Tent", "Family Safari Suite"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 10, 2026",
+    availableTo: "Jan 20, 2027",
+    availability: "Available",
     amenities: ["Elephant Camp Walks", "Organic Farm Dining", "Solar Powered Cottages", "Naturalist Guides", "River Safari"],
     features: ["Pioneering ethical wildlife tourism", "Open-air dining overlooking buffer forest", "Handcrafted clay tharu huts"],
     description: "Authentic eco-safari retreat offering humane elephant encounters and immersive jungle wilderness walks.",
@@ -2351,6 +2469,19 @@ export const hotels: Hotel[] = [
     priceUSD: 180,
     image:
       "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Popular",
+    roomTypes: ["Royal Courtyard Suite", "Junior Heritage Suite", "Classic Rana Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 05, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["Rooftop Swimming Pool", "Historic Courtyards", "Artisan Boutiques", "Fine Dining Restaurants", "Luxury Spa"],
     features: ["Neoclassical Rana architectural preservation", "Handcrafted vintage chandeliers & portraits", "Prime city access"],
     description: "Immerse yourself in 19th-century royal Rana grandeur inside an authentic palace courtyard sanctuary.",
@@ -2369,6 +2500,19 @@ export const hotels: Hotel[] = [
     priceUSD: 140,
     image:
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Best Value",
+    roomTypes: ["Heritage Round Cottage", "Lakefront Deluxe", "Palm Garden Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 12, 2026",
+    availableTo: "Jan 10, 2027",
+    availability: "Available",
     amenities: ["Private Ferry Crossing", "Lakeside Bar & Garden", "Panoramic Annapurna Terrace", "Cozy Fireplace", "Free Wi-Fi"],
     features: ["Accessed solely via dedicated wooden rope shuttle raft", "Hosted royalty including Prince Charles", "Charity-driven lodge"],
     description: "Famous heritage island-style retreat afloat on Phewa Lake with postcard reflections of Mt. Machhapuchhre.",
@@ -2387,6 +2531,19 @@ export const hotels: Hotel[] = [
     priceUSD: 210,
     image:
       "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1533130061792-64b345e4a833?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Featured",
+    roomTypes: ["Private Plunge Pool Villa", "Deluxe Forest Villa", "Executive Safari Villa"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 05, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["Private Plunge Pools", "Himalayan Herbal Spa", "Jeep Safari Fleet", "All-Inclusive Dining", "Infinity Pool"],
     features: ["Minimalist Zen villas surrounded by Sal forest", "Private sundecks with outdoor garden showers", "Guided birdwatching"],
     description: "Chic contemporary villas harmonized within Chitwan jungle canopy with bespoke VIP safari excursions.",
@@ -2405,6 +2562,19 @@ export const hotels: Hotel[] = [
     priceUSD: 195,
     image:
       "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Popular",
+    roomTypes: ["Gaun Chalet", "Organic Farm Villa", "Grand Pavilions Villa"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 10, 2026",
+    availableTo: "Jan 15, 2027",
+    availability: "Available",
     amenities: ["Solar-Powered Luxury Villas", "Organic Farm-to-Table", "Clubhouse & Jacuzzi", "Mountain View Terraces", "Wellness Spa"],
     features: ["Completely off-grid luxury villa resort", "Farm tours and mountain trail walks", "Pure organic artisan dairy and produce"],
     description: "Nestled in a peaceful valley below the Annapurnas, providing private villas powered by renewable green energy.",
@@ -2423,6 +2593,19 @@ export const hotels: Hotel[] = [
     priceUSD: 165,
     image:
       "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Featured",
+    roomTypes: ["Regency Suite", "Stupa View King Room", "Standard Garden Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 05, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["37 Acres Landscaped Gardens", "Outdoor Lagoon Pool", "Club Oasis Spa", "Tennis Courts", "24hr Fitness Center"],
     features: ["Traditional Newari palace red-brick architecture", "Walking distance to sacred Boudhanath Stupa", "Helipad access on-site"],
     description: "Sprawling luxury resort hotel offering peace, vast gardens, and world-class international standards near Boudha.",
@@ -2441,6 +2624,19 @@ export const hotels: Hotel[] = [
     priceUSD: 125,
     image:
       "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1200",
+    gallery: [
+      "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&q=80&w=1200",
+    ],
+    badge: "Best Value",
+    roomTypes: ["Himalayan View Suite", "Cliffside Balcony Deluxe", "Pine Forest Room"],
+    breakfastIncluded: true,
+    availableFrom: "Oct 08, 2026",
+    availableTo: "Dec 31, 2026",
+    availability: "Available",
     amenities: ["Heated Infinity Pool", "Sky Garden Bar", "Sunset & Sunrise View Terraces", "Banquet Facilities", "Free Wi-Fi"],
     features: ["Every single room faces the snow-capped Himalayan peaks", "Forest edge hiking trails", "Stargazing telescopes"],
     description: "Contemporary cliffside architecture perched amidst Nagarkot pine forests with uninterrupted Himalayan sunrises.",
@@ -2999,3 +3195,44 @@ export const galleryData: GalleryPhoto[] = [
   { id: "g11", title: "Langtang Rhododendron Trails", category: "treks", location: "Langtang Valley", image: "https://images.unsplash.com/photo-1583267746897-2cf415887172?auto=format&fit=crop&q=80&w=1200", caption: "Blooming spring trails winding through traditional Tamang villages." },
   { id: "g12", title: "Pashupatinath Sacred Heritage", category: "cultural", location: "Kathmandu, Nepal", image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=1200", caption: "Centuries-old architecture and cultural heritage preserved in time." },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOTEL PRICING TIERS — Single source of truth
+// ─────────────────────────────────────────────────────────────────────────────
+// Edit tier names HERE only. Both the hotel listing cards and the hotel detail
+// page pricing table read from this function, so any change applies everywhere.
+//
+// When the API is connected, replace the switch body with API-provided tiers:
+//   if (hotel.pricingTiers?.length) return hotel.pricingTiers;
+// ─────────────────────────────────────────────────────────────────────────────
+export interface HotelPricingTier {
+  id: number;
+  /** Room / tier name shown on cards AND in the pricing table */
+  service: string;
+  ageGroup: string;
+  /** Multiplier applied to the hotel base price for this tier */
+  priceMultiplier: number;
+}
+
+export function getHotelPricingTiers(hotel: Hotel): HotelPricingTier[] {
+  switch (hotel.category) {
+    case "luxury":
+      return [
+        { id: 1, service: "Superior Room",    ageGroup: "Per Night / Per Room", priceMultiplier: 1.00 },
+        { id: 2, service: "Deluxe King Room",  ageGroup: "Per Night / Per Room", priceMultiplier: 1.35 },
+        { id: 3, service: "Executive Suite",   ageGroup: "Per Night / Per Room", priceMultiplier: 1.85 },
+      ];
+    case "boutique":
+      return [
+        { id: 1, service: "Standard Room",    ageGroup: "Per Night / Per Room", priceMultiplier: 1.00 },
+        { id: 2, service: "Deluxe Room",       ageGroup: "Per Night / Per Room", priceMultiplier: 1.35 },
+        { id: 3, service: "Heritage Suite",    ageGroup: "Per Night / Per Room", priceMultiplier: 1.85 },
+      ];
+    default: // resort, budget, etc.
+      return [
+        { id: 1, service: "Standard Cabin",   ageGroup: "Per Night / Per Room", priceMultiplier: 1.00 },
+        { id: 2, service: "Deluxe Cabin",      ageGroup: "Per Night / Per Room", priceMultiplier: 1.35 },
+        { id: 3, service: "Luxury Villa",      ageGroup: "Per Night / Per Room", priceMultiplier: 1.85 },
+      ];
+  }
+}

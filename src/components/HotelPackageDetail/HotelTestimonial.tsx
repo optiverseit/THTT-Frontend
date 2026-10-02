@@ -127,7 +127,7 @@ const HotelTestimonial: React.FC = () => {
         </div>
 
         {/* ── RIGHT STICKY PRICING SIDEBAR (4 cols) ── */}
-        <div className="lg:col-span-4 lg:sticky lg:top-[220px] self-start space-y-6">
+        <div className="lg:col-span-4 lg:sticky lg:top-[135px] self-start space-y-6">
           <HotelPricing pkg={pkg} />
         </div>
       </div>

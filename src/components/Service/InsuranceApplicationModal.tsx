@@ -27,6 +27,28 @@ import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { InsurancePlan, InsuranceCostOption } from "./insuranceData";
 import { InsuranceDocumentField, DEFAULT_DOCUMENT_CONFIG, buildEmptyDocumentFiles } from "./insuranceDocumentConfig";
 
+/** Dynamic insurance requirement field definition (can be loaded from API/database) */
+export interface InsuranceRequirementField {
+  id: string;
+  name: string;
+  placeholder?: string;
+  required?: boolean;
+  type?: "text" | "number" | "date" | "select";
+  options?: string[];
+  defaultValue?: string;
+}
+
+/** Default requirement configuration (1 input field for now, extensible dynamically via API/database) */
+export const DEFAULT_REQUIREMENT_CONFIG: InsuranceRequirementField[] = [
+  {
+    id: "trekDestination",
+    name: "Trek Destination / Route",
+    placeholder: "e.g. Everest Base Camp, Annapurna Circuit",
+    required: false,
+    type: "text",
+  },
+];
+
 export interface InsuranceApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,6 +57,8 @@ export interface InsuranceApplicationModalProps {
   numberOfTravelers?: number;
   /** Optional document config override from admin panel / API */
   documentConfig?: InsuranceDocumentField[];
+  /** Optional dynamic insurance requirement fields from admin panel / database / API */
+  requirementConfig?: InsuranceRequirementField[];
 }
 
 export interface InsuredApplicantData {
@@ -73,7 +97,9 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   selectedOption,
   numberOfTravelers = 1,
   documentConfig = DEFAULT_DOCUMENT_CONFIG,
+  requirementConfig = DEFAULT_REQUIREMENT_CONFIG,
 }) => {
+  const safeRequirementConfig = requirementConfig || [];
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
   const travelersCount = numberOfTravelers > 0 ? numberOfTravelers : 1;
@@ -84,15 +110,21 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   );
   const [activeApplicantIndex, setActiveApplicantIndex] = useState(0);
 
-  // Group trip details
-  const [trekkingRegion, setTrekkingRegion] = useState("Everest Base Camp & Gokyo (5,364m - 5,545m)");
-  const [maxAltitudeMeters, setMaxAltitudeMeters] = useState(plan.maxAltitude);
+  // Dynamic Insurance Requirements values (keyed by field id)
+  const [requirementValues, setRequirementValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    safeRequirementConfig.forEach((f) => {
+      initial[f.id] = f.defaultValue || "";
+    });
+    return initial;
+  });
+
+  // Emergency contact phone (Optional)
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+
+  // Dates
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [agencyOrGuideName, setAgencyOrGuideName] = useState("Trip Himalaya Tours & Travel (Authorized Lead)");
-  const [emergencyContactName, setEmergencyContactName] = useState("");
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
-  const [emergencyRelationship, setEmergencyRelationship] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
 
   // Submission State
@@ -121,19 +153,19 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         return next.slice(0, travelersCount);
       });
       setActiveApplicantIndex(0);
-      setMaxAltitudeMeters(plan.maxAltitude);
-      if (plan.id === "plan-trek-standard") {
-        setTrekkingRegion("Poon Hill & Cultural Foothill Trails (Under 3,000m)");
-      } else if (plan.id === "plan-extreme-expedition") {
-        setTrekkingRegion("Island Peak / Mera Peak Climbing (6,000m+)");
-      } else if (plan.id === "plan-international") {
-        setTrekkingRegion("International / Global Travel Route");
-      } else {
-        setTrekkingRegion("Everest Base Camp & Gokyo (5,364m - 5,545m)");
-      }
-      setAgencyOrGuideName("Trip Himalaya Tours & Travel (Authorized Lead)");
+
+      // Sync dynamic requirement values from config
+      setRequirementValues((prev) => {
+        const next = { ...prev };
+        safeRequirementConfig.forEach((f) => {
+          if (next[f.id] === undefined) {
+            next[f.id] = f.defaultValue || "";
+          }
+        });
+        return next;
+      });
     }
-  }, [travelersCount, isOpen, plan, documentConfig]);
+  }, [travelersCount, isOpen, plan, documentConfig, safeRequirementConfig]);
 
   if (!isOpen) return null;
 
@@ -218,12 +250,6 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         return;
       }
 
-      // Passport Expiry or NID/Citizenship Issued date
-      if (!app.passportExpiry) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Passport Expiry or NID/Citizenship Issued Date for Traveler ${i + 1}.`);
-        return;
-      }
 
       // Email validation
       if (!app.email.trim()) {
@@ -261,31 +287,25 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
       }
     }
 
-    // Section 2: Healthcare & Emergency details validation
-    if (!emergencyContactName.trim()) {
-      alert("Please enter Full Name for Healthcare & Emergency Contact (Section 2).");
-      return;
-    }
-    if (!emergencyRelationship.trim()) {
-      alert("Please enter Relationship for Healthcare & Emergency Contact (Section 2).");
-      return;
-    }
-    if (!emergencyContactPhone.trim()) {
-      alert("Please enter Emergency Contact Number for Healthcare & Emergency Contact (Section 2).");
-      return;
+    // Section 2: Dynamic Insurance Requirements validation
+    for (const field of safeRequirementConfig) {
+      if (field.required && !requirementValues[field.id]?.trim()) {
+        alert(`Please enter ${field.name}.`);
+        return;
+      }
     }
 
-    // Section 3: Trekking Route & Travel Schedule validation
+    // Start Date & End Date validation
     if (!startDate) {
-      alert("Please select the Policy Expected Start Date (Section 3).");
+      alert("Please select the Start Date.");
       return;
     }
     if (!endDate) {
-      alert("Please select the Policy Expected End Date (Section 3).");
+      alert("Please select the End Date.");
       return;
     }
     if (new Date(endDate) < new Date(startDate)) {
-      alert("Policy Expected End Date cannot be earlier than Policy Expected Start Date.");
+      alert("End Date cannot be earlier than Start Date.");
       return;
     }
 
@@ -329,8 +349,11 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
 
   const handleWhatsAppFollowUp = () => {
     const totalFormatted = displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR);
+    const reqSummary = safeRequirementConfig
+      .map((f) => `*${f.name}:* ${requirementValues[f.id] || "N/A"}`)
+      .join("\n");
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya (Travel & Trekking Insurance Team)!\n\nI have just submitted an online insurance application.\n\n*Reference ID:* ${submissionId}\n*Plan:* ${plan.name} (${selectedOption.name})\n*Altitude Cap:* ${plan.maxAltitude}\n*Travelers:* ${travelersCount} Person(s) (Lead: ${applicants[0].fullName})\n*Dates:* ${startDate} to ${endDate}\n*Trek Route:* ${trekkingRegion}\n*Estimated Premium:* ${totalFormatted}\n\nAll required documents (Passport scan, photo, and trekking itinerary) have been attached. Please issue the official policy certificate and cashless hospital card.`
+      `Hello Trip Himalaya (Travel & Trekking Insurance Team)!\n\nI have just submitted an online insurance application.\n\n*Reference ID:* ${submissionId}\n*Plan:* ${plan.name} (${selectedOption.name})\n*Altitude Cap:* ${plan.maxAltitude}\n*Travelers:* ${travelersCount} Person(s) (Lead: ${applicants[0].fullName})\n*Dates:* ${startDate} to ${endDate}\n${reqSummary}\n*Emergency Contact:* ${emergencyContactPhone || "N/A"}\n*Estimated Premium:* ${totalFormatted}\n\nAll required documents have been attached. Please issue the official policy certificate and cashless hospital card.`
     );
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
@@ -459,16 +482,18 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                       {startDate} → {endDate}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Trek Route / Trail</span>
-                    <span className="font-bold text-gray-800 block mt-0.5 truncate" title={trekkingRegion}>
-                      {trekkingRegion}
-                    </span>
-                  </div>
+                  {safeRequirementConfig.map((field) => (
+                    <div key={field.id}>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{field.name}</span>
+                      <span className="font-bold text-gray-800 block mt-0.5 truncate" title={requirementValues[field.id] || "N/A"}>
+                        {requirementValues[field.id] || "N/A"}
+                      </span>
+                    </div>
+                  ))}
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Emergency Contact</span>
-                    <span className="font-bold text-gray-800 block mt-0.5 truncate" title={`${emergencyContactName} (${emergencyRelationship}) • ${emergencyContactPhone}`}>
-                      {emergencyContactName} {emergencyRelationship ? `(${emergencyRelationship})` : ""} • {emergencyContactPhone}
+                    <span className="font-bold text-gray-800 block mt-0.5 truncate" title={emergencyContactPhone || "Optional (Not provided)"}>
+                      {emergencyContactPhone || "Optional (Not provided)"}
                     </span>
                   </div>
                 </div>
@@ -765,24 +790,24 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 </div>
               </div>
 
-              {/* Trekking & Dates Schedule */}
+              {/* Insurance Requirements & Dates Schedule */}
               <div
                 className="slip-schedule-bg grid grid-cols-3 gap-3 text-xs p-3.5 rounded-xl border relative z-1"
                 style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}
               >
                 <div>
-                  <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">Destination / Route</span>
-                  <span className="font-bold text-gray-800 block mt-0.5">{trekkingRegion}</span>
-                </div>
-                <div>
                   <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">Policy Coverage Dates</span>
                   <span className="font-bold text-[#2D1347] block mt-0.5">{startDate} to {endDate}</span>
                 </div>
+                {safeRequirementConfig.map((field) => (
+                  <div key={field.id}>
+                    <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">{field.name}</span>
+                    <span className="font-bold text-gray-800 block mt-0.5">{requirementValues[field.id] || "N/A"}</span>
+                  </div>
+                ))}
                 <div>
-                  <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">Healthcare &amp; Emergency</span>
-                  <span className="font-bold text-gray-800 block mt-0.5" title={`${emergencyContactName} (${emergencyRelationship}) • ${emergencyContactPhone}`}>
-                    {emergencyContactName} {emergencyRelationship ? `(${emergencyRelationship})` : ""} • {emergencyContactPhone}
-                  </span>
+                  <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">Emergency Contact</span>
+                  <span className="font-bold text-gray-800 block mt-0.5">{emergencyContactPhone || "Optional (Not provided)"}</span>
                 </div>
               </div>
 
@@ -997,7 +1022,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 </div>
 
                 {/* Passport / NID / Citizenship Number */}
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Passport / NID / Citizenship No. <span className="text-[#E11D48]">*</span>
                   </label>
@@ -1008,20 +1033,6 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     value={currentApplicant.passportNumber}
                     onChange={(e) => updateCurrentApplicant({ passportNumber: e.target.value.toUpperCase() })}
                     className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-[#200B3B] uppercase focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
-                  />
-                </div>
-
-                {/* Passport Expiry or NID/Citizenship Issued date */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Passport Expiry / NID Issued Date <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={currentApplicant.passportExpiry}
-                    onChange={(e) => updateCurrentApplicant({ passportExpiry: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
                   />
                 </div>
 
@@ -1057,59 +1068,15 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* ── SECTION 2: HEALTHCARE & EMERGENCY DETAILS ── */}
-            <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
-                <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
-                  <HeartPulse size={13} />
-                </div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
-                  2. Healthcare &amp; Emergency Contact
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Full name */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Full Name <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Sita Kumari Sharma"
-                    value={emergencyContactName}
-                    onChange={(e) => setEmergencyContactName(e.target.value)}
-                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
-                  />
-                </div>
-
-                {/* Relationship */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Relationship <span className="text-[#E11D48]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Mother, Father, Spouse"
-                    value={emergencyRelationship}
-                    onChange={(e) => setEmergencyRelationship(e.target.value)}
-                    className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
-                  />
-                </div>
-
-                {/* Emergency contact number */}
+                {/* Emergency Contact Number (Optional) */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Emergency Contact Number <span className="text-[#E11D48]">*</span>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
+                    <span>Emergency Contact Number</span>
+                    <span className="text-gray-400 font-normal text-[10px]">(Optional)</span>
                   </label>
                   <input
                     type="tel"
-                    required
                     placeholder="e.g. +977 9800000000"
                     value={emergencyContactPhone}
                     onChange={(e) => setEmergencyContactPhone(e.target.value)}
@@ -1119,64 +1086,64 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               </div>
             </div>
 
-            {/* ── SECTION 3: TREKKING ROUTE & TRAVEL SCHEDULE ── */}
+            {/* ── SECTION 2: INSURANCE REQUIREMENTS: ── */}
             <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
                 <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E11D48] flex items-center justify-center flex-shrink-0">
                   <Mountain size={13} />
                 </div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
-                  3. Trekking Route &amp; Travel Schedule
+                  2. Insurance Requirements:
                 </h4>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Trek Destination / Trail (Unchangeable) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                    <span>Trek Destination / Trail</span>
-                    <span className="text-[10px] text-gray-400 font-normal">(Preset)</span>
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={trekkingRegion}
-                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-xl text-[10px] text-gray-600 cursor-not-allowed outline-none font-medium"
-                  />
-                </div>
+                {/* Dynamic Requirement Inputs (Supports 0, 1, 2, or more fields from database/API) */}
+                {safeRequirementConfig.map((field) => (
+                  <div key={field.id} className={safeRequirementConfig.length === 1 ? "sm:col-span-2" : ""}>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                      <span>{field.name}</span>
+                      {field.required ? (
+                        <span className="text-[#E11D48]">*</span>
+                      ) : (
+                        <span className="text-gray-400 font-normal text-[10px]">(Optional)</span>
+                      )}
+                    </label>
+                    {field.type === "select" && field.options ? (
+                      <select
+                        required={field.required}
+                        value={requirementValues[field.id] || ""}
+                        onChange={(e) =>
+                          setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all cursor-pointer"
+                      >
+                        <option value="">Select {field.name}...</option>
+                        {field.options.map((opt, i) => (
+                          <option key={i} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type || "text"}
+                        required={field.required}
+                        placeholder={field.placeholder || `Enter ${field.name.toLowerCase()}`}
+                        value={requirementValues[field.id] || ""}
+                        onChange={(e) =>
+                          setRequirementValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                        }
+                        className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
+                      />
+                    )}
+                  </div>
+                ))}
 
-                {/* Maximum Planned Altitude (Unchangeable) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                    <span>Maximum Planned Altitude</span>
-                    <span className="text-[10px] text-gray-400 font-normal">(Preset)</span>
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={maxAltitudeMeters || plan.maxAltitude}
-                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-xl text-[10px] text-gray-600 cursor-not-allowed outline-none font-medium"
-                  />
-                </div>
-
-                {/* Trekking Agency / Guide Name (Unchangeable) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                    <span>Trekking Agency / Guide Name</span>
-                    <span className="text-[10px] text-gray-400 font-normal">(Authorized)</span>
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={agencyOrGuideName}
-                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-xl text-[10px] text-gray-600 cursor-not-allowed outline-none font-medium"
-                  />
-                </div>
-
-                {/* Policy Expected Start Date */}
+                {/* Start Date */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Policy Expected Start Date <span className="text-[#E11D48]">*</span>
+                    Start Date <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="date"
@@ -1188,10 +1155,10 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                   />
                 </div>
 
-                {/* Policy Expected End Date */}
+                {/* End Date */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Policy Expected End Date <span className="text-[#E11D48]">*</span>
+                    End Date <span className="text-[#E11D48]">*</span>
                   </label>
                   <input
                     type="date"
@@ -1205,7 +1172,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               </div>
             </div>
 
-            {/* ── SECTION 4: REQUIRED DOCUMENTS UPLOAD ── */}
+            {/* ── SECTION 3: REQUIRED DOCUMENTS UPLOAD ── */}
             <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-4 border border-gray-100 space-y-3">
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/60">
                 <div className="flex items-center gap-2">
@@ -1213,7 +1180,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     <UploadCloud size={13} />
                   </div>
                   <h4 className="text-xs font-black uppercase tracking-wider text-[#2D1347]">
-                    4. Document Attachments {travelersCount > 1 ? `— Traveler ${activeApplicantIndex + 1}` : ""}
+                    3. Document Attachments {travelersCount > 1 ? `— Traveler ${activeApplicantIndex + 1}` : ""}
                   </h4>
                 </div>
                 <span className="text-[10px] font-black uppercase text-[#E11D48] bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">Required</span>

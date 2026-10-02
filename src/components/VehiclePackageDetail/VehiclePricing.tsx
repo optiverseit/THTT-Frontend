@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import VehicleVerificationCard from "./VehicleVerificationCard";
-import BookingModal from "../reusable/packages/BookingModal";
+import VehicleRentalBookingModal from "../Service/VehicleRentalBookingModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
 
@@ -167,13 +167,10 @@ const VehiclePricing: React.FC<VehiclePricingProps> = ({ pkg }) => {
         <VehicleVerificationCard />
       </div>
 
-      <BookingModal
-        pkg={pkg}
+      <VehicleRentalBookingModal
+        item={pkg}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
-        initialTierIndex={selectedTierIndex}
-        initialGuests={numberOfGuests}
-        pricingSource="tier"
       />
     </>
   );

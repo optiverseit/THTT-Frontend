@@ -4,6 +4,7 @@ import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // CHANGE THIS IMPORT PATH ONLY if your API file has a different location/name
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -143,9 +144,8 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
   // If logged in -> booking modal
   // =========================================================
   const handleBookTour = (tour: any) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/tours",

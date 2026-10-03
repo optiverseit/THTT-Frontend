@@ -39,7 +39,7 @@ import ToursDetailContent, { TourFilterCriteria } from "../components/Service/To
 import ActivitiesDetailContent, { ActivityFilterCriteria } from "../components/Service/ActivitiesDetailContent";
 import TrekkingDetailContent, { TrekFilterCriteria } from "../components/Service/TrekkingDetailContent";
 import HotelBookingDetailContent from "../components/Service/HotelBookingDetailContent";
-import TravelInsuranceDetailContent from "../components/Service/TravelInsuranceDetailContent";
+import TravelInsuranceDetailContent, { InsuranceFilterCriteria } from "../components/Service/TravelInsuranceDetailContent";
 import VehicleRentalDetailContent from "../components/Service/VehicleRentalDetailContent";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
 import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
@@ -136,21 +136,19 @@ const ServiceDetail: React.FC = () => {
   const [appliedVisaFilter, setAppliedVisaFilter] = useState<VisaFilterCriteria | null>(null);
 
   // Heli Search Bar State
-  const [heliRouteSearch, setHeliRouteSearch] = useState(searchParams.get("route") || "");
-  const [heliFlightType, setHeliFlightType] = useState(searchParams.get("flightType") || "");
-
-  useEffect(() => {
-    setHeliRouteSearch(searchParams.get("route") || "");
-    setHeliFlightType(searchParams.get("flightType") || "");
-  }, [searchParams]);
+  const [heliLocationInput, setHeliLocationInput] = useState("");
+  const [heliNameInput, setHeliNameInput] = useState("");
+  const [appliedHeliFilter, setAppliedHeliFilter] = useState<{ location: string; name: string } | null>(null);
 
   const handleHeliSearch = () => {
-    const params = new URLSearchParams();
-    if (heliRouteSearch) params.set("route", heliRouteSearch);
-    if (heliFlightType) params.set("flightType", heliFlightType);
-    const queryString = params.toString();
-    navigate(`/service/heli-services${queryString ? `?${queryString}` : ""}`);
-    setTimeout(() => scrollToSection("section-services", "SERVICES"), 100);
+    const loc = heliLocationInput.trim();
+    const name = heliNameInput.trim();
+    if (!loc && !name) {
+      setAppliedHeliFilter(null);
+    } else {
+      setAppliedHeliFilter({ location: loc, name });
+    }
+    setTimeout(() => scrollToSection("section-services", "SERVICES"), 80);
   };
 
   const handleVisaSearch = () => {
@@ -197,6 +195,19 @@ const ServiceDetail: React.FC = () => {
     setAppliedTrekFilter({
       location: trekLocationSearch,
       duration: trekDurationSearch,
+    });
+    scrollToSection("section-services", "SERVICES");
+  };
+
+  // Insurance Search Bar State
+  const [insuranceSearchType, setInsuranceSearchType] = useState("all");
+  const [insuranceSearchDays, setInsuranceSearchDays] = useState("");
+  const [appliedInsuranceFilter, setAppliedInsuranceFilter] = useState<InsuranceFilterCriteria | null>(null);
+
+  const handleInsuranceSearch = () => {
+    setAppliedInsuranceFilter({
+      insuranceType: insuranceSearchType,
+      days: insuranceSearchDays,
     });
     scrollToSection("section-services", "SERVICES");
   };
@@ -458,48 +469,7 @@ const ServiceDetail: React.FC = () => {
     if (isVisaServices) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Globe size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                DESTINATION COUNTRY
-              </label>
-              <select
-                value={visaSearchCountry}
-                onChange={(e) => setVisaSearchCountry(e.target.value)}
-                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-              >
-                <option value="">All Countries</option>
-                <option value="thailand">Thailand</option>
-                <option value="uae">UAE (Dubai / Abu Dhabi)</option>
-                <option value="schengen">Schengen Europe</option>
-                <option value="singapore">Singapore</option>
-                <option value="malaysia">Malaysia</option>
-                <option value="japan">Japan</option>
-                <option value="uk">United Kingdom</option>
-                <option value="usa">USA</option>
-                <option value="australia">Australia</option>
-                <option value="canada">Canada</option>
-                <option value="south korea">South Korea</option>
-                <option value="qatar">Qatar</option>
-                <option value="saudi arabia">Saudi Arabia</option>
-                <option value="indonesia">Indonesia (Bali)</option>
-                <option value="vietnam">Vietnam</option>
-                <option value="turkey">Turkey</option>
-                <option value="egypt">Egypt</option>
-                <option value="china">China</option>
-                <option value="new zealand">New Zealand</option>
-                <option value="oman">Oman</option>
-                <option value="bahrain">Bahrain</option>
-                <option value="kuwait">Kuwait</option>
-                <option value="sri lanka">Sri Lanka</option>
-                <option value="maldives">Maldives</option>
-                <option value="cambodia">Cambodia</option>
-                <option value="philippines">Philippines</option>
-              </select>
-            </div>
-          </div>
-
+          {/* 1. Left: Visa Type */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <FileText size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
@@ -513,6 +483,7 @@ const ServiceDetail: React.FC = () => {
               >
                 <option value="all">All Visa Types</option>
                 <option value="tourist">Tourist Visa</option>
+                <option value="student">Student Visa</option>
                 <option value="business">Business Visa</option>
                 <option value="transit">Transit Visa</option>
                 <option value="express">Express Fast-Track</option>
@@ -520,6 +491,7 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
+          {/* 2. Center: Entry Type */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <Shield size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
@@ -538,6 +510,24 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
+          {/* 3. Right: Country (Text Input) */}
+          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Globe size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                DESTINATION COUNTRY
+              </label>
+              <input
+                type="text"
+                value={visaSearchCountry}
+                onChange={(e) => setVisaSearchCountry(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleVisaSearch()}
+                placeholder="Search destination country..."
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+              />
+            </div>
+          </div>
+
           <button
             onClick={handleVisaSearch}
             className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
@@ -551,38 +541,48 @@ const ServiceDetail: React.FC = () => {
     if (isTravelInsurance) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* 1. Insurance Type Dropdown */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <Shield size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                COVERAGE DESTINATION
+                INSURANCE TYPE
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="">High Altitude Nepal Trekking (Up to 6000m)</option>
-                <option value="schengen">Schengen &amp; Europe Compliant</option>
-                <option value="worldwide">Worldwide International Travel</option>
-                <option value="domestic">Domestic Nepal Tours</option>
+              <select
+                value={insuranceSearchType}
+                onChange={(e) => setInsuranceSearchType(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="all">All Insurance Types</option>
+                <option value="domestic">Domestic</option>
+                <option value="international">International</option>
               </select>
             </div>
           </div>
 
+          {/* 2. Days Input */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Heart size={18} className="text-pink-500 flex-shrink-0" />
+            <Clock size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                POLICY TIER
+                DAYS
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="gold">Gold (Heli Rescue + Hospitalization)</option>
-                <option value="platinum">Platinum (Comprehensive All-Inclusive)</option>
-                <option value="silver">Silver (Standard Medical Only)</option>
-              </select>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={insuranceSearchDays}
+                onChange={(e) => setInsuranceSearchDays(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && handleInsuranceSearch()}
+                placeholder="Enter number of days..."
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+              />
             </div>
           </div>
 
           <button
-            onClick={() => scrollToSection("section-services", "SERVICES")}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+            onClick={handleInsuranceSearch}
+            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
           >
             SEARCH
           </button>
@@ -637,44 +637,41 @@ const ServiceDetail: React.FC = () => {
     // Heli Services
     return (
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-          <Wind size={18} className="text-pink-500 flex-shrink-0" />
+        {/* Location */}
+        <div className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+          <MapPin size={18} className="text-pink-500 flex-shrink-0" />
           <div className="flex flex-col w-full">
-            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              HELI ROUTE
+            <label htmlFor="heli-location-input" className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              LOCATION
             </label>
-            <select
-              id="heli-route-select"
-              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-              onChange={(e) => setHeliRouteSearch(e.target.value)}
-              value={heliRouteSearch}
-            >
-              <option value="">All Routes</option>
-              <option value="everest">Everest Base Camp &amp; Kalapathar</option>
-              <option value="annapurna">Annapurna Base Camp</option>
-              <option value="langtang">Langtang Valley &amp; Kyanjin</option>
-              <option value="muktinath">Muktinath Pilgrimage</option>
-              <option value="gosaikunda">Gosaikunda Holy Lake</option>
-            </select>
+            <input
+              id="heli-location-input"
+              type="text"
+              value={heliLocationInput}
+              onChange={(e) => setHeliLocationInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleHeliSearch()}
+              placeholder="Everest, Annapurna..."
+              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-          <Users size={18} className="text-pink-500 flex-shrink-0" />
+        {/* Name / Title */}
+        <div className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+          <Wind size={18} className="text-pink-500 flex-shrink-0" />
           <div className="flex flex-col w-full">
-            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              FLIGHT TYPE
+            <label htmlFor="heli-name-input" className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              NAME / TITLE
             </label>
-            <select
-              id="heli-flight-type-select"
-              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-              onChange={(e) => setHeliFlightType(e.target.value)}
-              value={heliFlightType}
-            >
-              <option value="">All Types</option>
-              <option value="charter">Private Charter</option>
-              <option value="sharing">Sharing Heli Service</option>
-            </select>
+            <input
+              id="heli-name-input"
+              type="text"
+              value={heliNameInput}
+              onChange={(e) => setHeliNameInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleHeliSearch()}
+              placeholder="Search package name..."
+              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+            />
           </div>
         </div>
 
@@ -996,15 +993,15 @@ const ServiceDetail: React.FC = () => {
                 </div>
                 <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
                 <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
-                  "Find the right visa for your destination"
+                  "Expert assistance for seamless visa applications, embassy counseling, and swift approvals"
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
                     { icon: Shield, label: "98%+", desc: "Visa Approved" },
                     { icon: Globe2, label: "45+", desc: "Destinations" },
-                    { icon: Clock, label: "3–5 Days", desc: "Working Days" },
-                    { icon: Zap, label: "24/7", desc: "Supports" },
-                    { icon: CheckCircle2, label: "●", desc: "Document Pickup Sec." },
+                    { icon: Clock, label: "3–5 Days", desc: "Express Processing" },
+                    { icon: Zap, label: "24/7", desc: "Expert Support" },
+                    { icon: CheckCircle2, label: "Doorstep", desc: "Document Pickup Service" },
                   ].map((stat, idx) => { const Icon = stat.icon; return (
                     <div key={idx} className="bg-white/70 backdrop-blur-lg py-2 px-2.5 rounded-xl border border-white/60 shadow-xs hover:shadow-sm hover:bg-white/85 hover:border-[#E91E63]/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default flex flex-row items-center gap-2 group min-w-0">
                       <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border text-[#E91E63] bg-pink-50/80 border-[#E91E63]/25 group-hover:scale-105 transition-transform"><Icon size={14} /></div>
@@ -1078,11 +1075,25 @@ const ServiceDetail: React.FC = () => {
             ) : isHotelBooking ? (
               <HotelBookingDetailContent />
             ) : isTravelInsurance ? (
-              <TravelInsuranceDetailContent />
+              <TravelInsuranceDetailContent
+                filter={appliedInsuranceFilter}
+                onClearFilter={() => {
+                  setAppliedInsuranceFilter(null);
+                  setInsuranceSearchType("all");
+                  setInsuranceSearchDays("");
+                }}
+              />
             ) : isVehicleRental ? (
               <VehicleRentalDetailContent />
             ) : isHeliServices ? (
-              <HeliServicesDetailContent />
+              <HeliServicesDetailContent
+                filter={appliedHeliFilter}
+                onClearFilter={() => {
+                  setAppliedHeliFilter(null);
+                  setHeliLocationInput("");
+                  setHeliNameInput("");
+                }}
+              />
             ) : (
               <VisaServicesDetailContent
                 filter={appliedVisaFilter}

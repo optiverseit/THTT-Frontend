@@ -15,6 +15,7 @@ import VehicleRentalBookingModal, {
 } from "./VehicleRentalBookingModal";
 
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // Change this path only if your API file is located somewhere else
 import { getAllVehicles } from "../../api/BackendApi";
@@ -788,9 +789,8 @@ const VehicleRentalDetailContent: React.FC = () => {
   // ==========================================================
 
   const handleBookVehicle = (vehicle: ReturnType<typeof enrichVehicleWithDefaults>) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/vehicle-rental",

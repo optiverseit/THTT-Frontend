@@ -23,6 +23,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { useGlobalCurrency } from "../context/CurrencyContext";
+import { isSessionValid, clearAuthSession } from "../utils/sessionManager";
 
 
 interface Category {
@@ -304,28 +305,19 @@ const Packages: React.FC = () => {
   const handleBookPackage = (
     pkgToBook: Package
   ) => {
-
-    const token =
-      localStorage.getItem("token");
-
-
-    if (!token) {
-
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
-
         state: {
-
           from: "/packages",
-
           packageId:
             pkgToBook.id,
-
           openBooking: true,
         },
       });
-
       return;
     }
+
 
 
     setSelectedBookingPkg(

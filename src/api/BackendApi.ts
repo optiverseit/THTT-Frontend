@@ -52,6 +52,18 @@ export const resetPassword = (
   });
 };
 
+export const updateUserProfile = (data: any) => {
+  return axiosInstance.put("/profile", data);
+};
+
+export const uploadUserProfilePicture = (data: FormData) => {
+  return axiosInstance.post("/profile/avatar", data, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 
 export const getPackagesByCategory = (category: string, page = 1) => {
   return axiosInstance.get("/packageByCategory", {
@@ -395,5 +407,56 @@ export const getHotelById = (id: number | string) => {
 export const createHotelBooking = (data: any) => {
   return axiosInstance.post("/hotel-bookings/store", data);
 };
+
+
+
+
+// DASHBAORD APIS 
+export const getMyPackageBookings = () => {
+  return axiosInstance.get("/bookings/my/PACKAGE");
+};
+
+export const getMyVehicleBookings = () => {
+  return axiosInstance.get("/bookings/my/VEHICLE");
+};
+
+export const getMyHeliBookings = () => {
+  return axiosInstance.get("/bookings/my/HELI");
+};
+
+export const getMyVisaApplications = () => {
+  return axiosInstance.get("/visa-applications");
+};
+
+export const getMyInsuranceApplications = () => {
+  return axiosInstance.get("/insurance-applications");
+};
+
+export const getMyWorkPermitApplications = () => {
+  return axiosInstance.get("/work-permits/myApplications");
+};
+
+export const getMyHotelBookings = () => {
+  return axiosInstance.get("/hotel-bookings");
+};
+
+
+// DASHBOARD DETAIL APIS
+export const getMyBookingById = (id: number | string) => {
+  return axiosInstance.get(`/bookings/show/${id}`);
+};
+export const getMyVisaApplicationById = (id: number | string) => {
+  return axiosInstance.get(`/visa-applications/show/${id}`);
+};
+export const getMyInsuranceApplicationById = (id: number | string) => {
+  return axiosInstance.get(`/insurance-applications/show/${id}`);
+};
+export const getMyWorkPermitApplicationById = (id: number | string) => {
+  return axiosInstance.get(`/work-permits/${id}`);
+};
+export const getMyHotelBookingById = (id: number | string) => {
+  return axiosInstance.get(`/hotel-bookings/show/${id}`);
+};
+
 
 

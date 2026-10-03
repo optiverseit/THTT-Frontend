@@ -382,4 +382,13 @@ export const createInsuranceApplication = (formData: FormData) => {
   });
 };
 
+// HOTEL SERVICE
+export const getHotels = () => {
+  return axiosInstance.get("/hotels");
+};
+
+export const getHotelById = (id: number | string) => {
+  return axiosInstance.get(`/hotels/show/${id}`);
+};
+
 

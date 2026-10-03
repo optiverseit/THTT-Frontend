@@ -70,6 +70,7 @@ export interface DynamicFaqItem {
 
 export interface Hotel {
   id: string;
+  backendId?: number;
   name: string;
   slug: string;
   category: "luxury" | "boutique" | "resort" | "budget";
@@ -79,6 +80,8 @@ export interface Hotel {
   rating: number;
   reviewsCount: number;
   priceUSD: number;
+  priceNPR?: number;
+  lowestPriceNPR?: number;
   image: string;
   gallery?: string[];
   amenities: string[];
@@ -93,8 +96,14 @@ export interface Hotel {
   availability?: "Available" | "Limited" | "Not Available";
   days?: number;
   tier?: "Luxury" | "Deluxe" | "Standard" | string;
+  pricingTable?: {
+    id: number;
+    service: string;
+    ageGroup: string;
+    priceNepali: string;
+    priceForeigner?: string;
+  }[];
 }
-
 export interface Vehicle {
   id: string;
   name: string;

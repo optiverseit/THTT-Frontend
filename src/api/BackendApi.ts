@@ -84,6 +84,7 @@ export const initiatePayment = (data: {
   work_permit_id?: number;
   visa_application_id?: number;
   insurance_application_id?: number;
+  hotel_booking_id?: number;
   provider: "ESEWA" | "KHALTI" | "PAYLATER";
 }) => {
   return axiosInstance.post("/payments/initiate", data);
@@ -389,6 +390,10 @@ export const getHotels = () => {
 
 export const getHotelById = (id: number | string) => {
   return axiosInstance.get(`/hotels/show/${id}`);
+};
+
+export const createHotelBooking = (data: any) => {
+  return axiosInstance.post("/hotel-bookings/store", data);
 };
 
 

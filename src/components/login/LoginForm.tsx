@@ -298,8 +298,7 @@ const LoginForm = () => {
         );
       } else {
         setApiError(
-          responseData?.message ||
-            "Invalid login response."
+          "Username or password do not match. Please login through correct information."
         );
       }
     } catch (error: any) {
@@ -309,8 +308,7 @@ const LoginForm = () => {
       );
 
       setApiError(
-        error.response?.data?.message ||
-          "Unable to login. Please try again."
+        "Username or password do not match. Please login through correct information."
       );
     } finally {
       setLoading(false);

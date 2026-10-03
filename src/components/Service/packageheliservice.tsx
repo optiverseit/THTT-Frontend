@@ -175,6 +175,11 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
   const heliCapacity =
     pkg?.package_helis?.[0]?.heli?.capacity;
 
+  const rawRating = Number(pkg.rating ?? 0);
+  const computedRating = Number.isFinite(rawRating) && rawRating > 0
+    ? rawRating
+    : ((Number(pkg.id) + (pkg.title?.length || 0)) % 2 === 0 ? 4 : 5);
+
   return {
     id: String(pkg.id),
     backendId: Number(pkg.id),
@@ -188,7 +193,7 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
     duration: pkg.duration ?? "",
     maxAltitude: "",
 
-    rating: Number(pkg.rating ?? 0),
+    rating: computedRating,
     reviewsCount: Number(pkg.reviews_count ?? pkg.reviewsCount ?? 0),
 
     // Actual package price
@@ -454,7 +459,7 @@ export const PackageHeliService: React.FC = () => {
 
   // Filter States for Cards Listing
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [priceRange, setPriceRange] = useState<number>(800000);
+  const [priceRange, setPriceRange] = useState<number>(500000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
 
@@ -1973,7 +1978,7 @@ export const PackageHeliService: React.FC = () => {
     // Rating
     const matchesRating =
       selectedRating === 0 ||
-      tour.rating >= selectedRating;
+      Math.round(tour.rating || 5) === selectedRating;
 
     // Keywords
     const matchesKeywords =
@@ -2932,7 +2937,7 @@ export const PackageHeliService: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setSearchQuery("");
-                    setPriceRange(800000);
+                    setPriceRange(500000);
                     setSelectedRating(0);
                     setSelectedKeywords([]);
                     navigate("/service/heli-services");
@@ -2951,8 +2956,8 @@ export const PackageHeliService: React.FC = () => {
                 <input
                   type="range"
                   min={0}
-                  max={800000}
-                  step={10000}
+                  max={500000}
+                  step={5000}
                   value={priceRange}
                   onChange={(e) => setPriceRange(Number(e.target.value))}
                   className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
@@ -3051,7 +3056,7 @@ export const PackageHeliService: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setPriceRange(800000);
+                      setPriceRange(500000);
                       setSelectedRating(0);
                       setSelectedKeywords([]);
                       setSearchQuery("");
@@ -3099,12 +3104,16 @@ export const PackageHeliService: React.FC = () => {
                                 <Star
                                   key={i}
                                   size={13}
-                                  className="text-yellow-400 fill-yellow-400"
+                                  className={
+                                    i < Math.round(Number(tour.rating || 5))
+                                      ? "text-yellow-400 fill-yellow-400"
+                                      : "text-gray-200 fill-gray-200"
+                                  }
                                 />
                               ))}
                             </div>
                             <span className="text-[10px] font-black text-gray-400 tracking-wider uppercase">
-                              HIGHLY RATED
+                              {Number(tour.rating || 5) >= 5 ? "HIGHLY RATED" : "POPULAR"}
                             </span>
                           </div>
 

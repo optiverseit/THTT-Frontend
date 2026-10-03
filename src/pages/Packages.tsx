@@ -22,6 +22,7 @@ import {
 } from "../api/BackendApi";
 
 import { useNavigate } from "react-router-dom";
+import { useGlobalCurrency } from "../context/CurrencyContext";
 
 
 interface Category {
@@ -36,6 +37,7 @@ interface Category {
 const Packages: React.FC = () => {
 
   const navigate = useNavigate();
+  const { nprPerOneDollar } = useGlobalCurrency();
 
 
   // =========================================================
@@ -64,7 +66,14 @@ const Packages: React.FC = () => {
   const [selectedCategory, setSelectedCategory] =
     useState<string>("all");
 
-  const [priceRange, setPriceRange] = useState<number>(0);
+  // Applied values (only updated when user clicks SEARCH button or presses Enter)
+  const [appliedSearchQuery, setAppliedSearchQuery] =
+    useState<string>("");
+
+  const [appliedCategory, setAppliedCategory] =
+    useState<string>("all");
+
+  const [priceRange, setPriceRange] = useState<number>(500000);
 
   const [selectedRating, setSelectedRating] =
     useState<number>(0);
@@ -154,9 +163,21 @@ const Packages: React.FC = () => {
       );
 
 
-      setPackages(packageData);
+      const mappedPackages = packageData.map((pkg: any) => {
+        if (pkg.rating !== undefined && pkg.rating !== null && pkg.rating !== "") {
+          return pkg;
+        }
+        const numId = Number(pkg.id);
+        const computedRating = (!isNaN(numId) && (numId + (pkg.title?.length || 0)) % 2 === 0) ? 4 : 5;
+        return {
+          ...pkg,
+          rating: computedRating,
+        };
+      });
 
-      setFilteredPackages(packageData);
+      setPackages(mappedPackages);
+
+      setFilteredPackages(mappedPackages);
 
     } catch (error) {
 
@@ -319,7 +340,7 @@ const Packages: React.FC = () => {
   // FILTER PACKAGES
   // =========================================================
 
-  const handleSearch = () => {
+  const filterPackagesWith = (queryText: string, categoryFilter: string) => {
 
     const filtered =
       packages.filter(
@@ -327,153 +348,92 @@ const Packages: React.FC = () => {
 
 
           // =====================================
-          // SEARCH
+          // SEARCH BY TITLE OR LOCATION
           // =====================================
 
-          const query =
-            searchQuery
-              .trim()
-              .toLowerCase();
-
+          const query = queryText.trim().toLowerCase();
 
           const matchesSearch =
-
             !query ||
-
-            pkg.title
-              ?.toLowerCase()
-              .includes(query) ||
-
-            pkg.location
-              ?.toLowerCase()
-              .includes(query) ||
-
-            pkg.description
-              ?.toLowerCase()
-              .includes(query) ||
-
-            pkg.category?.title
-              ?.toLowerCase()
-              .includes(query) ||
-
-            pkg.category?.name
-              ?.toLowerCase()
-              .includes(query) ||
-
-            pkg.highlights?.some(
-              (
-                highlight: any
-              ) => {
-
-                const value =
-
-                  typeof highlight ===
-                    "string"
-
-                    ? highlight
-
-                    : highlight
-                      ?.highlight;
-
-
-                return value
-                  ?.toLowerCase()
-                  .includes(
-                    query
-                  );
-              }
+            // Title match (any word in query matches title)
+            query.split(/[\s,]+/).filter(Boolean).some((word) =>
+              pkg.title?.toLowerCase().includes(word)
+            ) ||
+            // Location match (any word in query matches location keywords)
+            query.split(/[\s,]+/).filter(Boolean).some((word) =>
+              pkg.location?.toLowerCase().includes(word)
             );
 
 
           // =====================================
           // CATEGORY
+          // Matches static options: all | tours | adventure | trekking
+          // against pkg.category.name / pkg.category.title / pkg.type
           // =====================================
 
-          const packageCategoryId =
+          const pkgCategoryName = (
+            pkg.category?.name ||
+            pkg.category?.title ||
+            pkg.category?.slug ||
+            pkg.type ||
+            ""
+          ).toLowerCase();
 
-            pkg.category_id ??
-
-            pkg.category?.id;
-
+          const pkgCategoryId = String(pkg.category_id ?? pkg.category?.id ?? "");
 
           const matchesCategory =
-
-            selectedCategory ===
-              "all" ||
-
-              selectedCategory === ""
-
+            categoryFilter === "all" || categoryFilter === ""
               ? true
-
-              : String(
-                packageCategoryId
-              ) ===
-              String(
-                selectedCategory
-              );
+              : categoryFilter === "tours"
+              ? pkgCategoryName.includes("tour") || pkgCategoryName.includes("holiday") || pkgCategoryName.includes("unesco")
+              : categoryFilter === "adventure"
+              ? pkgCategoryName.includes("adventure") || pkgCategoryName.includes("activity") || pkgCategoryName.includes("activities")
+              : categoryFilter === "trekking"
+              ? pkgCategoryName.includes("trek") || pkgCategoryName.includes("hiking") || pkgCategoryName.includes("expedition")
+              : String(pkgCategoryId) === String(categoryFilter);
 
 
           // =====================================
           // PRICE
           // =====================================
 
-          let priceNum = 0;
+          const extractPriceNPR = (item: any): number => {
+            if (Array.isArray(item.pricingTable) && item.pricingTable.length > 0) {
+              const firstTier = item.pricingTable[0];
+              const rawTier = String(firstTier?.priceNepali || firstTier?.price || "").replace(/[^0-9.]/g, "");
+              const tierNum = Number(rawTier);
+              if (Number.isFinite(tierNum) && tierNum > 0) return tierNum;
+            }
 
+            if (typeof item.price === "number" && !isNaN(item.price)) return item.price;
+            if (typeof item.price_npr === "number" && !isNaN(item.price_npr)) return item.price_npr;
+            if (typeof item.starting_price === "number" && !isNaN(item.starting_price)) return item.starting_price;
+            if (typeof item.priceNepali === "number" && !isNaN(item.priceNepali)) return item.priceNepali;
 
-          if (
-            typeof pkg.price ===
-            "number"
-          ) {
+            const rawStr = String(item.price ?? item.price_npr ?? item.starting_price ?? item.priceNepali ?? "").trim();
+            if (rawStr) {
+              const isUSD = rawStr.includes("$");
+              const cleaned = Number(rawStr.replace(/[^0-9.]/g, ""));
+              if (Number.isFinite(cleaned) && cleaned > 0) {
+                return isUSD ? cleaned * (nprPerOneDollar || 151.09) : cleaned;
+              }
+            }
+            return 0;
+          };
 
-            priceNum =
-              pkg.price;
-
-          } else if (
-            typeof pkg.price ===
-            "string"
-          ) {
-
-            priceNum =
-              Number(
-                pkg.price.replace(
-                  /[^0-9.]/g,
-                  ""
-                )
-              );
-
-          } else if (
-            pkg.price_npr !==
-            undefined
-          ) {
-
-            priceNum =
-              Number(
-                pkg.price_npr
-              );
-          }
-
+          const priceNum = extractPriceNPR(pkg);
           const matchesPrice =
-            priceRange === 0 ||
             priceNum === 0 ||
             priceNum <= priceRange;
-
 
           // =====================================
           // RATING
           // =====================================
 
-          const packageRating =
-            Number(
-              pkg.rating ?? 0
-            );
-
-
+          const packageRating = Math.round(Number(pkg.rating ?? 5));
           const matchesRating =
-
             selectedRating === 0 ||
-
-            packageRating >=
-            selectedRating;
+            packageRating === selectedRating;
 
 
           // =====================================
@@ -554,19 +514,26 @@ const Packages: React.FC = () => {
     );
   };
 
+  // Called when user clicks "SEARCH" or presses Enter in the search input
+  const handleSearch = () => {
+    setAppliedSearchQuery(searchQuery);
+    setAppliedCategory(selectedCategory);
+    filterPackagesWith(searchQuery, selectedCategory);
+  };
+
 
   // =========================================================
-  // APPLY FILTER AUTOMATICALLY
+  // APPLY FILTERS (only triggers on packages load, applied search/category, or sidebar filters)
   // =========================================================
 
   useEffect(() => {
 
-    handleSearch();
+    filterPackagesWith(appliedSearchQuery, appliedCategory);
 
   }, [
     packages,
-    searchQuery,
-    selectedCategory,
+    appliedSearchQuery,
+    appliedCategory,
     priceRange,
     selectedRating,
     selectedKeywords,
@@ -648,52 +615,7 @@ const Packages: React.FC = () => {
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 
 
-              {/* SEARCH */}
-
-              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-
-
-                <Search
-                  size={18}
-                  className="text-pink-500 flex-shrink-0"
-                />
-
-
-                <div className="flex flex-col w-full text-left">
-
-
-                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-
-                    SEARCH KEYWORD
-
-                  </label>
-
-
-                  <input
-                    type="text"
-                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
-                    placeholder="Where do you want to go?"
-                    value={
-                      searchQuery
-                    }
-                    onChange={(
-                      e
-                    ) =>
-                      setSearchQuery(
-                        e.target
-                          .value
-                      )
-                    }
-                  />
-
-                </div>
-
-              </div>
-
-
-              {/* =================================
-                                CATEGORY
-                            ================================= */}
+              {/* LEFT: SELECT CATEGORY */}
 
               <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
 
@@ -708,85 +630,55 @@ const Packages: React.FC = () => {
 
 
                   <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-
                     SELECT CATEGORY
-
                   </label>
 
 
                   <select
                     className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-                    value={
-                      selectedCategory
-                    }
-                    onChange={(
-                      e
-                    ) =>
-                      setSelectedCategory(
-                        e.target
-                          .value
-                      )
-                    }
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
                   >
-
-
-                    <option value="all">
-
-                      All Categories
-
-                    </option>
-
-
-                    {categories.map(
-                      (
-                        category
-                      ) => {
-
-
-                        /*
-                         * Backend may return:
-                         *
-                         * title
-                         *
-                         * OR
-                         *
-                         * name
-                         */
-
-                        const categoryLabel =
-
-                          category.title ||
-
-                          category.name ||
-
-                          category.slug ||
-
-                          `Category ${category.id}`;
-
-
-                        return (
-
-                          <option
-                            key={
-                              category.id
-                            }
-                            value={
-                              category.id
-                            }
-                          >
-
-                            {
-                              categoryLabel
-                            }
-
-                          </option>
-
-                        );
-                      }
-                    )}
-
-
+                    <option value="all">All Packages</option>
+                    <option value="tours">Tours Packages</option>
+                    <option value="adventure">Adventure Activity</option>
+                    <option value="trekking">Trekking Packages</option>
                   </select>
+
+
+                </div>
+
+              </div>
+
+
+              {/* RIGHT: SEARCH BY TITLE / LOCATION */}
+
+              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+
+
+                <Search
+                  size={18}
+                  className="text-pink-500 flex-shrink-0"
+                />
+
+
+                <div className="flex flex-col w-full text-left">
+
+
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    SEARCH BY TITLE / LOCATION
+                  </label>
+
+
+                  <input
+                    type="text"
+                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
+                    placeholder="Package name or location..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  />
+
 
                 </div>
 
@@ -796,10 +688,8 @@ const Packages: React.FC = () => {
               {/* SEARCH BUTTON */}
 
               <button
-                onClick={
-                  handleSearch
-                }
-                className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+                onClick={handleSearch}
+                className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
               >
 
                 SEARCH
@@ -939,6 +829,9 @@ const Packages: React.FC = () => {
               priceRange={
                 priceRange
               }
+              minPrice={0}
+              maxPrice={500000}
+              step={5000}
               selectedRating={
                 selectedRating
               }

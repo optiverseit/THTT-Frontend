@@ -52,6 +52,18 @@ export const resetPassword = (
   });
 };
 
+export const updateUserProfile = (data: any) => {
+  return axiosInstance.put("/profile", data);
+};
+
+export const uploadUserProfilePicture = (data: FormData) => {
+  return axiosInstance.post("/profile/avatar", data, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 
 export const getPackagesByCategory = (category: string, page = 1) => {
   return axiosInstance.get("/packageByCategory", {

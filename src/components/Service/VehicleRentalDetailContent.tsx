@@ -8,7 +8,7 @@ import {
   displayPrice,
 } from "../../context/CurrencyContext";
 
-import FilterSideBar from "../TravelPackage/FilterSiderBar";
+import VehicleSidebarFilter from "../VehiclePackageDetail/VehicleSidebarFilter";
 
 import VehicleRentalBookingModal, {
   VehicleBookingItem,
@@ -910,9 +910,9 @@ const VehicleRentalDetailContent: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start" ref={cardsTopRef}>
         {/* Left Filter Sidebar */}
         <div className="lg:col-span-1">
-          <FilterSideBar
-            setPriceRange={setPriceRange}
+          <VehicleSidebarFilter
             priceRange={priceRange}
+            setPriceRange={setPriceRange}
             minPrice={0}
             maxPrice={500000}
             step={5000}

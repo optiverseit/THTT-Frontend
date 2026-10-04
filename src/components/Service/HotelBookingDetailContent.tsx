@@ -2,11 +2,23 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HotelBookingSection from "./HotelBookingSection";
 import HotelBookingModal from "../HotelPackageDetail/HotelBookingModal";
-import FilterSideBar from "../TravelPackage/FilterSideBar";
+import HotelSidebarFilter from "../HotelPackageDetail/HotelSidebarFilter";
 import { getHotels } from "../../api/BackendApi";
-import { useGlobalCurrency } from "../../context/CurrencyContext";
-import { Award, Coffee, Car, Clock, ShieldCheck, Headphones } from "lucide-react";
+import { Award, Coffee, Car, Clock, ShieldCheck, Headphones, X, Calendar, MapPin, Building2, Globe } from "lucide-react";
 import type { Hotel } from "../../assets/data/types";
+
+export interface HotelFilterCriteria {
+  region: string;
+  location: string;
+  hotelName: string;
+  checkInDate: string;
+  checkOutDate: string;
+}
+
+interface HotelBookingDetailContentProps {
+  filter?: HotelFilterCriteria | null;
+  onClearFilter?: () => void;
+}
 
 interface HotelPricingTierApi {
   id: number;
@@ -77,22 +89,41 @@ const getTierPrice = (tier: HotelPricingTierApi): number => {
 const getLowestTier = (hotel: HotelApi): HotelPricingTierApi | null => {
   const tiers = getPricingTiers(hotel).filter((tier) => getTierPrice(tier) > 0);
   if (!tiers.length) return null;
-  return tiers.reduce((lowest, current) => getTierPrice(current) < getTierPrice(lowest) ? current : lowest);
+  return tiers.reduce((lowest, current) =>
+    getTierPrice(current) < getTierPrice(lowest) ? current : lowest
+  );
 };
 
 const getImageUrl = (hotel: HotelApi): string => {
-  const images = Array.isArray(hotel.images) ? hotel.images.filter((image) => image.status !== "INACTIVE") : [];
+  const images = Array.isArray(hotel.images)
+    ? hotel.images.filter((image) => image.status !== "INACTIVE")
+    : [];
   const primary = images.find((image) => image.is_primary);
   const cover = images.find((image) => image.image_type === "COVER");
   const selected = primary || cover || images[0];
-  return selected?.image_url || selected?.file_url || selected?.secure_url || selected?.url || selected?.image || "";
+  return (
+    selected?.image_url ||
+    selected?.file_url ||
+    selected?.secure_url ||
+    selected?.url ||
+    selected?.image ||
+    ""
+  );
 };
 
 const getGallery = (hotel: HotelApi): string[] => {
   if (!Array.isArray(hotel.images)) return [];
   return hotel.images
     .filter((image) => image.status !== "INACTIVE")
-    .map((image) => image.image_url || image.file_url || image.secure_url || image.url || image.image || "")
+    .map(
+      (image) =>
+        image.image_url ||
+        image.file_url ||
+        image.secure_url ||
+        image.url ||
+        image.image ||
+        ""
+    )
     .filter(Boolean);
 };
 
@@ -102,7 +133,7 @@ const mapPricingTable = (hotel: HotelApi) => {
     service: tier.room_name,
     ageGroup: tier.pricing_unit === "PER_DAY" ? "Per Day" : "Per Night",
     priceNepali: String(getTierPrice(tier)),
-    priceForeigner: String(getTierPrice(tier))
+    priceForeigner: String(getTierPrice(tier)),
   }));
 };
 
@@ -111,6 +142,9 @@ const mapApiHotelToHotel = (hotel: HotelApi): Hotel => {
   const lowestPriceNPR = lowestTier ? getTierPrice(lowestTier) : 0;
   const pricingTable = mapPricingTable(hotel);
   const rating = Number(hotel.rating ?? 0);
+  const country = hotel.country || "Nepal";
+  const isDomestic = country.trim().toLowerCase() === "nepal";
+
   return {
     id: String(hotel.id),
     backendId: hotel.id,
@@ -119,7 +153,12 @@ const mapApiHotelToHotel = (hotel: HotelApi): Hotel => {
     category: "luxury",
     tierLabel: lowestTier?.room_name || "Room",
     city: hotel.city || "",
-    location: [hotel.address, hotel.city, hotel.country].filter(Boolean).join(", ") || "Nepal",
+    location:
+      [hotel.address, hotel.city, hotel.country].filter(Boolean).join(", ") ||
+      "Nepal",
+    country,
+    address: hotel.address || "",
+    region: isDomestic ? "domestic" : "international",
     rating: Number.isFinite(rating) ? rating : 0,
     reviewsCount: 0,
     priceUSD: 0,
@@ -131,26 +170,114 @@ const mapApiHotelToHotel = (hotel: HotelApi): Hotel => {
     features: [],
     description: hotel.description || hotel.short_description || "",
     isFeatured: Boolean(hotel.is_featured),
-    badge: hotel.is_featured ? "Featured" : rating >= 4.5 ? "Popular" : "Best Value",
+    badge: hotel.is_featured
+      ? "Featured"
+      : rating >= 4.5
+      ? "Popular"
+      : "Best Value",
     roomTypes: pricingTable.map((tier) => tier.service),
     availableFrom: hotel.available_from || undefined,
     availableTo: hotel.available_to || undefined,
     availability: "Available",
     tier: "Standard",
-    pricingTable
+    pricingTable,
   };
 };
 
-const HotelBookingDetailContent: React.FC = () => {
+/**
+ * Normalizes any date string (ISO, YYYY-MM-DD, "Oct 08, 2026") into uniform "YYYY-MM-DD"
+ */
+const normalizeToYMD = (val?: string | null): string | null => {
+  if (!val) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+
+  const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (ymdMatch) {
+    const y = ymdMatch[1];
+    const m = ymdMatch[2].padStart(2, "0");
+    const d = ymdMatch[3].padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  return null;
+};
+
+const checkIsDomestic = (
+  hotel: Hotel,
+  countryLower: string,
+  cityLower: string,
+  locationLower: string
+): boolean => {
+  const region = (hotel.region || "").trim().toLowerCase();
+  const category = (hotel.category || "").trim().toLowerCase();
+
+  if (region === "international" || category === "international") return false;
+  if (region === "domestic" || category === "domestic") return true;
+
+  if (countryLower && countryLower !== "nepal") return false;
+
+  const internationalKeywords = [
+    "thailand",
+    "bangkok",
+    "phuket",
+    "bali",
+    "indonesia",
+    "dubai",
+    "uae",
+    "united arab emirates",
+    "india",
+    "delhi",
+    "new delhi",
+    "mumbai",
+    "bhutan",
+    "maldives",
+    "singapore",
+    "malaysia",
+    "vietnam",
+    "japan",
+    "europe",
+    "switzerland",
+    "france",
+    "paris",
+    "london",
+  ];
+
+  if (
+    internationalKeywords.some(
+      (kw) => locationLower.includes(kw) || cityLower.includes(kw)
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
+const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
+  filter,
+  onClearFilter,
+}) => {
   const navigate = useNavigate();
-  const { nprPerOneDollar } = useGlobalCurrency();
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [priceRange, setPriceRange] = useState(1000);
+
+  // Sidebar filters
+  const [priceRange, setPriceRange] = useState(500000);
   const [selectedRating, setSelectedRating] = useState(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
+
+  // Booking Modal
   const [selectedBookingItem, setSelectedBookingItem] = useState<any>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
@@ -162,8 +289,15 @@ const HotelBookingDetailContent: React.FC = () => {
         setLoadError("");
         const response = await getHotels();
         const responseData = response?.data?.data;
-        const apiHotels: HotelApi[] = Array.isArray(responseData) ? responseData : Array.isArray(responseData?.data) ? responseData.data : [];
-        if (!cancelled) setHotels(apiHotels.map(mapApiHotelToHotel));
+        const apiHotels: HotelApi[] = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray(responseData?.data)
+          ? responseData.data
+          : [];
+
+        if (!cancelled) {
+          setHotels(apiHotels.map(mapApiHotelToHotel));
+        }
       } catch (error) {
         console.error("Failed to load hotels:", error);
         if (!cancelled) {
@@ -180,29 +314,189 @@ const HotelBookingDetailContent: React.FC = () => {
     };
   }, []);
 
-  const getHotelPriceNPR = (hotel: Hotel): number => Number(hotel.lowestPriceNPR ?? hotel.priceNPR ?? 0);
+  const getHotelPriceNPR = (hotel: Hotel): number =>
+    Number(hotel.lowestPriceNPR ?? hotel.priceNPR ?? 0);
 
   const hotelKeywords = useMemo(() => {
-    const defaultKeywords = ["KATHMANDU", "POKHARA", "CHITWAN", "NAGARKOT", "LUMBINI", "HERITAGE", "LUXURY", "RESORT", "SPA", "BOUTIQUE", "SWIMMING POOL", "MOUNTAIN VIEW"];
-    const dynamicKeywords = hotels.flatMap((hotel) => [hotel.city, hotel.location, ...(hotel.amenities || []), ...(hotel.features || []), ...(hotel.roomTypes || [])]).filter(Boolean).map((item) => String(item).toUpperCase());
-    return Array.from(new Set([...defaultKeywords, ...dynamicKeywords])).slice(0, 20);
+    const defaultKeywords = [
+      "KATHMANDU",
+      "POKHARA",
+      "CHITWAN",
+      "NAGARKOT",
+      "LUMBINI",
+      "HERITAGE",
+      "LUXURY",
+      "RESORT",
+      "SPA",
+      "BOUTIQUE",
+      "SWIMMING POOL",
+      "MOUNTAIN VIEW",
+    ];
+    const dynamicKeywords = hotels
+      .flatMap((hotel) => [
+        hotel.city,
+        hotel.location,
+        ...(hotel.amenities || []),
+        ...(hotel.features || []),
+        ...(hotel.roomTypes || []),
+      ])
+      .filter(Boolean)
+      .map((item) => String(item).toUpperCase());
+    return Array.from(new Set([...defaultKeywords, ...dynamicKeywords])).slice(
+      0,
+      20
+    );
   }, [hotels]);
 
-  const filteredHotels = useMemo(() => {
-    return hotels.filter((hotel) => {
-      const hotelNpr = getHotelPriceNPR(hotel);
-      const maxNpr = priceRange * (nprPerOneDollar || 133);
-      const matchesPrice = hotelNpr === 0 || hotelNpr <= maxNpr;
-      const matchesRating = selectedRating === 0 || Math.round(hotel.rating || 0) >= selectedRating;
-      const matchesKeywords = selectedKeywords.length === 0 || selectedKeywords.some((keyword) => {
-        const kw = keyword.toLowerCase();
-        return hotel.name.toLowerCase().includes(kw) || hotel.location.toLowerCase().includes(kw) || hotel.city.toLowerCase().includes(kw) || hotel.tierLabel.toLowerCase().includes(kw) || hotel.amenities.some((item) => item.toLowerCase().includes(kw)) || hotel.features.some((item) => item.toLowerCase().includes(kw)) || hotel.roomTypes?.some((item) => item.toLowerCase().includes(kw));
-      });
-      const hotelBadge = hotel.badge || (hotel.isFeatured ? "Featured" : hotel.rating >= 4.5 ? "Popular" : "Best Value");
-      const matchesBadge = selectedBadges.length === 0 || selectedBadges.some((badge) => hotelBadge.toLowerCase().includes(badge.toLowerCase()));
-      return matchesPrice && matchesRating && matchesKeywords && matchesBadge;
+  // Pre-index hotels for fastest searching results
+  const indexedHotels = useMemo(() => {
+    return hotels.map((hotel) => {
+      const nameLower = (hotel.name || "").toLowerCase().trim();
+      const cityLower = (hotel.city || "").toLowerCase().trim();
+      const locationLower = (hotel.location || "").toLowerCase().trim();
+      const addressLower = ((hotel as any).address || "").toLowerCase().trim();
+      const countryLower = ((hotel as any).country || "").toLowerCase().trim();
+
+      const fromYmd = normalizeToYMD(hotel.availableFrom);
+      const toYmd = normalizeToYMD(hotel.availableTo);
+      const isDomestic = checkIsDomestic(
+        hotel,
+        countryLower,
+        cityLower,
+        locationLower
+      );
+
+      const priceNpr = getHotelPriceNPR(hotel);
+      const ratingRound = Math.round(hotel.rating || 0);
+      const badgeStr = (
+        hotel.badge ||
+        (hotel.isFeatured
+          ? "Featured"
+          : hotel.rating >= 4.5
+          ? "Popular"
+          : "Best Value")
+      ).toLowerCase();
+
+      const searchableBlob = [
+        nameLower,
+        cityLower,
+        locationLower,
+        addressLower,
+        hotel.tierLabel?.toLowerCase() || "",
+        ...(hotel.amenities || []).map((a) => a.toLowerCase()),
+        ...(hotel.features || []).map((f) => f.toLowerCase()),
+        ...(hotel.roomTypes || []).map((r) => r.toLowerCase()),
+      ].join(" ");
+
+      return {
+        hotel,
+        nameLower,
+        cityLower,
+        locationLower,
+        addressLower,
+        fromYmd,
+        toYmd,
+        isDomestic,
+        priceNpr,
+        ratingRound,
+        badgeStr,
+        searchableBlob,
+      };
     });
-  }, [hotels, priceRange, selectedRating, selectedKeywords, selectedBadges, nprPerOneDollar]);
+  }, [hotels]);
+
+  // Fast filtering: combines search bar criteria (filter) + sidebar filters
+  const filteredHotels = useMemo(() => {
+    const regionFilter = (filter?.region || "all").trim().toLowerCase();
+    const locFilter = (filter?.location || "").trim().toLowerCase();
+    const nameFilter = (filter?.hotelName || "").trim().toLowerCase();
+    const cIn = normalizeToYMD(filter?.checkInDate) || "";
+    const cOut = normalizeToYMD(filter?.checkOutDate) || "";
+
+    return indexedHotels
+      .filter((item) => {
+        // 1. Search Bar: Region (Domestic & International)
+        if (regionFilter === "domestic" && !item.isDomestic) return false;
+        if (regionFilter === "international" && item.isDomestic) return false;
+
+        // 2. Search Bar: Location
+        if (locFilter) {
+          const matchLoc =
+            item.cityLower.includes(locFilter) ||
+            item.locationLower.includes(locFilter) ||
+            item.addressLower.includes(locFilter);
+          if (!matchLoc) return false;
+        }
+
+        // 3. Search Bar: Hotel Name
+        if (nameFilter) {
+          if (!item.nameLower.includes(nameFilter)) return false;
+        }
+
+        // 4 & 5. Search Bar: Checkin and Checkout Date comparison against hotel's Available dates
+        // If the checkin date and checkout date is between the available dates then show that cards:
+        // checkIn >= availableFrom (available start date is equals or lesser)
+        // checkOut <= availableTo (available end date is equals or greater)
+        if (cIn || cOut) {
+          const { fromYmd, toYmd } = item;
+          if (fromYmd && toYmd) {
+            if (cIn && cOut) {
+              if (cIn < fromYmd || cOut > toYmd) return false;
+            } else if (cIn) {
+              if (cIn < fromYmd || cIn > toYmd) return false;
+            } else if (cOut) {
+              if (cOut < fromYmd || cOut > toYmd) return false;
+            }
+          } else if (fromYmd) {
+            if (cIn && cIn < fromYmd) return false;
+            if (cOut && cOut < fromYmd) return false;
+          } else if (toYmd) {
+            if (cIn && cIn > toYmd) return false;
+            if (cOut && cOut > toYmd) return false;
+          }
+        }
+
+        // 6. Sidebar: Price Range
+        if (item.priceNpr > 0 && item.priceNpr > priceRange) return false;
+
+        // 7. Sidebar: Rating
+        if (selectedRating > 0 && item.ratingRound < selectedRating) return false;
+
+        // 8. Sidebar: Keywords
+        if (selectedKeywords.length > 0) {
+          const matches = selectedKeywords.some((kw) =>
+            item.searchableBlob.includes(kw.toLowerCase())
+          );
+          if (!matches) return false;
+        }
+
+        // 9. Sidebar: Badges / Highlights
+        if (selectedBadges.length > 0) {
+          const matches = selectedBadges.some((b) =>
+            item.badgeStr.includes(b.toLowerCase())
+          );
+          if (!matches) return false;
+        }
+
+        return true;
+      })
+      .map((item) => item.hotel);
+  }, [
+    indexedHotels,
+    filter,
+    priceRange,
+    selectedRating,
+    selectedKeywords,
+    selectedBadges,
+  ]);
+
+  const hasActiveSearchBarFilter = Boolean(
+    (filter?.region && filter.region !== "all") ||
+      filter?.location?.trim() ||
+      filter?.hotelName?.trim() ||
+      filter?.checkInDate ||
+      filter?.checkOutDate
+  );
 
   const handleBookHotel = (hotel: Hotel) => {
     setSelectedBookingItem({
@@ -219,7 +513,7 @@ const HotelBookingDetailContent: React.FC = () => {
       features: hotel.features || [],
       amenities: hotel.amenities || [],
       type: "hotel",
-      category: "hotel"
+      category: "hotel",
     });
     setIsBookingModalOpen(true);
   };
@@ -233,7 +527,9 @@ const HotelBookingDetailContent: React.FC = () => {
       <div className="py-20 flex items-center justify-center">
         <div className="text-center">
           <div className="w-10 h-10 border-4 border-gray-200 border-t-[#E91E63] rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-bold text-gray-500 mt-4">Loading hotels...</p>
+          <p className="text-sm font-bold text-gray-500 mt-4">
+            Loading hotels...
+          </p>
         </div>
       </div>
     );
@@ -249,44 +545,188 @@ const HotelBookingDetailContent: React.FC = () => {
 
   return (
     <>
-      <div className="space-y-12">
-        <div className="px-1">
-          <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">Featured Luxury &amp; Boutique Hotels</h3>
-          <p className="text-xs text-gray-500 font-medium mt-1">Browse 5-star heritage hotels, lakeside boutique stays, jungle safari eco-resorts, and mountain lodges.</p>
+      <div className="space-y-8">
+        <div className="px-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h3 className="text-2xl sm:text-3xl font-black text-[#2D1347] tracking-tight">
+              Featured Luxury &amp; Boutique Hotels
+            </h3>
+            <p className="text-xs text-gray-500 font-medium mt-1">
+              Browse 5-star heritage hotels, lakeside boutique stays, jungle
+              safari eco-resorts, and international luxury destinations.
+            </p>
+          </div>
+
+          {/* Active Search Bar Badge Pill */}
+          {hasActiveSearchBarFilter && (
+            <div className="flex items-center gap-2 bg-pink-50 border border-pink-200 px-3.5 py-1.5 rounded-full self-start sm:self-auto">
+              <span className="text-[11px] font-black text-[#E91E63] uppercase tracking-wider">
+                Search Bar Filter Applied
+              </span>
+              {onClearFilter && (
+                <button
+                  type="button"
+                  onClick={onClearFilter}
+                  className="text-gray-400 hover:text-[#E91E63] cursor-pointer ml-1"
+                  title="Clear search bar filter"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Active Filter Criteria Summary Bar */}
+        {hasActiveSearchBarFilter && (
+          <div className="bg-white rounded-2xl p-4 border border-pink-100 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-400 font-bold uppercase text-[10px] tracking-wider">
+                Active Criteria:
+              </span>
+              {filter?.region && filter.region !== "all" && (
+                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
+                  <Globe size={11} />
+                  <span>Region: {filter.region === "domestic" ? "Domestic" : "International"}</span>
+                </span>
+              )}
+              {filter?.location?.trim() && (
+                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
+                  <MapPin size={11} />
+                  <span>Location: {filter.location}</span>
+                </span>
+              )}
+              {filter?.hotelName?.trim() && (
+                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
+                  <Building2 size={11} />
+                  <span>Hotel: {filter.hotelName}</span>
+                </span>
+              )}
+              {(filter?.checkInDate || filter?.checkOutDate) && (
+                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
+                  <Calendar size={11} />
+                  <span>
+                    Dates: {filter.checkInDate || "Any"} to {filter.checkOutDate || "Any"}
+                  </span>
+                </span>
+              )}
+            </div>
+
+            {onClearFilter && (
+              <button
+                type="button"
+                onClick={onClearFilter}
+                className="text-[11px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
+              >
+                Clear Search
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start mt-6">
           <div className="lg:col-span-1">
-            <FilterSideBar setPriceRange={setPriceRange} priceRange={priceRange} selectedRating={selectedRating} setSelectedRating={setSelectedRating} selectedKeywords={selectedKeywords} setSelectedKeywords={setSelectedKeywords} customKeywords={hotelKeywords} selectedBadges={selectedBadges} setSelectedBadges={setSelectedBadges} />
+            <HotelSidebarFilter
+              priceRange={priceRange}
+              setPriceRange={setPriceRange}
+              selectedRating={selectedRating}
+              setSelectedRating={setSelectedRating}
+              selectedKeywords={selectedKeywords}
+              setSelectedKeywords={setSelectedKeywords}
+              customKeywords={hotelKeywords}
+              selectedBadges={selectedBadges}
+              setSelectedBadges={setSelectedBadges}
+              minPrice={0}
+              maxPrice={500000}
+              step={5000}
+            />
           </div>
+
           <div className="lg:col-span-3">
-            <HotelBookingSection hotels={filteredHotels} onBook={handleBookHotel} onDetails={handleFullDetails} priceUnit="per night" itemsPerPage={12} />
+            <HotelBookingSection
+              hotels={filteredHotels}
+              onBook={handleBookHotel}
+              onDetails={handleFullDetails}
+              priceUnit="per night"
+              itemsPerPage={12}
+            />
           </div>
         </div>
+
         <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-3xl p-8 sm:p-10 shadow-xl">
           <div className="max-w-3xl mb-8">
-            <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">VIP TRAVELER ADVANTAGE</span>
-            <h3 className="text-2xl sm:text-3xl font-black tracking-tight">Why Book Your Stays with Trip Himalaya?</h3>
-            <p className="text-gray-300 text-sm mt-2 font-medium">We eliminate third-party booking fees and secure direct property upgrades that you won't find anywhere else.</p>
+            <span className="text-[#FF4FA3] font-black uppercase tracking-[0.2em] text-xs block mb-1">
+              VIP TRAVELER ADVANTAGE
+            </span>
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
+              Why Book Your Stays with Trip Himalaya?
+            </h3>
+            <p className="text-gray-300 text-sm mt-2 font-medium">
+              We eliminate third-party booking fees and secure direct property
+              upgrades that you won't find anywhere else.
+            </p>
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
-              { icon: Award, title: "Direct B2B Contract Rates", desc: "Save 15% to 30% compared to Booking.com, Agoda, and Expedia with zero hidden booking commissions." },
-              { icon: Coffee, title: "Complimentary Breakfast", desc: "Daily buffet or American breakfast included in all standard and luxury partner bookings." },
-              { icon: Car, title: "Free Airport Pick-Up", desc: "Complimentary private chauffeur transfer from Kathmandu or Pokhara airport for stays of 2+ nights." },
-              { icon: Clock, title: "Early Check-in & Late Out", desc: "Priority room readiness for early morning flight arrivals and late afternoon checkouts." },
-              { icon: ShieldCheck, title: "Verified Hygiene Standards", desc: "Every partner property is inspected for cleanliness, safety, and traveler comfort." },
-              { icon: Headphones, title: "24/7 Local Assistance", desc: "Our Nepal-based travel team remains available throughout your stay for booking support and assistance." }
+              {
+                icon: Award,
+                title: "Direct B2B Contract Rates",
+                desc: "Save 15% to 30% compared to Booking.com, Agoda, and Expedia with zero hidden booking commissions.",
+              },
+              {
+                icon: Coffee,
+                title: "Complimentary Breakfast",
+                desc: "Daily buffet or American breakfast included in all standard and luxury partner bookings.",
+              },
+              {
+                icon: Car,
+                title: "Free Airport Pick-Up",
+                desc: "Complimentary private chauffeur transfer from Kathmandu or Pokhara airport for stays of 2+ nights.",
+              },
+              {
+                icon: Clock,
+                title: "Early Check-in & Late Out",
+                desc: "Priority room readiness for early morning flight arrivals and late afternoon checkouts.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Verified Hygiene Standards",
+                desc: "Every partner property is inspected for cleanliness, safety, and traveler comfort.",
+              },
+              {
+                icon: Headphones,
+                title: "24/7 Local Assistance",
+                desc: "Our Nepal-based travel team remains available throughout your stay for booking support and assistance.",
+              },
             ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5">
-                <div className="w-10 h-10 rounded-xl bg-[#E91E63] flex items-center justify-center mb-4"><Icon size={20} /></div>
+              <div
+                key={title}
+                className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#E91E63] flex items-center justify-center mb-4">
+                  <Icon size={20} />
+                </div>
                 <h4 className="font-black text-sm">{title}</h4>
-                <p className="text-gray-300 text-xs leading-relaxed mt-2">{desc}</p>
+                <p className="text-gray-300 text-xs leading-relaxed mt-2">
+                  {desc}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </div>
-      {selectedBookingItem && <HotelBookingModal pkg={selectedBookingItem} isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} pricingSource="tier" initialTierIndex={0} initialGuests={1} />}
+
+      {selectedBookingItem && (
+        <HotelBookingModal
+          pkg={selectedBookingItem}
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          pricingSource="tier"
+          initialTierIndex={0}
+          initialGuests={1}
+        />
+      )}
     </>
   );
 };

@@ -466,8 +466,8 @@ export const getAllDocuments = () => {
     return axiosInstance.get("/documents");
 };
 
-export const getDocumentById = (id) => {
-    return axiosInstance.get(`/documents/${id}`);
+export const getDocumentById = (id: string | number) => {
+  return axiosInstance.get(`/documents/${id}`);
 };
 
 

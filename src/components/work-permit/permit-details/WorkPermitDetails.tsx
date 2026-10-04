@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import PermitBanner from "./PermitBanner";
 import AboutPermit from "./AboutPermit";
@@ -9,7 +9,6 @@ import WorkPermitModal from "../WorkPermitModal";
 import WorkPermitPrintDossier from "./WorkPermitPrintDossier";
 import { Globe } from "lucide-react";
 import { getCountryById } from "../../../api/BackendApi";
-import { DEFAULT_WORK_PERMIT_TYPES, type WorkPermitType } from "./mockPermitData";
 
 interface Country {
   id: number;
@@ -40,25 +39,6 @@ const WorkPermitDetails = () => {
     useState<Country | null>(null);
 
   const [loading, setLoading] = useState(true);
-
-  /** Shared selected permit type — CostDetails updates it, AboutPermit reads it */
-  const [activePermitType, setActivePermitType] =
-    useState<WorkPermitType>(DEFAULT_WORK_PERMIT_TYPES[0]);
-
-  /** Shared selected age group tier from CostDetails */
-  const [activeAgeGroup, setActiveAgeGroup] =
-    useState<string>("18-35 Years");
-
-  const handlePermitTypeChange = useCallback((pt: WorkPermitType) => {
-    setActivePermitType(pt);
-  }, []);
-
-  const handleAgeTierChange = useCallback((tier: { age_group_label: string }) => {
-    setActiveAgeGroup((prev) => {
-      if (prev === tier.age_group_label) return prev;
-      return tier.age_group_label;
-    });
-  }, []);
 
   useEffect(() => {
     const fetchCountry = async () => {
@@ -157,15 +137,10 @@ const WorkPermitDetails = () => {
             <AboutPermit
               id={id}
               country={selectedCountry}
-              selectedPermitType={activePermitType}
-              onPermitTypeChange={handlePermitTypeChange}
             />
 
             <CostDetails
               country={selectedCountry}
-              selectedPermitType={activePermitType}
-              onPermitTypeChange={handlePermitTypeChange}
-              onAgeTierChange={handleAgeTierChange}
             />
 
           </div>
@@ -175,8 +150,7 @@ const WorkPermitDetails = () => {
           <WorkPermitModal
             country={[selectedCountry]}
             defaultCountry={selectedCountry.country_name}
-            defaultPermitType={activePermitType?.modal_type_value || defaultPermitType}
-            defaultAgeGroup={activeAgeGroup}
+            defaultPermitType={defaultPermitType}
           />
 
         </div>

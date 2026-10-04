@@ -1,11 +1,21 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
-import { DOCUMENTATION_ITEMS, DocumentationItem } from "../data/documentationData";
+import { getAllDocuments } from "../api/BackendApi";
 
-// --- SUB-COMPONENT: Documentation Card (No Icons) ---
+interface DocumentationItem {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  image: string | null;
+  image_public_id?: string | null;
+  description?: string | null;
+  status?: string;
+  display_order?: number;
+}
+
 interface DocumentationCardProps {
   item: DocumentationItem;
   onSelect: (item: DocumentationItem) => void;
@@ -17,26 +27,21 @@ const DocumentationCard: React.FC<DocumentationCardProps> = ({ item, onSelect })
       onClick={() => onSelect(item)}
       className="relative w-full h-[340px] rounded-3xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5"
     >
-      {/* Background Image */}
-      <img
-        src={item.heroImage}
-        alt={item.name}
-        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-      />
-
-      {/* Gradient Overlay */}
+      {item.image && (
+        <img
+          src={item.image}
+          alt={item.title}
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10 group-hover:via-black/45 transition-colors" />
-
-      {/* Bottom Content */}
       <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 md:p-6 text-white z-10">
         <h3 className="text-lg sm:text-xl md:text-2xl font-black mb-1.5 tracking-tight group-hover:text-pink-200 transition-colors">
-          {item.name}
+          {item.title}
         </h3>
-
         <p className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed line-clamp-2 mb-3">
-          {item.shortDesc}
+          {item.subtitle}
         </p>
-
         <button
           type="button"
           onClick={(e) => {
@@ -53,9 +58,30 @@ const DocumentationCard: React.FC<DocumentationCardProps> = ({ item, onSelect })
   );
 };
 
-// --- MAIN DOCUMENTATION PAGE ---
 export default function DocumentationPage() {
   const navigate = useNavigate();
+  const [documents, setDocuments] = useState<DocumentationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllDocuments();
+        if (response?.data?.status) {
+          setDocuments(response.data.data || []);
+        } else {
+          setDocuments([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch documents:", error);
+        setDocuments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocuments();
+  }, []);
 
   const handleFloatingWhatsApp = () => {
     const msg = encodeURIComponent("Hello Trip Himalaya! I would like to inquire about your documentation services.");
@@ -68,7 +94,6 @@ export default function DocumentationPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50 font-sans">
-      {/* BannerSection matching Image structure: "Our Documentation" replacing "Our Services" */}
       <BannerSection
         heading="COMPREHENSIVE SOLUTIONS"
         title="Our Documentation"
@@ -76,7 +101,6 @@ export default function DocumentationPage() {
         background="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
         alt="Trip Himalaya Documentation Services"
       />
-
       <main className="relative z-20 mx-auto w-full flex-grow px-4 pb-16 pt-6 sm:pt-8 sm:px-8 lg:px-16 max-w-screen-2xl">
         <header className="mb-6 sm:mb-8 text-center">
           <h2 className="mb-2.5 text-2xl sm:text-3xl md:text-4xl font-black text-[#2e1065] tracking-tight">
@@ -86,28 +110,28 @@ export default function DocumentationPage() {
             We provide end-to-end support for visa clearances, police reports, insurance policies, and legal document attestations.
           </p>
         </header>
-
-        {/* 3-column Grid matching the screenshot */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-7">
-          {DOCUMENTATION_ITEMS.map((item) => (
-            <DocumentationCard
-              key={item.id}
-              item={item}
-              onSelect={handleCardClick}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-[#2e1065] rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-7">
+            {documents.map((item) => (
+              <DocumentationCard
+                key={item.id}
+                item={item}
+                onSelect={handleCardClick}
+              />
+            ))}
+          </div>
+        )}
       </main>
-
-      {/* PreFooter CTA Section */}
       <PreFooter
         title="Need a custom document solution?"
         description="Tell us what documents you need — we handle special embassy attestations, translations, and expedited clearances."
         btn1="Talk to an expert"
         btn2="Get a Free Quote"
       />
-
-      {/* Floating WhatsApp Quick Contact Button */}
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={handleFloatingWhatsApp}

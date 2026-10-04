@@ -77,6 +77,9 @@ export interface Hotel {
   tierLabel: string;
   city: string;
   location: string;
+  country?: string;
+  address?: string;
+  region?: "domestic" | "international" | string;
   rating: number;
   reviewsCount: number;
   priceUSD: number;

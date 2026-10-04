@@ -31,6 +31,7 @@ import {
   Zap,
   Fuel,
   CheckCircle2,
+  Calendar,
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import Testimonials from "../components/reusable/Testimonials";
@@ -38,7 +39,7 @@ import PreFooter from "../components/reusable/PreFooter";
 import ToursDetailContent, { TourFilterCriteria } from "../components/Service/ToursDetailContent";
 import ActivitiesDetailContent, { ActivityFilterCriteria } from "../components/Service/ActivitiesDetailContent";
 import TrekkingDetailContent, { TrekFilterCriteria } from "../components/Service/TrekkingDetailContent";
-import HotelBookingDetailContent from "../components/Service/HotelBookingDetailContent";
+import HotelBookingDetailContent, { HotelFilterCriteria } from "../components/Service/HotelBookingDetailContent";
 import TravelInsuranceDetailContent, { InsuranceFilterCriteria } from "../components/Service/TravelInsuranceDetailContent";
 import VehicleRentalDetailContent from "../components/Service/VehicleRentalDetailContent";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
@@ -208,6 +209,32 @@ const ServiceDetail: React.FC = () => {
     setAppliedInsuranceFilter({
       insuranceType: insuranceSearchType,
       days: insuranceSearchDays,
+    });
+    scrollToSection("section-services", "SERVICES");
+  };
+
+  // Hotel Booking Search Bar State
+  const [hotelSearchRegion, setHotelSearchRegion] = useState("all");
+  const [hotelSearchLocation, setHotelSearchLocation] = useState("");
+  const [hotelSearchName, setHotelSearchName] = useState("");
+  const [hotelSearchCheckIn, setHotelSearchCheckIn] = useState("");
+  const [hotelSearchCheckOut, setHotelSearchCheckOut] = useState("");
+  const [showHotelLocation, setShowHotelLocation] = useState(false);
+  const [showHotelCheckIn, setShowHotelCheckIn] = useState(false);
+  const [showHotelCheckOut, setShowHotelCheckOut] = useState(false);
+  const [appliedHotelFilter, setAppliedHotelFilter] = useState<HotelFilterCriteria | null>(null);
+
+  const isLocationVisible = showHotelLocation || Boolean(hotelSearchLocation) || showHotelCheckIn || Boolean(hotelSearchCheckIn) || showHotelCheckOut || Boolean(hotelSearchCheckOut);
+  const isCheckInVisible = showHotelCheckIn || Boolean(hotelSearchCheckIn) || showHotelCheckOut || Boolean(hotelSearchCheckOut);
+  const isCheckOutVisible = showHotelCheckOut || Boolean(hotelSearchCheckOut);
+
+  const handleHotelSearch = () => {
+    setAppliedHotelFilter({
+      region: hotelSearchRegion,
+      location: hotelSearchLocation,
+      hotelName: hotelSearchName,
+      checkInDate: hotelSearchCheckIn,
+      checkOutDate: hotelSearchCheckOut,
     });
     scrollToSection("section-services", "SERVICES");
   };
@@ -422,43 +449,132 @@ const ServiceDetail: React.FC = () => {
 
     if (isHotelBooking) {
       return (
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <MapPin size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                CITY / REGION
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:py-4 sm:px-3.5 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 transition-all duration-300">
+          {/* 1. At left side: Search by Region: Domestic and International (dropdown - always visible) */}
+          <div className="flex items-center gap-2 flex-1 min-w-0 px-2 sm:px-2.5 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Globe size={16} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full min-w-0">
+              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                SEARCH BY REGION
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="">All Cities</option>
-                <option value="kathmandu">Kathmandu &amp; Thamel</option>
-                <option value="pokhara">Pokhara Lakeside</option>
-                <option value="chitwan">Chitwan Sauraha</option>
-                <option value="nagarkot">Nagarkot Mountain View</option>
-                <option value="lumbini">Lumbini Heritage</option>
+              <select
+                value={hotelSearchRegion}
+                onChange={(e) => setHotelSearchRegion(e.target.value)}
+                className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full truncate"
+              >
+                <option value="all">All Regions</option>
+                <option value="domestic">Domestic</option>
+                <option value="international">International</option>
               </select>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Bed size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                PROPERTY TYPE
+          {/* 2. Search by Hotel name (always visible by default; click reveals Location) */}
+          <div
+            onClick={() => setShowHotelLocation(true)}
+            className="flex items-center gap-2 flex-1 min-w-0 px-2 sm:px-2.5 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-text"
+          >
+            <Building2 size={16} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full min-w-0">
+              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                SEARCH BY HOTEL NAME
               </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="">All Property Types</option>
-                <option value="5star">5-Star Luxury Resorts</option>
-                <option value="boutique">Heritage Boutique Hotels</option>
-                <option value="resort">Scenic Eco Lodges</option>
-                <option value="deluxe">Standard Deluxe Stays</option>
-              </select>
+              <input
+                type="text"
+                value={hotelSearchName}
+                onChange={(e) => {
+                  setHotelSearchName(e.target.value);
+                  setShowHotelLocation(true);
+                }}
+                onFocus={() => setShowHotelLocation(true)}
+                onClick={() => setShowHotelLocation(true)}
+                onKeyDown={(e) => e.key === "Enter" && handleHotelSearch()}
+                placeholder="Hotel name..."
+                className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full truncate"
+              />
             </div>
           </div>
+
+          {/* 3. Search by location (revealed when Hotel Name is clicked; click reveals Checkin) */}
+          {isLocationVisible && (
+            <div
+              onClick={() => setShowHotelCheckIn(true)}
+              className="flex items-center gap-2 flex-1 min-w-0 px-2 sm:px-2.5 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-text transition-all duration-200"
+            >
+              <MapPin size={16} className="text-pink-500 flex-shrink-0" />
+              <div className="flex flex-col w-full min-w-0">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                  SEARCH BY LOCATION
+                </label>
+                <input
+                  type="text"
+                  value={hotelSearchLocation}
+                  onChange={(e) => {
+                    setHotelSearchLocation(e.target.value);
+                    setShowHotelCheckIn(true);
+                  }}
+                  onFocus={() => setShowHotelCheckIn(true)}
+                  onClick={() => setShowHotelCheckIn(true)}
+                  onKeyDown={(e) => e.key === "Enter" && handleHotelSearch()}
+                  placeholder="City, area..."
+                  className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full truncate"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 4. Checkin date (revealed when Location is clicked; click reveals Checkout) */}
+          {isCheckInVisible && (
+            <div
+              onClick={() => setShowHotelCheckOut(true)}
+              className="flex items-center gap-1.5 flex-1 min-w-0 px-1.5 sm:px-2 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-pointer transition-all duration-200"
+            >
+              <Calendar size={16} className="text-pink-500 flex-shrink-0" />
+              <div className="flex flex-col w-full min-w-0">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                  CHECKIN DATE
+                </label>
+                <input
+                  type="date"
+                  value={hotelSearchCheckIn}
+                  onFocus={() => setShowHotelCheckOut(true)}
+                  onClick={() => setShowHotelCheckOut(true)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setHotelSearchCheckIn(val);
+                    setShowHotelCheckOut(true);
+                    if (hotelSearchCheckOut && val && hotelSearchCheckOut < val) {
+                      setHotelSearchCheckOut("");
+                    }
+                  }}
+                  className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:p-0"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 5. Checkout date (revealed when Checkin is clicked) */}
+          {isCheckOutVisible && (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 px-1.5 sm:px-2 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-pointer transition-all duration-200">
+              <Calendar size={16} className="text-pink-500 flex-shrink-0" />
+              <div className="flex flex-col w-full min-w-0">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                  CHECKOUT DATE
+                </label>
+                <input
+                  type="date"
+                  min={hotelSearchCheckIn || undefined}
+                  value={hotelSearchCheckOut}
+                  onChange={(e) => setHotelSearchCheckOut(e.target.value)}
+                  className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:p-0"
+                />
+              </div>
+            </div>
+          )}
 
           <button
-            onClick={() => scrollToSection("section-services", "SERVICES")}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
+            onClick={handleHotelSearch}
+            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-6 sm:px-7 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95 flex-shrink-0"
           >
             SEARCH
           </button>
@@ -1073,7 +1189,20 @@ const ServiceDetail: React.FC = () => {
                 }}
               />
             ) : isHotelBooking ? (
-              <HotelBookingDetailContent />
+              <HotelBookingDetailContent
+                filter={appliedHotelFilter}
+                onClearFilter={() => {
+                  setAppliedHotelFilter(null);
+                  setHotelSearchRegion("all");
+                  setHotelSearchLocation("");
+                  setHotelSearchName("");
+                  setHotelSearchCheckIn("");
+                  setHotelSearchCheckOut("");
+                  setShowHotelLocation(false);
+                  setShowHotelCheckIn(false);
+                  setShowHotelCheckOut(false);
+                }}
+              />
             ) : isTravelInsurance ? (
               <TravelInsuranceDetailContent
                 filter={appliedInsuranceFilter}

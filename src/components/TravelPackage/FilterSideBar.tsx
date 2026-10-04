@@ -1,6 +1,12 @@
 import { Filter, Star, Tag, Award } from "lucide-react";
 import React from "react";
-import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
+import {
+  useGlobalCurrency,
+  formatNPR,
+  formatUSD,
+  formatINR,
+  displayPrice,
+} from "../../context/CurrencyContext";
 
 interface FilterSideBarProps {
   priceRange?: number;
@@ -12,10 +18,13 @@ interface FilterSideBarProps {
   customKeywords?: string[];
   selectedBadges?: string[];
   setSelectedBadges?: React.Dispatch<React.SetStateAction<string[]>>;
+  minPrice?: number;
+  maxPrice?: number;
+  step?: number;
 }
 
 const FilterSideBar: React.FC<FilterSideBarProps> = ({
-  priceRange = 5000,
+  priceRange,
   setPriceRange,
   setSelectedKeywords,
   selectedKeywords,
@@ -24,9 +33,19 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
   customKeywords,
   selectedBadges = [],
   setSelectedBadges,
+  minPrice = 0,
+  maxPrice,
+  step,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const ratings = [5, 4, 3, 2, 1];
+
+  const isNPRScale = typeof maxPrice === "number";
+  const sliderMin = minPrice;
+  const sliderMax = isNPRScale ? maxPrice : 5000;
+  const sliderStep = step ?? (isNPRScale ? 1000 : 1);
+  const currentPriceRange = priceRange ?? sliderMax;
+
   const keywords = customKeywords && customKeywords.length > 0 ? customKeywords : [
     "EVEREST",
     "ANNAPURNA",
@@ -46,7 +65,7 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
   const clearAllFilters = () => {
     setSelectedRating(0);
     setSelectedKeywords([]);
-    setPriceRange(5000);
+    setPriceRange(sliderMax);
     if (setSelectedBadges) setSelectedBadges([]);
   };
 
@@ -73,22 +92,31 @@ const FilterSideBar: React.FC<FilterSideBarProps> = ({
         </label>
         <input
           type="range"
-          min={0}
-          max={5000}
-          value={priceRange}
+          min={sliderMin}
+          max={sliderMax}
+          step={sliderStep}
+          value={currentPriceRange}
           className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
           onChange={(e) => setPriceRange(Number(e.target.value))}
         />
         <div className="flex justify-between items-center text-xs font-bold mt-3">
           <span className="text-gray-400">
-            {selectedCurrency === "nepali" ? "NPR 0" : selectedCurrency === "inr" ? "₹0" : "$0"}
+            {isNPRScale
+              ? displayPrice(sliderMin, selectedCurrency, nprPerOneDollar, nprPerOneINR)
+              : selectedCurrency === "nepali"
+              ? "NPR 0"
+              : selectedCurrency === "inr"
+              ? "₹0"
+              : "$0"}
           </span>
           <span className="text-[#E91E63] font-black">
-            {selectedCurrency === "nepali"
-              ? formatNPR(priceRange * nprPerOneDollar)
+            {isNPRScale
+              ? displayPrice(currentPriceRange, selectedCurrency, nprPerOneDollar, nprPerOneINR)
+              : selectedCurrency === "nepali"
+              ? formatNPR(currentPriceRange * nprPerOneDollar)
               : selectedCurrency === "inr"
-              ? formatINR((priceRange * nprPerOneDollar) / nprPerOneINR)
-              : formatUSD(priceRange)}
+              ? formatINR((currentPriceRange * nprPerOneDollar) / nprPerOneINR)
+              : formatUSD(currentPriceRange)}
           </span>
         </div>
       </div>

@@ -98,25 +98,67 @@ const PackageDetailsSection: React.FC<PackageProps> = ({
               </button>
             )}
 
-            {Array.from({ length: totalPages }, (_, index) => {
-              const pageNum = index + 1;
-              const isActive = currentPage === pageNum;
-              return (
-                <button
-                  key={pageNum}
-                  type="button"
-                  onClick={() => handlePageChange(pageNum)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`min-w-[38px] h-[38px] px-3 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer select-none active:scale-95 ${
-                    isActive
-                      ? "bg-[#E91E63] text-white shadow-md shadow-pink-500/25"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
+            {(() => {
+              const getPageNumbers = () => {
+                if (totalPages <= 7) {
+                  return Array.from({ length: totalPages }, (_, i) => i + 1);
+                }
+                if (currentPage <= 4) {
+                  return [1, 2, 3, 4, 5, "...", totalPages];
+                }
+                if (currentPage >= totalPages - 3) {
+                  return [
+                    1,
+                    "...",
+                    totalPages - 4,
+                    totalPages - 3,
+                    totalPages - 2,
+                    totalPages - 1,
+                    totalPages,
+                  ];
+                }
+                return [
+                  1,
+                  "...",
+                  currentPage - 1,
+                  currentPage,
+                  currentPage + 1,
+                  "...",
+                  totalPages,
+                ];
+              };
+
+              return getPageNumbers().map((item, idx) => {
+                if (item === "...") {
+                  return (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="min-w-[32px] h-[38px] flex items-center justify-center text-gray-400 font-bold select-none text-sm"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+
+                const pageNum = Number(item);
+                const isActive = currentPage === pageNum;
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => handlePageChange(pageNum)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`min-w-[38px] h-[38px] px-3 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                      isActive
+                        ? "bg-[#E91E63] text-white shadow-md shadow-pink-500/25"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              });
+            })()}
 
             {totalPages > 1 && (
               <button

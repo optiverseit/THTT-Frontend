@@ -204,18 +204,25 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
           <div className="flex items-center gap-2 mb-1.5">
             <div className="flex items-center">
               {Array.from({ length: 5 }).map(
-                (_, i) => (
-                  <Star
-                    key={i}
-                    size={13}
-                    className="text-yellow-400 fill-yellow-400"
-                  />
-                )
+                (_, i) => {
+                  const ratingVal = Math.max(1, Math.min(5, Math.round(Number(pkg.rating ?? 5))));
+                  return (
+                    <Star
+                      key={i}
+                      size={13}
+                      className={
+                        i < ratingVal
+                          ? "text-yellow-400 fill-yellow-400"
+                          : "text-gray-200 fill-gray-200"
+                      }
+                    />
+                  );
+                }
               )}
             </div>
 
             <span className="text-[10px] font-black text-gray-400 tracking-wider uppercase">
-              HIGHLY RATED
+              {Number(pkg.rating ?? 5) >= 5 ? "HIGHLY RATED" : "POPULAR"}
             </span>
           </div>
 

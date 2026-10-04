@@ -5,6 +5,7 @@ import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { createHotelBooking, initiatePayment } from "../../api/BackendApi";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 import PaymentMethod from "../reusable/PaymentMethod";
 
 export interface HotelBookingItem {
@@ -60,6 +61,19 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
   const [childrenCount, setChildrenCount] = useState<string>("");
   useEffect(() => {
     if (isOpen) {
+      if (isSessionValid()) {
+        const name = localStorage.getItem("name") || "";
+        const email = localStorage.getItem("email") || "";
+        const phone = localStorage.getItem("phone") || "";
+        const nationality = localStorage.getItem("nationality") || "";
+        setFormData((prev) => ({
+          ...prev,
+          fullName: prev.fullName || name,
+          email: prev.email || email,
+          phone: prev.phone || phone,
+          nationality: prev.nationality || nationality,
+        }));
+      }
       setSelectedTierIndex(typeof initialTierIndex === "number" ? initialTierIndex : 0);
       setGuestsCount(typeof initialGuests === "number" && initialGuests > 0 ? initialGuests : 1);
       setIsSubmitting(false);
@@ -130,6 +144,11 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSessionValid()) {
+      clearAuthSession();
+      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
     if (!formData.termsAgreed) return setSubmitError("Please review and accept the hotel reservation terms to proceed.");
     if (!formData.fullName.trim()) return setSubmitError("Please enter the primary guest full name.");
     if (!formData.email.trim()) return setSubmitError("Please enter an email address.");

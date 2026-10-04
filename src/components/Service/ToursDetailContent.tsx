@@ -4,6 +4,7 @@ import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // CHANGE THIS IMPORT PATH ONLY if your API file has a different location/name
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -21,6 +22,7 @@ import {
   Globe,
   CalendarCheck,
   ArrowUpRight,
+  X,
 } from "lucide-react";
 
 
@@ -48,7 +50,20 @@ const TOUR_FAQS = [
   },
 ];
 
-export const ToursDetailContent: React.FC = () => {
+export interface TourFilterCriteria {
+  destinationType: string;
+  location: string;
+}
+
+export interface ToursDetailContentProps {
+  filter?: TourFilterCriteria | null;
+  onClearFilter?: () => void;
+}
+
+export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
+  filter,
+  onClearFilter,
+}) => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -129,9 +144,8 @@ export const ToursDetailContent: React.FC = () => {
   // If logged in -> booking modal
   // =========================================================
   const handleBookTour = (tour: any) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/tours",
@@ -175,37 +189,127 @@ export const ToursDetailContent: React.FC = () => {
   // =========================================================
   // FILTERS
   // =========================================================
+  useEffect(() => {
+    if (filter?.destinationType) {
+      if (filter.destinationType === "domestic") {
+        setActiveTab("domestic");
+      } else if (filter.destinationType === "international") {
+        setActiveTab("international");
+      } else if (filter.destinationType === "all") {
+        setActiveTab("all");
+      }
+    }
+  }, [filter?.destinationType]);
+
+  const isDomestic = (pkg: any) => {
+    const cat =
+      typeof pkg.category === "string"
+        ? pkg.category.toLowerCase()
+        : (pkg.category?.slug || pkg.category?.name || "").toLowerCase();
+    const tourType = (pkg.tour_type || "").toLowerCase();
+    const catType = (pkg.category_type || "").toLowerCase();
+
+    // If EXPLICITLY marked international → not domestic
+    const explicitlyIntl =
+      cat.includes("international") ||
+      tourType.includes("international") ||
+      catType.includes("international");
+    if (explicitlyIntl) return false;
+
+    // If explicitly domestic → domestic
+    const explicitlyDomestic =
+      cat.includes("domestic") ||
+      tourType.includes("domestic") ||
+      catType.includes("domestic");
+    if (explicitlyDomestic) return true;
+
+    // Unknown type → assume domestic (most Nepal tour packages are local)
+    return true;
+  };
+
+  const isInternational = (pkg: any) => {
+    const cat =
+      typeof pkg.category === "string"
+        ? pkg.category.toLowerCase()
+        : (pkg.category?.slug || pkg.category?.name || "").toLowerCase();
+    const tourType = (pkg.tour_type || "").toLowerCase();
+    const catType = (pkg.category_type || "").toLowerCase();
+
+    // Must be EXPLICITLY marked international to appear here
+    return (
+      cat.includes("international") ||
+      tourType.includes("international") ||
+      catType.includes("international")
+    );
+  };
+
+  const matchesLocation = (pkg: any, query?: string) => {
+    if (!query || query.trim() === "") return true;
+
+    // Split query into individual words so "pokhara" matches
+    // "Kathmandu & Pokhara, Nepal" even when typed alone
+    const words = query
+      .trim()
+      .toLowerCase()
+      .split(/[\s,&]+/)
+      .filter(Boolean);
+
+    const searchIn = [
+      pkg.location || "",
+      pkg.title || "",
+      pkg.description || "",
+      // Also check type fields so "international" / "domestic" keyword searches work
+      pkg.tour_type || "",
+      pkg.category_type || "",
+      typeof pkg.category === "string"
+        ? pkg.category
+        : (pkg.category?.name || pkg.category?.slug || ""),
+      ...(Array.isArray(pkg.highlights)
+        ? pkg.highlights.map((h: any) =>
+            typeof h === "string" ? h : h?.highlight || ""
+          )
+        : []),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    // Every word in the query must appear somewhere in the combined text
+    return words.every((word) => searchIn.includes(word));
+  };
+
+  const isExternalFilterActive = Boolean(
+    filter &&
+      ((filter.destinationType && filter.destinationType !== "all") ||
+        (filter.location && filter.location.trim() !== ""))
+  );
+
+  const handleClearAllFilters = () => {
+    setActiveTab("all");
+    onClearFilter?.();
+  };
+
   const filteredTours = tourPackages.filter((pkg) => {
-    if (activeTab === "all") {
-      return true;
-    }
-
-    /*
-     * Your backend Package fields do not currently show a
-     * domestic/international field in the API design you've
-     * provided, so only apply these filters if such a value
-     * actually exists.
-     */
+    // 1. Destination / Type check from activeTab or filter
     if (activeTab === "domestic") {
-      return (
-        pkg.tour_type === "domestic" ||
-        pkg.category_type === "domestic"
-      );
-    }
-
-    if (activeTab === "international") {
-      return (
-        pkg.tour_type === "international" ||
-        pkg.category_type === "international"
-      );
-    }
-
-    if (activeTab === "featured") {
-      return (
+      if (!isDomestic(pkg)) return false;
+    } else if (activeTab === "international") {
+      if (!isInternational(pkg)) return false;
+    } else if (activeTab === "featured") {
+      const isFeat =
         pkg.is_featured === true ||
         pkg.is_featured === 1 ||
-        pkg.is_featured === "1"
-      );
+        pkg.is_featured === "1" ||
+        pkg.isFeatured === true;
+      if (!isFeat) return false;
+    } else if (filter?.destinationType === "domestic") {
+      if (!isDomestic(pkg)) return false;
+    } else if (filter?.destinationType === "international") {
+      if (!isInternational(pkg)) return false;
+    }
+
+    // 2. Location filter check
+    if (filter?.location && filter.location.trim() !== "") {
+      if (!matchesLocation(pkg, filter.location)) return false;
     }
 
     return true;
@@ -313,13 +417,53 @@ export const ToursDetailContent: React.FC = () => {
         </div>
       </div>
 
+      {/* ACTIVE SEARCH FILTER INDICATOR */}
+      {isExternalFilterActive && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-pink-50/70 border border-pink-100 p-3 sm:p-4 rounded-2xl">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-gray-500 font-semibold">Active Filter:</span>
+            {filter?.destinationType && filter.destinationType !== "all" && (
+              <span className="bg-pink-100 text-[#E11D48] font-bold px-2.5 py-1 rounded-lg">
+                {filter.destinationType === "domestic" ? "Domestic Tour" : "International Tour"}
+              </span>
+            )}
+            {filter?.location && filter.location.trim() !== "" && (
+              <span className="bg-purple-100 text-[#2D1347] font-bold px-2.5 py-1 rounded-lg">
+                Location: "{filter.location.trim()}"
+              </span>
+            )}
+            <span className="text-gray-500 font-medium">
+              ({filteredTours.length} {filteredTours.length === 1 ? "tour" : "tours"} found)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearAllFilters}
+            className="text-xs font-bold text-gray-500 hover:text-[#E11D48] flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <X size={14} />
+            <span>Clear Filter</span>
+          </button>
+        </div>
+      )}
+
       {/* PACKAGES GRID */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
         {visibleTours.length === 0 ? (
-          <div className="py-12 text-center">
+          <div className="py-12 text-center space-y-3">
             <p className="font-bold text-gray-500">
-              No tour packages found.
+              No tour packages found matching your criteria.
             </p>
+            {isExternalFilterActive && (
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#2D1347] text-white hover:bg-[#3B145C] transition-colors cursor-pointer"
+              >
+                <X size={13} />
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

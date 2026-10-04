@@ -22,6 +22,7 @@ import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { getWorkPermitDocumentRequirements, createWorkPermitApplication, getPermitFeeTiers, initiatePayment, } from "../../api/BackendApi";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 interface CountryProps {
   id: number;
@@ -88,9 +89,10 @@ interface FormDataType {
 interface WorkPermitModalProps {
   country: CountryProps[];
   defaultCountry?: string;
+  defaultPermitType?: string;
 }
 
-const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
+const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_labour_permit" }: WorkPermitModalProps) => {
   const [currentStep, setCurrentStep] = useState<"stepA" | "stepB" | "stepC" | "payment" | "submitted">("stepA");
   const [applicationId, setApplicationId] = useState("");
   const [workPermitId, setWorkPermitId] = useState<number | null>(null);
@@ -114,7 +116,7 @@ const WorkPermitModal = ({ country, defaultCountry }: WorkPermitModalProps) => {
     phoneCode: "+977",
     phone: "",
     countryId: "",
-    permitType: "new_labour_permit",
+    permitType: defaultPermitType || "new_labour_permit",
     passportExpiryDate: "",
     adDate: "",
     bsDate: "",
@@ -528,6 +530,12 @@ const totalPriceFormatted = loadingFeeTiers
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (!isSessionValid()) {
+      clearAuthSession();
+      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
 
     // Prevent multi-processing / double submission
     if (isSubmitting) return;

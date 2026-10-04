@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import HotelVerificationCard from "./HotelVerificationCard";
 import HotelBookingModal from "./HotelBookingModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 interface HotelPricingProps {
   pkg: any;
@@ -23,6 +25,8 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
   const [selectedTierIndex, setSelectedTierIndex] = useState<number>(0);
   const [numberOfGuests, setNumberOfGuests] = useState<number>(1);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isBookingConfirmed, setIsBookingConfirmed] = useState<boolean>(false);
 
   const pricingRows: { serviceName: string; targetAgeGroup: string; priceInNPR: number }[] =
@@ -163,7 +167,19 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
             {/* CTAs */}
             <div className="space-y-1.5 pt-0.5">
               <button
-                onClick={() => setIsBookingModalOpen(true)}
+                onClick={() => {
+                  if (!isSessionValid()) {
+                    clearAuthSession();
+                    navigate("/login", {
+                      state: {
+                        from: location.pathname,
+                        openBooking: true,
+                      },
+                    });
+                    return;
+                  }
+                  setIsBookingModalOpen(true);
+                }}
                 className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${isBookingConfirmed ? "bg-emerald-600 text-white" : "bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"}`}
               >
                 {isBookingConfirmed ? <><Check size={14} /><span>Reservation Requested!</span></> : <span>Book This Hotel Now</span>}

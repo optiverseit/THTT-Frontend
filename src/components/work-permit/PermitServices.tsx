@@ -17,25 +17,46 @@ interface Country {
 interface PermitServicesProps {
   countries?: Country[];
   filterCountryId?: string;
+  filterPermitType?: string;
   onClearFilter?: () => void;
   isLoading?: boolean;
 }
 
+const PERMIT_TYPE_LABELS: Record<string, string> = {
+  new: "New Work Permit",
+  renew: "Renewal Permit",
+  individual: "Individual Permit",
+};
+
 const PermitServices = ({
   countries = [],
   filterCountryId = "",
+  filterPermitType = "all",
   onClearFilter,
   isLoading = false,
 }: PermitServicesProps) => {
   const navigate = useNavigate();
 
-  const isFiltered = filterCountryId !== "";
+  const isCountryFiltered = filterCountryId !== "";
+  const isPermitTypeFiltered = filterPermitType !== "" && filterPermitType !== "all";
+  const isFiltered = isCountryFiltered || isPermitTypeFiltered;
 
-  const visibleCountries = isFiltered
+  // Filter by country if one is selected
+  const visibleCountries = isCountryFiltered
     ? countries.filter(
         (country) => String(country.id) === String(filterCountryId)
       )
     : countries;
+
+  // Navigate to detail with permit type query param so the detail page can pre-select the type
+  const handleCountryClick = (countryId: number) => {
+    const params = new URLSearchParams();
+    if (isPermitTypeFiltered) {
+      params.set("permitType", filterPermitType);
+    }
+    const qs = params.toString();
+    navigate(`/permit-details/${countryId}${qs ? `?${qs}` : ""}`);
+  };
 
   return (
     <div className="w-full py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-tr from-blue-100/50 via-blue-50/50 to-pink-50">
@@ -47,21 +68,25 @@ const PermitServices = ({
           </h1>
 
           {isFiltered && (
-            <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-xs font-bold">
-
-              <span>
-                Showing results for:{" "}
-                {visibleCountries[0]?.country_name ?? filterCountryId}
-              </span>
-
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {isCountryFiltered && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-xs font-bold">
+                  Country: {visibleCountries[0]?.country_name ?? filterCountryId}
+                </span>
+              )}
+              {isPermitTypeFiltered && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold">
+                  Type: {PERMIT_TYPE_LABELS[filterPermitType] ?? filterPermitType}
+                </span>
+              )}
               <button
                 onClick={onClearFilter}
-                className="ml-1 hover:text-pink-900 transition-colors"
-                title="Clear filter"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-full border border-pink-200 transition-all cursor-pointer shadow-sm active:scale-95"
+                title="Clear all filters"
               >
                 <X size={13} />
+                Clear Filter
               </button>
-
             </div>
           )}
         </header>
@@ -74,7 +99,7 @@ const PermitServices = ({
         ) : visibleCountries.length > 0 ? (
           <div
             className={`grid gap-4 sm:gap-6 ${
-              isFiltered
+              isCountryFiltered
                 ? "grid-cols-1 place-items-center"
                 : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
             }`}
@@ -82,11 +107,9 @@ const PermitServices = ({
             {visibleCountries.map((country) => (
               <div
                 key={country.id}
-                onClick={() =>
-                  navigate(`/permit-details/${country.id}`)
-                }
+                onClick={() => handleCountryClick(country.id)}
                 className={`rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col items-center justify-between text-center border cursor-pointer group ${
-                  isFiltered
+                  isCountryFiltered
                     ? "border-pink-400 ring-2 ring-pink-300 shadow-lg w-56 sm:w-64"
                     : "border-gray-100 hover:border-pink-300"
                 }`}
@@ -121,6 +144,13 @@ const PermitServices = ({
                   {country.short_description}
                 </p>
 
+                {/* PERMIT TYPE BADGE — shown when a type is filtered */}
+                {isPermitTypeFiltered && (
+                  <span className="mb-2 inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-purple-50 border border-purple-200 text-purple-700">
+                    {PERMIT_TYPE_LABELS[filterPermitType] ?? filterPermitType}
+                  </span>
+                )}
+
                 <span className="rounded-full tracking-wider bg-purple-50 group-hover:bg-pink-600 group-hover:text-white transition-colors text-purple-950 text-xs font-bold w-full py-2 block">
                   View Details
                 </span>
@@ -130,7 +160,7 @@ const PermitServices = ({
           </div>
         ) : (
           <div className="text-center py-12 text-gray-400 text-sm font-semibold">
-            No results found for the selected country.
+            No results found for the selected filters.
           </div>
         )}
 

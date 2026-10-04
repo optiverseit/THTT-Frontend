@@ -461,5 +461,14 @@ export const getMyHotelBookingById = (id: number | string) => {
   return axiosInstance.get(`/hotel-bookings/show/${id}`);
 };
 
+// DOCUMENTATION
+export const getAllDocuments = () => {
+    return axiosInstance.get("/documents");
+};
+
+export const getDocumentById = (id) => {
+    return axiosInstance.get(`/documents/${id}`);
+};
+
 
 

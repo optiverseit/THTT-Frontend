@@ -471,4 +471,13 @@ export const getDocumentById = (id: string | number) => {
 };
 
 
+export const getTravelGuides = () => {
+  return axiosInstance.get("/travel-guides");
+};
+
+export const getTravelGuideById = (id: number | string) => {
+  return axiosInstance.get(`/travel-guides/${id}`);
+};
+
+
 

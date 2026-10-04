@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import PermitBanner from "./PermitBanner";
 import AboutPermit from "./AboutPermit";
 import CostDetails from "./CostDetails";
@@ -24,6 +24,16 @@ interface Country {
 
 const WorkPermitDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+
+  // Map search bar permit type shorthand → modal's internal permitType values
+  const PERMIT_TYPE_MAP: Record<string, string> = {
+    new: "new_labour_permit",
+    renew: "renewal_permit",
+    individual: "individual_permit",
+  };
+  const rawPermitType = searchParams.get("permitType") || "new";
+  const defaultPermitType = PERMIT_TYPE_MAP[rawPermitType] ?? "new_labour_permit";
 
   const [selectedCountry, setSelectedCountry] =
     useState<Country | null>(null);
@@ -140,6 +150,7 @@ const WorkPermitDetails = () => {
           <WorkPermitModal
             country={[selectedCountry]}
             defaultCountry={selectedCountry.country_name}
+            defaultPermitType={defaultPermitType}
           />
 
         </div>

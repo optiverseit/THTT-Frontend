@@ -5,7 +5,7 @@ import { Clock, CheckCircle2, Calendar, MessageCircle, ChevronDown, Search, Eye,
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import { VisaDetailPlan, CostOption } from "./VisaCountryDetailView";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
-import { getVisaCategories } from "../../api/BackendApi";
+import { getVisaCategories, getVisaPublicPricingTiers } from "../../api/BackendApi";
 export type { VisaDetailPlan, CostOption };
 const getRegionFromCountryCode = (countryCode: string): VisaDetailPlan["region"] => {
   const code = countryCode.toUpperCase();
@@ -61,41 +61,127 @@ export interface VisaServicesDetailContentProps {
   onClearFilter?: () => void;
 }
 const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
-  if (!countryFilter || countryFilter.trim() === "" || countryFilter === "all") return true;
+  if (!countryFilter || countryFilter.trim() === "" || countryFilter.toLowerCase() === "all") return true;
   const c = countryFilter.trim().toLowerCase();
   const planCountry = (plan.country || "").toLowerCase();
-  const planId = (plan.id || "").toLowerCase();
   const planCode = (plan.countryCode || "").toLowerCase();
-  if (planCountry.includes(c) || planId.includes(c) || planCode === c) return true;
-  if (c === "uae" && (planCountry.includes("uae") || planCountry.includes("dubai") || planCountry.includes("emirates"))) return true;
-  if (c === "usa" && (planCountry.includes("usa") || planCountry.includes("united states"))) return true;
-  if (c === "uk" && (planCountry.includes("uk") || planCountry.includes("united kingdom"))) return true;
-  if (c === "schengen" && (planCountry.includes("schengen") || planCountry.includes("europe"))) return true;
-  if (c.includes("bali") && planCountry.includes("indonesia")) return true;
-  if (c.includes("indonesia") && planCountry.includes("indonesia")) return true;
+  const planAbout = (plan.aboutText || "").toLowerCase();
+  const planType = (plan.visaType || "").toLowerCase();
+  const inclusions = (plan.inclusions || []).join(" ").toLowerCase();
+
+  if (
+    planCountry.includes(c) ||
+    c.includes(planCountry) ||
+    planCode === c ||
+    planAbout.includes(c) ||
+    planType.includes(c) ||
+    inclusions.includes(c)
+  ) {
+    return true;
+  }
+
+  // Common country/region aliases
+  const isUae =
+    planCountry.includes("uae") ||
+    planCountry.includes("emirates") ||
+    planCountry.includes("dubai") ||
+    planCode === "ae" ||
+    planAbout.includes("uae") ||
+    planAbout.includes("dubai") ||
+    planAbout.includes("emirates");
+  if (
+    (c === "uae" || c.includes("dubai") || c.includes("emirates") || c === "ae") &&
+    isUae
+  ) {
+    return true;
+  }
+
+  const isUsa =
+    planCountry.includes("usa") ||
+    planCountry.includes("united states") ||
+    planCountry.includes("america") ||
+    planCode === "us" ||
+    planAbout.includes("usa") ||
+    planAbout.includes("united states") ||
+    planAbout.includes("america");
+  if (
+    (c === "usa" || c === "us" || c.includes("united states") || c.includes("america")) &&
+    isUsa
+  ) {
+    return true;
+  }
+
+  const isUk =
+    planCountry.includes("uk") ||
+    planCountry.includes("united kingdom") ||
+    planCountry.includes("britain") ||
+    planCountry.includes("england") ||
+    planCode === "gb" ||
+    planAbout.includes("uk") ||
+    planAbout.includes("united kingdom");
+  if (
+    (c === "uk" || c === "gb" || c.includes("united kingdom") || c.includes("britain")) &&
+    isUk
+  ) {
+    return true;
+  }
+
+  const isSchengen =
+    planCountry.includes("schengen") ||
+    planCountry.includes("europe") ||
+    planCode === "eu" ||
+    planAbout.includes("schengen") ||
+    planAbout.includes("europe");
+  if ((c === "schengen" || c.includes("europe")) && isSchengen) {
+    return true;
+  }
+
+  if (c.includes("bali") && (planCountry.includes("indonesia") || planAbout.includes("bali") || planAbout.includes("indonesia"))) {
+    return true;
+  }
+
   return false;
 };
+
 const matchesVisaType = (plan: VisaDetailPlan, typeFilter?: string) => {
   if (!typeFilter || typeFilter === "all" || typeFilter.trim() === "") return true;
   const f = typeFilter.toLowerCase();
   const planType = (plan.visaType || "").toLowerCase();
   const planAbout = (plan.aboutText || "").toLowerCase();
   const inclusions = (plan.inclusions || []).join(" ").toLowerCase();
+
   if (f === "tourist") {
     return (
       planType.includes("tourist") ||
       planType.includes("visit") ||
       planType.includes("visitor") ||
+      planType.includes("holiday") ||
       planType.includes("evisa") ||
       planType.includes("e-visa") ||
       planType.includes("eta") ||
       planAbout.includes("tourist") ||
-      planAbout.includes("visitor")
+      planAbout.includes("visitor") ||
+      planAbout.includes("tourism") ||
+      inclusions.includes("tourist") ||
+      inclusions.includes("tourism")
+    );
+  }
+  if (f === "student") {
+    return (
+      planType.includes("student") ||
+      planType.includes("study") ||
+      planType.includes("education") ||
+      planAbout.includes("student") ||
+      planAbout.includes("study") ||
+      inclusions.includes("student") ||
+      inclusions.includes("study")
     );
   }
   if (f === "business") {
     return (
       planType.includes("business") ||
+      planType.includes("commercial") ||
+      planType.includes("conference") ||
       planAbout.includes("business") ||
       inclusions.includes("business")
     );
@@ -103,7 +189,7 @@ const matchesVisaType = (plan: VisaDetailPlan, typeFilter?: string) => {
   if (f === "transit") {
     return (
       planType.includes("transit") ||
-      planType.includes("entry") ||
+      planType.includes("stopover") ||
       planAbout.includes("transit") ||
       inclusions.includes("transit")
     );
@@ -113,40 +199,67 @@ const matchesVisaType = (plan: VisaDetailPlan, typeFilter?: string) => {
     return (
       proc.includes("1 –") ||
       proc.includes("2 –") ||
+      proc.includes("1-") ||
+      proc.includes("2-") ||
       proc.includes("instant") ||
       proc.includes("same day") ||
+      proc.includes("fast") ||
       inclusions.includes("fast-track") ||
       inclusions.includes("express") ||
       inclusions.includes("instant") ||
+      planType.includes("express") ||
+      planType.includes("fast") ||
       Boolean(plan.popular)
     );
   }
-  return planType.includes(f);
+  if (f === "work") {
+    return (
+      planType.includes("work") ||
+      planType.includes("employment") ||
+      planAbout.includes("work") ||
+      planAbout.includes("employment")
+    );
+  }
+  return planType.includes(f) || planAbout.includes(f) || inclusions.includes(f);
 };
+
 const matchesEntryType = (plan: VisaDetailPlan, entryFilter?: string) => {
   if (!entryFilter || entryFilter === "all" || entryFilter.trim() === "") return true;
   const f = entryFilter.toLowerCase();
   const planEntry = (plan.entryType || "").toLowerCase();
-  if (!planEntry && (!plan.costOptions || plan.costOptions.length === 0)) return true;
+  const planAbout = (plan.aboutText || "").toLowerCase();
+  const inclusions = (plan.inclusions || []).join(" ").toLowerCase();
+  const allTiers = (plan.costOptions || [])
+    .map((c: CostOption) => `${c.name} ${c.entryType || ""}`)
+    .join(" ")
+    .toLowerCase();
+
   if (f === "single") {
-    if (planEntry.includes("single")) return true;
-    if (plan.costOptions?.some((c: CostOption) => (c.entryType || "").toLowerCase().includes("single"))) return true;
-    return false;
+    return (
+      planEntry.includes("single") ||
+      allTiers.includes("single") ||
+      planAbout.includes("single entry") ||
+      inclusions.includes("single entry")
+    );
   }
   if (f === "multiple") {
-    if (planEntry.includes("multiple") || planEntry.includes("double")) return true;
-    if (
-      plan.costOptions?.some((c: CostOption) => {
-        const ce = (c.entryType || "").toLowerCase();
-        return ce.includes("multiple") || ce.includes("double");
-      })
-    ) {
-      return true;
-    }
-    return false;
+    return (
+      planEntry.includes("multiple") ||
+      planEntry.includes("double") ||
+      allTiers.includes("multiple") ||
+      allTiers.includes("double") ||
+      planAbout.includes("multiple entry") ||
+      inclusions.includes("multiple entry")
+    );
   }
-  return planEntry.includes(f);
+  return (
+    planEntry.includes(f) ||
+    allTiers.includes(f) ||
+    planAbout.includes(f) ||
+    inclusions.includes(f)
+  );
 };
+
 export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps> = ({
   filter,
   onClearFilter,
@@ -154,95 +267,141 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   const navigate = useNavigate();
   const INITIAL_COUNT = 9;
   const LOAD_MORE_STEP = 15;
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_COUNT);
   const [visaPlans, setVisaPlans] = useState<VisaDetailPlan[]>([]);
+  const [loading, setLoading] = useState(true);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-  const isExternalFilterActive = Boolean(filter && (Boolean(filter.country && filter.country.trim() !== "" && filter.country !== "all") || (filter.visaType && filter.visaType !== "all") || (filter.entryType && filter.entryType !== "all")));
+  const isExternalFilterActive = Boolean(
+    filter &&
+      ((filter.country && filter.country.trim() !== "" && filter.country.toLowerCase() !== "all") ||
+        (filter.visaType && filter.visaType !== "all") ||
+        (filter.entryType && filter.entryType !== "all"))
+  );
+
   useEffect(() => {
+    let isMounted = true;
     const fetchVisaCategories = async () => {
       try {
+        setLoading(true);
         const response = await getVisaCategories();
         const categories: VisaCategory[] = response.data?.data || [];
-        const mappedPlans: VisaDetailPlan[] = categories.map((category) => {
-          const countryName = category.country?.country_name || "Visa Destination";
-          const countryCode = category.country?.iso_2 || category.country?.flag_code || category.country?.country_code || "";
-          return { id: String(category.id), country: countryName, countryCode, region: getRegionFromCountryCode(countryCode), visaType: category.name || "Visa", duration: "", processingTime: category.processing_time || "", baseNPRPrice: 0, entryType: "", inclusions: category.short_description ? [category.short_description] : [], aboutText: category.description || category.short_description || "", requirementDocuments: [], termsAndConditions: [], costOptions: [], countryId: category.country_id, visaCategoryId: category.id, image: category.visa_image || null };
-        });
-        setVisaPlans(mappedPlans);
+        const mappedPlans: VisaDetailPlan[] = await Promise.all(
+          categories.map(async (category) => {
+            const countryName = category.country?.country_name || "Visa Destination";
+            const countryCode =
+              category.country?.iso_2 ||
+              category.country?.flag_code ||
+              category.country?.country_code ||
+              "";
+            let costOptions: CostOption[] = [];
+            let entryType = "";
+            let duration = "";
+            let baseNPRPrice = 0;
+
+            try {
+              const pricingRes = await getVisaPublicPricingTiers(category.id);
+              const pricing = pricingRes.data?.data || [];
+              costOptions = (Array.isArray(pricing) ? pricing : [])
+                .filter((item: any) => item?.status !== "INACTIVE")
+                .sort(
+                  (a: any, b: any) =>
+                    Number(a?.display_order || 0) - Number(b?.display_order || 0)
+                )
+                .map((item: any, index: number) => ({
+                  name: String(item?.title || `Option ${index + 1}`),
+                  days: String(item?.validity || ""),
+                  nprPrice: Number(item?.price_npr || 0),
+                  entryType: String(item?.title || ""),
+                  description: item?.description || undefined,
+                  visaPricingTierId: item?.id,
+                  countryId: category.country_id,
+                  visaCategoryId: category.id,
+                }));
+
+              if (costOptions.length > 0) {
+                entryType = costOptions[0].entryType;
+                duration = costOptions[0].days;
+                baseNPRPrice = costOptions[0].nprPrice;
+              }
+            } catch (err) {
+              console.warn(
+                `Failed to fetch pricing tiers for visa category ${category.id}:`,
+                err
+              );
+            }
+
+            return {
+              id: String(category.id),
+              country: countryName,
+              countryCode,
+              region: getRegionFromCountryCode(countryCode),
+              visaType: category.name || "Visa",
+              duration,
+              processingTime: category.processing_time || "",
+              baseNPRPrice,
+              entryType,
+              inclusions: category.short_description
+                ? [category.short_description]
+                : [],
+              aboutText:
+                category.description || category.short_description || "",
+              requirementDocuments: [],
+              termsAndConditions: [],
+              costOptions,
+              countryId: category.country_id,
+              visaCategoryId: category.id,
+              image: category.visa_image || null,
+            };
+          })
+        );
+        if (isMounted) {
+          setVisaPlans(mappedPlans);
+        }
       } catch (error) {
         console.error("Failed to fetch visa categories:", error);
-        setVisaPlans([]);
+        if (isMounted) {
+          setVisaPlans([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     fetchVisaCategories();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
   useEffect(() => {
-    if (isExternalFilterActive) setActiveTab("all");
     setVisibleCount(INITIAL_COUNT);
-  }, [filter, activeTab, searchQuery, isExternalFilterActive]);
+  }, [filter, isExternalFilterActive]);
+
   const filteredPlans = visaPlans.filter((plan: VisaDetailPlan) => {
     if (filter) {
       if (!matchesCountry(plan, filter.country)) return false;
       if (!matchesVisaType(plan, filter.visaType)) return false;
       if (!matchesEntryType(plan, filter.entryType)) return false;
     }
-    if (activeTab !== "all" && plan.region !== activeTab) return false;
-    if (searchQuery && !plan.country.toLowerCase().includes(searchQuery.toLowerCase()) && !plan.visaType.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
   const displayedPlans = filteredPlans.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPlans.length;
   const handleSeeMore = () => setVisibleCount((prev: number) => prev + LOAD_MORE_STEP);
   const handleClearAllFilters = () => {
-    setSearchQuery("");
-    setActiveTab("all");
     onClearFilter?.();
   };
   const handleSelectPlan = (plan: VisaDetailPlan) => navigate(`/visa-details/${plan.id}`);
-  const handleWhatsAppInquiry = (plan: VisaDetailPlan) => {
-    const formattedPrice = plan.baseNPRPrice > 0 ? displayPrice(plan.baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR) : "—";
-    const msg = encodeURIComponent(`Hello Trip Himalaya (Visa & Documentation Team)! I would like to inquire about visa assistance for "${plan.country}" (${plan.visaType}, fee starting around ${formattedPrice}). Please guide me with requirements and next steps.`);
+  const handleWhatsAppInquiry = (plan: VisaDetailPlan, entryLabel?: string, priceNPR?: number) => {
+    const finalPrice = priceNPR && priceNPR > 0 ? priceNPR : plan.baseNPRPrice;
+    const formattedPrice = finalPrice > 0 ? displayPrice(finalPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR) : "—";
+    const entryText = entryLabel && entryLabel !== "—" ? `${entryLabel}, ` : "";
+    const msg = encodeURIComponent(`Hello Trip Himalaya (Visa & Documentation Team)! I would like to inquire about visa assistance for "${plan.country}" (${plan.visaType}, ${entryText}fee starting around ${formattedPrice}). Please guide me with requirements and next steps.`);
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
   return (
     <div className="space-y-8">
-      <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-3 px-4 sm:px-6">
-        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 w-full">
-          <span className="text-xs sm:text-sm font-black text-[#2D1347] uppercase tracking-wider mr-1 whitespace-nowrap">
-            All Destination :
-          </span>
-          {[
-            { id: "all", label: "All" },
-            { id: "asia", label: "Asia" },
-            { id: "middle-east", label: "Gulf & UAE" },
-            { id: "europe", label: "Schengen" },
-            { id: "west", label: "USA & UK" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab.id
-                ? "bg-[#2D1347] text-white shadow-xs"
-                : "text-gray-600 hover:text-[#2D1347] hover:bg-gray-100/80"
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="relative w-full">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search destination..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 hover:bg-gray-100/60 focus:bg-white border border-gray-200 rounded-full text-xs sm:text-sm font-semibold text-[#2D1347] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#E91E63] transition-colors"
-          />
-        </div>
-      </div>
       <div className="space-y-6">
         <div className="text-center pt-2 pb-1">
           <div className="inline-flex flex-col items-center">
@@ -256,11 +415,6 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
           <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs">
             <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
               <span className="text-gray-500 font-semibold">Active Filter:</span>
-              {filter?.country && filter.country.trim() !== "" && filter.country !== "all" && (
-                <span className="px-2.5 py-1 bg-white border border-pink-200 rounded-lg text-pink-600 font-bold capitalize shadow-2xs">
-                  {filter.country}
-                </span>
-              )}
               {filter?.visaType && filter.visaType !== "all" && (
                 <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
                   {filter.visaType} Visa
@@ -269,6 +423,11 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
               {filter?.entryType && filter.entryType !== "all" && (
                 <span className="px-2.5 py-1 bg-white border border-emerald-200 rounded-lg text-emerald-700 font-bold capitalize shadow-2xs">
                   {filter.entryType} Entry
+                </span>
+              )}
+              {filter?.country && filter.country.trim() !== "" && filter.country.toLowerCase() !== "all" && (
+                <span className="px-2.5 py-1 bg-white border border-pink-200 rounded-lg text-pink-600 font-bold capitalize shadow-2xs">
+                  {filter.country}
                 </span>
               )}
               <span className="text-xs text-gray-500 font-medium ml-1">
@@ -285,7 +444,12 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
             </button>
           </div>
         )}
-        {filteredPlans.length === 0 ? (
+        {loading ? (
+          <div className="py-20 text-center">
+            <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#2D1347] font-bold text-base">Loading visa destinations...</p>
+          </div>
+        ) : filteredPlans.length === 0 ? (
           <div className="bg-white rounded-3xl p-10 sm:p-14 border border-gray-200/80 text-center space-y-4 shadow-sm my-4">
             <div className="w-16 h-16 bg-purple-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
               <Search size={30} />
@@ -307,7 +471,65 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {displayedPlans.map((plan: VisaDetailPlan) => {
-              const formattedPrice = plan.baseNPRPrice > 0 ? displayPrice(plan.baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR) : "—";
+              // Determine display values based on active entry filter
+              let displayEntryType = plan.entryType || "—";
+              let displayDuration = plan.duration || "—";
+              let displayPriceNPR = plan.baseNPRPrice;
+
+              if (plan.costOptions && plan.costOptions.length > 0) {
+                const requestedEntry = filter?.entryType?.toLowerCase();
+                if (requestedEntry === "multiple") {
+                  const multiOpt = plan.costOptions.find(
+                    (c) =>
+                      (c.entryType || "").toLowerCase().includes("multiple") ||
+                      (c.name || "").toLowerCase().includes("multiple") ||
+                      (c.entryType || "").toLowerCase().includes("double")
+                  );
+                  if (multiOpt) {
+                    displayEntryType = multiOpt.entryType || multiOpt.name || "Multiple Entry";
+                    displayDuration = multiOpt.days || plan.duration || "—";
+                    displayPriceNPR = multiOpt.nprPrice || plan.baseNPRPrice;
+                  }
+                } else if (requestedEntry === "single") {
+                  const singleOpt = plan.costOptions.find(
+                    (c) =>
+                      (c.entryType || "").toLowerCase().includes("single") ||
+                      (c.name || "").toLowerCase().includes("single")
+                  );
+                  if (singleOpt) {
+                    displayEntryType = singleOpt.entryType || singleOpt.name || "Single Entry";
+                    displayDuration = singleOpt.days || plan.duration || "—";
+                    displayPriceNPR = singleOpt.nprPrice || plan.baseNPRPrice;
+                  }
+                } else {
+                  // No specific entry filter: check if both single and multiple options exist
+                  const hasSingle = plan.costOptions.some(
+                    (c) =>
+                      (c.entryType || "").toLowerCase().includes("single") ||
+                      (c.name || "").toLowerCase().includes("single")
+                  );
+                  const hasMultiple = plan.costOptions.some(
+                    (c) =>
+                      (c.entryType || "").toLowerCase().includes("multiple") ||
+                      (c.name || "").toLowerCase().includes("multiple") ||
+                      (c.entryType || "").toLowerCase().includes("double")
+                  );
+                  if (hasSingle && hasMultiple) {
+                    displayEntryType = "Single / Multiple Entry";
+                  }
+                }
+              }
+
+              const formattedPrice =
+                displayPriceNPR > 0
+                  ? displayPrice(
+                      displayPriceNPR,
+                      selectedCurrency,
+                      nprPerOneDollar,
+                      nprPerOneINR
+                    )
+                  : "—";
+
               return (
                 <div
                   key={plan.id}
@@ -344,14 +566,14 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
                     <div className="flex flex-wrap gap-2 my-3">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 text-[#2D1347] text-xs font-bold border border-purple-100/60">
                         <Calendar size={13} className="text-[#E91E63]" />
-                        <span>{plan.duration || "—"}</span>
+                        <span>{displayDuration}</span>
                       </span>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gray-50 text-gray-700 text-xs font-semibold border border-gray-200/70">
                         <Clock size={13} className="text-gray-400" />
                         <span>{plan.processingTime || "—"}</span>
                       </span>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
-                        <span>{plan.entryType || "—"}</span>
+                        <span>{displayEntryType}</span>
                       </span>
                     </div>
                     <div className="space-y-2 my-4 pt-3 border-t border-gray-100">
@@ -388,7 +610,7 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleWhatsAppInquiry(plan);
+                          handleWhatsAppInquiry(plan, displayEntryType, displayPriceNPR);
                         }}
                         className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-[#E91E63] to-pink-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
                       >

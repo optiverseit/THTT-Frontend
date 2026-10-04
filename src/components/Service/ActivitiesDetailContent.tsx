@@ -9,6 +9,7 @@ import {
 
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 import FilterSideBar from "../TravelPackage/FilterSiderBar";
 import PackageDetailsSection from "../TravelPackage/PackageDetailsSection";
 
@@ -209,13 +210,9 @@ export const ActivitiesDetailContent: React.FC<ActivitiesDetailContentProps> = (
   // =========================================================
 
   const handleBookActivity = (pkg: any) => {
-
-    const token =
-      localStorage.getItem("token");
-
-    // Not logged in
-    if (!token) {
-
+    // Not logged in or expired session
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/activities",

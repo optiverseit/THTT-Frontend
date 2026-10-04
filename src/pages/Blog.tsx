@@ -362,26 +362,63 @@ const Blog: React.FC = () => {
     setSearchParams(newMode === "video" ? { mode: "video" } : {});
   };
 
+  const handleSearchClick = () => {
+    const el = document.getElementById("blog-content-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const readCategories = [
     "All",
-    "TREKKING",
-    "INTERNATIONAL",
-    "TRAVEL TIPS",
-    "VISA ASSISTANCE",
-    "LUXURY",
+    "Tours and Travel",
+    "Adventure activity",
+    "Trekking",
+    "Hotels",
+    "Visa Service",
+    "Work Permit",
+    "Travel Guide",
   ];
-  const videoCategories = ["All", "ADVENTURE", "DESTINATIONS", "WILDLIFE", "LUXURY"];
+  const videoCategories = [
+    "All",
+    "Tours and Travel",
+    "Adventure activity",
+    "Trekking",
+    "Hotels",
+    "Visa Service",
+    "Work Permit",
+    "Travel Guide",
+  ];
+
+  const normalizeCat = (cat: string) => cat.toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const filteredPosts = useMemo(
     () =>
       blogPosts.filter((p) => {
-        const s = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
+        const searchCorpus = [
+          p.title,
+          p.excerpt,
+          p.content || "",
+          p.category,
+          p.author,
+          p.date,
+          p.readTime,
+          p.slug,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        const words = q.split(/\s+/).filter(Boolean);
         const matchSearch =
-          p.title.toLowerCase().includes(s) ||
-          p.excerpt.toLowerCase().includes(s);
+          words.length === 0 || words.every((word) => searchCorpus.includes(word));
+
         const matchCat =
           selectedCategory === "All" ||
-          p.category.toUpperCase() === selectedCategory;
+          normalizeCat(p.category) === normalizeCat(selectedCategory) ||
+          p.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+          selectedCategory.toLowerCase().includes(p.category.toLowerCase());
+
         return matchSearch && matchCat;
       }),
     [searchQuery, selectedCategory]
@@ -390,13 +427,30 @@ const Blog: React.FC = () => {
   const filteredVideos = useMemo(
     () =>
       videoPosts.filter((v) => {
-        const s = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
+        const searchCorpus = [
+          v.title,
+          v.description,
+          v.content || "",
+          v.category,
+          v.author,
+          v.duration,
+          v.date,
+          v.slug,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        const words = q.split(/\s+/).filter(Boolean);
         const matchSearch =
-          v.title.toLowerCase().includes(s) ||
-          v.description.toLowerCase().includes(s);
+          words.length === 0 || words.every((word) => searchCorpus.includes(word));
+
         const matchCat =
           selectedCategory === "All" ||
-          v.category.toUpperCase() === selectedCategory;
+          normalizeCat(v.category) === normalizeCat(selectedCategory) ||
+          v.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+          selectedCategory.toLowerCase().includes(v.category.toLowerCase());
+
         return matchSearch && matchCat;
       }),
     [searchQuery, selectedCategory]
@@ -429,9 +483,32 @@ const Blog: React.FC = () => {
             <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar: Category on Left, Search Keyword on Right */}
           <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Left: Category Dropdown */}
+              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                {mode === "read" ? <BookOpenText size={18} className="text-pink-500 flex-shrink-0" /> : <Clapperboard size={18} className="text-pink-500 flex-shrink-0" />}
+                <div className="flex flex-col w-full text-left">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">SELECT CATEGORY</label>
+                  <select
+                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                  >
+                    <option value="All">All Categories</option>
+                    {categories
+                      .filter((c) => c !== "All")
+                      .map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Right: Search Keyword Input */}
               <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
                 <Search size={18} className="text-pink-500 flex-shrink-0" />
                 <div className="flex flex-col w-full text-left">
@@ -442,40 +519,16 @@ const Blog: React.FC = () => {
                     placeholder={mode === "read" ? "Search articles, guides, topics..." : "Search vlogs, destinations..."}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearchClick()}
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-                {mode === "read" ? <BookOpenText size={18} className="text-pink-500 flex-shrink-0" /> : <Clapperboard size={18} className="text-pink-500 flex-shrink-0" />}
-                <div className="flex flex-col w-full text-left">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">SELECT CATEGORY</label>
-                  <select
-                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    {mode === "read" ? (
-                      <>
-                        <option value="All">All Categories</option>
-                        <option value="TREKKING">Trekking</option>
-                        <option value="INTERNATIONAL">International</option>
-                        <option value="TRAVEL TIPS">Travel Tips</option>
-                        <option value="VISA ASSISTANCE">Visa Assistance</option>
-                        <option value="LUXURY">Luxury</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="All">All Categories</option>
-                        <option value="ADVENTURE">Adventure</option>
-                        <option value="DESTINATIONS">Destinations</option>
-                        <option value="WILDLIFE">Wildlife</option>
-                        <option value="LUXURY">Luxury</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              </div>
-              <button className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer">
+
+              {/* Search button */}
+              <button
+                onClick={handleSearchClick}
+                className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
+              >
                 SEARCH
               </button>
             </div>
@@ -518,7 +571,7 @@ const Blog: React.FC = () => {
       </section>
 
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <div id="blog-content-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 scroll-mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
           {/* ── LEFT: Main Content ── */}

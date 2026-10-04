@@ -7,6 +7,7 @@ import {
 } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // Change only this path if your API file is located somewhere else
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -150,9 +151,8 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
   // BOOK TREK
   // =========================================================
   const handleBookTrek = (trek: any) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/trekking",

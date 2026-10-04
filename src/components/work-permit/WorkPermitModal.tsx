@@ -17,12 +17,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { ADToBS } from "bikram-sambat-js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { getWorkPermitDocumentRequirements, createWorkPermitApplication, getPermitFeeTiers, initiatePayment, } from "../../api/BackendApi";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
+import { DEFAULT_WORK_PERMIT_TYPES } from "./permit-details/mockPermitData";
 
 interface CountryProps {
   id: number;
@@ -90,9 +91,15 @@ interface WorkPermitModalProps {
   country: CountryProps[];
   defaultCountry?: string;
   defaultPermitType?: string;
+  defaultAgeGroup?: string;
 }
 
-const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_labour_permit" }: WorkPermitModalProps) => {
+const WorkPermitModal = ({
+  country,
+  defaultCountry,
+  defaultPermitType = "new_labour_permit",
+  defaultAgeGroup = "18-35 Years",
+}: WorkPermitModalProps) => {
   const [currentStep, setCurrentStep] = useState<"stepA" | "stepB" | "stepC" | "payment" | "submitted">("stepA");
   const [applicationId, setApplicationId] = useState("");
   const [workPermitId, setWorkPermitId] = useState<number | null>(null);
@@ -140,6 +147,19 @@ const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_lab
       }
     }
   }, [defaultCountry, country]);
+
+  // Sync default permit type when changed from outside (e.g. clicking permit type in CostDetails/AboutPermit)
+  useEffect(() => {
+    if (defaultPermitType) {
+      setFormData((prev) => {
+        if (prev.permitType === defaultPermitType) return prev;
+        return {
+          ...prev,
+          permitType: defaultPermitType,
+        };
+      });
+    }
+  }, [defaultPermitType]);
 
 
   // Fetch document requirements when country changes
@@ -225,10 +245,50 @@ useEffect(() => {
   fetchPermitFeeTiers();
 }, [formData.countryId]);
 
-  const filteredDocumentRequirements = documentRequirements.filter(
-    (document) =>
-      document.permit_type === formData.permitType.toUpperCase()
-  );
+  // Generate mock document requirements matching DEFAULT_WORK_PERMIT_TYPES (shown in AboutPermit section)
+  const mockDocsForPermit = useMemo<DocumentRequirement[]>(() => {
+    const matched =
+      DEFAULT_WORK_PERMIT_TYPES.find(
+        (pt) =>
+          pt.modal_type_value.toLowerCase() === formData.permitType.toLowerCase() ||
+          pt.id.toLowerCase() === formData.permitType.toLowerCase()
+      ) || DEFAULT_WORK_PERMIT_TYPES[0];
+
+    return matched.documents.map((doc, idx) => {
+      const title = typeof doc === "string" ? doc : doc.title;
+      const isOptional =
+        typeof doc === "object" && doc.is_required !== undefined
+          ? !doc.is_required
+          : /if required|if applicable/i.test(title);
+
+      const docKey = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+      return {
+        id: idx + 1000,
+        country_id: Number(formData.countryId) || 0,
+        permit_type: (matched.modal_type_value || formData.permitType).toUpperCase(),
+        document_type: docKey,
+        title,
+        description:
+          typeof doc === "object" && doc.description
+            ? doc.description
+            : isOptional
+            ? "Optional supporting document (upload if available)"
+            : "Mandatory verification document",
+        is_required: !isOptional,
+        display_order: idx + 1,
+        status: "active",
+      };
+    });
+  }, [formData.permitType, formData.countryId]);
+
+  // Documents shown in the form: use mock data matching DEFAULT_WORK_PERMIT_TYPES for the selected permit type
+  const filteredDocumentRequirements: DocumentRequirement[] = useMemo(() => {
+    return mockDocsForPermit;
+  }, [mockDocsForPermit]);
 
   const selectedCountry = country.find(
     (c) => c.id.toString() === formData.countryId
@@ -475,49 +535,96 @@ useEffect(() => {
   };
 
   const goToStepC = () => {
-    const result = validateStepB();
-    if (result.isValid) {
-      setStepErrors([]);
-      setCurrentStep("stepC");
-    } else if (result.firstMissingDocType) {
-      setTimeout(() => {
-        const el = document.getElementById(`wp_doc_${result.firstMissingDocType}`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          const btn = document.getElementById(`wp_doc_btn_${result.firstMissingDocType}`) || el.querySelector("button");
-          if (btn) btn.focus();
-        }
-      }, 50);
+    // 1. Must validate Step A (Basic Info) first!
+    const stepAResult = validateStepA();
+    if (!stepAResult.isValid) {
+      setCurrentStep("stepA");
+      if (stepAResult.firstErrorFieldId) {
+        setTimeout(() => {
+          const el = document.getElementById(stepAResult.firstErrorFieldId!);
+          if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 50);
+      }
+      return;
     }
+
+    // 2. Must validate Step B (Documents)
+    const stepBResult = validateStepB();
+    if (!stepBResult.isValid) {
+      setCurrentStep("stepB");
+      if (stepBResult.firstMissingDocType) {
+        setTimeout(() => {
+          const el = document.getElementById(`wp_doc_${stepBResult.firstMissingDocType}`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            const btn =
+              document.getElementById(`wp_doc_btn_${stepBResult.firstMissingDocType}`) ||
+              el.querySelector("button");
+            if (btn) btn.focus();
+          }
+        }, 50);
+      }
+      return;
+    }
+
+    // Both are valid -> proceed to Step C
+    setStepErrors([]);
+    setCurrentStep("stepC");
   };
 
-  // ── Work Permit Fee Calculation (Age-based government & insurance fee structure) ──
-const selectedFeeTier =
-  formData.age !== null
-    ? permitFeeTiers.find(
-        (tier) =>
-          formData.age! >= Number(tier.min_age) &&
-          formData.age! <= Number(tier.max_age)
-      )
-    : undefined;
+  // ── Work Permit Fee Calculation (Age-based government & insurance fee structure + Permit Category) ──
+  const selectedFeeTier =
+    formData.age !== null
+      ? permitFeeTiers.find(
+          (tier) =>
+            formData.age! >= Number(tier.min_age) &&
+            formData.age! <= Number(tier.max_age)
+        )
+      : undefined;
 
-const totalFeeNpr = selectedFeeTier
-  ? Number(selectedFeeTier.total_cost_npr)
-  : 0;
+  // Base fee determined by age or default age group
+  const baseAgeFeeNpr = useMemo(() => {
+    if (selectedFeeTier) {
+      return Number(selectedFeeTier.total_cost_npr);
+    }
+    if (formData.age !== null) {
+      if (formData.age >= 18 && formData.age <= 35) return 8000;
+      if (formData.age > 35) return 9000;
+    }
+    if (defaultAgeGroup.includes("36") || defaultAgeGroup.includes("50")) {
+      return 9000;
+    }
+    return 8000;
+  }, [selectedFeeTier, formData.age, defaultAgeGroup]);
 
-const getFeeTierLabel = () => {
-  if (!selectedFeeTier) {
-    return "No fee tier available";
-  }
+  // Permit type fee adjustment from DEFAULT_WORK_PERMIT_TYPES
+  const permitAdjustment = useMemo(() => {
+    const matched = DEFAULT_WORK_PERMIT_TYPES.find(
+      (pt) =>
+        pt.modal_type_value.toLowerCase() === formData.permitType.toLowerCase() ||
+        pt.id.toLowerCase() === formData.permitType.toLowerCase()
+    );
+    if (!matched) return 0;
+    return matched.fee_adjustment_npr ?? (matched.base_fee_npr - 8000);
+  }, [formData.permitType]);
 
-  return selectedFeeTier.age_group_label;
-};
+  const totalFeeNpr = Math.max(0, baseAgeFeeNpr + permitAdjustment);
 
-const totalPriceFormatted = loadingFeeTiers
-  ? "Loading..."
-  : selectedFeeTier
-    ? `NPR ${totalFeeNpr.toLocaleString("en-IN")}`
-    : "NPR 0";
+  const getFeeTierLabel = () => {
+    if (selectedFeeTier) {
+      return selectedFeeTier.age_group_label;
+    }
+    if (formData.age !== null) {
+      if (formData.age >= 18 && formData.age <= 35) return "18-35 Years";
+      if (formData.age > 35) return "36-50 Years";
+    }
+    return defaultAgeGroup || "18-35 Years";
+  };
+
+  const totalPriceFormatted = `NPR ${totalFeeNpr.toLocaleString("en-IN")}`;
 
   // const handleSubmit = (e?: React.FormEvent) => {
   //   if (e) e.preventDefault();
@@ -1537,14 +1644,22 @@ const totalPriceFormatted = loadingFeeTiers
           </div>
 
           {/* 3-Step Wizard Breadcrumbs (Only if not submitted and not in payment) */}
+          {/* 3-Step Wizard Breadcrumbs — each tab is clickable with validation */}
           {currentStep !== "submitted" && currentStep !== "payment" && (
             <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-white/15">
-              {/* Step A */}
-              <div
-                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepA"
-                  ? "bg-pink-600/90 text-white shadow-sm"
-                  : "bg-white/10 text-gray-300"
-                  }`}
+
+              {/* Step A — always accessible */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStepErrors([]);
+                  setCurrentStep("stepA");
+                }}
+                className={`flex items-center gap-2 p-2 rounded-xl transition-all cursor-pointer text-left ${
+                  currentStep === "stepA"
+                    ? "bg-pink-600/90 text-white shadow-sm"
+                    : "bg-white/10 text-gray-300 hover:bg-white/20"
+                }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white text-[#2D1347] text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   A
@@ -1553,30 +1668,46 @@ const totalPriceFormatted = loadingFeeTiers
                   <p className="text-[11px] font-extrabold truncate">Basic Info</p>
                   <p className="text-[9px] text-pink-200 truncate">~30 sec form</p>
                 </div>
-              </div>
+              </button>
 
-              {/* Step B */}
-              <div
-                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepB"
-                  ? "bg-pink-600/90 text-white shadow-sm"
-                  : "bg-white/10 text-gray-300"
-                  }`}
+              {/* Step B — directly viewable without proceeding click from basic info */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStepErrors([]);
+                  setCurrentStep("stepB");
+                }}
+                className={`flex items-center gap-2 p-2 rounded-xl transition-all cursor-pointer text-left ${
+                  currentStep === "stepB"
+                    ? "bg-pink-600/90 text-white shadow-sm"
+                    : "bg-white/10 text-gray-300 hover:bg-white/20"
+                }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white text-[#2D1347] text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   B
                 </span>
                 <div className="min-w-0">
                   <p className="text-[11px] font-extrabold truncate">Documents</p>
-                  <p className="text-[9px] text-gray-300 truncate">5 Verification Files</p>
+                  <p className="text-[9px] text-gray-300 truncate">
+                    {filteredDocumentRequirements.length > 0
+                      ? `${filteredDocumentRequirements.length} Verification Files`
+                      : "Verification Files"}
+                  </p>
                 </div>
-              </div>
+              </button>
 
-              {/* Step C */}
-              <div
-                className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepC"
-                  ? "bg-pink-600/90 text-white shadow-sm"
-                  : "bg-white/10 text-gray-300"
-                  }`}
+              {/* Step C — validates A + B first; redirects to validation place if issues exist */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentStep === "stepC") return;
+                  goToStepC();
+                }}
+                className={`flex items-center gap-2 p-2 rounded-xl transition-all cursor-pointer text-left ${
+                  currentStep === "stepC"
+                    ? "bg-pink-600/90 text-white shadow-sm"
+                    : "bg-white/10 text-gray-300 hover:bg-white/20"
+                }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white text-[#2D1347] text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   C
@@ -1585,7 +1716,8 @@ const totalPriceFormatted = loadingFeeTiers
                   <p className="text-[11px] font-extrabold truncate">Review</p>
                   <p className="text-[9px] text-gray-300 truncate">Final Submit</p>
                 </div>
-              </div>
+              </button>
+
             </div>
           )}
         </div>
@@ -1781,12 +1913,28 @@ const totalPriceFormatted = loadingFeeTiers
                     name="permitType"
                     value={formData.permitType}
                     onChange={handleChange}
-                    className="select w-full border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm mt-1 cursor-pointer"
+                    className="select w-full border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm mt-1 cursor-pointer font-medium"
                   >
-                    <option value="new_labour_permit">New Labour Permit (Shram)</option>
-                    <option value="renewal_permit">Renewal Permit</option>
-                    <option value="individual_permit">Individual Work Permit</option>
+                    <option value="new_labour_permit">
+                      New Labour Permit (Shram) — NPR {(baseAgeFeeNpr + 0).toLocaleString("en-IN")}
+                    </option>
+                    <option value="renewal_permit">
+                      Renewal Permit — NPR {(baseAgeFeeNpr - 1500).toLocaleString("en-IN")}
+                    </option>
+                    <option value="individual_permit">
+                      Individual Work Permit — NPR {(baseAgeFeeNpr + 1000).toLocaleString("en-IN")}
+                    </option>
                   </select>
+
+                  {/* Dynamic Fee Summary Badge */}
+                  <div className="mt-2 px-3 py-2 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 rounded-xl flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-purple-950">
+                      Package Fee ({getFeeTierLabel()}):
+                    </span>
+                    <span className="text-xs font-black text-[#E91E63]">
+                      {totalPriceFormatted}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1980,6 +2128,12 @@ const totalPriceFormatted = loadingFeeTiers
                     </span>
                   </div>
                   <div>
+                    <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Application Fee</span>
+                    <span className="font-black text-[#E91E63]">
+                      {totalPriceFormatted}
+                    </span>
+                  </div>
+                  <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Date of Birth</span>
                     <span className="font-bold text-gray-800">
                       {formData.adDate} (AD) {formData.bsDate && `• ${formData.bsDate} (BS)`}
@@ -1994,10 +2148,10 @@ const totalPriceFormatted = loadingFeeTiers
                 </div>
               </div>
 
-              {/* Document Summary (All 5 documents) */}
+              {/* Document Summary */}
               <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200/80 space-y-2 text-xs">
                 <h4 className="font-extrabold text-purple-950 text-sm mb-2">
-                  Uploaded Documentation (5 Checkpoints)
+                  Uploaded Documentation ({filteredDocumentRequirements.length} Checkpoints)
                 </h4>
                 <div className="space-y-1.5 text-gray-600">
                   {filteredDocumentRequirements.map((document) => {

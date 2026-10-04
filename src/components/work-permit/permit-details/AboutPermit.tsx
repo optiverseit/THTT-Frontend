@@ -5,6 +5,7 @@ import {
   FileText,
   Zap,
 } from "lucide-react";
+import { DEFAULT_WORK_PERMIT_TYPES, type WorkPermitType } from "./mockPermitData";
 
 interface CountryProps {
   id: number;
@@ -21,16 +22,25 @@ interface CountryProps {
 interface AboutPermitProps {
   id?: string;
   country: CountryProps;
+  /** Driven by CostDetails permit type selector — synced via parent state */
+  selectedPermitType?: WorkPermitType;
+  /** Notify parent when a permit type row is clicked here */
+  onPermitTypeChange?: (permitType: WorkPermitType) => void;
 }
 
-const AboutPermit = ({ country }: AboutPermitProps) => {
-  const reqDocs = [
-    "Original Passport (Scan Copy)",
-    "Valid Job Offer Letter/Visa Copy",
-    "Experience Certificates (if applicable)",
-    "MRP Size Photo (Recent)",
-    "Police Clearance Report (if required)",
-  ];
+const AboutPermit = ({ country, selectedPermitType, onPermitTypeChange }: AboutPermitProps) => {
+  // Permit types list: mock data for now; replace with API response later.
+  // When API is ready, fetch permit types here and store in state.
+  const permitTypes = DEFAULT_WORK_PERMIT_TYPES;
+
+  // Resolve which permit type is currently active
+  const activePermitType = selectedPermitType ?? permitTypes[0];
+
+  // Documents for the currently active permit type
+  const activeDocs: string[] =
+    (activePermitType?.documents ?? []).map((doc) =>
+      typeof doc === "string" ? doc : doc.title
+    );
 
   const included = [
     "Govt. Application Filling",
@@ -72,38 +82,81 @@ const AboutPermit = ({ country }: AboutPermitProps) => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row w-full justify-between gap-6">
-            <div className="w-full sm:w-[48%]">
-              <h1 className="flex items-center gap-2 text-purple-950 font-bold text-base sm:text-xl">
-                <CircleCheck
-                  size={16}
-                  className="text-green-500 flex-shrink-0"
-                />
+          {/* REQUIREMENT DOCUMENTS + WHAT'S INCLUDED */}
+          <div className="space-y-5">
+
+            {/* ── TOP ROW: Labels (left) | Required docs (right) ── */}
+            <div>
+              <h1 className="flex items-center gap-2 text-purple-950 font-bold text-base sm:text-xl mb-3">
+                <CircleCheck size={16} className="text-green-500 flex-shrink-0" />
                 REQUIREMENT DOCUMENTS
               </h1>
 
-              <ul className="list-disc marker:text-pink-500 list-inside mt-2">
-                {reqDocs.map((item, index) => (
-                  <li
-                    key={index}
-                    className="text-gray-500 font-semibold mb-1 text-sm sm:text-base"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+
+                {/* LEFT: permit type selector — shrinks to content */}
+                {/* Mock data: swap DEFAULT_WORK_PERMIT_TYPES with API array when ready */}
+                <div className="flex-shrink-0 space-y-2">
+                  {permitTypes.map((pt) => {
+                    const isActive = activePermitType?.id === pt.id;
+                    return (
+                      <div
+                        key={pt.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onPermitTypeChange?.(pt)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") onPermitTypeChange?.(pt);
+                        }}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border transition-all cursor-pointer select-none w-fit ${
+                          isActive
+                            ? "border-[#E91E63] bg-pink-50/40 ring-1 ring-[#E91E63]"
+                            : "border-gray-200 bg-gray-50/50 hover:border-gray-300"
+                        }`}
+                      >
+                        <span
+                          className={`w-3 h-3 rounded-full flex-shrink-0 transition-all ${
+                            isActive
+                              ? "bg-[#E91E63] shadow shadow-pink-400/40"
+                              : "bg-gray-200 border border-gray-300"
+                          }`}
+                        />
+                        <p className="text-xs font-black text-[#200B3B] capitalize whitespace-nowrap">{pt.name}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* RIGHT: document list — fills remaining space */}
+                <div className="flex-1 min-w-0">
+                  <ul className="list-disc marker:text-pink-500 list-inside">
+                    {activeDocs.length > 0 ? (
+                      activeDocs.map((item, index) => (
+                        <li
+                          key={index}
+                          className="text-gray-500 font-semibold mb-1 text-sm sm:text-base"
+                        >
+                          {item}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-gray-400 text-sm italic">
+                        No documents listed for this permit type.
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+              </div>
             </div>
 
-            <div className="w-full sm:w-[48%]">
-              <h1 className="flex items-center gap-2 text-purple-950 font-bold text-base sm:text-xl">
-                <Zap
-                  size={16}
-                  className="text-pink-500 flex-shrink-0"
-                />
+            {/* ── BOTTOM ROW: What's Included — full width ── */}
+            <div className="pt-2 border-t border-gray-100">
+              <h1 className="flex items-center gap-2 text-purple-950 font-bold text-base sm:text-xl mb-2">
+                <Zap size={16} className="text-pink-500 flex-shrink-0" />
                 WHAT'S INCLUDED
               </h1>
-
-              <ul className="list-disc marker:text-green-500 list-inside mt-2">
+              <ul className="list-disc marker:text-green-500 list-inside">
                 {included.map((item, index) => (
                   <li
                     key={index}
@@ -114,7 +167,9 @@ const AboutPermit = ({ country }: AboutPermitProps) => {
                 ))}
               </ul>
             </div>
+
           </div>
+
         </div>
       </div>
 

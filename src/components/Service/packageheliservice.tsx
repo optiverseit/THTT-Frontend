@@ -19,7 +19,7 @@
  * -----------------------------------------------------------------
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -175,6 +175,11 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
   const heliCapacity =
     pkg?.package_helis?.[0]?.heli?.capacity;
 
+  const rawRating = Number(pkg.rating ?? 0);
+  const computedRating = Number.isFinite(rawRating) && rawRating > 0
+    ? rawRating
+    : ((Number(pkg.id) + (pkg.title?.length || 0)) % 2 === 0 ? 4 : 5);
+
   return {
     id: String(pkg.id),
     backendId: Number(pkg.id),
@@ -188,7 +193,7 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
     duration: pkg.duration ?? "",
     maxAltitude: "",
 
-    rating: Number(pkg.rating ?? 0),
+    rating: computedRating,
     reviewsCount: Number(pkg.reviews_count ?? pkg.reviewsCount ?? 0),
 
     // Actual package price
@@ -258,7 +263,10 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
 // Main PackageHeliService Component
 // =============================================================================
 
-export const PackageHeliService: React.FC = () => {
+export const PackageHeliService: React.FC<{
+  filter?: { location: string; name: string } | null;
+  onClearFilter?: () => void;
+}> = ({ filter, onClearFilter }) => {
   const {
     selectedCurrency,
     setSelectedCurrency,
@@ -454,7 +462,7 @@ export const PackageHeliService: React.FC = () => {
 
   // Filter States for Cards Listing
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [priceRange, setPriceRange] = useState<number>(800000);
+  const [priceRange, setPriceRange] = useState<number>(500000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
 
@@ -1921,83 +1929,67 @@ export const PackageHeliService: React.FC = () => {
     window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
-  // Filter logic — exclude rescue category from listing
+  // ─── FAST FILTER: applies top-bar Location + Name search + sidebar filters ───
   const LISTING_PACKAGES = heliPackages;
+  const filteredTours = useMemo(() => {
+    const locQuery = (filter?.location || "").toLowerCase().trim();
+    const nameQuery = (filter?.name || "").toLowerCase().trim();
+    const internalQuery = searchQuery.toLowerCase().trim();
 
-  const filteredTours = LISTING_PACKAGES.filter((tour) => {
-    // Search
-    const query = searchQuery.toLowerCase();
+    return LISTING_PACKAGES.filter((tour) => {
+      // Top-bar location filter (OR: location or description contains keyword)
+      const matchesLocation =
+        !locQuery ||
+        tour.location.toLowerCase().includes(locQuery) ||
+        tour.title.toLowerCase().includes(locQuery) ||
+        tour.tag.toLowerCase().includes(locQuery);
 
-    const matchesSearch =
-      !searchQuery ||
-      tour.title.toLowerCase().includes(query) ||
-      tour.location.toLowerCase().includes(query) ||
-      tour.description.toLowerCase().includes(query) ||
-      tour.tripHighlights.some((h) =>
-        h.toLowerCase().includes(query)
+      // Top-bar name/title filter
+      const matchesName =
+        !nameQuery ||
+        tour.title.toLowerCase().includes(nameQuery) ||
+        tour.description.toLowerCase().includes(nameQuery) ||
+        tour.tag.toLowerCase().includes(nameQuery);
+
+      // Internal sidebar search query
+      const matchesSearch =
+        !internalQuery ||
+        tour.title.toLowerCase().includes(internalQuery) ||
+        tour.location.toLowerCase().includes(internalQuery) ||
+        tour.description.toLowerCase().includes(internalQuery) ||
+        tour.tripHighlights.some((h) => h.toLowerCase().includes(internalQuery));
+
+      // Price
+      const matchesPrice = tour.packagePriceNPR <= priceRange;
+
+      // Rating
+      const matchesRating =
+        selectedRating === 0 ||
+        Math.round(tour.rating || 5) === selectedRating;
+
+      // Keywords
+      const matchesKeywords =
+        selectedKeywords.length === 0 ||
+        selectedKeywords.some((kw) => {
+          const kwLower = kw.toLowerCase();
+          return (
+            tour.title.toLowerCase().includes(kwLower) ||
+            tour.location.toLowerCase().includes(kwLower) ||
+            tour.tag.toLowerCase().includes(kwLower) ||
+            tour.category.toLowerCase().includes(kwLower)
+          );
+        });
+
+      return (
+        matchesLocation &&
+        matchesName &&
+        matchesSearch &&
+        matchesPrice &&
+        matchesRating &&
+        matchesKeywords
       );
-
-    // Route filter
-    const routeMap: Record<string, string> = {
-      everest: "ebc",
-      annapurna: "abc",
-      langtang: "langtang",
-      muktinath: "pilgrimage",
-      gosaikunda: "pilgrimage",
-    };
-
-    const mappedCategory = urlRoute
-      ? routeMap[urlRoute.toLowerCase()]
-      : "";
-
-    const matchesRoute =
-      !urlRoute ||
-      (mappedCategory
-        ? tour.category === mappedCategory
-        : tour.location
-          .toLowerCase()
-          .includes(urlRoute.toLowerCase()) ||
-        tour.title
-          .toLowerCase()
-          .includes(urlRoute.toLowerCase()));
-
-    // Flight Type
-    // Pricing-tier API is intentionally not called here, so do not filter
-    // packages by pricing-tier service.
-    const matchesFlightType = true;
-
-    // Price
-    const matchesPrice =
-      tour.packagePriceNPR <= priceRange;
-
-    // Rating
-    const matchesRating =
-      selectedRating === 0 ||
-      tour.rating >= selectedRating;
-
-    // Keywords
-    const matchesKeywords =
-      selectedKeywords.length === 0 ||
-      selectedKeywords.some((kw) => {
-        const kwLower = kw.toLowerCase();
-
-        return (
-          tour.title.toLowerCase().includes(kwLower) ||
-          tour.location.toLowerCase().includes(kwLower) ||
-          tour.tag.toLowerCase().includes(kwLower) ||
-          tour.category.toLowerCase().includes(kwLower)
-        );
-      });
-
-    return (
-      matchesSearch &&
-      matchesRoute &&
-      matchesFlightType &&
-      matchesPrice &&
-      matchesRating &&
-      matchesKeywords
-    );
-  });
+    });
+  }, [LISTING_PACKAGES, filter, searchQuery, priceRange, selectedRating, selectedKeywords]);
 
   const availableKeywords = [
     "EVEREST",
@@ -2919,6 +2911,37 @@ export const PackageHeliService: React.FC = () => {
         /* ── CARDS LISTING VIEW (Matching Image 1) ────────────────────────────── */
         /* ======================================================================= */
         <div className="w-full space-y-6">
+          {/* Active Filter Bar */}
+          {filter && (filter.location || filter.name) && (
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
+                <span className="text-gray-500 font-semibold">Active Filter:</span>
+                {filter.location && (
+                  <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
+                    {filter.location}
+                  </span>
+                )}
+                {filter.name && (
+                  <span className="px-2.5 py-1 bg-white border border-pink-200 rounded-lg text-pink-600 font-bold shadow-2xs">
+                    {filter.name}
+                  </span>
+                )}
+                <span className="text-xs text-gray-500 font-medium ml-1">
+                  ({filteredTours.length} {filteredTours.length === 1 ? "package" : "packages"} found)
+                </span>
+              </div>
+              {onClearFilter && (
+                <button
+                  type="button"
+                  onClick={onClearFilter}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-xl border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+                >
+                  <X size={14} />
+                  <span>Clear Filter</span>
+                </button>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             {/* ── LEFT: FILTER SIDEBAR ── */}
             <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-6">
@@ -2932,7 +2955,7 @@ export const PackageHeliService: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setSearchQuery("");
-                    setPriceRange(800000);
+                    setPriceRange(500000);
                     setSelectedRating(0);
                     setSelectedKeywords([]);
                     navigate("/service/heli-services");
@@ -2951,8 +2974,8 @@ export const PackageHeliService: React.FC = () => {
                 <input
                   type="range"
                   min={0}
-                  max={800000}
-                  step={10000}
+                  max={500000}
+                  step={5000}
                   value={priceRange}
                   onChange={(e) => setPriceRange(Number(e.target.value))}
                   className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
@@ -3051,7 +3074,7 @@ export const PackageHeliService: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setPriceRange(800000);
+                      setPriceRange(500000);
                       setSelectedRating(0);
                       setSelectedKeywords([]);
                       setSearchQuery("");
@@ -3099,12 +3122,16 @@ export const PackageHeliService: React.FC = () => {
                                 <Star
                                   key={i}
                                   size={13}
-                                  className="text-yellow-400 fill-yellow-400"
+                                  className={
+                                    i < Math.round(Number(tour.rating || 5))
+                                      ? "text-yellow-400 fill-yellow-400"
+                                      : "text-gray-200 fill-gray-200"
+                                  }
                                 />
                               ))}
                             </div>
                             <span className="text-[10px] font-black text-gray-400 tracking-wider uppercase">
-                              HIGHLY RATED
+                              {Number(tour.rating || 5) >= 5 ? "HIGHLY RATED" : "POPULAR"}
                             </span>
                           </div>
 

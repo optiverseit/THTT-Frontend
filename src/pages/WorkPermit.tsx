@@ -25,7 +25,8 @@ interface Country {
 const WorkPermit = () => {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [appliedCountry, setAppliedCountry] = useState("");
-  const [selectedPermitType, setSelectedPermitType] = useState("new");
+  const [selectedPermitType, setSelectedPermitType] = useState("all");
+  const [appliedPermitType, setAppliedPermitType] = useState("all");
 
   const [countries, setCountries] = useState<Country[]>([]);
   const [countriesLoading, setCountriesLoading] = useState(true);
@@ -75,6 +76,7 @@ const WorkPermit = () => {
 
   const handleSearch = () => {
     setAppliedCountry(selectedCountry);
+    setAppliedPermitType(selectedPermitType);
     scrollToSection("section-services");
   };
 
@@ -185,6 +187,10 @@ const WorkPermit = () => {
                         }
                       >
 
+                        <option value="all">
+                          All Permit Types
+                        </option>
+
                         <option value="new">
                           New Work Permit
                         </option>
@@ -291,10 +297,13 @@ const WorkPermit = () => {
         <PermitServices
           countries={countries}
           filterCountryId={appliedCountry}
+          filterPermitType={appliedPermitType}
           isLoading={countriesLoading}
           onClearFilter={() => {
             setAppliedCountry("");
             setSelectedCountry("");
+            setAppliedPermitType("all");
+            setSelectedPermitType("all");
           }}
         />
 

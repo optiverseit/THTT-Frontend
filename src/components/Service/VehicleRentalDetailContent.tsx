@@ -15,6 +15,7 @@ import VehicleRentalBookingModal, {
 } from "./VehicleRentalBookingModal";
 
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // Change this path only if your API file is located somewhere else
 import { getAllVehicles } from "../../api/BackendApi";
@@ -173,7 +174,7 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
     vehicle_type: "4WD SUV",
     fuel_type: "Electric",
     price: 7000,
-    rating: 5,
+    rating: 4,
     description: "Eco-friendly zero-emission pure electric SUV with silent ride, panoramic sunroof, and ultra-smooth modern suspension for valley tours.",
     from_location: "Kathmandu",
     destination: "Nagarkot Sunrise",
@@ -566,7 +567,7 @@ const VehicleRentalDetailContent: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState<number>(0);
+  const [priceRange, setPriceRange] = useState<number>(500000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
 
@@ -599,7 +600,18 @@ const VehicleRentalDetailContent: React.FC = () => {
           [];
 
         if (Array.isArray(vehicleData) && vehicleData.length > 0) {
-          setVehicles(vehicleData);
+          const mappedVehicles = vehicleData.map((v: any, index: number) => {
+            if (v.rating !== undefined && v.rating !== null && v.rating !== "") {
+              return v;
+            }
+            const numId = Number(v.id) || index;
+            const computedRating = (!isNaN(numId) && (numId + (v.name?.length || 0)) % 2 === 0) ? 4 : 5;
+            return {
+              ...v,
+              rating: computedRating,
+            };
+          });
+          setVehicles(mappedVehicles);
         } else {
           // Fallback to mock data if API returned empty array
           setVehicles(MOCK_VEHICLES_FALLBACK);
@@ -641,7 +653,8 @@ const VehicleRentalDetailContent: React.FC = () => {
       vehicle.price_per_day ??
       vehicle.pricePerDay ??
       0;
-    const parsed = Number(value);
+    const cleanStr = String(value).replace(/[^0-9.]/g, "");
+    const parsed = Number(cleanStr);
     return Number.isNaN(parsed) ? 0 : parsed;
   };
 
@@ -717,15 +730,15 @@ const VehicleRentalDetailContent: React.FC = () => {
       }
     }
 
-    // 2. Price filter
+    // 2. Price filter (0 to 500,000 NPR)
     const priceNum = getVehiclePrice(v);
     const matchesPrice =
-      priceRange === 0 || priceNum === 0 || priceNum <= priceRange;
+      priceNum === 0 || priceNum <= priceRange;
 
     // 3. Rating filter
-    const rating = v.rating ?? 5;
+    const rating = Math.round(Number(v.rating ?? 5));
     const matchesRating =
-      selectedRating === 0 || Math.round(Number(rating)) >= selectedRating;
+      selectedRating === 0 || rating === selectedRating;
 
     // 4. Keyword filter
     const matchesKeywords =
@@ -776,9 +789,8 @@ const VehicleRentalDetailContent: React.FC = () => {
   // ==========================================================
 
   const handleBookVehicle = (vehicle: ReturnType<typeof enrichVehicleWithDefaults>) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/vehicle-rental",
@@ -901,6 +913,9 @@ const VehicleRentalDetailContent: React.FC = () => {
           <FilterSideBar
             setPriceRange={setPriceRange}
             priceRange={priceRange}
+            minPrice={0}
+            maxPrice={500000}
+            step={5000}
             selectedRating={selectedRating}
             setSelectedRating={setSelectedRating}
             selectedKeywords={selectedKeywords}
@@ -952,16 +967,23 @@ const VehicleRentalDetailContent: React.FC = () => {
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             <div className="flex items-center">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={13}
-                                  className="text-yellow-400 fill-yellow-400"
-                                />
-                              ))}
+                              {Array.from({ length: 5 }).map((_, i) => {
+                                const roundedRating = Math.round(Number(vehicle.rating ?? 5));
+                                return (
+                                  <Star
+                                    key={i}
+                                    size={13}
+                                    className={
+                                      i < roundedRating
+                                        ? "text-yellow-400 fill-yellow-400"
+                                        : "text-gray-200 fill-gray-200"
+                                    }
+                                  />
+                                );
+                              })}
                             </div>
                             <span className="text-[11px] font-black text-gray-700">
-                              {Number(vehicle.rating).toFixed(1)}
+                              {Number(vehicle.rating || 5).toFixed(1)}
                             </span>
                           </div>
 

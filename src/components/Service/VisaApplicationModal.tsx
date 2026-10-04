@@ -23,6 +23,7 @@ import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { initiatePayment, storeVisaApplication } from "../../api/BackendApi";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 export { COUNTRY_CODES, isoToFlag };
 
 export interface VisaApplicationModalProps {
@@ -195,6 +196,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isSessionValid()) {
+      clearAuthSession();
+      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
 
     for (let i = 0; i < guests; i++) {
       const app = applicants[i];

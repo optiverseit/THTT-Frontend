@@ -2024,7 +2024,7 @@ export const blogPosts: BlogPost[] = [
     8. Local Culture : Learn a few Sherpa phrases. A little 'Tashi Delek' goes a long way.
     9. Snack Smart : Bring energy bars and nuts to supplement the dal bhat.
     10. Enjoy the Journey : Don't just focus on the destination. The views in the Khumbu valley are unparalleled.`,
-    category: "TREKKING",
+    category: "Trekking",
     author: "Adventure Desk",
     date: "Sept 21, 2025",
     image:
@@ -2037,7 +2037,8 @@ export const blogPosts: BlogPost[] = [
     slug: "bali-cultural-guide",
     excerpt:
       "Experience the spiritual side of Bali with our guide to hidden temples, local art markets, and traditional ceremonies.",
-    category: "INTERNATIONAL",
+    content: `Bali is famous for its beaches, but Ubud represents the cultural and spiritual core of the island. Explore lush rice terraces, ancient water temples, vibrant artisan markets, and traditional Balinese dance performances. Our complete travel guide helps you navigate customs, sacred sites, and eco-retreats.`,
+    category: "Tours and Travel",
     author: "Travel Editor",
     date: "Aug 24, 2025",
     image:
@@ -2050,7 +2051,8 @@ export const blogPosts: BlogPost[] = [
     slug: "travel-insurance-guide",
     excerpt:
       "Safety first! Learn why specific mountain coverage is vital for your high-altitude adventures in Nepal.",
-    category: "TRAVEL TIPS",
+    content: `Standard travel insurance often caps medical evacuation at 3,000 meters. For Himalayan trekking like EBC or Annapurna, you require comprehensive high-altitude emergency coverage up to 6,000 meters with guaranteed helicopter dispatch. Here's our complete guide to choosing the right policy.`,
+    category: "Travel Guide",
     author: "Support Team",
     date: "Nov 21, 2024",
     image:
@@ -2063,7 +2065,8 @@ export const blogPosts: BlogPost[] = [
     slug: "nepal-visa-guide",
     excerpt:
       "Getting your entry permit at Kathmandu airport is easier than ever with our step-by-step documentation guide.",
-    category: "VISA ASSISTANCE",
+    content: `Foreign travelers visiting Nepal can obtain an On-Arrival Tourist Visa at Tribhuvan International Airport (TIA) or land border crossings. Discover fee structures (15, 30, and 90 days), required passport validity, photo specifications, online pre-arrival forms, and embassy verification tips.`,
+    category: "Visa Service",
     author: "Legal Desk",
     date: "Nov 17, 2024",
     image:
@@ -2072,16 +2075,59 @@ export const blogPosts: BlogPost[] = [
   },
   {
     id: "b5",
-    title: "Everything You Need to Know About the ABC Heli Tour Experience",
-    slug: "abc-heli-tour-blog",
+    title: "Top Luxury Resorts & Heritage Boutique Hotels in Nepal",
+    slug: "nepal-luxury-resorts-guide",
     excerpt:
-      "Short on time but want the big views? The Annapurna Base Camp Helicopter tour is the ultimate luxury experience.",
-    category: "LUXURY",
+      "From panoramic ridge-view resorts in Nagarkot to traditional Newari palaces in Kathmandu, experience the best hospitality.",
+    content: `Nepal offers extraordinary luxury stays that combine world-class amenities with rich heritage. Discover eco-villas in Pokhara, 5-star mountain view resorts in Nagarkot and Dhulikhel, and peaceful safari lodges in Chitwan Sauraha. Learn about booking perks, complimentary airport transfers, and seasonal packages.`,
+    category: "Hotels",
     author: "Tour Guide",
     date: "Nov 10, 2024",
     image:
       "https://images.unsplash.com/photo-1544016768-982d1554f0b9?auto=format&fit=crop&q=80&w=800",
     readTime: "7 min read",
+  },
+  {
+    id: "b6",
+    title: "Ultimate Guide to Nepal Work Permits (Shramik) & Documentation",
+    slug: "nepal-work-permit-guide",
+    excerpt:
+      "Step-by-step walkthrough for new labor permits, biometric verification, renewals, and foreign employment filing.",
+    content: `Navigating Nepal's Department of Foreign Employment (DoFE) requirements is crucial for overseas workers and expatriates. This guide details pre-departure orientation, Social Security Fund (SSF) registration, medical clearance certificates, embassy attestation, and fast-track digital approval.`,
+    category: "Work Permit",
+    author: "Documentation Desk",
+    date: "Oct 15, 2025",
+    image:
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800",
+    readTime: "6 min read",
+  },
+  {
+    id: "b7",
+    title: "Top Adrenaline Adventure Activities in Nepal: Air, River & Land",
+    slug: "adventure-activities-nepal-guide",
+    excerpt:
+      "Pokhara paragliding, Kushma bungee jump, Trishuli river rafting, and ultra-light mountain flights.",
+    content: `Nepal is the world's adventure playground. Soar beside raptors overlooking Phewa Lake in Pokhara, leap from one of the world's highest bungee bridges in Kushma, paddle roaring class IV rapids on the Trishuli and Bhote Koshi rivers, and experience sheer Himalayan exhilaration.`,
+    category: "Adventure activity",
+    author: "Adventure Team",
+    date: "Oct 02, 2025",
+    image:
+      "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&q=80&w=800",
+    readTime: "5 min read",
+  },
+  {
+    id: "b8",
+    title: "Kathmandu Valley Cultural Tour: 7 UNESCO World Heritage Highlights",
+    slug: "kathmandu-heritage-cultural-tour",
+    excerpt:
+      "Explore ancient durbar squares, towering stupas at Swayambhunath & Boudha, and sacred Pashupatinath temple.",
+    content: `The Kathmandu Valley boasts an unprecedented concentration of ancient monuments. Walk through the golden gates of Bhaktapur, spin prayer wheels at the ancient Monkey Temple, and immerse yourself in centuries of Newari craftsmanship and vibrant festivals.`,
+    category: "Tours and Travel",
+    author: "Cultural Guide",
+    date: "Sept 12, 2025",
+    image:
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800",
+    readTime: "6 min read",
   },
 ];
 export const videoPosts: VideoPost[] = [

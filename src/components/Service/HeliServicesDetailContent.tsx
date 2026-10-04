@@ -16,6 +16,11 @@ import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import PackageHeliService from "./packageheliservice";
 import { useParams, useSearchParams } from "react-router-dom";
 
+export interface HeliFilterCriteria {
+  location: string;
+  name: string;
+}
+
 // ── FAQ DATA ──────────────────────────────────────────────────────────────────
 const HELI_FAQS = [
   {
@@ -79,7 +84,10 @@ const WHY_CHOOSE = [
 ];
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
-export const HeliServicesDetailContent: React.FC = () => {
+export const HeliServicesDetailContent: React.FC<{
+  filter?: { location: string; name: string } | null;
+  onClearFilter?: () => void;
+}> = ({ filter, onClearFilter }) => {
   const { tourId } = useParams<{ tourId?: string }>();
   const [searchParams] = useSearchParams();
   const isDetailPage = Boolean(tourId || searchParams.get("tour"));
@@ -92,7 +100,7 @@ export const HeliServicesDetailContent: React.FC = () => {
   return (
     <div className="space-y-12">
       {/* ── 1. HELI TOURS & PACKAGES (packageheliservice) ── */}
-      <PackageHeliService />
+      <PackageHeliService filter={filter} onClearFilter={onClearFilter} />
 
       {/* ── 2. WHY CHOOSE US ────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-[#2D1347] to-[#401863] text-white p-8 sm:p-12 rounded-3xl shadow-xl">

@@ -6,6 +6,7 @@ import { useGlobalCurrency } from "../../context/CurrencyContext";
 import ShareModal from "../reusable/ShareModal";
 import Logo from "../../assets/images/Logo.png";
 import HotelBookingModal from "./HotelBookingModal";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 interface PackageProp {
   pkg: any;
@@ -692,7 +693,19 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               <span className="text-xl sm:text-2xl font-black text-[#E91E63]">{startsFromDisplayPrice}</span>
             </div>
             <button
-              onClick={() => setIsBookingModalOpen(true)}
+              onClick={() => {
+                if (!isSessionValid()) {
+                  clearAuthSession();
+                  navigate("/login", {
+                    state: {
+                      from: location.pathname,
+                      openBooking: true,
+                    },
+                  });
+                  return;
+                }
+                setIsBookingModalOpen(true);
+              }}
               className="px-6 sm:px-8 py-3 rounded-full text-xs font-black uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-lg shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
             >
               BOOK NOW

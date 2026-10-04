@@ -7,6 +7,7 @@ import {
 } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // Change only this path if your API file is located somewhere else
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -24,6 +25,7 @@ import {
   Layers,
   CalendarCheck,
   ArrowUpRight,
+  X,
 } from "lucide-react";
 
 
@@ -51,7 +53,20 @@ const TREK_FAQS = [
   },
 ];
 
-export const TrekkingDetailContent: React.FC = () => {
+export interface TrekFilterCriteria {
+  location?: string;  // free-text location search (e.g. Everest, Pokhara)
+  duration?: string;  // free-text duration search (e.g. 7 days, 14 days)
+}
+
+export interface TrekkingDetailContentProps {
+  filter?: TrekFilterCriteria | null;
+  onClearFilter?: () => void;
+}
+
+export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
+  filter,
+  onClearFilter,
+}) => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [visibleCount, setVisibleCount] = useState<number>(9);
 
@@ -136,9 +151,8 @@ export const TrekkingDetailContent: React.FC = () => {
   // BOOK TREK
   // =========================================================
   const handleBookTrek = (trek: any) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isSessionValid()) {
+      clearAuthSession();
       navigate("/login", {
         state: {
           from: "/service/trekking",
@@ -186,64 +200,93 @@ export const TrekkingDetailContent: React.FC = () => {
   // =========================================================
   // FILTER TREKKING PACKAGES
   // =========================================================
+
+
+
+  // Match location search across relevant trek fields
+  const matchesTrekLocation = (pkg: any, query?: string) => {
+    if (!query || query.trim() === "") return true;
+    const words = query.trim().toLowerCase().split(/[\s,&]+/).filter(Boolean);
+    if (words.length === 0) return true;
+    const searchIn = [
+      pkg.location || "",
+      pkg.title || "",
+      pkg.description || "",
+      pkg.trek_region || "",
+    ].join(" ").toLowerCase();
+    return words.every((word) => searchIn.includes(word));
+  };
+
+  // Match duration search
+  const matchesTrekDuration = (pkg: any, query?: string) => {
+    if (!query || query.trim() === "") return true;
+    const words = query.trim().toLowerCase().split(/[\s,&]+/).filter(Boolean);
+    if (words.length === 0) return true;
+    const searchIn = [pkg.duration || "", pkg.title || "", pkg.description || ""].join(" ").toLowerCase();
+    return words.every((word) => searchIn.includes(word));
+  };
+
+  const hasLocationFilter = Boolean(filter?.location && filter.location.trim() !== "");
+  const hasDurationFilter = Boolean(filter?.duration && filter.duration.trim() !== "");
+
+  const isExternalFilterActive = Boolean(filter && (hasLocationFilter || hasDurationFilter));
+
+  const handleClearAllFilters = () => {
+    setActiveTab("all");
+    setVisibleCount(9);
+    onClearFilter?.();
+  };
+
   const filteredTreks = trekPackages.filter((pkg) => {
-    if (activeTab === "all") {
-      return true;
-    }
+    const titleLower = pkg.title?.toLowerCase() || "";
+    const locLower   = pkg.location?.toLowerCase() || "";
 
-    const titleLower =
-      pkg.title?.toLowerCase() || "";
-
-    const locLower =
-      pkg.location?.toLowerCase() || "";
-
+    // 1. Region tab filter (from pills)
     if (activeTab === "everest") {
-      return (
-        titleLower.includes("everest") ||
-        titleLower.includes("ebc") ||
-        locLower.includes("solukhumbu") ||
-        locLower.includes("everest")
-      );
+      if (
+        !titleLower.includes("everest") &&
+        !titleLower.includes("ebc") &&
+        !locLower.includes("solukhumbu") &&
+        !locLower.includes("everest")
+      ) return false;
+    } else if (activeTab === "annapurna") {
+      if (
+        !titleLower.includes("annapurna") &&
+        !titleLower.includes("abc") &&
+        !titleLower.includes("poon") &&
+        !titleLower.includes("mardi") &&
+        !locLower.includes("annapurna")
+      ) return false;
+    } else if (activeTab === "langtang") {
+      if (
+        !titleLower.includes("langtang") &&
+        !titleLower.includes("gosaikunda") &&
+        !locLower.includes("langtang")
+      ) return false;
+    } else if (activeTab === "remote") {
+      if (
+        !titleLower.includes("mustang") &&
+        !titleLower.includes("manaslu") &&
+        !titleLower.includes("dolpo") &&
+        !titleLower.includes("kanchenjunga") &&
+        !locLower.includes("mustang") &&
+        !locLower.includes("manaslu") &&
+        !locLower.includes("dolpo") &&
+        !locLower.includes("kanchenjunga")
+      ) return false;
+    } else if (activeTab === "featured") {
+      if (
+        pkg.is_featured !== true &&
+        pkg.is_featured !== 1 &&
+        pkg.is_featured !== "1"
+      ) return false;
     }
 
-    if (activeTab === "annapurna") {
-      return (
-        titleLower.includes("annapurna") ||
-        titleLower.includes("abc") ||
-        titleLower.includes("poon") ||
-        titleLower.includes("mardi") ||
-        locLower.includes("annapurna")
-      );
-    }
+    // 2. External location search
+    if (!matchesTrekLocation(pkg, filter?.location)) return false;
 
-    if (activeTab === "langtang") {
-      return (
-        titleLower.includes("langtang") ||
-        titleLower.includes("gosaikunda") ||
-        locLower.includes("langtang")
-      );
-    }
-
-    if (activeTab === "remote") {
-      return (
-        titleLower.includes("mustang") ||
-        titleLower.includes("manaslu") ||
-        titleLower.includes("dolpo") ||
-        titleLower.includes("kanchenjunga") ||
-        locLower.includes("mustang") ||
-        locLower.includes("manaslu") ||
-        locLower.includes("dolpo") ||
-        locLower.includes("kanchenjunga")
-      );
-    }
-
-    if (activeTab === "featured") {
-      return (
-        pkg.is_featured === true ||
-        pkg.is_featured === 1 ||
-        pkg.is_featured === "1"
-      );
-    }
+    // 3. External duration search
+    if (!matchesTrekDuration(pkg, filter?.duration)) return false;
 
     return true;
   });
@@ -384,14 +427,54 @@ export const TrekkingDetailContent: React.FC = () => {
         </div>
       </div>
 
+      {/* ACTIVE SEARCH FILTER INDICATOR */}
+      {isExternalFilterActive && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-pink-50/70 border border-pink-100 p-3 sm:p-4 rounded-2xl">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-gray-500 font-semibold">Active Filter:</span>
+            {hasLocationFilter && (
+              <span className="bg-purple-100 text-[#2D1347] font-bold px-2.5 py-1 rounded-lg">
+                Location: "{filter?.location?.trim()}"
+              </span>
+            )}
+            {hasDurationFilter && (
+              <span className="bg-pink-100 text-[#E11D48] font-bold px-2.5 py-1 rounded-lg">
+                Duration: "{filter?.duration?.trim()}"
+              </span>
+            )}
+            <span className="text-gray-500 font-medium">
+              ({filteredTreks.length} {filteredTreks.length === 1 ? "trek" : "treks"} found)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearAllFilters}
+            className="text-xs font-bold text-gray-500 hover:text-[#E11D48] flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <X size={14} />
+            <span>Clear Filter</span>
+          </button>
+        </div>
+      )}
+
       {/* ── DYNAMIC TREK CIRCUITS ── */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">
 
         {visibleTreks.length === 0 ? (
-          <div className="py-12 text-center">
+          <div className="py-12 text-center space-y-3">
             <p className="font-bold text-gray-500">
-              No trekking packages found.
+              No trekking packages found matching your criteria.
             </p>
+            {isExternalFilterActive && (
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#2D1347] text-white hover:bg-[#3B145C] transition-colors cursor-pointer"
+              >
+                <X size={13} />
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

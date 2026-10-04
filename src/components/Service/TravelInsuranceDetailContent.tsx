@@ -1,9 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGlobalCurrency } from "../../context/CurrencyContext";
-import { ChevronDown, MessageCircle, CheckCircle2, CalendarCheck } from "lucide-react";
+import { ChevronDown, MessageCircle, CheckCircle2, CalendarCheck, Clock, X, Search, Shield } from "lucide-react";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
-import { getInsurancePlans } from "../../api/BackendApi";
+import { getInsurancePlans, getInsurancePricingTiersByPlan } from "../../api/BackendApi";
+
+export interface InsuranceFilterCriteria {
+  insuranceType: string;
+  days: string;
+}
+
+export interface TravelInsuranceDetailContentProps {
+  filter?: InsuranceFilterCriteria | null;
+  onClearFilter?: () => void;
+}
+
+interface InsurancePricingTier {
+  id: number;
+  insurance_plan_id: number;
+  title: string;
+  duration_days: number;
+  price_npr: string | number;
+  status?: string;
+  display_order?: number;
+}
 
 interface InsurancePlan {
   id: number;
@@ -15,6 +35,8 @@ interface InsurancePlan {
   processing_time?: string | null;
   status?: "ACTIVE" | "INACTIVE";
   display_order?: number;
+  tier?: string | null;
+  pricing_tiers?: InsurancePricingTier[];
 }
 
 const INSURANCE_FAQS = [
@@ -40,7 +62,66 @@ const INSURANCE_FAQS = [
   },
 ];
 
-export const TravelInsuranceDetailContent: React.FC = () => {
+const matchesInsuranceType = (plan: InsurancePlan, typeFilter?: string) => {
+  if (!typeFilter || typeFilter === "all" || typeFilter.trim() === "") return true;
+  const f = typeFilter.toLowerCase();
+  const text = `${plan.name} ${plan.short_description || ""} ${plan.description || ""} ${plan.tier || ""}`.toLowerCase();
+
+  if (f === "domestic") {
+    const isDomestic =
+      text.includes("domestic") ||
+      text.includes("nepal") ||
+      text.includes("local") ||
+      text.includes("inland") ||
+      text.includes("himalaya") ||
+      text.includes("trekking");
+    const isInternational =
+      text.includes("international") ||
+      text.includes("worldwide") ||
+      text.includes("schengen") ||
+      text.includes("abroad") ||
+      text.includes("global");
+
+    if (isDomestic) return true;
+    return !isInternational;
+  }
+
+  if (f === "international") {
+    const isInternational =
+      text.includes("international") ||
+      text.includes("worldwide") ||
+      text.includes("schengen") ||
+      text.includes("abroad") ||
+      text.includes("global") ||
+      text.includes("europe") ||
+      text.includes("foreign");
+    const isStrictDomestic =
+      (text.includes("domestic") || text.includes("nepal only")) && !isInternational;
+
+    if (isInternational) return true;
+    return !isStrictDomestic;
+  }
+
+  return text.includes(f);
+};
+
+const getPlanDurations = (plan: InsurancePlan): number[] => {
+  const tierDays = (plan.pricing_tiers || [])
+    .map((t) => Number(t.duration_days))
+    .filter((d) => !isNaN(d) && d > 0);
+
+  const text = `${plan.name} ${plan.short_description || ""} ${plan.description || ""}`;
+  const regexMatches = Array.from(text.matchAll(/\b(\d+)\s*days?\b/gi)).map((m) =>
+    parseInt(m[1], 10)
+  );
+
+  return Array.from(new Set([...tierDays, ...regexMatches]));
+};
+
+export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContentProps> = ({
+  filter,
+  onClearFilter,
+}) => {
   const navigate = useNavigate();
   const { selectedCurrency } = useGlobalCurrency();
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
@@ -53,16 +134,32 @@ export const TravelInsuranceDetailContent: React.FC = () => {
     fetchInsurancePlans();
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(INITIAL_COUNT);
+  }, [filter]);
+
   const fetchInsurancePlans = async () => {
     try {
       setLoading(true);
       const response = await getInsurancePlans();
-      console.log("INSURANCE PLANS:", response.data);
-      if (response.data?.status) {
-        setInsurancePlans(Array.isArray(response.data.data) ? response.data.data : []);
-      } else {
-        setInsurancePlans([]);
-      }
+      const rawPlans = Array.isArray(response.data?.data) ? response.data.data : [];
+
+      const detailedPlans: InsurancePlan[] = await Promise.all(
+        rawPlans.map(async (plan: any) => {
+          try {
+            const tiersRes = await getInsurancePricingTiersByPlan(plan.id);
+            const tiers = Array.isArray(tiersRes.data?.data) ? tiersRes.data.data : [];
+            return {
+              ...plan,
+              pricing_tiers: tiers.filter((t: any) => t?.status !== "INACTIVE"),
+            };
+          } catch {
+            return { ...plan, pricing_tiers: [] };
+          }
+        })
+      );
+
+      setInsurancePlans(detailedPlans);
     } catch (error) {
       console.error("Failed to fetch insurance plans:", error);
       setInsurancePlans([]);
@@ -71,8 +168,50 @@ export const TravelInsuranceDetailContent: React.FC = () => {
     }
   };
 
-  const displayedPlans = insurancePlans.slice(0, visibleCount);
-  const hasMore = visibleCount < insurancePlans.length;
+  const targetDays = filter?.days ? parseInt(filter.days.trim(), 10) : null;
+  const isValidDaysSearch = targetDays !== null && !isNaN(targetDays) && targetDays > 0;
+
+  // Check if any plan matching the insurance type filter has an EXACT match for targetDays
+  const plansMatchingType = insurancePlans.filter((p) =>
+    matchesInsuranceType(p, filter?.insuranceType)
+  );
+
+  const hasAnyExactDayMatch =
+    isValidDaysSearch &&
+    plansMatchingType.some((plan) =>
+      getPlanDurations(plan).some((d) => d === targetDays)
+    );
+
+  const filteredPlans = insurancePlans.filter((plan) => {
+    if (filter) {
+      if (!matchesInsuranceType(plan, filter.insuranceType)) return false;
+
+      if (isValidDaysSearch) {
+        const durations = getPlanDurations(plan);
+        if (durations.length === 0) return false;
+
+        if (hasAnyExactDayMatch) {
+          // Exactly same days found on at least one plan -> show exact match
+          return durations.some((d) => d === targetDays);
+        } else {
+          // If exactly same days NOT found, show 5 up and 5 down days (e.g. 45 to 55 for 50)
+          const minDays = Math.max(1, targetDays - 5);
+          const maxDays = targetDays + 5;
+          return durations.some((d) => d >= minDays && d <= maxDays);
+        }
+      }
+    }
+    return true;
+  });
+
+  const isExternalFilterActive = Boolean(
+    filter &&
+      ((filter.insuranceType && filter.insuranceType !== "all") ||
+        (filter.days && filter.days.trim() !== ""))
+  );
+
+  const displayedPlans = filteredPlans.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredPlans.length;
 
   const handleSeeMore = () => {
     setVisibleCount((prev) => prev + LOAD_MORE_STEP);
@@ -105,7 +244,7 @@ export const TravelInsuranceDetailContent: React.FC = () => {
   return (
     <div className="space-y-12">
       {/* ── INSURANCE PLANS COMPARISON GRID ── */}
-      <div className="mb-8 text-center max-w-3xl mx-auto">
+      <div className="mb-4 text-center max-w-3xl mx-auto">
         <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#2D1347] tracking-tight">
           Tailored Plans for Trekking, Expeditions &amp; Holidays
         </h3>
@@ -114,43 +253,107 @@ export const TravelInsuranceDetailContent: React.FC = () => {
         </p>
       </div>
 
+      {isExternalFilterActive && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs max-w-5xl mx-auto">
+          <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
+            <span className="text-gray-500 font-semibold">Active Filter:</span>
+            {filter?.insuranceType && filter.insuranceType !== "all" && (
+              <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
+                {filter.insuranceType} Insurance
+              </span>
+            )}
+
+            <span className="text-xs text-gray-500 font-medium ml-1">
+              ({filteredPlans.length} {filteredPlans.length === 1 ? "plan" : "plans"} found)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-xl border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+          >
+            <X size={14} />
+            <span>Clear Filter</span>
+          </button>
+        </div>
+      )}
+
       {loading ? (
-        <div className="py-16 text-center">
-          <div className="w-10 h-10 border-4 border-gray-200 border-t-[#E11D48] rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-gray-500 mt-4">Loading insurance plans...</p>
+        <div className="py-20 text-center">
+          <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#2D1347] font-bold text-base">Loading insurance plans...</p>
         </div>
       ) : displayedPlans.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-sm font-bold text-gray-500">No insurance plans available.</p>
+        <div className="bg-white rounded-3xl p-10 sm:p-14 border border-gray-200/80 text-center space-y-4 shadow-sm my-4 max-w-xl mx-auto">
+          <div className="w-16 h-16 bg-purple-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+            <Search size={30} />
+          </div>
+          <h4 className="text-xl sm:text-2xl font-black text-[#2D1347]">
+            No Matching Insurance Plans Found
+          </h4>
+          <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+            We couldn't find any insurance plans matching your search criteria. Try adjusting your duration or clearing filters.
+          </p>
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="px-6 py-2.5 bg-[#2D1347] hover:bg-pink-600 text-white font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow-md active:scale-95"
+          >
+            Show All Insurance Plans
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-          {displayedPlans.map((plan, index) => (
-            <div
-              key={plan.id}
-              onClick={() => handleViewPlan(plan.id)}
-              className="rounded-3xl border border-gray-200/80 bg-[#FBFBFE] hover:bg-white hover:border-[#E11D48]/50 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1"
-            >
-              <div className="p-6 sm:p-7 pb-4">
-                {/* Plan Header */}
-                <div className="flex items-start justify-between gap-3 mb-3.5">
-                  <div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-block mb-1.5 ${getPlanBadgeClass(index)}`}>
-                      {getPlanBadge(index)}
-                    </span>
-                    <h4 className="text-base sm:text-lg font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
-                      {plan.name}
-                    </h4>
+          {displayedPlans.map((plan, index) => {
+            const matchedTier =
+              isValidDaysSearch && plan.pricing_tiers
+                ? plan.pricing_tiers.find((t) => {
+                    const d = Number(t.duration_days);
+                    if (hasAnyExactDayMatch) return d === targetDays;
+                    return d >= Math.max(1, targetDays - 5) && d <= targetDays + 5;
+                  })
+                : null;
+
+            return (
+              <div
+                key={plan.id}
+                onClick={() => handleViewPlan(plan.id)}
+                className="rounded-3xl border border-gray-200/80 bg-[#FBFBFE] hover:bg-white hover:border-[#E11D48]/50 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group hover:-translate-y-1"
+              >
+                <div className="p-6 sm:p-7 pb-4">
+                  {/* Plan Header */}
+                  <div className="flex items-start justify-between gap-3 mb-3.5">
+                    <div>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-block mb-1.5 ${getPlanBadgeClass(index)}`}>
+                        {getPlanBadge(index)}
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
+                        {plan.name}
+                      </h4>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="font-extrabold text-sm sm:text-base text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-2xl block shadow-2xs">
+                        View Pricing
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="font-extrabold text-sm sm:text-base text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-2xl block shadow-2xs">
-                      View Pricing
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">
-                      {plan.processing_time || "Processing time varies"}
-                    </span>
+
+                  {/* Available/Matched Duration Badges (API-fetched) */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                    {matchedTier ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-pink-700 bg-pink-50 border border-pink-200 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                        <Clock size={11} className="text-pink-600" />
+                        <span>{matchedTier.duration_days} Days</span>
+                      </span>
+                    ) : plan.pricing_tiers && plan.pricing_tiers.length > 0 ? (
+                      plan.pricing_tiers.map((tier) => (
+                        <span key={tier.id} className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-900 bg-purple-50 border border-purple-200/80 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                          <Clock size={11} className="text-[#E11D48]" />
+                          <span>{tier.duration_days} Days</span>
+                        </span>
+                      ))
+                    ) : null}
                   </div>
-                </div>
 
                 {/* Little Plan Details */}
                 <div className="border-t border-gray-100/90 pt-2.5 mt-1">
@@ -210,8 +413,9 @@ export const TravelInsuranceDetailContent: React.FC = () => {
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
       )}
 
       {/* ── SEE MORE PLANS BUTTON ── */}

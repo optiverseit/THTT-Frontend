@@ -575,48 +575,7 @@ export const ActivitiesDetailContent: React.FC<ActivitiesDetailContentProps> = (
 
       </div>
 
-      {/* ACTIVE SEARCH FILTER INDICATOR */}
-      {isExternalFilterActive && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-pink-50/70 border border-pink-100 p-3 sm:p-4 rounded-2xl">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-gray-500 font-semibold">Active Filter:</span>
-            {hasActivityTypeFilter && (
-              <span className="bg-pink-100 text-[#E11D48] font-bold px-2.5 py-1 rounded-lg">
-                {filter?.activityType === "Air"
-                  ? "Aerial Thrills"
-                  : filter?.activityType === "Water"
-                  ? "River Rapids"
-                  : filter?.activityType === "Land"
-                  ? "Gravity & Land"
-                  : filter?.activityType === "combo"
-                  ? "Multi-Activity Combos"
-                  : filter?.activityType}
-              </span>
-            )}
-            {hasLocationFilter && (
-              <span className="bg-purple-100 text-[#2D1347] font-bold px-2.5 py-1 rounded-lg">
-                Location: "{filter?.location?.trim()}"
-              </span>
-            )}
-            {hasActivityNameFilter && (
-              <span className="bg-pink-100 text-[#E11D48] font-bold px-2.5 py-1 rounded-lg">
-                Activity: "{filter?.activityName?.trim()}"
-              </span>
-            )}
-            <span className="text-gray-500 font-medium">
-              ({filteredActivities.length} {filteredActivities.length === 1 ? "activity" : "activities"} found)
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleClearAllFilters}
-            className="text-xs font-bold text-gray-500 hover:text-[#E11D48] flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <X size={14} />
-            <span>Clear Filter</span>
-          </button>
-        </div>
-      )}
+
 
       {/* ──────────────────────────────────────────────────── */}
       {/* SIDEBAR + PACKAGE CARDS */}

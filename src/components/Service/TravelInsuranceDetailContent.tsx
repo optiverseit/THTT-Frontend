@@ -253,38 +253,13 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
         </p>
       </div>
 
-      {isExternalFilterActive && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs max-w-5xl mx-auto">
-          <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
-            <span className="text-gray-500 font-semibold">Active Filter:</span>
-            {filter?.insuranceType && filter.insuranceType !== "all" && (
-              <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
-                {filter.insuranceType} Insurance
-              </span>
-            )}
-
-            <span className="text-xs text-gray-500 font-medium ml-1">
-              ({filteredPlans.length} {filteredPlans.length === 1 ? "plan" : "plans"} found)
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onClearFilter}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-xl border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
-          >
-            <X size={14} />
-            <span>Clear Filter</span>
-          </button>
-        </div>
-      )}
-
       {loading ? (
         <div className="py-20 text-center">
           <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#2D1347] font-bold text-base">Loading insurance plans...</p>
         </div>
       ) : displayedPlans.length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 sm:p-14 border border-gray-200/80 text-center space-y-4 shadow-sm my-4 max-w-xl mx-auto">
+        <div className="bg-white rounded-3xl p-10 sm:p-14 border border-gray-200/80 text-center space-y-4 shadow-sm my-4">
           <div className="w-16 h-16 bg-purple-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
             <Search size={30} />
           </div>

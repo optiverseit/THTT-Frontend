@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   MessageCircle,
   Users,
+  Briefcase,
 } from "lucide-react";
 
 import {
@@ -11,6 +12,7 @@ import {
 } from "../../../context/CurrencyContext";
 
 import { getPermitFeeTiers } from "../../../api/BackendApi";
+import { DEFAULT_WORK_PERMIT_TYPES, type WorkPermitType } from "./mockPermitData";
 
 interface CountryProps {
   id: number;
@@ -26,7 +28,42 @@ interface CountryProps {
 
 interface CostDetailsProps {
   country?: CountryProps;
+  /** Driven by parent state / sibling components */
+  selectedPermitType?: WorkPermitType;
+  /** Optional: called when the selected permit type changes so sibling components can sync */
+  onPermitTypeChange?: (permitType: WorkPermitType) => void;
+  /** Optional: called when the selected age tier changes so parent / modal can sync */
+  onAgeTierChange?: (tier: PermitFeeTier) => void;
 }
+
+export const DEFAULT_FEE_TIERS: PermitFeeTier[] = [
+  {
+    id: 1,
+    country_id: 1,
+    age_group_label: "18-35 Years",
+    min_age: 18,
+    max_age: 35,
+    welfare_fund_npr: "1500",
+    ssf_contribution_npr: "2000",
+    insurance_premium_npr: "3500",
+    service_fee_npr: "1000",
+    total_cost_npr: "8000",
+    status: "active",
+  },
+  {
+    id: 2,
+    country_id: 1,
+    age_group_label: "36-50 Years",
+    min_age: 36,
+    max_age: 50,
+    welfare_fund_npr: "1500",
+    ssf_contribution_npr: "2000",
+    insurance_premium_npr: "4500",
+    service_fee_npr: "1000",
+    total_cost_npr: "9000",
+    status: "active",
+  },
+];
 
 interface PermitFeeTier {
   id: number;
@@ -48,6 +85,9 @@ interface PermitFeeTier {
 
 const CostDetails: React.FC<CostDetailsProps> = ({
   country,
+  selectedPermitType: propSelectedPermitType,
+  onPermitTypeChange,
+  onAgeTierChange,
 }) => {
   const {
     selectedCurrency,
@@ -55,18 +95,16 @@ const CostDetails: React.FC<CostDetailsProps> = ({
     nprPerOneINR,
   } = useGlobalCurrency();
 
-  const [feeTiers, setFeeTiers] = useState<
-    PermitFeeTier[]
-  >([]);
+  // Controlled permit type: driven directly by prop from parent (matches AboutPermit pattern)
+  const permitTypes = DEFAULT_WORK_PERMIT_TYPES;
+  const selectedPermitType =
+    propSelectedPermitType ??
+    permitTypes[0];
 
-  const [selectedTierIndex, setSelectedTierIndex] =
-    useState<number>(0);
-
-  const [loading, setLoading] =
-    useState<boolean>(false);
-
-  const [error, setError] =
-    useState<string>("");
+  const [feeTiers, setFeeTiers] = useState<PermitFeeTier[]>([]);
+  const [selectedTierIndex, setSelectedTierIndex] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
   /*
    * Fetch permit fee tiers whenever country changes
@@ -83,40 +121,15 @@ const CostDetails: React.FC<CostDetailsProps> = ({
         setError("");
         setSelectedTierIndex(0);
 
-        const response = await getPermitFeeTiers(
-          country.id
-        );
+        const response = await getPermitFeeTiers(country.id);
 
-        console.log(
-          "PERMIT FEE TIERS:",
-          response.data
-        );
+        console.log("PERMIT FEE TIERS:", response.data);
 
-        /*
-         * Laravel pagination response:
-         *
-         * response.data
-         *   └── data
-         *        └── data
-         *             └── [...]
-         */
-        const tiers =
-          response.data?.data?.data ?? [];
-
-        setFeeTiers(
-          Array.isArray(tiers) ? tiers : []
-        );
-      } catch (error) {
-        console.error(
-          "Failed to fetch permit fee tiers:",
-          error
-        );
-
+        const tiers = response.data?.data?.data ?? [];
+        setFeeTiers(Array.isArray(tiers) && tiers.length > 0 ? tiers : []);
+      } catch (err) {
+        console.error("Failed to fetch permit fee tiers:", err);
         setFeeTiers([]);
-
-        setError(
-          "Unable to load permit fee information."
-        );
       } finally {
         setLoading(false);
       }
@@ -126,10 +139,28 @@ const CostDetails: React.FC<CostDetailsProps> = ({
   }, [country?.id]);
 
   /*
-   * Selected tier
+   * Fallback to default tiers if API has no tiers configured yet
    */
+  const effectiveFeeTiers: PermitFeeTier[] =
+    feeTiers.length > 0 ? feeTiers : DEFAULT_FEE_TIERS;
+
   const activeTier =
-    feeTiers[selectedTierIndex];
+    effectiveFeeTiers[selectedTierIndex] || effectiveFeeTiers[0];
+
+  // Stable ref for onAgeTierChange to prevent infinite render loops
+  const onAgeTierChangeRef = useRef(onAgeTierChange);
+  useEffect(() => {
+    onAgeTierChangeRef.current = onAgeTierChange;
+  }, [onAgeTierChange]);
+
+  // Notify parent only once on initial mount/data load
+  const hasNotifiedInitialTier = useRef(false);
+  useEffect(() => {
+    if (!hasNotifiedInitialTier.current && activeTier) {
+      hasNotifiedInitialTier.current = true;
+      onAgeTierChangeRef.current?.(activeTier);
+    }
+  }, [activeTier]);
 
   /*
    * Currency label
@@ -141,47 +172,37 @@ const CostDetails: React.FC<CostDetailsProps> = ({
       ? "INR"
       : "USD";
 
-  /*
-   * Convert backend string amount to number
-   *
-   * Example:
-   * "8000.00" -> 8000
-   */
-  const toNumber = (
-    amount: string | number
-  ): number => {
+  const toNumber = (amount: string | number): number => {
     const parsed = Number(amount);
-
-    return Number.isFinite(parsed)
-      ? parsed
-      : 0;
+    return Number.isFinite(parsed) ? parsed : 0;
   };
+
+  // Active permit adjustment relative to base tier
+  const activePermitAdjustment = selectedPermitType?.fee_adjustment_npr ?? 0;
+
+  // Final total NPR for active age group + active permit type
+  const finalTotalNpr = Math.max(
+    0,
+    toNumber(activeTier?.total_cost_npr ?? 8000) + activePermitAdjustment
+  );
 
   /*
    * WhatsApp Inquiry
    */
   const handleWhatsAppInquiry = () => {
-    if (!activeTier) {
-      return;
-    }
-
-    const totalNpr = toNumber(
-      activeTier.total_cost_npr
-    );
+    if (!activeTier) return;
 
     const tierPrice = displayPrice(
-      totalNpr,
+      finalTotalNpr,
       selectedCurrency,
       nprPerOneDollar,
       nprPerOneINR
     );
 
-    const countryName =
-      country?.country_name ??
-      "Work Permit";
+    const countryName = country?.country_name ?? "Work Permit";
 
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am inquiring about the Work Permit service for ${countryName}. Age Group: ${activeTier.age_group_label} (Total Fee: ${tierPrice}). Please guide me through the application process and requirements.`
+      `Hello Trip Himalaya! I am inquiring about the Work Permit service for ${countryName}. Age Group: ${activeTier.age_group_label}, Permit Type: ${selectedPermitType?.name ?? "Work Permit"} (Total Fee: ${tierPrice}). Please guide me through the application process and requirements.`
     );
 
     window.open(
@@ -202,9 +223,7 @@ const CostDetails: React.FC<CostDetailsProps> = ({
 
         {/* Header */}
         <div className="mb-4">
-
           <div className="flex items-center justify-between gap-2 flex-wrap">
-
             <h2 className="text-2xl font-bold text-purple-950">
               Permit Cost
             </h2>
@@ -214,181 +233,186 @@ const CostDetails: React.FC<CostDetailsProps> = ({
                 {country.country_name} Permit
               </span>
             )}
-
           </div>
 
           <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mt-1">
             Based on Age Groups ({currencyLabel})
           </p>
-
         </div>
 
         {/* LOADING */}
         {loading && (
           <div className="py-10 flex flex-col items-center justify-center">
-
             <div className="w-8 h-8 border-4 border-pink-100 border-t-[#E91E63] rounded-full animate-spin" />
-
             <p className="text-xs text-gray-400 font-semibold mt-3">
               Loading permit fees...
             </p>
-
           </div>
         )}
 
         {/* ERROR */}
         {!loading && error && (
           <div className="py-8 text-center">
-
             <p className="text-sm text-red-500 font-semibold">
               {error}
             </p>
-
           </div>
         )}
 
-        {/* NO TIERS */}
-        {!loading &&
-          !error &&
-          feeTiers.length === 0 && (
-            <div className="py-8 text-center">
-
-              <p className="text-sm text-gray-400 font-semibold">
-                No permit fee information available.
+        {/* FEE INFORMATION */}
+        {!loading && activeTier && (
+          <>
+            {/* AGE GROUP SELECTOR */}
+            <div className="mb-4">
+              <p className="text-[11px] font-bold text-gray-500 mb-1.5 flex items-center gap-1">
+                <Users size={12} className="text-[#E91E63]" />
+                Select Age Group:
               </p>
 
+              <div
+                className="grid gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-200/70"
+                style={{
+                  gridTemplateColumns: `repeat(${effectiveFeeTiers.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {effectiveFeeTiers.map((tier, idx) => {
+                  const isSelected = selectedTierIndex === idx;
+                  // Dynamic price for this age group under currently selected permit type
+                  const tierPrice = Math.max(
+                    0,
+                    toNumber(tier.total_cost_npr) + activePermitAdjustment
+                  );
+
+                  return (
+                    <button
+                      key={tier.id}
+                      onClick={() => {
+                        setSelectedTierIndex(idx);
+                        onAgeTierChangeRef.current?.(tier);
+                      }}
+                      className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-[#E91E63] text-white shadow-md shadow-pink-500/20 scale-[1.02]"
+                          : "text-gray-600 hover:text-[#2D1347] hover:bg-white/80"
+                      }`}
+                    >
+                      <div className="leading-tight truncate">
+                        {tier.age_group_label}
+                      </div>
+
+                      <div
+                        className={`text-[9px] mt-0.5 ${
+                          isSelected ? "text-pink-100" : "text-gray-400 font-semibold"
+                        }`}
+                      >
+                        {displayPrice(
+                          tierPrice,
+                          selectedCurrency,
+                          nprPerOneDollar,
+                          nprPerOneINR
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          )}
 
-        {/* FEE INFORMATION */}
-        {!loading &&
-          !error &&
-          feeTiers.length > 0 &&
-          activeTier && (
-            <>
+            {/* ── WORK PERMIT TYPE SELECTOR ── */}
+            <div className="mb-5">
+              <p className="text-[11px] font-bold text-gray-500 mb-1.5 flex items-center gap-1">
+                <Briefcase size={12} className="text-[#E91E63]" />
+                Select Permit Type:
+              </p>
 
-              {/* AGE GROUP SELECTOR */}
-              <div className="mb-4">
+              <div className="space-y-2">
+                {permitTypes.map((pt) => {
+                  const isSelected = selectedPermitType.id === pt.id;
+                  const ptAdjustment =
+                    pt.fee_adjustment_npr ?? (pt.base_fee_npr - 8000);
+                  const ptPrice = Math.max(
+                    0,
+                    toNumber(activeTier.total_cost_npr) + ptAdjustment
+                  );
 
-                <p className="text-[11px] font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-
-                  <Users
-                    size={12}
-                    className="text-[#E91E63]"
-                  />
-
-                  Select Age Group:
-
-                </p>
-
-                <div
-                  className="grid gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-200/70"
-                  style={{
-                    gridTemplateColumns: `repeat(${feeTiers.length}, minmax(0, 1fr))`,
-                  }}
-                >
-
-                  {feeTiers.map(
-                    (tier, idx) => {
-                      const isSelected =
-                        selectedTierIndex === idx;
-
-                      const totalNpr =
-                        toNumber(
-                          tier.total_cost_npr
-                        );
-
-                      return (
-                        <button
-                          key={tier.id}
-                          onClick={() =>
-                            setSelectedTierIndex(
-                              idx
-                            )
-                          }
-                          className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  return (
+                    <div
+                      key={pt.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onPermitTypeChange?.(pt)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") onPermitTypeChange?.(pt);
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                        isSelected
+                          ? "border-[#E91E63] bg-pink-50/40 ring-1 ring-[#E91E63]"
+                          : "border-gray-200 bg-gray-50/50 hover:border-gray-300"
+                      }`}
+                    >
+                      {/* Left: radio dot + name */}
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`w-3 h-3 rounded-full flex-shrink-0 transition-all ${
                             isSelected
-                              ? "bg-[#E91E63] text-white shadow-md shadow-pink-500/20 scale-[1.02]"
-                              : "text-gray-600 hover:text-[#2D1347] hover:bg-white/80"
+                              ? "bg-[#E91E63] shadow shadow-pink-400/40"
+                              : "bg-gray-200 border border-gray-300"
+                          }`}
+                        />
+                        <div>
+                          <p className="text-xs font-black text-[#200B3B] capitalize">{pt.name}</p>
+                        </div>
+                      </div>
+
+                      {/* Right: Dynamic price badge based on selected age group */}
+                      <div className="text-right flex-shrink-0">
+                        <span
+                          className={`text-xs font-black px-2.5 py-1 rounded-xl transition-all ${
+                            isSelected
+                              ? "bg-[#E91E63] text-white shadow-xs"
+                              : "bg-white text-gray-700 border border-gray-200"
                           }`}
                         >
-
-                          <div className="leading-tight truncate">
-                            {
-                              tier.age_group_label
-                            }
-                          </div>
-
-                          <div
-                            className={`text-[9px] mt-0.5 ${
-                              isSelected
-                                ? "text-pink-100"
-                                : "text-gray-400"
-                            }`}
-                          >
-
-                            {displayPrice(
-                              totalNpr,
-                              selectedCurrency,
-                              nprPerOneDollar,
-                              nprPerOneINR
-                            )}
-
-                          </div>
-
-                        </button>
-                      );
-                    }
-                  )}
-
-                </div>
-
+                          {displayPrice(
+                            ptPrice,
+                            selectedCurrency,
+                            nprPerOneDollar,
+                            nprPerOneINR
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* TOTAL COST */}
-              <div className="rounded-2xl p-4 bg-gradient-to-br from-[#2D1347] to-[#45186b] text-white shadow-md mb-4">
+            {/* TOTAL COST */}
+            <div className="rounded-2xl p-4 bg-gradient-to-br from-[#2D1347] to-[#45186b] text-white shadow-md mb-4">
+              <span className="text-[10px] font-semibold text-pink-300 uppercase tracking-widest block">
+                Total Package Fee ({activeTier.age_group_label} • {selectedPermitType?.name})
+              </span>
 
-                <span className="text-[10px] font-semibold text-pink-300 uppercase tracking-widest block">
-                  Total Package Fee (
-                  {activeTier.age_group_label})
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                  {displayPrice(
+                    finalTotalNpr,
+                    selectedCurrency,
+                    nprPerOneDollar,
+                    nprPerOneINR
+                  )}
                 </span>
 
-                <div className="flex items-baseline gap-1 mt-0.5">
-
-                  <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-
-                    {displayPrice(
-                      toNumber(
-                        activeTier.total_cost_npr
-                      ),
-                      selectedCurrency,
-                      nprPerOneDollar,
-                      nprPerOneINR
-                    )}
-
+                {selectedCurrency !== "nepali" && (
+                  <span className="text-[10px] text-pink-200/80 font-medium">
+                    (≈ NPR {finalTotalNpr.toLocaleString("en-IN")})
                   </span>
-
-                  {selectedCurrency !==
-                    "nepali" && (
-                    <span className="text-[10px] text-pink-200/80 font-medium">
-
-                      (≈ NPR{" "}
-                      {toNumber(
-                        activeTier.total_cost_npr
-                      ).toLocaleString(
-                        "en-IN"
-                      )}
-                      )
-
-                    </span>
-                  )}
-
-                </div>
-
+                )}
               </div>
+            </div>
 
-              {/* FEE BREAKDOWN */}
-              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-4">
+              {/* FEE BREAKDOWN — hidden for now; remove 'hidden' to show again */}
+              <div className="hidden bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-4">
 
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-3">
                   Fee Breakdown

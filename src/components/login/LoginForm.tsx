@@ -229,6 +229,11 @@ const LoginForm = () => {
       localStorage.setItem("nationality", user.nationality);
     }
 
+    if (user?.avatar) {
+  localStorage.setItem("avatar", user.avatar);
+}
+
+
     login({
       name: fullName || user?.name,
       email:
@@ -239,6 +244,7 @@ const LoginForm = () => {
       gender: user?.gender,
       address: user?.address,
       nationality: user?.nationality,
+      avatar: user?.avatar,
     });
   };
 
@@ -258,17 +264,17 @@ const LoginForm = () => {
       const loginData =
         loginMethod === "email"
           ? {
-              email:
-                data.email.trim(),
-              password:
-                data.password,
-            }
+            email:
+              data.email.trim(),
+            password:
+              data.password,
+          }
           : {
-              phone:
-                data.phone.trim(),
-              password:
-                data.password,
-            };
+            phone:
+              data.phone.trim(),
+            password:
+              data.password,
+          };
 
       const response =
         await loginUser(loginData);
@@ -299,7 +305,7 @@ const LoginForm = () => {
       } else {
         setApiError(
           responseData?.message ||
-            "Invalid login response."
+          "Invalid login response."
         );
       }
     } catch (error: any) {
@@ -310,7 +316,7 @@ const LoginForm = () => {
 
       setApiError(
         error.response?.data?.message ||
-          "Unable to login. Please try again."
+        "Unable to login. Please try again."
       );
     } finally {
       setLoading(false);
@@ -367,7 +373,7 @@ const LoginForm = () => {
         } else {
           setApiError(
             responseData?.message ||
-              "Invalid Google login response."
+            "Invalid Google login response."
           );
         }
       } catch (error: any) {
@@ -379,7 +385,7 @@ const LoginForm = () => {
         setApiError(
           error.response?.data
             ?.message ||
-            "Google login failed. Please try again."
+          "Google login failed. Please try again."
         );
       } finally {
         setLoading(false);
@@ -417,13 +423,13 @@ const LoginForm = () => {
 
                 email:
                   method ===
-                  "email"
+                    "email"
                     ? prev.email
                     : "",
 
                 phone:
                   method ===
-                  "phone"
+                    "phone"
                     ? prev.phone
                     : "",
               }));
@@ -431,12 +437,11 @@ const LoginForm = () => {
               setErrors({});
               setApiError("");
             }}
-            className={`rounded-lg ${
-              loginMethod ===
-              method
+            className={`rounded-lg ${loginMethod ===
+                method
                 ? "bg-pink-500 text-white"
                 : ""
-            } cursor-pointer w-full`}
+              } cursor-pointer w-full`}
           >
             <p className="py-1 tracking-widest text-sm">
               {method.toUpperCase()}
@@ -451,34 +456,33 @@ const LoginForm = () => {
         <div className="flex flex-col">
           <label className="text-xs tracking-widest mb-1.5">
             {loginMethod ===
-            "email"
+              "email"
               ? "EMAIL ADDRESS"
               : "PHONE"}
           </label>
 
           <div
-            className={`input w-full rounded-xl backdrop-blur-md bg-gray-600/40 focus:outline-none ${
-              errors.emailOrPhone
+            className={`input w-full rounded-xl backdrop-blur-md bg-gray-600/40 focus:outline-none ${errors.emailOrPhone
                 ? "border border-red-500/70"
                 : ""
-            }`}
+              }`}
           >
             <input
               type={
                 loginMethod ===
-                "email"
+                  "email"
                   ? "email"
                   : "tel"
               }
               name={
                 loginMethod ===
-                "email"
+                  "email"
                   ? "email"
                   : "phone"
               }
               value={
                 loginMethod ===
-                "email"
+                  "email"
                   ? data.email
                   : data.phone
               }
@@ -487,7 +491,7 @@ const LoginForm = () => {
               }
               placeholder={
                 loginMethod ===
-                "email"
+                  "email"
                   ? "you@example.com"
                   : "+977 9800000000"
               }
@@ -496,14 +500,14 @@ const LoginForm = () => {
               }
               autoComplete={
                 loginMethod ===
-                "email"
+                  "email"
                   ? "email"
                   : "tel"
               }
             />
 
             {loginMethod ===
-            "email" ? (
+              "email" ? (
               <Mail size={14} />
             ) : (
               <Phone size={14} />
@@ -527,11 +531,10 @@ const LoginForm = () => {
           </label>
 
           <div
-            className={`input w-full rounded-xl backdrop-blur-md bg-gray-600/40 focus:outline-none ${
-              errors.password
+            className={`input w-full rounded-xl backdrop-blur-md bg-gray-600/40 focus:outline-none ${errors.password
                 ? "border border-red-500/70"
                 : ""
-            }`}
+              }`}
           >
             <input
               type={

@@ -64,6 +64,9 @@ export const uploadUserProfilePicture = (data: FormData) => {
   });
 };
 
+export const getUserById = (id: number | string) => {
+  return axiosInstance.get(`/user/show/${id}`);
+};
 
 export const getPackagesByCategory = (category: string, page = 1) => {
   return axiosInstance.get("/packageByCategory", {

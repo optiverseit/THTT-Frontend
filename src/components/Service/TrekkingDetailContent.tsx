@@ -382,7 +382,7 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
         </div>
 
         {/* Filter Pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 scrollbar-none md:flex-wrap">
           {[
             {
               id: "all",
@@ -415,7 +415,7 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
                 setActiveTab(tab.id);
                 setVisibleCount(9);
               }}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-[#2D1347] text-white shadow-md"
                   : "bg-white text-gray-700 border border-gray-200/80 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E11D48] shadow-2xs"

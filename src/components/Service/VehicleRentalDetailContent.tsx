@@ -1169,15 +1169,6 @@ const VehicleRentalDetailContent: React.FC = () => {
                         WhatsApp
                       </a>
 
-                      {/* Instant WhatsApp Inquiry */}
-                      <button
-                        type="button"
-                        onClick={() => handleWhatsAppInquiry(vehicle)}
-                        className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-emerald-600 transition-colors mt-2.5 cursor-pointer group"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
-                        <span>INSTANT INQUIRY</span>
-                      </button>
 
                       {/* Short Note: Admin seat assignment verification below Book Now & Instant Inquiry (hidden if trip is Private) */}
                       {vehicle.tripType?.toLowerCase() !== "private" && (

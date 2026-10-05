@@ -349,15 +349,7 @@ export const HotelBookingCard: React.FC<HotelBookingCardProps> = ({
           </button>
         </div>
 
-        <div
-          onClick={handleWhatsAppInquiry}
-          className="flex items-center justify-center gap-1.5 mt-2.5 text-[10px] font-bold text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer group/inq"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-          <span className="group-hover/inq:underline uppercase tracking-wider">
-            INSTANT INQUIRY
-          </span>
-        </div>
+
       </div>
     </div>
   );

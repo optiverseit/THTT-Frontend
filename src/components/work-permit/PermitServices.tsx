@@ -14,8 +14,13 @@ interface Country {
   display_order: number;
 }
 
+export interface PermitServiceItem {
+  country: Country;
+  permit_type: string;
+}
+
 interface PermitServicesProps {
-  countries?: Country[];
+  permitServices?: PermitServiceItem[];
   filterCountryId?: string;
   filterPermitType?: string;
   onClearFilter?: () => void;
@@ -23,13 +28,21 @@ interface PermitServicesProps {
 }
 
 const PERMIT_TYPE_LABELS: Record<string, string> = {
-  new: "New Work Permit",
-  renew: "Renewal Permit",
-  individual: "Individual Permit",
+  NEW_LABOUR_PERMIT: "New Work Permit",
+  RENEWAL_PERMIT: "Renewal Permit",
+  INDIVIDUAL_PERMIT: "Individual Permit",
+  LEGALIZATION_ATTESTATION: "Legalization / Attestation",
+};
+
+const FILTER_TO_API_TYPE: Record<string, string> = {
+  new: "NEW_LABOUR_PERMIT",
+  renew: "RENEWAL_PERMIT",
+  individual: "INDIVIDUAL_PERMIT",
+  legalization: "LEGALIZATION_ATTESTATION",
 };
 
 const PermitServices = ({
-  countries = [],
+  permitServices = [],
   filterCountryId = "",
   filterPermitType = "all",
   onClearFilter,
@@ -38,24 +51,50 @@ const PermitServices = ({
   const navigate = useNavigate();
 
   const isCountryFiltered = filterCountryId !== "";
-  const isPermitTypeFiltered = filterPermitType !== "" && filterPermitType !== "all";
-  const isFiltered = isCountryFiltered || isPermitTypeFiltered;
 
-  // Filter by country if one is selected
-  const visibleCountries = isCountryFiltered
-    ? countries.filter(
-        (country) => String(country.id) === String(filterCountryId)
-      )
-    : countries;
+  const isPermitTypeFiltered =
+    filterPermitType !== "" && filterPermitType !== "all";
 
-  // Navigate to detail with permit type query param so the detail page can pre-select the type
-  const handleCountryClick = (countryId: number) => {
+  const isFiltered =
+    isCountryFiltered || isPermitTypeFiltered;
+
+  const backendPermitType =
+    FILTER_TO_API_TYPE[filterPermitType] ?? filterPermitType;
+
+  // Filter using both country and permit type
+  const visiblePermitServices = permitServices.filter((item) => {
+    const matchesCountry =
+      !isCountryFiltered ||
+      String(item.country.id) === String(filterCountryId);
+
+    const matchesPermitType =
+      !isPermitTypeFiltered ||
+      item.permit_type === backendPermitType;
+
+    return matchesCountry && matchesPermitType;
+  });
+
+  const selectedCountryName =
+    permitServices.find(
+      (item) =>
+        String(item.country.id) === String(filterCountryId)
+    )?.country.country_name ?? filterCountryId;
+
+  // Every card carries its own permit type.
+  // This is important because UAE NEW and UAE RENEWAL
+  // must go to the same country detail page but with
+  // different permitType query parameters.
+  const handleCountryClick = (
+    countryId: number,
+    permitType: string
+  ) => {
     const params = new URLSearchParams();
-    if (isPermitTypeFiltered) {
-      params.set("permitType", filterPermitType);
-    }
-    const qs = params.toString();
-    navigate(`/permit-details/${countryId}${qs ? `?${qs}` : ""}`);
+
+    params.set("permitType", permitType);
+
+    navigate(
+      `/permit-details/${countryId}?${params.toString()}`
+    );
   };
 
   return (
@@ -69,16 +108,21 @@ const PermitServices = ({
 
           {isFiltered && (
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+
               {isCountryFiltered && (
                 <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-xs font-bold">
-                  Country: {visibleCountries[0]?.country_name ?? filterCountryId}
+                  Country: {selectedCountryName}
                 </span>
               )}
+
               {isPermitTypeFiltered && (
                 <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold">
-                  Type: {PERMIT_TYPE_LABELS[filterPermitType] ?? filterPermitType}
+                  Type:{" "}
+                  {PERMIT_TYPE_LABELS[backendPermitType] ??
+                    backendPermitType}
                 </span>
               )}
+
               <button
                 onClick={onClearFilter}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-full border border-pink-200 transition-all cursor-pointer shadow-sm active:scale-95"
@@ -87,16 +131,22 @@ const PermitServices = ({
                 <X size={13} />
                 Clear Filter
               </button>
+
             </div>
           )}
         </header>
 
         {isLoading ? (
           <div className="py-20 text-center">
+
             <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-[#2D1347] font-bold text-base">Loading work permits...</p>
+
+            <p className="text-[#2D1347] font-bold text-base">
+              Loading work permits...
+            </p>
+
           </div>
-        ) : visibleCountries.length > 0 ? (
+        ) : visiblePermitServices.length > 0 ? (
           <div
             className={`grid gap-4 sm:gap-6 ${
               isCountryFiltered
@@ -104,59 +154,70 @@ const PermitServices = ({
                 : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
             }`}
           >
-            {visibleCountries.map((country) => (
-              <div
-                key={country.id}
-                onClick={() => handleCountryClick(country.id)}
-                className={`rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col items-center justify-between text-center border cursor-pointer group ${
-                  isCountryFiltered
-                    ? "border-pink-400 ring-2 ring-pink-300 shadow-lg w-56 sm:w-64"
-                    : "border-gray-100 hover:border-pink-300"
-                }`}
-              >
 
-                {/* FLAG */}
-                <div className="p-2 mb-2">
-                  {country.flag_code ? (
-                    <ReactCountryFlag
-                      svg
-                      countryCode={country.flag_code}
-                      className="rounded-lg shadow-sm text-4xl sm:text-5xl"
-                      style={{
-                        width: "2.5em",
-                        height: "2.5em",
-                      }}
-                    />
-                  ) : (
-                    <div className="w-[100px] h-[100px] rounded-lg bg-purple-50 flex items-center justify-center text-pink-500">
-                      <Globe size={48} />
-                    </div>
-                  )}
-                </div>
+            {visiblePermitServices.map((item) => {
+              const country = item.country;
+              const permitType = item.permit_type;
 
-                {/* COUNTRY NAME */}
-                <h3 className="text-purple-950 font-extrabold text-base sm:text-lg mb-1 group-hover:text-pink-600 transition-colors">
-                  {country.country_name}
-                </h3>
+              return (
+                <div
+                  key={`${country.id}-${permitType}`}
+                  onClick={() =>
+                    handleCountryClick(
+                      country.id,
+                      permitType
+                    )
+                  }
+                  className={`rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col items-center justify-between text-center border cursor-pointer group ${
+                    isCountryFiltered
+                      ? "border-pink-400 ring-2 ring-pink-300 shadow-lg w-56 sm:w-64"
+                      : "border-gray-100 hover:border-pink-300"
+                  }`}
+                >
 
-                {/* DESCRIPTION */}
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3">
-                  {country.short_description}
-                </p>
+                  {/* FLAG */}
+                  <div className="p-2 mb-2">
+                    {country.flag_code ? (
+                      <ReactCountryFlag
+                        svg
+                        countryCode={country.flag_code}
+                        className="rounded-lg shadow-sm text-4xl sm:text-5xl"
+                        style={{
+                          width: "2.5em",
+                          height: "2.5em",
+                        }}
+                      />
+                    ) : (
+                      <div className="w-[100px] h-[100px] rounded-lg bg-purple-50 flex items-center justify-center text-pink-500">
+                        <Globe size={48} />
+                      </div>
+                    )}
+                  </div>
 
-                {/* PERMIT TYPE BADGE — shown when a type is filtered */}
-                {isPermitTypeFiltered && (
+                  {/* COUNTRY NAME */}
+                  <h3 className="text-purple-950 font-extrabold text-base sm:text-lg mb-1 group-hover:text-pink-600 transition-colors">
+                    {country.country_name}
+                  </h3>
+
+                  {/* DESCRIPTION */}
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3">
+                    {country.short_description}
+                  </p>
+
+                  {/* PERMIT TYPE BADGE */}
                   <span className="mb-2 inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-purple-50 border border-purple-200 text-purple-700">
-                    {PERMIT_TYPE_LABELS[filterPermitType] ?? filterPermitType}
+                    {PERMIT_TYPE_LABELS[permitType] ??
+                      permitType}
                   </span>
-                )}
 
-                <span className="rounded-full tracking-wider bg-purple-50 group-hover:bg-pink-600 group-hover:text-white transition-colors text-purple-950 text-xs font-bold w-full py-2 block">
-                  View Details
-                </span>
+                  <span className="rounded-full tracking-wider bg-purple-50 group-hover:bg-pink-600 group-hover:text-white transition-colors text-purple-950 text-xs font-bold w-full py-2 block">
+                    View Details
+                  </span>
 
-              </div>
-            ))}
+                </div>
+              );
+            })}
+
           </div>
         ) : (
           <div className="text-center py-12 text-gray-400 text-sm font-semibold">
@@ -166,10 +227,12 @@ const PermitServices = ({
 
         {/* SEE ALL */}
         <div className="flex justify-center mt-4 sm:mt-6">
+
           <div
             onClick={onClearFilter}
             className="rounded-2xl sm:rounded-3xl bg-white shadow-sm hover:shadow-xl transition-all p-4 sm:p-5 flex flex-col justify-center items-center text-center border border-gray-100 cursor-pointer group w-40 sm:w-48"
           >
+
             <div className="p-3 sm:p-4 bg-pink-600 group-hover:bg-pink-700 transition-colors flex items-center rounded-2xl justify-center text-white mb-3">
               <ArrowRight
                 size={24}
@@ -184,6 +247,7 @@ const PermitServices = ({
             <p className="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-wider">
               COUNTRIES
             </p>
+
           </div>
         </div>
 

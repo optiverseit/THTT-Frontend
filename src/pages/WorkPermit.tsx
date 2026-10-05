@@ -6,7 +6,7 @@ import { workPermitTestimonials } from "../assets/data/mockData";
 import WorkPermitProcess from "../components/work-permit/WorkPermitProcess";
 import WorkPermitFaq from "../components/work-permit/WorkPermitFaq";
 import PreFooter from "../components/reusable/PreFooter";
-import { getCountries } from "../api/BackendApi";
+import { getGroupedWorkPermitCountries } from "../api/BackendApi";
 
 interface Country {
   id: number;
@@ -22,39 +22,80 @@ interface Country {
   updated_at?: string;
 }
 
+interface PermitServiceItem {
+  country: Country;
+  permit_type: string;
+}
+
 const WorkPermit = () => {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [appliedCountry, setAppliedCountry] = useState("");
-  const [selectedPermitType, setSelectedPermitType] = useState("all");
-  const [appliedPermitType, setAppliedPermitType] = useState("all");
 
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [selectedPermitType, setSelectedPermitType] =
+    useState("all");
+
+  const [appliedPermitType, setAppliedPermitType] =
+    useState("all");
+
+  const [permitServices, setPermitServices] = useState<
+    PermitServiceItem[]
+  >([]);
+
+  const [countriesLoading, setCountriesLoading] =
+    useState(true);
 
   useEffect(() => {
-    const fetchCountries = async () => {
+    const fetchPermitServices = async () => {
       try {
         setCountriesLoading(true);
 
-        const response = await getCountries();
+        const response =
+          await getGroupedWorkPermitCountries();
 
-        // Laravel paginated response:
-        // response.data.data.data = actual countries array
-        const countryData = response.data?.data?.data ?? [];
+        console.log(
+          "GROUPED WORK PERMIT COUNTRIES:",
+          response.data
+        );
 
-        setCountries(
-          Array.isArray(countryData) ? countryData : []
+        const permitData =
+          response.data?.data ?? [];
+
+        setPermitServices(
+          Array.isArray(permitData)
+            ? permitData
+            : []
         );
       } catch (error) {
-        console.error("Failed to fetch countries:", error);
-        setCountries([]);
+        console.error(
+          "Failed to fetch work permit countries:",
+          error
+        );
+
+        setPermitServices([]);
       } finally {
         setCountriesLoading(false);
       }
     };
 
-    fetchCountries();
+    fetchPermitServices();
   }, []);
+
+  /*
+   * The grouped API can return the same country more
+   * than once because one country can support multiple
+   * permit types.
+   *
+   * The SEARCH dropdown should still show each country
+   * only once.
+   */
+  const countries = Array.from(
+    new Map(
+      permitServices.map((item) => [
+        item.country.id,
+        item.country,
+      ])
+    ).values()
+  );
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -138,7 +179,9 @@ const WorkPermit = () => {
                         className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
                         value={selectedCountry}
                         onChange={(e) =>
-                          setSelectedCountry(e.target.value)
+                          setSelectedCountry(
+                            e.target.value
+                          )
                         }
                         disabled={countriesLoading}
                       >
@@ -152,7 +195,9 @@ const WorkPermit = () => {
                         {countries.map((country) => (
                           <option
                             key={country.id}
-                            value={String(country.id)}
+                            value={String(
+                              country.id
+                            )}
                           >
                             {country.country_name}
                           </option>
@@ -183,7 +228,9 @@ const WorkPermit = () => {
                         className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
                         value={selectedPermitType}
                         onChange={(e) =>
-                          setSelectedPermitType(e.target.value)
+                          setSelectedPermitType(
+                            e.target.value
+                          )
                         }
                       >
 
@@ -252,7 +299,6 @@ const WorkPermit = () => {
                     desc: "We Handle All Paperwork",
                   },
                 ].map((stat, idx) => {
-
                   const Icon = stat.icon;
 
                   return (
@@ -295,7 +341,7 @@ const WorkPermit = () => {
       <div id="section-services">
 
         <PermitServices
-          countries={countries}
+          permitServices={permitServices}
           filterCountryId={appliedCountry}
           filterPermitType={appliedPermitType}
           isLoading={countriesLoading}
@@ -335,7 +381,6 @@ const WorkPermit = () => {
         btn1="Search Permit"
         btn2="WhatsApp Inquiry"
       />
-
     </>
   );
 };

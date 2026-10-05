@@ -18,20 +18,28 @@ interface CountryProps {
   display_order: number;
 }
 
+interface DocumentRequirement {
+  id: number;
+  country_id: number;
+  permit_type: string;
+  document_type: string;
+  title: string;
+  description: string | null;
+  is_required: boolean;
+  display_order: number;
+  status: string;
+}
+
 interface AboutPermitProps {
   id?: string;
   country: CountryProps;
+  documentRequirements: DocumentRequirement[];
 }
 
-const AboutPermit = ({ country }: AboutPermitProps) => {
-  const reqDocs = [
-    "Original Passport (Scan Copy)",
-    "Valid Job Offer Letter/Visa Copy",
-    "Experience Certificates (if applicable)",
-    "MRP Size Photo (Recent)",
-    "Police Clearance Report (if required)",
-  ];
-
+const AboutPermit = ({
+  country,
+  documentRequirements,
+}: AboutPermitProps) => {
   const included = [
     "Govt. Application Filling",
     "FEO Coordination",
@@ -60,7 +68,10 @@ const AboutPermit = ({ country }: AboutPermitProps) => {
         <div className="p-5 sm:p-8 md:p-10">
           <div>
             <header className="flex items-center gap-2">
-              <FileText size={18} className="text-pink-500" />
+              <FileText
+                size={18}
+                className="text-pink-500"
+              />
 
               <p className="text-purple-950 text-lg sm:text-xl font-bold mb-2">
                 About {country.country_name} Permit
@@ -68,7 +79,8 @@ const AboutPermit = ({ country }: AboutPermitProps) => {
             </header>
 
             <p className="text-gray-500 font-semibold py-2 sm:py-4 mb-4 sm:mb-6 text-sm sm:text-base">
-              {country.short_description || "No description available."}
+              {country.short_description ||
+                "No description available."}
             </p>
           </div>
 
@@ -82,16 +94,26 @@ const AboutPermit = ({ country }: AboutPermitProps) => {
                 REQUIREMENT DOCUMENTS
               </h1>
 
-              <ul className="list-disc marker:text-pink-500 list-inside mt-2">
-                {reqDocs.map((item, index) => (
-                  <li
-                    key={index}
-                    className="text-gray-500 font-semibold mb-1 text-sm sm:text-base"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
+              {documentRequirements.length > 0 ? (
+                <ul className="list-disc marker:text-pink-500 list-inside mt-2">
+                  {documentRequirements.map(
+                    (document) => (
+                      <li
+                        key={document.id}
+                        className="text-gray-500 font-semibold mb-1 text-sm sm:text-base"
+                      >
+                        {document.title}
+                        {!document.is_required &&
+                          " (Optional)"}
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="text-gray-400 font-semibold mt-2 text-sm">
+                  No document requirements available.
+                </p>
+              )}
             </div>
 
             <div className="w-full sm:w-[48%]">
@@ -100,7 +122,7 @@ const AboutPermit = ({ country }: AboutPermitProps) => {
                   size={16}
                   className="text-pink-500 flex-shrink-0"
                 />
-                WHAT'S INCLUDED
+                WHAT&apos;S INCLUDED
               </h1>
 
               <ul className="list-disc marker:text-green-500 list-inside mt-2">

@@ -417,35 +417,6 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
         </div>
       </div>
 
-      {/* ACTIVE SEARCH FILTER INDICATOR */}
-      {isExternalFilterActive && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-pink-50/70 border border-pink-100 p-3 sm:p-4 rounded-2xl">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-gray-500 font-semibold">Active Filter:</span>
-            {filter?.destinationType && filter.destinationType !== "all" && (
-              <span className="bg-pink-100 text-[#E11D48] font-bold px-2.5 py-1 rounded-lg">
-                {filter.destinationType === "domestic" ? "Domestic Tour" : "International Tour"}
-              </span>
-            )}
-            {filter?.location && filter.location.trim() !== "" && (
-              <span className="bg-purple-100 text-[#2D1347] font-bold px-2.5 py-1 rounded-lg">
-                Location: "{filter.location.trim()}"
-              </span>
-            )}
-            <span className="text-gray-500 font-medium">
-              ({filteredTours.length} {filteredTours.length === 1 ? "tour" : "tours"} found)
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleClearAllFilters}
-            className="text-xs font-bold text-gray-500 hover:text-[#E11D48] flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <X size={14} />
-            <span>Clear Filter</span>
-          </button>
-        </div>
-      )}
 
       {/* PACKAGES GRID */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100">

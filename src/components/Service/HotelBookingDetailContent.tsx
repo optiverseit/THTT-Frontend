@@ -498,6 +498,22 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
       filter?.checkOutDate
   );
 
+  const isAnyFilterActive = Boolean(
+    hasActiveSearchBarFilter ||
+      priceRange < 500000 ||
+      selectedRating > 0 ||
+      selectedKeywords.length > 0 ||
+      selectedBadges.length > 0
+  );
+
+  const handleClearAllFilters = () => {
+    setPriceRange(500000);
+    setSelectedRating(0);
+    setSelectedKeywords([]);
+    setSelectedBadges([]);
+    onClearFilter?.();
+  };
+
   const handleBookHotel = (hotel: Hotel) => {
     setSelectedBookingItem({
       id: hotel.backendId || hotel.id,
@@ -557,72 +573,7 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
             </p>
           </div>
 
-          {/* Active Search Bar Badge Pill */}
-          {hasActiveSearchBarFilter && (
-            <div className="flex items-center gap-2 bg-pink-50 border border-pink-200 px-3.5 py-1.5 rounded-full self-start sm:self-auto">
-              <span className="text-[11px] font-black text-[#E91E63] uppercase tracking-wider">
-                Search Bar Filter Applied
-              </span>
-              {onClearFilter && (
-                <button
-                  type="button"
-                  onClick={onClearFilter}
-                  className="text-gray-400 hover:text-[#E91E63] cursor-pointer ml-1"
-                  title="Clear search bar filter"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          )}
         </div>
-
-        {/* Active Filter Criteria Summary Bar */}
-        {hasActiveSearchBarFilter && (
-          <div className="bg-white rounded-2xl p-4 border border-pink-100 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-gray-400 font-bold uppercase text-[10px] tracking-wider">
-                Active Criteria:
-              </span>
-              {filter?.region && filter.region !== "all" && (
-                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
-                  <Globe size={11} />
-                  <span>Region: {filter.region === "domestic" ? "Domestic" : "International"}</span>
-                </span>
-              )}
-              {filter?.location?.trim() && (
-                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
-                  <MapPin size={11} />
-                  <span>Location: {filter.location}</span>
-                </span>
-              )}
-              {filter?.hotelName?.trim() && (
-                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
-                  <Building2 size={11} />
-                  <span>Hotel: {filter.hotelName}</span>
-                </span>
-              )}
-              {(filter?.checkInDate || filter?.checkOutDate) && (
-                <span className="inline-flex items-center gap-1 bg-pink-100/60 text-[#E91E63] font-bold px-2.5 py-1 rounded-full">
-                  <Calendar size={11} />
-                  <span>
-                    Dates: {filter.checkInDate || "Any"} to {filter.checkOutDate || "Any"}
-                  </span>
-                </span>
-              )}
-            </div>
-
-            {onClearFilter && (
-              <button
-                type="button"
-                onClick={onClearFilter}
-                className="text-[11px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                Clear Search
-              </button>
-            )}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start mt-6">
           <div className="lg:col-span-1">
@@ -649,6 +600,8 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
               onDetails={handleFullDetails}
               priceUnit="per night"
               itemsPerPage={12}
+              onClearFilter={handleClearAllFilters}
+              hasActiveFilter={isAnyFilterActive}
             />
           </div>
         </div>

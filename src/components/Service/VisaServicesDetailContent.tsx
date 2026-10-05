@@ -411,39 +411,7 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
             <div className="h-1.5 w-32 sm:w-40 bg-[#E91E63] rounded-full mt-2.5 shadow-xs" />
           </div>
         </div>
-        {isExternalFilterActive && (
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs">
-            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
-              <span className="text-gray-500 font-semibold">Active Filter:</span>
-              {filter?.visaType && filter.visaType !== "all" && (
-                <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
-                  {filter.visaType} Visa
-                </span>
-              )}
-              {filter?.entryType && filter.entryType !== "all" && (
-                <span className="px-2.5 py-1 bg-white border border-emerald-200 rounded-lg text-emerald-700 font-bold capitalize shadow-2xs">
-                  {filter.entryType} Entry
-                </span>
-              )}
-              {filter?.country && filter.country.trim() !== "" && filter.country.toLowerCase() !== "all" && (
-                <span className="px-2.5 py-1 bg-white border border-pink-200 rounded-lg text-pink-600 font-bold capitalize shadow-2xs">
-                  {filter.country}
-                </span>
-              )}
-              <span className="text-xs text-gray-500 font-medium ml-1">
-                ({filteredPlans.length} {filteredPlans.length === 1 ? "destination" : "destinations"} found)
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleClearAllFilters}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-xl border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
-            >
-              <X size={14} />
-              <span>Clear Filter</span>
-            </button>
-          </div>
-        )}
+
         {loading ? (
           <div className="py-20 text-center">
             <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />

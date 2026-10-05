@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import type { Hotel } from "../../assets/data/types";
 import HotelBookingCard from "./HotelBookingCard";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 interface HotelBookingSectionProps {
   hotels: Hotel[];
@@ -9,6 +9,8 @@ interface HotelBookingSectionProps {
   onDetails?: (hotel: Hotel) => void;
   priceUnit?: string;
   itemsPerPage?: number;
+  onClearFilter?: () => void;
+  hasActiveFilter?: boolean;
 }
 
 export const HotelBookingSection: React.FC<HotelBookingSectionProps> = ({
@@ -17,6 +19,8 @@ export const HotelBookingSection: React.FC<HotelBookingSectionProps> = ({
   onDetails,
   priceUnit = "per day",
   itemsPerPage = 12,
+  onClearFilter,
+  hasActiveFilter,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -51,13 +55,23 @@ export const HotelBookingSection: React.FC<HotelBookingSectionProps> = ({
     <div ref={sectionRef} className="w-full col-span-3 max-w-7xl scroll-mt-28">
       <div className="flex flex-col gap-6">
         {currentHotels.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 p-8 shadow-xs">
+          <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 p-8 shadow-xs space-y-3">
             <p className="text-gray-700 font-bold text-base">
               No hotels found matching your filter criteria.
             </p>
             <p className="text-gray-400 text-xs mt-1">
               Try broadening your price range, ratings, or keyword selections.
             </p>
+            {(hasActiveFilter ?? Boolean(onClearFilter)) && onClearFilter && (
+              <button
+                type="button"
+                onClick={onClearFilter}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#2D1347] text-white hover:bg-[#3B145C] transition-colors cursor-pointer"
+              >
+                <X size={13} />
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           currentHotels.map((hotel) => (

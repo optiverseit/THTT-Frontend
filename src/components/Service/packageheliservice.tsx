@@ -2911,37 +2911,7 @@ export const PackageHeliService: React.FC<{
         /* ── CARDS LISTING VIEW (Matching Image 1) ────────────────────────────── */
         /* ======================================================================= */
         <div className="w-full space-y-6">
-          {/* Active Filter Bar */}
-          {filter && (filter.location || filter.name) && (
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-purple-50/90 border border-purple-200/80 rounded-2xl px-4 sm:px-5 py-3 shadow-xs">
-              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#2D1347] font-bold">
-                <span className="text-gray-500 font-semibold">Active Filter:</span>
-                {filter.location && (
-                  <span className="px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-[#2D1347] font-bold capitalize shadow-2xs">
-                    {filter.location}
-                  </span>
-                )}
-                {filter.name && (
-                  <span className="px-2.5 py-1 bg-white border border-pink-200 rounded-lg text-pink-600 font-bold shadow-2xs">
-                    {filter.name}
-                  </span>
-                )}
-                <span className="text-xs text-gray-500 font-medium ml-1">
-                  ({filteredTours.length} {filteredTours.length === 1 ? "package" : "packages"} found)
-                </span>
-              </div>
-              {onClearFilter && (
-                <button
-                  type="button"
-                  onClick={onClearFilter}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-pink-50 text-pink-600 hover:text-pink-700 font-bold text-xs rounded-xl border border-pink-200 transition-all cursor-pointer shadow-2xs active:scale-95"
-                >
-                  <X size={14} />
-                  <span>Clear Filter</span>
-                </button>
-              )}
-            </div>
-          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             {/* ── LEFT: FILTER SIDEBAR ── */}
             <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-6">
@@ -3078,7 +3048,7 @@ export const PackageHeliService: React.FC<{
                       setSelectedRating(0);
                       setSelectedKeywords([]);
                       setSearchQuery("");
-                      navigate("/service/heli-services");
+                      onClearFilter?.();
                     }}
                     className="mt-2 px-5 py-2 rounded-full bg-[#E91E63] text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
                   >

@@ -429,6 +429,26 @@ const VehicleImageSlider: React.FC<VehicleImageSliderProps> = ({
 // HELPER: ENRICH VEHICLE WITH FALLBACKS FOR NEW FIELDS
 // ============================================================
 
+const normalizeDateStr = (dateStr?: string | null): string => {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (ymdMatch) {
+    const y = ymdMatch[1];
+    const m = ymdMatch[2].padStart(2, "0");
+    const d = ymdMatch[3].padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  return s;
+};
+
 const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   const name = v.name || v.title || "Rental Vehicle";
   const rawType = (v.type || v.category || "").toLowerCase();
@@ -481,8 +501,10 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   const destination = v.destination || v.to_location || (index % 2 === 0 ? "Pokhara" : "Chitwan");
 
   // 4. Date: from to To
-  const availableFrom = v.available_from || "2026-10-01";
-  const availableTo = v.available_to || "2026-10-20";
+  const availableFrom =
+    normalizeDateStr(v.available_from || (v as any).availableFrom) || "2026-10-01";
+  const availableTo =
+    normalizeDateStr(v.available_to || (v as any).availableTo) || "2026-10-20";
 
   // 5. One way or Round Trip, Private (any one at a time) — defaults to "One Way" until API provides trip_type
   const tripType = v.trip_type || "One Way";
@@ -1107,7 +1129,7 @@ const VehicleRentalDetailContent: React.FC = () => {
                           <Calendar size={12} className="text-[#E91E63] flex-shrink-0" />
                           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight flex-shrink-0">Available Dates:</span>
                           <span className="font-extrabold text-[#E91E63] text-[11px] whitespace-nowrap truncate">
-                            {vehicle.availableFrom} to {vehicle.availableTo}
+                            {normalizeDateStr(vehicle.availableFrom)} to {normalizeDateStr(vehicle.availableTo)}
                           </span>
                         </div>
                       </div>

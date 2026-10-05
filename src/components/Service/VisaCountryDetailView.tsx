@@ -23,6 +23,9 @@ import {
   Check,
   Link2,
   MapPin,
+  Mail,
+  Phone,
+  Globe,
 } from "lucide-react";
 import {
   useGlobalCurrency,
@@ -383,17 +386,27 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               <h1 style={{ fontSize: "18px", fontWeight: 900, color: "#ffffff", letterSpacing: "0.01em", margin: 0, textTransform: "uppercase" }}>
                 Trip Himalaya Tours &amp; Travel Pvt. Ltd.
               </h1>
-              <div style={{ fontSize: "9px", color: "#f3e8ff", margin: "3px 0 0", lineHeight: "1.4" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>
-                    <MapPin size={10} color="#f472b6" style={{ marginRight: "4px", flexShrink: 0 }} />
-                    Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal
-                  </span>
-                  <span>📞 +977 9851420882</span>
+              <div style={{ fontSize: "9px", color: "#f3e8ff", margin: "4px 0 0", lineHeight: "1.45" }}>
+                {/* 1. Location */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <MapPin size={9.5} color="#f472b6" style={{ flexShrink: 0 }} />
+                  <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "3px" }}>
-                  <span>✉ dev.triphimalayatt@gmail.com</span>
-                  <span>🌐 www.triphimalaya.com.np</span>
+                {/* 2. Email */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
+                  <Mail size={9.5} color="#f472b6" style={{ flexShrink: 0 }} />
+                  <span>dev.triphimalayatt@gmail.com</span>
+                </div>
+                {/* 3. Phone and Website */}
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "2px" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                    <Phone size={9} color="#f472b6" style={{ flexShrink: 0 }} />
+                    <span>+977 9851420882</span>
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                    <Globe size={9} color="#f472b6" style={{ flexShrink: 0 }} />
+                    <span>www.triphimalaya.com.np</span>
+                  </span>
                 </div>
               </div>
             </div>

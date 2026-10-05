@@ -24,6 +24,7 @@ import DashboardLayout from "./pages/DashboardLayout";
 import WorkPermit from "./pages/WorkPermit";
 import DocumentationPage from "./pages/DocumentationPage";
 import DocumentationDetailPage from "./pages/DocumentationDetailPage";
+import SearchResults from "./pages/SearchResults";
 
 // Page-level detail views (moved from deep component paths to pages/)
 import VideoDetail from "./pages/VideoDetail";
@@ -204,6 +205,9 @@ const MainLayout = () => {
         {/* ── DOCUMENTATION ── */}
         <Route path="/documentation" element={<DocumentationPage />} />
         <Route path="/documentation/:id" element={<DocumentationDetailPage />} />
+
+        {/* ── SEARCH RESULTS ── */}
+        <Route path="/search" element={<SearchResults />} />
 
         {/* ── 404 Catch-All Route ── */}
         <Route path="*" element={<NotFound />} />

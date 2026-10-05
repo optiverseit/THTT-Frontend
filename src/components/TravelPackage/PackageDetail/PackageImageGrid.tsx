@@ -543,7 +543,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
 
         {/* Share button — top-right corner of hero */}
-        <div className="absolute top-20 right-4 sm:top-20 sm:right-8 md:right-11 lg:right-14 xl:right-16 z-20">
+        <div className="absolute top-8 right-4 sm:top-10 sm:right-8 md:right-11 lg:right-14 xl:right-16 z-20">
           {isShareOpen && (
             <div className="absolute top-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30">
               {/* Facebook */}
@@ -660,7 +660,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
       <div className="print:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
         {/* Mobile: 4-col single row with small thumbnails containing much less vertical space */}
         <div className="grid grid-cols-4 sm:hidden gap-1.5">
-          {galleryImages.slice(1, 5).map((img, idx) => (
+          {galleryImages.slice(1, 5).map((img: string, idx: number) => (
             <div
               key={idx}
               onClick={() => openLightbox(idx + 1)}

@@ -323,6 +323,278 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       window.scrollTo({ top: 180, behavior: "smooth" });
     }
   };
+
+  const renderPricingSidebar = () => (
+    <div className="space-y-4">
+      {/* =======================================================================
+          MAIN PRICING CARD (Matching PackagePricing.tsx)
+          ======================================================================= */}
+      <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Card Header: Title left, Currency Toggle right */}
+        <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-black">Pricing Options</h2>
+            <p className="text-[9px] text-gray-300 font-medium">Standard rates &amp; inclusions</p>
+          </div>
+          {/* NEPALI / USD / INR currency toggle buttons (syncs site-wide) */}
+          <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
+            <button
+              type="button"
+              onClick={() => setSelectedCurrency("nepali")}
+              aria-label="Show prices in Nepali Rupees (NPR)"
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "nepali"
+                ? "bg-white text-[#200B3B] shadow-xs"
+                : "text-white/80 hover:text-white"
+                }`}
+            >
+              NEPALI
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCurrency("foreigner")}
+              aria-label="Show prices in US Dollars (USD)"
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "foreigner"
+                ? "bg-[#E91E63] text-white shadow-xs"
+                : "text-white/80 hover:text-white"
+                }`}
+            >
+              USD ($)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCurrency("inr")}
+              aria-label="Show prices in Indian Rupees (INR)"
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "inr"
+                ? "bg-[#FF5722] text-white shadow-xs"
+                : "text-white/80 hover:text-white"
+                }`}
+            >
+              INR (₹)
+            </button>
+          </div>
+        </div>
+        {/* Exchange Rate Status Banner — shown when USD or INR mode is active */}
+        {selectedCurrency !== "nepali" && (
+          <div
+            className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed
+              ? "bg-amber-50 text-amber-700"
+              : "bg-emerald-50 text-emerald-700"
+              }`}
+          >
+            <div className="flex items-center gap-1">
+              {isRateLoading ? (
+                <RefreshCw size={10} className="animate-spin" />
+              ) : rateLoadFailed ? (
+                <AlertCircle size={10} />
+              ) : (
+                <Zap size={10} />
+              )}
+              <span>
+                {isRateLoading
+                  ? "Fetching live exchange rate..."
+                  : rateLoadFailed
+                    ? selectedCurrency === "inr"
+                      ? `Offline estimate — 1 INR = NPR 1.60`
+                      : `Offline estimate — 1 USD = NPR 151.09`
+                    : selectedCurrency === "inr"
+                      ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)}`
+                      : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
+              </span>
+            </div>
+            {!isRateLoading && (
+              <span className="text-[8px] opacity-60">Live Exchange Rate</span>
+            )}
+          </div>
+        )}
+        {/* Pricing Table + Controls body */}
+        <div className="p-3 sm:p-3.5 space-y-2.5">
+          {/* Pricing Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                <tr>
+                  <th className="pb-2">Option / Tier</th>
+                  <th className="pb-2">Validity</th>
+                  <th className="pb-2 text-right">Price</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100/60">
+                {pricingLoading ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-8 text-center text-xs font-semibold text-gray-400"
+                    >
+                      Loading pricing options...
+                    </td>
+                  </tr>
+                ) : costOptionsList.length > 0 ? (
+                  costOptionsList.map((pricingRow, rowIndex) => {
+                    const isSelected =
+                      selectedCostOption.name === pricingRow.name;
+
+                    return (
+                      <tr
+                        key={rowIndex}
+                        onClick={() => setSelectedCostOption(pricingRow)}
+                        className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected
+                            ? "bg-purple-50/70 font-bold"
+                            : ""
+                          }`}
+                      >
+                        <td className="py-2.5 font-bold text-[#200B3B] text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-2 h-2 rounded-full border ${isSelected
+                                  ? "bg-[#E91E63] border-[#E91E63]"
+                                  : "border-gray-300"
+                                }`}
+                            />
+                            <span>{pricingRow.name}</span>
+                          </div>
+                        </td>
+
+                        <td className="py-2.5 text-gray-500 text-[11px]">
+                          {pricingRow.days}
+                        </td>
+
+                        <td className="py-2.5 text-right font-black text-[#E91E63] text-sm">
+                          {getRowDisplayPrice(pricingRow.nprPrice)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-8 text-center text-xs font-semibold text-gray-400"
+                    >
+                      No pricing options available.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {/* Guest / Applicant Count Selector */}
+          <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Users size={13} className="text-[#E91E63]" />
+              <div>
+                <span className="block text-[11px] font-bold text-[#200B3B]">
+                  Number of Applicants
+                </span>
+                <span className="text-[9px] text-gray-400">Select traveler count</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleDecreaseGuestCount}
+                disabled={numberOfGuests <= 1}
+                aria-label="Remove one applicant"
+                className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
+              >
+                −
+              </button>
+              <span className="font-black text-xs text-[#200B3B] w-4 text-center">
+                {numberOfGuests}
+              </span>
+              <button
+                type="button"
+                onClick={handleIncreaseGuestCount}
+                aria-label="Add one more applicant"
+                className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          {/* Estimated Total */}
+          <div className="flex items-center justify-between pt-0.5">
+            <div>
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+                Estimated Total ({numberOfGuests} {numberOfGuests === 1 ? "applicant" : "applicants"})
+              </span>
+              <span className="text-lg font-black text-[#200B3B]">
+                {getFormattedEstimatedTotal()}
+              </span>
+            </div>
+            <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Zap size={10} />
+              Best Rate
+            </span>
+          </div>
+          {/* CTA Buttons */}
+          <div className="space-y-1.5 pt-0.5">
+            <button
+              type="button"
+              onClick={() => setIsAppModalOpen(true)}
+              aria-label="Process Visa Application Now"
+              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
+            >
+              <span>Process Application Now</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleWhatsAppInquiry}
+              aria-label="Send a WhatsApp inquiry"
+              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <MessageCircle size={14} />
+              <span>WhatsApp Instant Inquiry</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* =======================================================================
+          VERIFICATION & TRUST CARD (Matching Trekking Details stack + Sketch stats)
+          ======================================================================= */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 space-y-3.5">
+        <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+              VERIFIED CONCIERGE
+            </span>
+            <p className="text-xs font-black text-[#200B3B]">
+              Govt. Licensed &amp; Official Embassy Liaison
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+          <div className="w-9 h-9 rounded-xl bg-purple-50 text-[#2D1347] flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 size={18} className="text-emerald-500" />
+          </div>
+          <div>
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+              SUCCESSFUL APPLICATIONS
+            </span>
+            <p className="text-xs font-black text-[#200B3B]">
+              {plan.successfulApplications || "1000+"} Approvals Granted
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-pink-50 text-[#E91E63] flex items-center justify-center flex-shrink-0">
+            <Zap size={18} />
+          </div>
+          <div>
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+              APPROVAL RATING
+            </span>
+            <p className="text-xs font-black text-[#200B3B]">
+              {plan.successRate || "99%"} Visa Success Rate
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* ══════════════════════════════════════════════════════════════════
@@ -782,6 +1054,12 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               </div>
             </div>
           </div>
+
+          {/* ── PRICING & TRUST CARDS ON MOBILE (just below About Visa) ── */}
+          <div id="pricing-section-mobile" className="lg:hidden">
+            {renderPricingSidebar()}
+          </div>
+
           {/* # Requirement Document */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -839,274 +1117,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             </div>
           </div>
         </div>
-        {/* RIGHT COLUMN: Same design, alignment, style and stack as Trekking Details Page (PackagePricing.tsx) */}
-        <div id="pricing-section" className="space-y-4 lg:sticky lg:top-[150px] self-start">
-          {/* =======================================================================
-              MAIN PRICING CARD (Matching PackagePricing.tsx)
-              ======================================================================= */}
-          <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* Card Header: Title left, Currency Toggle right */}
-            <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-black">Pricing Options</h2>
-                <p className="text-[9px] text-gray-300 font-medium">Standard rates &amp; inclusions</p>
-              </div>
-              {/* NEPALI / USD / INR currency toggle buttons (syncs site-wide) */}
-              <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCurrency("nepali")}
-                  aria-label="Show prices in Nepali Rupees (NPR)"
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "nepali"
-                    ? "bg-white text-[#200B3B] shadow-xs"
-                    : "text-white/80 hover:text-white"
-                    }`}
-                >
-                  NEPALI
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCurrency("foreigner")}
-                  aria-label="Show prices in US Dollars (USD)"
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "foreigner"
-                    ? "bg-[#E91E63] text-white shadow-xs"
-                    : "text-white/80 hover:text-white"
-                    }`}
-                >
-                  USD ($)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCurrency("inr")}
-                  aria-label="Show prices in Indian Rupees (INR)"
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "inr"
-                    ? "bg-[#FF5722] text-white shadow-xs"
-                    : "text-white/80 hover:text-white"
-                    }`}
-                >
-                  INR (₹)
-                </button>
-              </div>
-            </div>
-            {/* Exchange Rate Status Banner — shown when USD or INR mode is active */}
-            {selectedCurrency !== "nepali" && (
-              <div
-                className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed
-                  ? "bg-amber-50 text-amber-700"
-                  : "bg-emerald-50 text-emerald-700"
-                  }`}
-              >
-                <div className="flex items-center gap-1">
-                  {isRateLoading ? (
-                    <RefreshCw size={10} className="animate-spin" />
-                  ) : rateLoadFailed ? (
-                    <AlertCircle size={10} />
-                  ) : (
-                    <Zap size={10} />
-                  )}
-                  <span>
-                    {isRateLoading
-                      ? "Fetching live exchange rate..."
-                      : rateLoadFailed
-                        ? selectedCurrency === "inr"
-                          ? `Offline estimate — 1 INR = NPR 1.60`
-                          : `Offline estimate — 1 USD = NPR 151.09`
-                        : selectedCurrency === "inr"
-                          ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)}`
-                          : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
-                  </span>
-                </div>
-                {!isRateLoading && (
-                  <span className="text-[8px] opacity-60">Live Exchange Rate</span>
-                )}
-              </div>
-            )}
-            {/* Pricing Table + Controls body */}
-            <div className="p-3 sm:p-3.5 space-y-2.5">
-              {/* Pricing Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
-                    <tr>
-                      <th className="pb-2">Option / Tier</th>
-                      <th className="pb-2">Validity</th>
-                      <th className="pb-2 text-right">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100/60">
-                    {pricingLoading ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="py-8 text-center text-xs font-semibold text-gray-400"
-                        >
-                          Loading pricing options...
-                        </td>
-                      </tr>
-                    ) : costOptionsList.length > 0 ? (
-                      costOptionsList.map((pricingRow, rowIndex) => {
-                        const isSelected =
-                          selectedCostOption.name === pricingRow.name;
-
-                        return (
-                          <tr
-                            key={rowIndex}
-                            onClick={() => setSelectedCostOption(pricingRow)}
-                            className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected
-                                ? "bg-purple-50/70 font-bold"
-                                : ""
-                              }`}
-                          >
-                            <td className="py-2.5 font-bold text-[#200B3B] text-xs">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className={`w-2 h-2 rounded-full border ${isSelected
-                                      ? "bg-[#E91E63] border-[#E91E63]"
-                                      : "border-gray-300"
-                                    }`}
-                                />
-                                <span>{pricingRow.name}</span>
-                              </div>
-                            </td>
-
-                            <td className="py-2.5 text-gray-500 text-[11px]">
-                              {pricingRow.days}
-                            </td>
-
-                            <td className="py-2.5 text-right font-black text-[#E91E63] text-sm">
-                              {getRowDisplayPrice(pricingRow.nprPrice)}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="py-8 text-center text-xs font-semibold text-gray-400"
-                        >
-                          No pricing options available.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {/* Guest / Applicant Count Selector */}
-              <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Users size={13} className="text-[#E91E63]" />
-                  <div>
-                    <span className="block text-[11px] font-bold text-[#200B3B]">
-                      Number of Applicants
-                    </span>
-                    <span className="text-[9px] text-gray-400">Select traveler count</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleDecreaseGuestCount}
-                    disabled={numberOfGuests <= 1}
-                    aria-label="Remove one applicant"
-                    className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
-                  >
-                    −
-                  </button>
-                  <span className="font-black text-xs text-[#200B3B] w-4 text-center">
-                    {numberOfGuests}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleIncreaseGuestCount}
-                    aria-label="Add one more applicant"
-                    className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              {/* Estimated Total */}
-              <div className="flex items-center justify-between pt-0.5">
-                <div>
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                    Estimated Total ({numberOfGuests} {numberOfGuests === 1 ? "applicant" : "applicants"})
-                  </span>
-                  <span className="text-lg font-black text-[#200B3B]">
-                    {getFormattedEstimatedTotal()}
-                  </span>
-                </div>
-                <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Zap size={10} />
-                  Best Rate
-                </span>
-              </div>
-              {/* CTA Buttons */}
-              <div className="space-y-1.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setIsAppModalOpen(true)}
-                  aria-label="Process Visa Application Now"
-                  className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
-                >
-                  <span>Process Application Now</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleWhatsAppInquiry}
-                  aria-label="Send a WhatsApp inquiry"
-                  className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <MessageCircle size={14} />
-                  <span>WhatsApp Instant Inquiry</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          {/* =======================================================================
-              VERIFICATION & TRUST CARD (Matching Trekking Details stack + Sketch stats)
-              ======================================================================= */}
-          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 space-y-3.5">
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                  VERIFIED CONCIERGE
-                </span>
-                <p className="text-xs font-black text-[#200B3B]">
-                  Govt. Licensed &amp; Official Embassy Liaison
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 text-[#2D1347] flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 size={18} className="text-emerald-500" />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                  SUCCESSFUL APPLICATIONS
-                </span>
-                <p className="text-xs font-black text-[#200B3B]">
-                  {plan.successfulApplications || "1000+"} Approvals Granted
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-pink-50 text-[#E91E63] flex items-center justify-center flex-shrink-0">
-                <Zap size={18} />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                  APPROVAL RATING
-                </span>
-                <p className="text-xs font-black text-[#200B3B]">
-                  {plan.successRate || "99%"} Visa Success Rate
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* RIGHT COLUMN: Desktop Only */}
+        <div id="pricing-section" className="hidden lg:block lg:col-span-1 lg:sticky lg:top-[150px] self-start space-y-4">
+          {renderPricingSidebar()}
         </div>
       </div>
       {/* ── OUR OTHER SERVICES SECTION ── */}

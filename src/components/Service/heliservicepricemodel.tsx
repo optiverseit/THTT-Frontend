@@ -416,7 +416,7 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
               className="w-full disabled:opacity-50 disabled:cursor-not-allowed py-3 px-4 rounded-xl bg-[#00C853] hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageCircle size={15} />
-              <span>WHATSAPP INSTANT INQUIRY</span>
+              <span>WHATSAPP</span>
             </button>
           </div>
         </div>

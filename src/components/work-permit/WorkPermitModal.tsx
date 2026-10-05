@@ -21,9 +21,8 @@ import { useEffect, useRef, useState } from "react";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
-import { getWorkPermitDocumentRequirements, createWorkPermitApplication, getPermitFeeTiers, initiatePayment, } from "../../api/BackendApi";
+import { createWorkPermitApplication, getPermitFeeTiers, initiatePayment } from "../../api/BackendApi";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
-
 interface CountryProps {
   id: number;
   country_code: string;
@@ -34,7 +33,6 @@ interface CountryProps {
   processing_days?: number;
   status?: string;
 }
-
 // export type FileKeys =
 //   | "passport"
 //   | "visaCopy"
@@ -43,7 +41,6 @@ interface CountryProps {
 //   | "policeReport"
 //   | "insuranceReg"
 //   | "feims";
-
 interface DocumentRequirement {
   id: number;
   country_id: number;
@@ -55,10 +52,10 @@ interface DocumentRequirement {
   display_order: number;
   status: string;
 }
-
 interface PermitFeeTier {
   id: number;
   country_id: number;
+  permit_type: string;
   age_group_label: string;
   min_age: number;
   max_age: number;
@@ -69,7 +66,6 @@ interface PermitFeeTier {
   total_cost_npr: string | number;
   status: string;
 }
-
 interface FormDataType {
   name: string;
   email: string;
@@ -85,14 +81,18 @@ interface FormDataType {
   files: Record<string, File | null>;
   companyChange: boolean;
 }
-
 interface WorkPermitModalProps {
   country: CountryProps[];
   defaultCountry?: string;
   defaultPermitType?: string;
+  documentRequirements?: DocumentRequirement[];
 }
-
-const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_labour_permit" }: WorkPermitModalProps) => {
+const WorkPermitModal = ({
+  country,
+  defaultCountry,
+  defaultPermitType = "new_labour_permit",
+  documentRequirements = [],
+}: WorkPermitModalProps) => {
   const [currentStep, setCurrentStep] = useState<"stepA" | "stepB" | "stepC" | "payment" | "submitted">("stepA");
   const [applicationId, setApplicationId] = useState("");
   const [workPermitId, setWorkPermitId] = useState<number | null>(null);
@@ -100,15 +100,11 @@ const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_lab
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [documentRequirements, setDocumentRequirements] = useState<DocumentRequirement[]>([]);
-  const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [permitFeeTiers, setPermitFeeTiers] = useState<PermitFeeTier[]>([]);
   const [loadingFeeTiers, setLoadingFeeTiers] = useState(false);
-
   // Max selectable DOB is today (cannot be in future)
   const todayStr = new Date().toISOString().split("T")[0];
-
   const [formData, setFormData] = useState<FormDataType>({
     name: "",
     email: "",
@@ -124,14 +120,19 @@ const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_lab
     files: {},
     companyChange: false,
   });
-
+  // Keep permit type synced with the permit selected on the details page
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      permitType: defaultPermitType || "new_labour_permit",
+    }));
+  }, [defaultPermitType]);
   // Set default country
   useEffect(() => {
     if (defaultCountry && country.length > 0) {
       const matchedCountry = country.find(
         (c) => c.country_name === defaultCountry
       );
-
       if (matchedCountry) {
         setFormData((prev) => ({
           ...prev,
@@ -140,73 +141,28 @@ const WorkPermitModal = ({ country, defaultCountry, defaultPermitType = "new_lab
       }
     }
   }, [defaultCountry, country]);
-
-
-  // Fetch document requirements when country changes
-  useEffect(() => {
-    if (!formData.countryId) {
-      setDocumentRequirements([]);
-      return;
-    }
-
-    const fetchDocumentRequirements = async () => {
-      try {
-        setLoadingDocuments(true);
-
-        const response = await getWorkPermitDocumentRequirements(
-          Number(formData.countryId)
-        );
-
-        setDocumentRequirements(response.data.data || []);
-
-        // Clear previously selected files when country changes
-        setFormData((prev) => ({
-          ...prev,
-          files: {},
-        }));
-
-      } catch (error) {
-        console.error(
-          "Failed to fetch document requirements:",
-          error
-        );
-
-        setDocumentRequirements([]);
-      } finally {
-        setLoadingDocuments(false);
-      }
-    };
-
-    fetchDocumentRequirements();
-
-  }, [formData.countryId]);
-
 useEffect(() => {
   const fetchPermitFeeTiers = async () => {
     if (!formData.countryId) {
       setPermitFeeTiers([]);
       return;
     }
-
     try {
       setLoadingFeeTiers(true);
-
+      const apiPermitType = formData.permitType.toUpperCase();
       const response = await getPermitFeeTiers(
-        formData.countryId
+        formData.countryId,
+        apiPermitType
       );
-
       console.log(
         "PERMIT FEE TIERS RESPONSE:",
         response.data
       );
-
       // API response:
       // response.data.data = paginator
       // response.data.data.data = actual fee tier array
       const tiers = response.data?.data?.data ?? [];
-
       console.log("ACTUAL FEE TIERS:", tiers);
-
       setPermitFeeTiers(
         Array.isArray(tiers) ? tiers : []
       );
@@ -215,29 +171,19 @@ useEffect(() => {
         "Failed to fetch permit fee tiers:",
         error
       );
-
       setPermitFeeTiers([]);
     } finally {
       setLoadingFeeTiers(false);
     }
   };
-
   fetchPermitFeeTiers();
-}, [formData.countryId]);
-
-  const filteredDocumentRequirements = documentRequirements.filter(
-    (document) =>
-      document.permit_type === formData.permitType.toUpperCase()
-  );
-
+}, [formData.countryId, formData.permitType]);
+  const filteredDocumentRequirements = documentRequirements;
   const selectedCountry = country.find(
     (c) => c.id.toString() === formData.countryId
   );
-
   const selectedCountryName = selectedCountry?.country_name || "";
-
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
-
   // const fileFields: {
   //   key: FileKeys;
   //   label: string;
@@ -287,11 +233,9 @@ useEffect(() => {
   //       hint: "Foreign Employment Information Management System online registration slip",
   //     },
   //   ];
-
   const handleButtonClick = (key: string) => {
     fileRefs.current[key]?.click();
   };
-
   const handleFileChange = (
     documentType: string,
     file: File | null
@@ -304,7 +248,6 @@ useEffect(() => {
       },
     }));
   };
-
   const handleConvert = (value: string) => {
     if (!value) {
       setFormData((prev) => ({
@@ -315,10 +258,8 @@ useEffect(() => {
       }));
       return;
     }
-
     const birthDate = new Date(value);
     const now = new Date();
-
     // Check if future date
     if (birthDate > now) {
       setFormData((prev) => ({
@@ -329,14 +270,12 @@ useEffect(() => {
       }));
       return;
     }
-
     // Accurate Age Calculation
     let calculatedAge = now.getFullYear() - birthDate.getFullYear();
     const monthDiff = now.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
       calculatedAge--;
     }
-
     // Attempt BS conversion without throwing or wiping age
     let bs = "";
     try {
@@ -344,7 +283,6 @@ useEffect(() => {
     } catch {
       bs = "";
     }
-
     setFormData((prev) => ({
       ...prev,
       adDate: value,
@@ -352,7 +290,6 @@ useEffect(() => {
       age: calculatedAge,
     }));
   };
-
   const getAgeCategoryText = (age: number | null): string => {
     if (age === null || isNaN(age)) return "--";
     if (age < 0) return "Invalid Date";
@@ -363,7 +300,6 @@ useEffect(() => {
             "Above 51 years";
     return `${label}  ·  ${age} yrs old`;
   };
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -381,16 +317,13 @@ useEffect(() => {
       }));
     }
   };
-
   const validateStepA = () => {
     const errors: string[] = [];
     let firstErrorFieldId: string | null = null;
-
     if (!formData.name.trim()) {
       errors.push("Full Name is required");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_name";
     }
-
     if (!formData.passportNumber.trim()) {
       errors.push("Passport Number is required");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_passportNumber";
@@ -398,12 +331,10 @@ useEffect(() => {
       errors.push("Passport Number must be 6–20 alphanumeric characters");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_passportNumber";
     }
-
     if (!formData.passportExpiryDate) {
       errors.push("Passport Expiry Date is required");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_passportExpiryDate";
     }
-
     if (!formData.email.trim()) {
       errors.push("Email is required");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
@@ -411,7 +342,6 @@ useEffect(() => {
       errors.push("Please enter a valid email address");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
     }
-
     const cleanPhone = formData.phone.replace(/[\s\-]/g, "");
     if (!cleanPhone) {
       errors.push("Phone / WhatsApp number is required");
@@ -420,12 +350,10 @@ useEffect(() => {
       errors.push("Phone must be a valid number (6–15 digits)");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_phone";
     }
-
     if (!formData.countryId) {
       errors.push("Destination Country is required");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_countryId";
     }
-
     if (!formData.adDate) {
       errors.push("Date of birth is required");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
@@ -436,15 +364,12 @@ useEffect(() => {
       errors.push("Applicant must be at least 18 years of age for foreign employment");
       if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
     }
-
     setStepErrors(errors);
     return { isValid: errors.length === 0, firstErrorFieldId, errors };
   };
-
   const validateStepB = () => {
     const errors: string[] = [];
     let firstMissingDocType: string | null = null;
-
     filteredDocumentRequirements.forEach((document) => {
       if (document.is_required && !formData.files[document.document_type]) {
         errors.push(`${document.title} is required`);
@@ -453,11 +378,9 @@ useEffect(() => {
         }
       }
     });
-
     setStepErrors(errors);
     return { isValid: errors.length === 0, firstMissingDocType, errors };
   };
-
   const goToStepB = () => {
     const result = validateStepA();
     if (result.isValid) {
@@ -473,7 +396,6 @@ useEffect(() => {
       }, 50);
     }
   };
-
   const goToStepC = () => {
     const result = validateStepB();
     if (result.isValid) {
@@ -490,7 +412,6 @@ useEffect(() => {
       }, 50);
     }
   };
-
   // ── Work Permit Fee Calculation (Age-based government & insurance fee structure) ──
 const selectedFeeTier =
   formData.age !== null
@@ -500,25 +421,20 @@ const selectedFeeTier =
           formData.age! <= Number(tier.max_age)
       )
     : undefined;
-
 const totalFeeNpr = selectedFeeTier
   ? Number(selectedFeeTier.total_cost_npr)
   : 0;
-
 const getFeeTierLabel = () => {
   if (!selectedFeeTier) {
     return "No fee tier available";
   }
-
   return selectedFeeTier.age_group_label;
 };
-
 const totalPriceFormatted = loadingFeeTiers
   ? "Loading..."
   : selectedFeeTier
     ? `NPR ${totalFeeNpr.toLocaleString("en-IN")}`
     : "NPR 0";
-
   // const handleSubmit = (e?: React.FormEvent) => {
   //   if (e) e.preventDefault();
   //   if (!applicationId) {
@@ -527,19 +443,15 @@ const totalPriceFormatted = loadingFeeTiers
   //   }
   //   setCurrentStep("payment");
   // };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
     if (!isSessionValid()) {
       clearAuthSession();
       window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
       return;
     }
-
     // Prevent multi-processing / double submission
     if (isSubmitting) return;
-
     // Validate Step A before submitting
     const stepAResult = validateStepA();
     if (!stepAResult.isValid) {
@@ -555,7 +467,6 @@ const totalPriceFormatted = loadingFeeTiers
       }
       return;
     }
-
     // Validate Step B documents before submitting
     const stepBResult = validateStepB();
     if (!stepBResult.isValid) {
@@ -572,101 +483,77 @@ const totalPriceFormatted = loadingFeeTiers
       }
       return;
     }
-
     try {
       setIsSubmitting(true);
       setStepErrors([]);
-
       const payload = new FormData();
-
       // Application data
       payload.append("country_id", formData.countryId);
       payload.append(
         "permit_type",
         formData.permitType.toUpperCase()
       );
-
       payload.append(
         "applicant_full_name",
         formData.name
       );
-
       payload.append(
         "phone_number",
         `${formData.phoneCode}${formData.phone}`
       );
-
       payload.append("email", formData.email);
-
       payload.append("dob_ad", formData.adDate);
       payload.append("dob_bs", formData.bsDate);
-
       payload.append(
         "passport_number",
         formData.passportNumber
       );
-
       payload.append(
         "passport_expiry_date",
         formData.passportExpiryDate
       );
-
       payload.append(
         "company_changed",
         formData.companyChange ? "1" : "0"
       );
-
       // Documents
       filteredDocumentRequirements.forEach((document) => {
         const file =
           formData.files[document.document_type];
-
         if (file) {
           payload.append(
             "document_types[]",
             document.document_type
           );
-
           payload.append(
             "files[]",
             file
           );
         }
       });
-
       const response =
         await createWorkPermitApplication(payload);
-
       console.log(
         "WORK PERMIT CREATED:",
         response.data
       );
-
       const application = response.data.data;
-
       setWorkPermitId(application.id);
-
       setApplicationId(
         application.application_number
       );
-
       setCurrentStep("payment");
-
     } catch (error: any) {
       console.error(
         "Work permit submission failed:",
         error
       );
-
       const responseData = error?.response?.data;
-
       if (responseData?.errors) {
         const validationErrors = Object.values(
           responseData.errors
         ).flat() as string[];
-
         setStepErrors(validationErrors);
-
         // Redirect to invalid field if backend points to one
         const errKeys = Object.keys(responseData.errors);
         const stepAFieldMap: Record<string, string> = {
@@ -681,7 +568,6 @@ const totalPriceFormatted = loadingFeeTiers
           dob_ad: "wp_adDate",
           dob_bs: "wp_adDate",
         };
-
         const matchingStepAKey = errKeys.find((k) => stepAFieldMap[k]);
         if (matchingStepAKey) {
           setCurrentStep("stepA");
@@ -711,7 +597,6 @@ const totalPriceFormatted = loadingFeeTiers
       setIsSubmitting(false);
     }
   };
-
   // ── eSewa mock payment handler ──
   const handleEsewaPayment = async () => {
     if (!workPermitId) {
@@ -720,43 +605,34 @@ const totalPriceFormatted = loadingFeeTiers
       ]);
       return;
     }
-
     try {
       setIsProcessingPayment(true);
       setStepErrors([]);
-
       // 1. Create PENDING payment and get eSewa payment data
       const response = await initiatePayment({
         work_permit_id: workPermitId,
         provider: "ESEWA",
       });
-
       console.log(
         "ESEWA INITIATE RESPONSE:",
         response.data
       );
-
       const paymentData = response.data?.data;
-
       if (!response.data?.status || !paymentData) {
         throw new Error(
           response.data?.message ||
           "Failed to initiate eSewa payment."
         );
       }
-
       if (!paymentData.payment_url) {
         throw new Error(
           "eSewa payment URL was not returned."
         );
       }
-
       // 2. Create form for eSewa
       const form = document.createElement("form");
-
       form.method = "POST";
       form.action = paymentData.payment_url;
-
       // 3. Exact fields returned by your Laravel backend
       const fields = {
         amount: paymentData.amount,
@@ -775,49 +651,39 @@ const totalPriceFormatted = loadingFeeTiers
           paymentData.signed_field_names,
         signature: paymentData.signature,
       };
-
       // 4. Convert fields into hidden form inputs
       Object.entries(fields).forEach(
         ([name, value]) => {
           const input =
             document.createElement("input");
-
           input.type = "hidden";
           input.name = name;
           input.value = String(value);
-
           form.appendChild(input);
         }
       );
-
       // 5. Add form to DOM
       document.body.appendChild(form);
-
       // 6. Submit directly to eSewa
       form.submit();
-
     } catch (error: any) {
       console.error(
         "eSewa payment initiation failed:",
         error
       );
-
       setStepErrors([
         error?.response?.data?.message ||
         error?.message ||
         "Failed to initiate eSewa payment.",
       ]);
-
       setIsProcessingPayment(false);
     }
   };
-
   // ── Pay Later handler ──
   const handlePayLater = async () => {
     try {
       setIsProcessingPayment(true);
       setStepErrors([]);
-
       if (workPermitId) {
         try {
           await initiatePayment({
@@ -828,11 +694,9 @@ const totalPriceFormatted = loadingFeeTiers
           console.warn("Pay later backend initiate warning:", apiErr);
         }
       }
-
       setSelectedPaymentMethod("pay_later");
       setPaymentStatus("unpaid");
       setCurrentStep("submitted");
-
     } catch (error: any) {
       console.error("Pay later initiation failed:", error);
       setSelectedPaymentMethod("pay_later");
@@ -842,19 +706,16 @@ const totalPriceFormatted = loadingFeeTiers
       setIsProcessingPayment(false);
     }
   };
-
   const handleDownloadSlip = () => {
     const submittedAt = new Date().toLocaleString("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     });
-
     const permitTypeLabel = ({
       new_labour_permit: "New Labour Permit (Shram)",
       renewal_permit: "Renewal Permit",
       individual_permit: "Individual Work Permit",
     } as Record<string, string>)[formData.permitType] ?? formData.permitType.replace(/_/g, " ");
-
     const slipHtml = `
       <!DOCTYPE html>
       <html lang="en">
@@ -865,14 +726,12 @@ const totalPriceFormatted = loadingFeeTiers
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
           @page { size: A4 portrait; margin: 0; }
           * { box-sizing: border-box; margin: 0; padding: 0; }
-
           /* Force background colors to print */
           html, body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             color-adjust: exact !important;
           }
-
           body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             background: #ffffff;
@@ -880,7 +739,6 @@ const totalPriceFormatted = loadingFeeTiers
             font-size: 11.5px;
             line-height: 1.5;
           }
-
           /* ── PAGE WRAPPER ── */
           .page {
             width: 210mm;
@@ -890,7 +748,6 @@ const totalPriceFormatted = loadingFeeTiers
             flex-direction: column;
             gap: 0;
           }
-
           /* ── WATERMARK ── */
           .watermark-wrapper {
             position: fixed;
@@ -913,7 +770,6 @@ const totalPriceFormatted = loadingFeeTiers
             white-space: nowrap;
             text-align: center;
           }
-
           /* ── LETTERHEAD ── */
           .letterhead {
             display: flex;
@@ -981,7 +837,6 @@ const totalPriceFormatted = loadingFeeTiers
             color: #000;
             font-weight: 500;
           }
-
           /* ── DOC TITLE BAND ── */
           .title-band {
             background: #000;
@@ -1020,7 +875,6 @@ const totalPriceFormatted = loadingFeeTiers
             color: #fff;
             letter-spacing: 0.5px;
           }
-
           /* ── REFERENCE BOX ── */
           .ref-box {
             display: flex;
@@ -1058,7 +912,6 @@ const totalPriceFormatted = loadingFeeTiers
             color: #000;
             letter-spacing: 0.5px;
           }
-
           /* ── SECTION HEADING ── */
           .section-heading {
             display: flex;
@@ -1080,7 +933,6 @@ const totalPriceFormatted = loadingFeeTiers
             letter-spacing: 1px;
             white-space: nowrap;
           }
-
           /* ── DETAIL TABLE ── */
           .detail-table {
             width: 100%;
@@ -1134,7 +986,6 @@ const totalPriceFormatted = loadingFeeTiers
             font-weight: 900;
             font-family: 'Inter', sans-serif;
           }
-
           /* ── TWO-COLUMN GRID ── */
           .two-col-grid {
             display: grid;
@@ -1152,7 +1003,6 @@ const totalPriceFormatted = loadingFeeTiers
           .two-col-grid .detail-table {
             flex: 1;
           }
-
           /* ── NOTICE BOX ── */
           .notice-box {
             border: 1px solid #999;
@@ -1165,7 +1015,6 @@ const totalPriceFormatted = loadingFeeTiers
             line-height: 1.5;
           }
           .notice-box strong { color: #000; }
-
           /* ── CHECKLIST ── */
           .checklist-box {
             border: 1px solid #999;
@@ -1204,7 +1053,6 @@ const totalPriceFormatted = loadingFeeTiers
             flex-shrink: 0;
             margin-top: 1px;
           }
-
           /* ── FOOTER ── */
           .doc-footer {
             margin-top: auto;
@@ -1224,7 +1072,6 @@ const totalPriceFormatted = loadingFeeTiers
         <div class="page">
           <!-- WATERMARK -->
           <div class="watermark-wrapper"><div class="watermark">Trip Himalaya Tours and Travels</div></div>
-
           <!-- LETTERHEAD -->
           <div class="letterhead">
             <div class="lh-left">
@@ -1242,7 +1089,6 @@ const totalPriceFormatted = loadingFeeTiers
               <div class="slip-date">Issued: ${submittedAt}</div>
             </div>
           </div>
-
           <!-- DOC TITLE BAND -->
           <div class="title-band">
             <div>
@@ -1254,7 +1100,6 @@ const totalPriceFormatted = loadingFeeTiers
               <div class="doc-id-val">${applicationId}</div>
             </div>
           </div>
-
           <!-- SUBMISSION REFERENCE -->
           <div class="ref-box">
             <div class="ref-accent"></div>
@@ -1265,10 +1110,8 @@ const totalPriceFormatted = loadingFeeTiers
               </div>
             </div>
           </div>
-
           <!-- TOP ROW: APPLICANT DETAILS + SUBMITTED DOCUMENTS (2 columns) -->
           <div class="two-col-grid">
-
             <!-- LEFT: APPLICANT DETAILS -->
             <div class="col-block">
               <div class="section-heading" style="margin-top:0;">
@@ -1326,14 +1169,12 @@ const totalPriceFormatted = loadingFeeTiers
                 </tbody>
               </table>
             </div>
-
            <!-- RIGHT: SUBMITTED DOCUMENTS -->
 <div class="col-block">
   <div class="section-heading" style="margin-top:0;">
     <div class="sh-text">Submitted Documents</div>
     <div class="sh-line"></div>
   </div>
-
   <table class="detail-table">
     <thead>
       <tr>
@@ -1341,18 +1182,15 @@ const totalPriceFormatted = loadingFeeTiers
         <th>Status / Filename</th>
       </tr>
     </thead>
-
     <tbody>
       ${filteredDocumentRequirements
         .map((document) => {
           const file = formData.files[document.document_type];
-
           return `
             <tr>
               <td class="td-label">
                 ${document.title}
               </td>
-
               <td class="td-value">
                 ${file
               ? `<span style="color:#047857; font-weight:700;">
@@ -1374,9 +1212,7 @@ const totalPriceFormatted = loadingFeeTiers
     </tbody>
   </table>
 </div>
-
           </div><!-- end .two-col-grid -->
-
           <!-- PAYMENT INFORMATION (full width) -->
           <div class="section-heading">
             <div class="sh-text">Payment Information</div>
@@ -1414,12 +1250,10 @@ const totalPriceFormatted = loadingFeeTiers
               </tr>
             </tbody>
           </table>
-
           <!-- NOTICE -->
           <div class="notice-box">
             <strong>Next Steps:</strong> Our licensed documentation officer will review your file and contact you within <strong>24 hours</strong> via WhatsApp or phone to verify your credentials and guide you through the DoFE / FEIMS submission process. Keep Reference No. <strong>${applicationId}</strong> for all follow-ups.
           </div>
-
           <!-- FEO CHECKLIST -->
           <div class="checklist-box">
             <div class="checklist-title">Foreign Employment Office (FEO) Checklist</div>
@@ -1432,7 +1266,6 @@ const totalPriceFormatted = loadingFeeTiers
               <div class="checklist-item"><span class="ci-icon">✓</span> Police Clearance (if required by employer)</div>
             </div>
           </div>
-
           <!-- FOOTER -->
           <div class="doc-footer">
             <div class="footer-left">
@@ -1444,12 +1277,10 @@ const totalPriceFormatted = loadingFeeTiers
               Ref: ${applicationId} &nbsp;|&nbsp; ${submittedAt}
             </div>
           </div>
-
         </div>
       </body>
       </html>
     `;
-
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
     iframe.style.right = "0";
@@ -1458,7 +1289,6 @@ const totalPriceFormatted = loadingFeeTiers
     iframe.style.height = "0";
     iframe.style.border = "0";
     document.body.appendChild(iframe);
-
     const doc = iframe.contentWindow?.document;
     if (doc) {
       doc.open();
@@ -1477,25 +1307,20 @@ const totalPriceFormatted = loadingFeeTiers
       window.print();
     }
   };
-
   const handleCloseModal = () => {
     const modal = document.getElementById(
       "work_permit_modal"
     ) as HTMLDialogElement;
-
     modal?.close();
-
     setTimeout(() => {
       setCurrentStep("stepA");
       setStepErrors([]);
       setPaymentStatus("unpaid");
       setSelectedPaymentMethod("esewa");
       setIsProcessingPayment(false);
-
       // Reset application identifiers
       setApplicationId("");
       setWorkPermitId(null);
-
       // Reset uploaded files
       setFormData((prev) => ({
         ...prev,
@@ -1503,7 +1328,6 @@ const totalPriceFormatted = loadingFeeTiers
       }));
     }, 300);
   };
-
   return (
     <dialog id="work_permit_modal" className="modal w-full">
       <div className="modal-box rounded-3xl max-w-2xl p-0 overflow-hidden bg-white shadow-2xl border border-gray-100">
@@ -1535,7 +1359,6 @@ const totalPriceFormatted = loadingFeeTiers
               <X size={18} />
             </button>
           </div>
-
           {/* 3-Step Wizard Breadcrumbs (Only if not submitted and not in payment) */}
           {currentStep !== "submitted" && currentStep !== "payment" && (
             <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-white/15">
@@ -1554,7 +1377,6 @@ const totalPriceFormatted = loadingFeeTiers
                   <p className="text-[9px] text-pink-200 truncate">~30 sec form</p>
                 </div>
               </div>
-
               {/* Step B */}
               <div
                 className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepB"
@@ -1567,10 +1389,9 @@ const totalPriceFormatted = loadingFeeTiers
                 </span>
                 <div className="min-w-0">
                   <p className="text-[11px] font-extrabold truncate">Documents</p>
-                  <p className="text-[9px] text-gray-300 truncate">5 Verification Files</p>
+                  <p className="text-[9px] text-gray-300 truncate">{documentRequirements.length} Verification Files</p>
                 </div>
               </div>
-
               {/* Step C */}
               <div
                 className={`flex items-center gap-2 p-2 rounded-xl transition-all ${currentStep === "stepC"
@@ -1589,7 +1410,6 @@ const totalPriceFormatted = loadingFeeTiers
             </div>
           )}
         </div>
-
         {/* Modal Body */}
         <div className="p-6 sm:p-8 max-h-[75vh] overflow-y-auto">
           {/* Error alerts if any */}
@@ -1606,7 +1426,6 @@ const totalPriceFormatted = loadingFeeTiers
               </div>
             </div>
           )}
-
           {/* ══════════ STEP A: BASIC INFORMATION ══════════ */}
           {currentStep === "stepA" && (
             <div className="space-y-4">
@@ -1620,7 +1439,6 @@ const totalPriceFormatted = loadingFeeTiers
                   Takes ~30 seconds
                 </span>
               </div>
-
               {/* Name */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Full Name (As in Passport)*</label>
@@ -1633,12 +1451,10 @@ const totalPriceFormatted = loadingFeeTiers
                   className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
-
               <div>
                 <label className="text-xs text-gray-600 font-bold">
                   Email Address*
                 </label>
-
                 <input
                   id="wp_email"
                   type="email"
@@ -1649,7 +1465,6 @@ const totalPriceFormatted = loadingFeeTiers
                   className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
-
               {/* Passport Number */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Passport Number*</label>
@@ -1663,7 +1478,6 @@ const totalPriceFormatted = loadingFeeTiers
                   style={{ textTransform: "uppercase" }}
                 />
               </div>
-
               {/* Passport Expiry Date */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Passport Expiry Date*</label>
@@ -1676,7 +1490,6 @@ const totalPriceFormatted = loadingFeeTiers
                   className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
-
               {/* Phone with Country Code */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Phone / WhatsApp Number*</label>
@@ -1705,7 +1518,6 @@ const totalPriceFormatted = loadingFeeTiers
                   />
                 </div>
               </div>
-
               {/* DOB & BS Conversion */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Date of Birth*</label>
@@ -1732,7 +1544,6 @@ const totalPriceFormatted = loadingFeeTiers
                   </div>
                 </div>
               </div>
-
               {/* Age Category */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Age Category</label>
@@ -1753,7 +1564,6 @@ const totalPriceFormatted = loadingFeeTiers
                   </div>
                 )}
               </div>
-
               {/* Country & Permit Type */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1766,7 +1576,6 @@ const totalPriceFormatted = loadingFeeTiers
                     className="select w-full border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm mt-1 cursor-pointer"
                   >
                     <option value="">Select Destination</option>
-
                     {country.map((c) => (
                       <option key={c.id} value={c.id.toString()}>
                         {c.country_name}
@@ -1774,7 +1583,6 @@ const totalPriceFormatted = loadingFeeTiers
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="text-xs text-gray-600 font-bold">Permit Service Type</label>
                   <select
@@ -1789,7 +1597,6 @@ const totalPriceFormatted = loadingFeeTiers
                   </select>
                 </div>
               </div>
-
               {/* Button to Next Step */}
               <div className="pt-4">
                 <button
@@ -1803,7 +1610,6 @@ const totalPriceFormatted = loadingFeeTiers
               </div>
             </div>
           )}
-
           {/* ══════════ STEP B: DOCUMENT UPLOAD ══════════ */}
           {currentStep === "stepB" && (
             <div className="space-y-4">
@@ -1816,13 +1622,8 @@ const totalPriceFormatted = loadingFeeTiers
                   JPG, PNG, or PDF (Max 10MB)
                 </span>
               </div>
-
               {/* Document upload cards - 5 files matching page specifications */}
-              {loadingDocuments ? (
-                <div className="py-8 text-center text-sm text-gray-500">
-                  Loading required documents...
-                </div>
-              ) : filteredDocumentRequirements.length === 0 ? (
+              {filteredDocumentRequirements.length === 0 ? (
                 <div className="py-8 text-center text-sm text-gray-500">
                   No document requirements found for this permit type.
                 </div>
@@ -1840,7 +1641,6 @@ const totalPriceFormatted = loadingFeeTiers
                           <span className="text-pink-500 ml-1">*</span>
                         )}
                       </label>
-
                       {document.is_required ? (
                         <span className="text-[10px] font-extrabold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
                           Required
@@ -1851,13 +1651,11 @@ const totalPriceFormatted = loadingFeeTiers
                         </span>
                       )}
                     </div>
-
                     {document.description && (
                       <p className="text-[10px] text-gray-500 mb-2.5 leading-relaxed">
                         {document.description}
                       </p>
                     )}
-
                     <input
                       type="file"
                       accept=".jpg,.jpeg,.png,.pdf"
@@ -1872,7 +1670,6 @@ const totalPriceFormatted = loadingFeeTiers
                         )
                       }
                     />
-
                     <div className="flex items-center gap-3">
                       <button
                         id={`wp_doc_btn_${document.document_type}`}
@@ -1884,14 +1681,12 @@ const totalPriceFormatted = loadingFeeTiers
                       >
                         Choose File
                       </button>
-
                       {formData.files[document.document_type] ? (
                         <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5 truncate">
                           <CheckCircle2
                             size={14}
                             className="text-emerald-600 flex-shrink-0"
                           />
-
                           <span className="truncate">
                             {formData.files[document.document_type]?.name}
                           </span>
@@ -1905,7 +1700,6 @@ const totalPriceFormatted = loadingFeeTiers
                   </div>
                 ))
               )}
-
               {/* Optional Company Change Checkbox */}
               <div className="rounded-2xl bg-purple-50/70 p-4 border border-purple-100">
                 <label className="flex items-center gap-2 text-xs font-bold text-purple-950 cursor-pointer">
@@ -1919,7 +1713,6 @@ const totalPriceFormatted = loadingFeeTiers
                   <span>This application involves a Company Change / Transfer</span>
                 </label>
               </div>
-
               {/* Navigation buttons */}
               <div className="pt-4 flex gap-3">
                 <button
@@ -1941,7 +1734,6 @@ const totalPriceFormatted = loadingFeeTiers
               </div>
             </div>
           )}
-
           {/* ══════════ STEP C: REVIEW & SUBMIT ══════════ */}
           {currentStep === "stepC" && (
             <div className="space-y-4">
@@ -1954,7 +1746,6 @@ const totalPriceFormatted = loadingFeeTiers
                   Verification Summary
                 </span>
               </div>
-
               {/* Applicant Summary */}
               <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200/80 space-y-2 text-xs">
                 <h4 className="font-extrabold text-purple-950 text-sm mb-2">
@@ -1993,16 +1784,14 @@ const totalPriceFormatted = loadingFeeTiers
                   </div>
                 </div>
               </div>
-
               {/* Document Summary (All 5 documents) */}
               <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200/80 space-y-2 text-xs">
                 <h4 className="font-extrabold text-purple-950 text-sm mb-2">
-                  Uploaded Documentation (5 Checkpoints)
+                  Uploaded Documentation ({documentRequirements.length} Checkpoints)
                 </h4>
                 <div className="space-y-1.5 text-gray-600">
                   {filteredDocumentRequirements.map((document) => {
                     const file = formData.files[document.document_type];
-
                     return (
                       <div
                         key={document.id}
@@ -2011,14 +1800,12 @@ const totalPriceFormatted = loadingFeeTiers
                         <span className="text-gray-700 font-semibold">
                           {document.title}:
                         </span>
-
                         {file ? (
                           <span className="font-bold text-emerald-700 flex items-center gap-1">
                             <CheckCircle2
                               size={13}
                               className="text-emerald-600 flex-shrink-0"
                             />
-
                             <span className="truncate max-w-[180px]">
                               {file.name}
                             </span>
@@ -2035,12 +1822,10 @@ const totalPriceFormatted = loadingFeeTiers
                   })}
                 </div>
               </div>
-
               {/* Notice */}
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-900 leading-relaxed">
                 By clicking Submit, your application enters our official verification queue. You will receive real-time notifications via WhatsApp ({formData.phoneCode} {formData.phone}) as the file progresses through the Foreign Employment Office (FEO).
               </div>
-
               {/* Navigation buttons */}
               <div className="pt-4 flex gap-3">
                 <button
@@ -2073,7 +1858,6 @@ const totalPriceFormatted = loadingFeeTiers
               </div>
             </div>
           )}
-
           {/* ══════════ STEP PAYMENT: ESEWA & PAY LATER ══════════ */}
           {currentStep === "payment" && (
             <div className="space-y-3">
@@ -2103,7 +1887,6 @@ const totalPriceFormatted = loadingFeeTiers
               </div>
             </div>
           )}
-
           {/* ══════════ STAGE AFTER SUBMIT ══════════ */}
           {currentStep === "submitted" && (
             <div className="text-center py-4 space-y-6">
@@ -2114,7 +1897,6 @@ const totalPriceFormatted = loadingFeeTiers
                 }`}>
                 <CheckCircle2 size={36} />
               </div>
-
               <div>
                 <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${paymentStatus === "paid"
                   ? "bg-emerald-100 text-emerald-800"
@@ -2131,7 +1913,6 @@ const totalPriceFormatted = loadingFeeTiers
                   Total Fee: <span className="font-bold text-slate-800">{totalPriceFormatted}</span> ({selectedPaymentMethod === "esewa" ? (paymentStatus === "paid" ? "Paid via eSewa" : "eSewa Pending") : "Pay Later"})
                 </p>
               </div>
-
               {/* What Happens Next */}
               <div className="text-left bg-gradient-to-br from-slate-50 to-purple-50/40 p-5 rounded-3xl border border-purple-100/80 space-y-4">
                 <div className="flex items-center gap-2">
@@ -2140,7 +1921,6 @@ const totalPriceFormatted = loadingFeeTiers
                     Post-Submission Processing Flow
                   </h4>
                 </div>
-
                 {/* Step 1: Officer Verification */}
                 <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-gray-100 shadow-xs">
                   <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -2155,7 +1935,6 @@ const totalPriceFormatted = loadingFeeTiers
                     </p>
                   </div>
                 </div>
-
                 {/* Step 2: Automated Notification */}
                 <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-gray-100 shadow-xs">
                   <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -2171,7 +1950,6 @@ const totalPriceFormatted = loadingFeeTiers
                   </div>
                 </div>
               </div>
-
               {/* Quick WhatsApp Link, Download PDF Slip & Close */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <a
@@ -2185,7 +1963,6 @@ const totalPriceFormatted = loadingFeeTiers
                   <MessageCircle size={16} />
                   <span>Notify via WhatsApp</span>
                 </a>
-
                 <button
                   type="button"
                   onClick={handleDownloadSlip}
@@ -2194,7 +1971,6 @@ const totalPriceFormatted = loadingFeeTiers
                   <Printer size={16} />
                   <span>Download PDF Slip</span>
                 </button>
-
                 <button
                   type="button"
                   onClick={handleCloseModal}
@@ -2210,5 +1986,4 @@ const totalPriceFormatted = loadingFeeTiers
     </dialog>
   );
 };
-
 export default WorkPermitModal;

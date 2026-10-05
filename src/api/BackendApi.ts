@@ -243,6 +243,29 @@ export const getVehicleById = (id: number | string) => {
 
 
 // WORK PERMIT
+
+// WORK PERMIT DOCUMENT REQUIREMENTS - PUBLIC
+// ======================================================
+
+// List page:
+// unique country + permit type combinations
+export const getGroupedWorkPermitCountries = () => {
+  return axiosInstance.get(
+    "/permit-document-requirements/grouped"
+  );
+};
+
+// Detail page + booking modal:
+// documents for selected country + selected permit type
+export const getWorkPermitDocumentRequirementsByType = (
+  countryId: number | string,
+  permitType: string
+) => {
+  return axiosInstance.get(
+    `/permit-document-requirements/${countryId}/${permitType}`
+  );
+};
+
 export const getCountries = () => {
   return axiosInstance.get("/countries");
 };
@@ -251,8 +274,13 @@ export const getCountryById = (id: string | number) => {
   return axiosInstance.get(`/countries/${id}`);
 };
 
-export const getPermitFeeTiers = (countryId: string | number) => {
-  return axiosInstance.get(`/countries/${countryId}/permit-fee-tiers`);
+export const getPermitFeeTiers = (
+  countryId: string | number,
+  permitType: string
+) => {
+  return axiosInstance.get(
+    `/countries/${countryId}/permit-fee-tiers/${permitType}`
+  );
 };
 
 export const getWorkPermitDocumentRequirements = (countryId: number) => {
@@ -463,7 +491,7 @@ export const getMyHotelBookingById = (id: number | string) => {
 
 // DOCUMENTATION
 export const getAllDocuments = () => {
-    return axiosInstance.get("/documents");
+  return axiosInstance.get("/documents");
 };
 
 export const getDocumentById = (id: string | number) => {

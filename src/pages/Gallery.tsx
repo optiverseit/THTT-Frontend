@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Compass,
   Eye,
@@ -24,6 +24,41 @@ const Gallery: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
+
+  const checkScroll = () => {
+    if (categoryScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = categoryScrollRef.current;
+    if (el) {
+      el.addEventListener("scroll", checkScroll, { passive: true });
+      window.addEventListener("resize", checkScroll);
+      return () => {
+        el.removeEventListener("scroll", checkScroll);
+        window.removeEventListener("resize", checkScroll);
+      };
+    }
+  }, []);
+
+  const scrollCategories = (direction: "left" | "right") => {
+    if (categoryScrollRef.current) {
+      const scrollAmount = 220;
+      categoryScrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+      setTimeout(checkScroll, 300);
+    }
+  };
 
   useEffect(() => {
     // TODO: Replace galleryData with API call here.
@@ -85,24 +120,66 @@ const Gallery: React.FC = () => {
       {/* ── MAIN CONTENT ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-12 md:pb-16">
         
-        {/* Category Filters */}
-        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-8 sm:mb-10">
-          {categories.map((cat) => (
+        {/* Category Filters with Horizontal Scroll & Arrows */}
+        <div className="relative max-w-4xl mx-auto mb-8 sm:mb-10 px-1">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Left Scroll Arrow */}
             <button
-              key={cat.id}
-              onClick={() => {
-                setSelectedCategory(cat.id);
-                setActivePhotoIndex(null);
-              }}
-              className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm ${
-                selectedCategory === cat.id
-                  ? "bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] text-white shadow-md shadow-pink-900/30 scale-105"
-                  : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+              type="button"
+              onClick={() => scrollCategories("left")}
+              disabled={!canScrollLeft}
+              aria-label="Scroll categories left"
+              className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center transition-all cursor-pointer z-10 ${
+                canScrollLeft
+                  ? "text-slate-700 hover:text-[#FF4FA3] hover:bg-pink-50 hover:border-pink-200 active:scale-95"
+                  : "text-slate-300 opacity-40 cursor-not-allowed"
               }`}
             >
-              {cat.label}
+              <ChevronLeft size={18} />
             </button>
-          ))}
+
+            {/* Scrollable Container with subtle scrollbar */}
+            <div
+              ref={categoryScrollRef}
+              className="flex items-center gap-2 sm:gap-3 overflow-x-auto scroll-smooth py-2 px-1 flex-1 whitespace-nowrap"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#CBD5E1 transparent",
+              }}
+            >
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    setActivePhotoIndex(null);
+                  }}
+                  className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex-shrink-0 whitespace-nowrap ${
+                    selectedCategory === cat.id
+                      ? "bg-gradient-to-r from-[#FF4FA3] to-[#8B2CFF] text-white shadow-md shadow-pink-900/30 scale-105"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Scroll Arrow */}
+            <button
+              type="button"
+              onClick={() => scrollCategories("right")}
+              disabled={!canScrollRight}
+              aria-label="Scroll categories right"
+              className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center transition-all cursor-pointer z-10 ${
+                canScrollRight
+                  ? "text-slate-700 hover:text-[#FF4FA3] hover:bg-pink-50 hover:border-pink-200 active:scale-95"
+                  : "text-slate-300 opacity-40 cursor-not-allowed"
+              }`}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Photos Grid */}

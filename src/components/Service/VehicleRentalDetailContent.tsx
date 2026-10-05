@@ -602,6 +602,42 @@ const VehicleRentalDetailContent: React.FC = () => {
   const itemsPerPage = 8;
   const cardsTopRef = useRef<HTMLDivElement>(null);
 
+  const pillsScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
+
+  const checkPillsScroll = () => {
+    if (pillsScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = pillsScrollRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+    }
+  };
+
+  useEffect(() => {
+    checkPillsScroll();
+    const el = pillsScrollRef.current;
+    if (el) {
+      el.addEventListener("scroll", checkPillsScroll, { passive: true });
+      window.addEventListener("resize", checkPillsScroll);
+      return () => {
+        el.removeEventListener("scroll", checkPillsScroll);
+        window.removeEventListener("resize", checkPillsScroll);
+      };
+    }
+  }, [vehicles.length]);
+
+  const scrollPills = (direction: "left" | "right") => {
+    if (pillsScrollRef.current) {
+      const scrollAmount = 180;
+      pillsScrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+      setTimeout(checkPillsScroll, 300);
+    }
+  };
+
   // ==========================================================
   // FETCH VEHICLES FROM API
   // ==========================================================
@@ -905,26 +941,68 @@ const VehicleRentalDetailContent: React.FC = () => {
           </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: "all", label: `All Vehicles (${vehicles.length})` },
-            { id: "suv", label: "4WD SUVs" },
-            { id: "van", label: "HiAce Vans" },
-            { id: "sedan", label: "Sedans" },
-            { id: "bus", label: "Coasters" },
-          ].map((tab) => (
+        {/* Filter Pills with Horizontal Scroll & Arrows */}
+        <div className="relative max-w-full">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Left Scroll Arrow */}
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${activeTab === tab.id
-                  ? "bg-[#2D1347] text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+              type="button"
+              onClick={() => scrollPills("left")}
+              disabled={!canScrollLeft}
+              aria-label="Scroll vehicle categories left"
+              className={`flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border border-gray-200/80 shadow-2xs flex items-center justify-center transition-all cursor-pointer z-10 ${
+                canScrollLeft
+                  ? "text-gray-700 hover:text-[#E11D48] hover:bg-pink-50 hover:border-pink-200 active:scale-95"
+                  : "text-gray-300 opacity-40 cursor-not-allowed"
+              }`}
             >
-              {tab.label}
+              <ChevronLeft size={16} />
             </button>
-          ))}
+
+            {/* Scrollable Container with subtle scrollbar */}
+            <div
+              ref={pillsScrollRef}
+              className="flex items-center gap-2 overflow-x-auto scroll-smooth py-1 px-0.5 flex-1 whitespace-nowrap"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#CBD5E1 transparent",
+              }}
+            >
+              {[
+                { id: "all", label: `All Vehicles (${vehicles.length})` },
+                { id: "suv", label: "4WD SUVs" },
+                { id: "van", label: "HiAce Vans" },
+                { id: "sedan", label: "Sedans" },
+                { id: "bus", label: "Coasters" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab.id
+                      ? "bg-[#2D1347] text-white shadow-md"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Scroll Arrow */}
+            <button
+              type="button"
+              onClick={() => scrollPills("right")}
+              disabled={!canScrollRight}
+              aria-label="Scroll vehicle categories right"
+              className={`flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border border-gray-200/80 shadow-2xs flex items-center justify-center transition-all cursor-pointer z-10 ${
+                canScrollRight
+                  ? "text-gray-700 hover:text-[#E11D48] hover:bg-pink-50 hover:border-pink-200 active:scale-95"
+                  : "text-gray-300 opacity-40 cursor-not-allowed"
+              }`}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 

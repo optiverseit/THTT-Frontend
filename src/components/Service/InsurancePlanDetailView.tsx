@@ -227,6 +227,159 @@ export const InsurancePlanDetailView: React.FC = () => {
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
   const heroBg = plan.heroImage;
+
+  const renderPricingSidebar = () => (
+    <div className="space-y-4">
+      <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-black">Coverage &amp; Pricing</h2>
+            <p className="text-[9px] text-gray-300 font-medium">Select your duration plan</p>
+          </div>
+          <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
+            <button
+              type="button"
+              onClick={() => setSelectedCurrency("nepali")}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "nepali" ? "bg-white text-[#200B3B] shadow-xs" : "text-white/80 hover:text-white"}`}
+            >NEPALI</button>
+            <button
+              type="button"
+              onClick={() => setSelectedCurrency("foreigner")}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "foreigner" ? "bg-[#E91E63] text-white shadow-xs" : "text-white/80 hover:text-white"}`}
+            >USD ($)</button>
+            <button
+              type="button"
+              onClick={() => setSelectedCurrency("inr")}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "inr" ? "bg-[#FF5722] text-white shadow-xs" : "text-white/80 hover:text-white"}`}
+            >INR (₹)</button>
+          </div>
+        </div>
+        {selectedCurrency !== "nepali" && (
+          <div className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+            <div className="flex items-center gap-1">
+              {isRateLoading ? <RefreshCw size={10} className="animate-spin" /> : rateLoadFailed ? <AlertCircle size={10} /> : <Zap size={10} />}
+              <span>
+                {isRateLoading ? "Fetching live exchange rate..." : rateLoadFailed
+                  ? selectedCurrency === "inr" ? "Offline estimate — 1 INR = NPR 1.60" : "Offline estimate — 1 USD = NPR 151.09"
+                  : selectedCurrency === "inr" ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)}` : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
+              </span>
+            </div>
+            {!isRateLoading && <span className="text-[8px] opacity-60">Live Exchange Rate</span>}
+          </div>
+        )}
+        <div className="p-3 sm:p-3.5 space-y-2.5">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                <tr>
+                  <th className="pb-2">Duration Plan</th>
+                  <th className="pb-2">Days</th>
+                  <th className="pb-2 text-right">Premium</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100/60">
+                {costOptionsList.length === 0 ? (
+                  <tr><td colSpan={3} className="py-5 text-center text-xs font-semibold text-gray-400">No pricing tier available</td></tr>
+                ) : costOptionsList.map((opt, rowIndex) => {
+                  const isSelected = selectedCostOption?.name === opt.name;
+                  return (
+                    <tr
+                      key={rowIndex}
+                      onClick={() => setSelectedCostOption(opt)}
+                      className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-purple-50/70 font-bold" : ""}`}
+                    >
+                      <td className="py-2.5 font-bold text-[#200B3B] text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full border ${isSelected ? "bg-[#E91E63] border-[#E91E63]" : "border-gray-300"}`} />
+                          <span>{opt.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-gray-500 text-[11px]">{opt.days}</td>
+                      <td className="py-2.5 text-right font-black text-[#E91E63] text-sm">
+                        {getRowDisplayPrice(opt.nprPrice)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Users size={13} className="text-[#E91E63]" />
+              <div>
+                <span className="block text-[11px] font-bold text-[#200B3B]">Number of Travelers</span>
+                <span className="text-[9px] text-gray-400">Select group size</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setNumberOfTravelers((prev) => Math.max(1, prev - 1))}
+                disabled={numberOfTravelers <= 1}
+                className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
+              >−</button>
+              <span className="font-black text-xs text-[#200B3B] w-4 text-center">{numberOfTravelers}</span>
+              <button
+                type="button"
+                onClick={() => setNumberOfTravelers((prev) => prev + 1)}
+                className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+              >+</button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-0.5">
+            <div>
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+                Estimated Premium ({numberOfTravelers} {numberOfTravelers === 1 ? "traveler" : "travelers"})
+              </span>
+              <span className="text-lg font-black text-[#200B3B]">
+                {selectedCostOption ? getFormattedEstimatedTotal() : "Not Available"}
+              </span>
+            </div>
+            <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Zap size={10} />
+              Best Rate
+            </span>
+          </div>
+          <div className="space-y-1.5 pt-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedCostOption) setIsAppModalOpen(true);
+              }}
+              disabled={!selectedCostOption}
+              className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm ${selectedCostOption
+                  ? "cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
+                  : "cursor-not-allowed bg-gray-200 text-gray-400"
+                }`}
+            >
+              <span>{selectedCostOption ? "Apply for Insurance Now" : "Pricing Not Available"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleWhatsAppInquiry}
+              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <MessageCircle size={14} />
+              <span>WhatsApp Inquiry</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Verified Insurance</span>
+            <p className="text-xs font-black text-[#200B3B]">Nepal-Licensed Insurance Brokers</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <div
@@ -663,6 +816,12 @@ export const InsurancePlanDetailView: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* ── PRICING & TRUST CARDS ON MOBILE (just below About card) ── */}
+          <div id="pricing-section-mobile" className="lg:hidden">
+            {renderPricingSidebar()}
+          </div>
+
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
@@ -768,154 +927,9 @@ export const InsurancePlanDetailView: React.FC = () => {
             </div>
           </div>
         </div>
-        <div id="pricing-section" className="space-y-4 lg:sticky lg:top-[150px] self-start">
-          <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-black">Coverage &amp; Pricing</h2>
-                <p className="text-[9px] text-gray-300 font-medium">Select your duration plan</p>
-              </div>
-              <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCurrency("nepali")}
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "nepali" ? "bg-white text-[#200B3B] shadow-xs" : "text-white/80 hover:text-white"}`}
-                >NEPALI</button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCurrency("foreigner")}
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "foreigner" ? "bg-[#E91E63] text-white shadow-xs" : "text-white/80 hover:text-white"}`}
-                >USD ($)</button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCurrency("inr")}
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "inr" ? "bg-[#FF5722] text-white shadow-xs" : "text-white/80 hover:text-white"}`}
-                >INR (₹)</button>
-              </div>
-            </div>
-            {selectedCurrency !== "nepali" && (
-              <div className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                <div className="flex items-center gap-1">
-                  {isRateLoading ? <RefreshCw size={10} className="animate-spin" /> : rateLoadFailed ? <AlertCircle size={10} /> : <Zap size={10} />}
-                  <span>
-                    {isRateLoading ? "Fetching live exchange rate..." : rateLoadFailed
-                      ? selectedCurrency === "inr" ? "Offline estimate — 1 INR = NPR 1.60" : "Offline estimate — 1 USD = NPR 151.09"
-                      : selectedCurrency === "inr" ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)}` : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
-                  </span>
-                </div>
-                {!isRateLoading && <span className="text-[8px] opacity-60">Live Exchange Rate</span>}
-              </div>
-            )}
-            <div className="p-3 sm:p-3.5 space-y-2.5">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
-                    <tr>
-                      <th className="pb-2">Duration Plan</th>
-                      <th className="pb-2">Days</th>
-                      <th className="pb-2 text-right">Premium</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100/60">
-                    {costOptionsList.length === 0 ? (
-                      <tr><td colSpan={3} className="py-5 text-center text-xs font-semibold text-gray-400">No pricing tier available</td></tr>
-                    ) : costOptionsList.map((opt, rowIndex) => {
-                      const isSelected = selectedCostOption?.name === opt.name;
-                      return (
-                        <tr
-                          key={rowIndex}
-                          onClick={() => setSelectedCostOption(opt)}
-                          className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-purple-50/70 font-bold" : ""}`}
-                        >
-                          <td className="py-2.5 font-bold text-[#200B3B] text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`w-2 h-2 rounded-full border ${isSelected ? "bg-[#E91E63] border-[#E91E63]" : "border-gray-300"}`} />
-                              <span>{opt.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-2.5 text-gray-500 text-[11px]">{opt.days}</td>
-                          <td className="py-2.5 text-right font-black text-[#E91E63] text-sm">
-                            {getRowDisplayPrice(opt.nprPrice)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Users size={13} className="text-[#E91E63]" />
-                  <div>
-                    <span className="block text-[11px] font-bold text-[#200B3B]">Number of Travelers</span>
-                    <span className="text-[9px] text-gray-400">Select group size</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setNumberOfTravelers((prev) => Math.max(1, prev - 1))}
-                    disabled={numberOfTravelers <= 1}
-                    className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
-                  >−</button>
-                  <span className="font-black text-xs text-[#200B3B] w-4 text-center">{numberOfTravelers}</span>
-                  <button
-                    type="button"
-                    onClick={() => setNumberOfTravelers((prev) => prev + 1)}
-                    className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
-                  >+</button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-0.5">
-                <div>
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                    Estimated Premium ({numberOfTravelers} {numberOfTravelers === 1 ? "traveler" : "travelers"})
-                  </span>
-                  <span className="text-lg font-black text-[#200B3B]">
-                    {selectedCostOption ? getFormattedEstimatedTotal() : "Not Available"}
-                  </span>
-                </div>
-                <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Zap size={10} />
-                  Best Rate
-                </span>
-              </div>
-              <div className="space-y-1.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedCostOption) setIsAppModalOpen(true);
-                  }}
-                  disabled={!selectedCostOption}
-                  className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm ${selectedCostOption
-                      ? "cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
-                      : "cursor-not-allowed bg-gray-200 text-gray-400"
-                    }`}
-                >
-                  <span>{selectedCostOption ? "Apply for Insurance Now" : "Pricing Not Available"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleWhatsAppInquiry}
-                  className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <MessageCircle size={14} />
-                  <span>WhatsApp Inquiry</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Verified Insurance</span>
-                <p className="text-xs font-black text-[#200B3B]">Nepal-Licensed Insurance Brokers</p>
-              </div>
-            </div>
-          </div>
+        {/* RIGHT COLUMN: Desktop Only */}
+        <div id="pricing-section" className="hidden lg:block lg:col-span-1 lg:sticky lg:top-[150px] self-start space-y-4">
+          {renderPricingSidebar()}
         </div>
       </div>
       <div className="mt-10">

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer } from "lucide-react";
+import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer, Mail, Phone, Globe } from "lucide-react";
 import type { Package } from "../../../assets/data/types";
 import { useGlobalCurrency } from "../../../context/CurrencyContext";
 import ShareModal from "../../reusable/ShareModal";
@@ -212,17 +212,27 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               <div style={{ fontSize: "18px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0 }}>
                 Trip Himalaya Tours &amp; Travel Pvt. Ltd.
               </div>
-              <div style={{ fontSize: "9px", color: "#f3e8ff", margin: "3px 0 0", lineHeight: "1.4" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>
-                    <MapPin size={10} color="#f472b6" style={{ marginRight: "4px", flexShrink: 0 }} />
-                    Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal
-                  </span>
-                  <span>📞 {contactPhone}</span>
+              <div style={{ fontSize: "9px", color: "#f3e8ff", margin: "4px 0 0", lineHeight: "1.45" }}>
+                {/* 1. Location */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <MapPin size={9.5} color="#f472b6" style={{ flexShrink: 0 }} />
+                  <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "3px" }}>
-                  <span>✉ {contactEmail}</span>
-                  <span>🌐 www.triphimalaya.com.np</span>
+                {/* 2. Email */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
+                  <Mail size={9.5} color="#f472b6" style={{ flexShrink: 0 }} />
+                  <span>{contactEmail}</span>
+                </div>
+                {/* 3. Phone and Website */}
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "2px" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                    <Phone size={9} color="#f472b6" style={{ flexShrink: 0 }} />
+                    <span>{contactPhone}</span>
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                    <Globe size={9} color="#f472b6" style={{ flexShrink: 0 }} />
+                    <span>www.triphimalaya.com.np</span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -466,7 +476,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
 
       {/* HERO HEADER — visa-page style */}
       <div
-        className="print:hidden relative overflow-hidden shadow-lg min-h-[250px] sm:min-h-[280px] flex flex-col justify-end"
+        className="print:hidden relative overflow-hidden shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end"
         style={{
           backgroundImage: `url('${galleryImages[0]}')`,
           backgroundSize: "cover",
@@ -480,7 +490,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
             {/* Left: title + meta */}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pr-12 sm:pr-14 md:pr-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-white tracking-tight drop-shadow-sm leading-tight">
                   {pkg.title}
@@ -533,7 +543,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
 
         {/* Share button — top-right corner of hero */}
-        <div className="absolute top-16 right-4 sm:top-20 sm:right-8 md:right-11 lg:right-14 xl:right-16 z-20">
+        <div className="absolute top-20 right-4 sm:top-20 sm:right-8 md:right-11 lg:right-14 xl:right-16 z-20">
           {isShareOpen && (
             <div className="absolute top-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30">
               {/* Facebook */}
@@ -646,18 +656,41 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
 
       </div>
 
-      {/* THUMBNAIL ROW — 4 photos preserved */}
-      <div className="print:hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 w-full">
-          <div onClick={() => openLightbox(1)} className="sm:col-span-3 h-32 sm:h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+      {/* THUMBNAIL GRID — compact 4-col single row on mobile, wide layout on desktop */}
+      <div className="print:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
+        {/* Mobile: 4-col single row with small thumbnails containing much less vertical space */}
+        <div className="grid grid-cols-4 sm:hidden gap-1.5">
+          {galleryImages.slice(1, 5).map((img, idx) => (
+            <div
+              key={idx}
+              onClick={() => openLightbox(idx + 1)}
+              className="relative aspect-4/3 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 shadow-xs border border-gray-100"
+            >
+              <img
+                src={img}
+                alt={`${pkg.title} ${idx + 2}`}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+              {idx === 3 && galleryImages.length > 5 && (
+                <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex items-center justify-center text-white text-[11px] font-black tracking-tight">
+                  +{galleryImages.length - 4}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Tablet/Desktop: original wide layout */}
+        <div className="hidden sm:grid grid-cols-12 gap-3 w-full">
+          <div onClick={() => openLightbox(1)} className="col-span-3 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
             <img src={galleryImages[1]} alt={`${pkg.title} 2`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
           </div>
-          <div onClick={() => openLightbox(2)} className="sm:col-span-6 h-32 sm:h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+          <div onClick={() => openLightbox(2)} className="col-span-6 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
             <img src={galleryImages[2]} alt={`${pkg.title} 3`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
           </div>
-          <div className="sm:col-span-3 flex flex-col gap-2 h-32 sm:h-36 md:h-40">
+          <div className="col-span-3 flex flex-col gap-2 h-36 md:h-40">
             <div onClick={() => openLightbox(3)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
               <img src={galleryImages[3]} alt={`${pkg.title} 4`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
@@ -671,16 +704,19 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
       </div>
 
       {/* SUB-NAVIGATION & PRICING BAR */}
-      <div className="print:hidden w-full bg-white border-y border-gray-100 shadow-sm relative z-10 mt-6 sm:mt-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto w-full sm:w-auto scrollbar-none">
+      <div className="print:hidden w-full bg-white border-y border-gray-100 shadow-sm relative z-10 mt-3 sm:mt-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          {/* Tab nav — scrollable on mobile */}
+          <div className="flex items-center gap-4 sm:gap-8 overflow-x-auto scrollbar-none border-b border-gray-100 py-0">
             {outletItems.map((item, index) => {
               const active = isTabActive(item.path);
               return (
                 <button
                   key={index}
                   onClick={() => navigate(item.path)}
-                  className={`py-2 text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap cursor-pointer relative ${active ? "text-[#E91E63]" : "text-gray-400 hover:text-[#200B3B]"}`}
+                  className={`py-3 text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap cursor-pointer relative flex-shrink-0 ${
+                    active ? "text-[#E91E63]" : "text-gray-400 hover:text-[#200B3B]"
+                  }`}
                 >
                   <span>{item.name}</span>
                   {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E91E63] rounded-full" />}
@@ -688,17 +724,20 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               );
             })}
           </div>
-          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="text-left sm:text-right">
-              <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">STARTS FROM</span>
-              <span className="text-xl sm:text-2xl font-black text-[#E91E63]">{startsFromDisplayPrice}</span>
+          {/* Price + Book Now row */}
+          <div className="flex items-center justify-between gap-3 py-2.5 sm:py-3">
+            <div className="text-left">
+              <span className="block text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">STARTS FROM</span>
+              <span className="text-lg sm:text-2xl font-black text-[#E91E63]">{startsFromDisplayPrice}</span>
             </div>
             <button
               onClick={() => {
-                const el = document.getElementById("pricing-section");
+                const el = window.innerWidth >= 1024
+                  ? document.getElementById("pricing-section-desktop") || document.getElementById("pricing-section")
+                  : document.getElementById("pricing-section") || document.getElementById("pricing-section-desktop");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="px-6 sm:px-8 py-3 rounded-full text-xs font-black uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-lg shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
+              className="px-5 sm:px-8 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider bg-[#E91E63] hover:bg-pink-600 text-white shadow-lg shadow-pink-600/20 transition-all cursor-pointer whitespace-nowrap"
             >
               BOOK NOW
             </button>

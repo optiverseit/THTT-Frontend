@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer } from "lucide-react";
+import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer, Mail, Phone, Globe } from "lucide-react";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency } from "../../context/CurrencyContext";
 import ShareModal from "../reusable/ShareModal";
@@ -208,17 +208,27 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               <div style={{ fontSize: "18px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0 }}>
                 Trip Himalaya Tours &amp; Travel Pvt. Ltd.
               </div>
-              <div style={{ fontSize: "9px", color: "#f3e8ff", margin: "3px 0 0", lineHeight: "1.4" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>
-                    <MapPin size={10} color="#f472b6" style={{ marginRight: "4px", flexShrink: 0 }} />
-                    Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal
-                  </span>
-                  <span>📞 {contactPhone}</span>
+              <div style={{ fontSize: "9px", color: "#f3e8ff", margin: "4px 0 0", lineHeight: "1.45" }}>
+                {/* 1. Location */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <MapPin size={9.5} color="#f472b6" style={{ flexShrink: 0 }} />
+                  <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "3px" }}>
-                  <span>✉ {contactEmail}</span>
-                  <span>🌐 www.triphimalaya.com.np</span>
+                {/* 2. Email */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
+                  <Mail size={9.5} color="#f472b6" style={{ flexShrink: 0 }} />
+                  <span>{contactEmail}</span>
+                </div>
+                {/* 3. Phone and Website */}
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "2px" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                    <Phone size={9} color="#f472b6" style={{ flexShrink: 0 }} />
+                    <span>{contactPhone}</span>
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                    <Globe size={9} color="#f472b6" style={{ flexShrink: 0 }} />
+                    <span>www.triphimalaya.com.np</span>
+                  </span>
                 </div>
               </div>
             </div>

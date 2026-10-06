@@ -266,7 +266,7 @@ const HotelPackageDetails: React.FC = () => {
   } = detailData;
 
   return (
-    <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-14 sm:pt-16 md:pt-18 print:min-h-0 print:bg-white">
+    <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-14 sm:pt-16 md:pt-0 print:min-h-0 print:bg-white">
       <div className="w-full">
         <HotelImageGrid pkg={enrichedPkg} />
       </div>

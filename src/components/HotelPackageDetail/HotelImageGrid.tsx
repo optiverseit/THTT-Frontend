@@ -542,7 +542,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
 
         {/* Share button — top-right corner of hero */}
-        <div className="absolute top-8 right-4 sm:top-10 sm:right-8 md:right-11 lg:right-14 xl:right-16 z-20">
+        <div className="absolute top-8 right-4 sm:top-10 sm:right-8 md:top-16 md:right-11 lg:right-14 xl:right-16 z-20">
           {isShareOpen && (
             <div className="absolute top-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30">
               {/* Facebook */}

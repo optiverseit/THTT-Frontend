@@ -16,11 +16,24 @@
  */
 
 import React, { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
 import VerificationCard from "./VerificationCard";
 import BookingModal from "../../reusable/packages/BookingModal";
-import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle } from "lucide-react";
-import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
+import {
+  MessageCircle,
+  Users,
+  Check,
+  Zap,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
+import {
+  useGlobalCurrency,
+  formatNPR,
+  formatUSD,
+  formatINR,
+} from "../../../context/CurrencyContext";
 
 // =============================================================================
 // Types
@@ -32,14 +45,24 @@ import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../../con
  * USD and INR conversions happen at render time using the live exchange rate.
  */
 interface PricingRow {
-  serviceName: string;      // Human-readable name of the service or tier
-  targetAgeGroup: string;   // The age bracket this pricing tier applies to
-  priceInNPR: number;       // Raw numeric price in Nepalese Rupees
+  serviceName: string;
+  targetAgeGroup: string;
+  priceInNPR: number;
 }
 
 /** Props accepted by the PackagePricing component */
 interface PackagePricingProps {
   pkg: Package;
+}
+
+/**
+ * Outlet context provided by PackageDetails.tsx.
+ *
+ * This is only used to know whether the pricing-tier API
+ * is currently loading.
+ */
+interface PackageOutletContext {
+  pricingLoading: boolean;
 }
 
 // =============================================================================
@@ -70,6 +93,13 @@ const WHATSAPP_BUSINESS_NUMBER = "9779851403761";
 const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
 
   // ---------------------------------------------------------------------------
+  // Pricing Loading State From PackageDetails
+  // ---------------------------------------------------------------------------
+
+  const { pricingLoading } =
+    useOutletContext<PackageOutletContext>();
+
+  // ---------------------------------------------------------------------------
   // Global Currency Context
   // ---------------------------------------------------------------------------
 
@@ -87,16 +117,20 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   // ---------------------------------------------------------------------------
 
   /** Selected experience tier index */
-  const [selectedTierIndex, setSelectedTierIndex] = useState<number>(0);
+  const [selectedTierIndex, setSelectedTierIndex] =
+    useState<number>(0);
 
   /** Number of travelers selected by the user */
-  const [numberOfGuests, setNumberOfGuests] = useState<number>(1);
+  const [numberOfGuests, setNumberOfGuests] =
+    useState<number>(1);
 
   /** Controls opening the upgraded BookingModal */
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] =
+    useState<boolean>(false);
 
   /** Controls the booking confirmation animation (resets after 3s) */
-  const [isBookingConfirmed, setIsBookingConfirmed] = useState<boolean>(false);
+  const [isBookingConfirmed, setIsBookingConfirmed] =
+    useState<boolean>(false);
 
   // ---------------------------------------------------------------------------
   // Pricing Data Preparation
@@ -112,10 +146,10 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   const pricingRows: PricingRow[] =
     Array.isArray(pkg.pricingTable)
       ? pkg.pricingTable.map((dataRow) => ({
-        serviceName: dataRow.service,
-        targetAgeGroup: dataRow.ageGroup,
-        priceInNPR: Number(dataRow.priceNepali),
-      }))
+          serviceName: dataRow.service,
+          targetAgeGroup: dataRow.ageGroup,
+          priceInNPR: Number(dataRow.priceNepali),
+        }))
       : [];
 
   // ---------------------------------------------------------------------------
@@ -127,21 +161,22 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
    */
   const selectedRow = pricingRows[selectedTierIndex];
 
-// If a pricing tier exists, use tier price.
-// Otherwise use the actual package price from API.
-const priceInNPR = selectedRow
-  ? selectedRow.priceInNPR
-  : Number(pkg.price || 0);
+  // If a pricing tier exists, use tier price.
+  // Otherwise use the actual package price from API.
+  const priceInNPR = selectedRow
+    ? selectedRow.priceInNPR
+    : Number(pkg.price || 0);
 
-const unitPriceForEstimatedTotal: number =
-  selectedCurrency === "nepali"
-    ? priceInNPR
-    : selectedCurrency === "inr"
-      ? Math.round(priceInNPR / nprPerOneINR)
-      : Math.round(priceInNPR / nprPerOneDollar);
+  const unitPriceForEstimatedTotal: number =
+    selectedCurrency === "nepali"
+      ? priceInNPR
+      : selectedCurrency === "inr"
+        ? Math.round(priceInNPR / nprPerOneINR)
+        : Math.round(priceInNPR / nprPerOneDollar);
 
   /** Final estimated total = unit price * guest count */
-  const estimatedTotalPrice: number = unitPriceForEstimatedTotal * numberOfGuests;
+  const estimatedTotalPrice: number =
+    unitPriceForEstimatedTotal * numberOfGuests;
 
   // ---------------------------------------------------------------------------
   // Display Formatting Helpers
@@ -154,10 +189,16 @@ const unitPriceForEstimatedTotal: number =
     if (selectedCurrency === "nepali") {
       return formatNPR(row.priceInNPR);
     }
+
     if (selectedCurrency === "inr") {
-      return formatINR(row.priceInNPR / nprPerOneINR);
+      return formatINR(
+        row.priceInNPR / nprPerOneINR
+      );
     }
-    return formatUSD(row.priceInNPR / nprPerOneDollar);
+
+    return formatUSD(
+      row.priceInNPR / nprPerOneDollar
+    );
   };
 
   /**
@@ -167,9 +208,11 @@ const unitPriceForEstimatedTotal: number =
     if (selectedCurrency === "nepali") {
       return formatNPR(estimatedTotalPrice);
     }
+
     if (selectedCurrency === "inr") {
       return formatINR(estimatedTotalPrice);
     }
+
     return formatUSD(estimatedTotalPrice);
   };
 
@@ -178,11 +221,16 @@ const unitPriceForEstimatedTotal: number =
   // ---------------------------------------------------------------------------
 
   const handleIncreaseGuestCount = (): void => {
-    setNumberOfGuests((previousCount) => previousCount + 1);
+    setNumberOfGuests(
+      (previousCount) => previousCount + 1
+    );
   };
 
   const handleDecreaseGuestCount = (): void => {
-    setNumberOfGuests((previousCount) => Math.max(1, previousCount - 1));
+    setNumberOfGuests(
+      (previousCount) =>
+        Math.max(1, previousCount - 1)
+    );
   };
 
   const handleBookNow = (): void => {
@@ -191,19 +239,35 @@ const unitPriceForEstimatedTotal: number =
 
   const handleWhatsAppInquiry = (): void => {
     const currencyText =
-      selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
+      selectedCurrency === "nepali"
+        ? "NPR"
+        : selectedCurrency === "inr"
+          ? "INR"
+          : "USD";
+
     const isTour = pkg.type === "tour";
-    const teamName = isTour ? "Tours & Holidays Team" : "Trekking & Adventure Activity Team";
+
+    const teamName = isTour
+      ? "Tours & Holidays Team"
+      : "Trekking & Adventure Activity Team";
+
     const packageTitle = pkg.title;
     const guestCount = numberOfGuests;
-    const totalFormatted = getFormattedEstimatedTotal();
-    const tierName = selectedRow?.serviceName || "";
+    const totalFormatted =
+      getFormattedEstimatedTotal();
+
+    const tierName =
+      selectedRow?.serviceName || "";
 
     const inquiryMessage = encodeURIComponent(
       `Hello Trip Himalaya (${teamName})! I am interested in booking "${packageTitle}" (${tierName}) for ${guestCount} guest(s). Estimated Total: ${totalFormatted} (${currencyText}). Please share availability and confirmation details.`
     );
 
-    window.open(`https://wa.me/${WHATSAPP_BUSINESS_NUMBER}?text=${inquiryMessage}`, "_blank", "noopener,noreferrer");
+    window.open(
+      `https://wa.me/${WHATSAPP_BUSINESS_NUMBER}?text=${inquiryMessage}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   // ---------------------------------------------------------------------------
@@ -223,39 +287,56 @@ const unitPriceForEstimatedTotal: number =
           <div className="py-2.5 px-3.5 bg-gradient-to-r from-[#200B3B] to-[#3B145C] text-white flex items-center justify-between gap-2">
 
             <div>
-              <h2 className="text-sm font-black">Pricing Options</h2>
-              <p className="text-[9px] text-gray-300 font-medium">Standard rates &amp; inclusions</p>
+              <h2 className="text-sm font-black">
+                Pricing Options
+              </h2>
+
+              <p className="text-[9px] text-gray-300 font-medium">
+                Standard rates &amp; inclusions
+              </p>
             </div>
 
             {/* NEPALI / USD / INR currency toggle buttons (syncs site-wide) */}
             <div className="flex bg-white/10 backdrop-blur-md p-0.5 rounded-lg text-[9px] font-black tracking-wider gap-0.5">
+
               <button
-                onClick={() => setSelectedCurrency("nepali")}
+                onClick={() =>
+                  setSelectedCurrency("nepali")
+                }
                 aria-label="Show prices in Nepali Rupees (NPR)"
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "nepali"
-                  ? "bg-white text-[#200B3B] shadow-xs"
-                  : "text-white/80 hover:text-white"
-                  }`}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  selectedCurrency === "nepali"
+                    ? "bg-white text-[#200B3B] shadow-xs"
+                    : "text-white/80 hover:text-white"
+                }`}
               >
                 NEPALI
               </button>
+
               <button
-                onClick={() => setSelectedCurrency("foreigner")}
+                onClick={() =>
+                  setSelectedCurrency("foreigner")
+                }
                 aria-label="Show prices in US Dollars (USD)"
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "foreigner"
-                  ? "bg-[#E91E63] text-white shadow-xs"
-                  : "text-white/80 hover:text-white"
-                  }`}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  selectedCurrency === "foreigner"
+                    ? "bg-[#E91E63] text-white shadow-xs"
+                    : "text-white/80 hover:text-white"
+                }`}
               >
                 USD ($)
               </button>
+
               <button
-                onClick={() => setSelectedCurrency("inr")}
+                onClick={() =>
+                  setSelectedCurrency("inr")
+                }
                 aria-label="Show prices in Indian Rupees (INR)"
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${selectedCurrency === "inr"
-                  ? "bg-[#FF5722] text-white shadow-xs"
-                  : "text-white/80 hover:text-white"
-                  }`}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  selectedCurrency === "inr"
+                    ? "bg-[#FF5722] text-white shadow-xs"
+                    : "text-white/80 hover:text-white"
+                }`}
               >
                 INR (₹)
               </button>
@@ -265,19 +346,25 @@ const unitPriceForEstimatedTotal: number =
           {/* Exchange Rate Status Banner — shown when USD or INR mode is active */}
           {selectedCurrency !== "nepali" && (
             <div
-              className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${rateLoadFailed
-                ? "bg-amber-50 text-amber-700"
-                : "bg-emerald-50 text-emerald-700"
-                }`}
+              className={`flex items-center justify-between gap-1.5 px-3.5 py-1.5 text-[9px] font-semibold ${
+                rateLoadFailed
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-emerald-50 text-emerald-700"
+              }`}
             >
               <div className="flex items-center gap-1">
+
                 {isRateLoading ? (
-                  <RefreshCw size={10} className="animate-spin" />
+                  <RefreshCw
+                    size={10}
+                    className="animate-spin"
+                  />
                 ) : rateLoadFailed ? (
                   <AlertCircle size={10} />
                 ) : (
                   <Zap size={10} />
                 )}
+
                 <span>
                   {isRateLoading
                     ? "Fetching live exchange rate..."
@@ -286,160 +373,276 @@ const unitPriceForEstimatedTotal: number =
                         ? `Offline estimate — 1 INR = NPR 1.60`
                         : `Offline estimate — 1 USD = NPR 151.09`
                       : selectedCurrency === "inr"
-                        ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(2)} (100 INR = NPR ${(nprPerOneINR * 100).toFixed(1)})`
-                        : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(2)}`}
+                        ? `Live rate: 1 INR = NPR ${nprPerOneINR.toFixed(
+                            2
+                          )} (100 INR = NPR ${(
+                            nprPerOneINR * 100
+                          ).toFixed(1)})`
+                        : `Live rate: 1 USD = NPR ${nprPerOneDollar.toFixed(
+                            2
+                          )}`}
                 </span>
               </div>
+
               {!isRateLoading && (
                 <span className="text-[8px] opacity-60">
-                  {rateLoadFailed ? "Fallback rate" : "Live Exchange Rate"}
+                  {rateLoadFailed
+                    ? "Fallback rate"
+                    : "Live Exchange Rate"}
                 </span>
               )}
             </div>
           )}
 
-          {/* Pricing Table + Controls body */}
-          <div className="p-3 sm:p-3.5 space-y-2.5">
+          {/* ===============================================================
+              ONLY PRICING BODY LOADING
+              =============================================================== */}
 
-            {/* Pricing Table — proper HTML table for guaranteed column alignment */}
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/2">
-                    Option / Tier
-                  </th>
-                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">
-                    Age Group
-                  </th>
-                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-right">
-                    Price
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {pricingRows.map((pricingRow, rowIndex) => {
-                  const isSelected = selectedTierIndex === rowIndex;
-                  return (
-                    <tr
-                      key={rowIndex}
-                      onClick={() => setSelectedTierIndex(rowIndex)}
-                      className="cursor-pointer hover:bg-gray-50/60 transition-colors"
-                    >
-                      {/* Radio + service name */}
-                      <td className="py-2.5 pr-2">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
-                              ? "border-[#E91E63] bg-[#E91E63]"
-                              : "border-gray-300 bg-white"
-                              }`}
+          {pricingLoading ? (
+
+            <div className="min-h-[240px] flex items-center justify-center p-3 sm:p-3.5">
+              <div className="flex flex-col items-center justify-center">
+
+                <div className="w-8 h-8 border-4 border-gray-200 border-t-[#E91E63] rounded-full animate-spin" />
+
+                <p className="text-[11px] font-semibold text-gray-400 mt-3">
+                  Loading pricing...
+                </p>
+
+              </div>
+            </div>
+
+          ) : (
+
+            /* Pricing Table + Controls body */
+            <div className="p-3 sm:p-3.5 space-y-2.5">
+
+              {/* Pricing Table — proper HTML table for guaranteed column alignment */}
+              <table className="w-full text-left border-collapse">
+
+                <thead>
+                  <tr className="border-b border-gray-200">
+
+                    <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/2">
+                      Option / Tier
+                    </th>
+
+                    <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">
+                      Age Group
+                    </th>
+
+                    <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-right">
+                      Price
+                    </th>
+
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+
+                  {pricingRows.map(
+                    (pricingRow, rowIndex) => {
+
+                      const isSelected =
+                        selectedTierIndex ===
+                        rowIndex;
+
+                      return (
+                        <tr
+                          key={rowIndex}
+                          onClick={() =>
+                            setSelectedTierIndex(
+                              rowIndex
+                            )
+                          }
+                          className="cursor-pointer hover:bg-gray-50/60 transition-colors"
+                        >
+
+                          {/* Radio + service name */}
+                          <td className="py-2.5 pr-2">
+
+                            <div className="flex items-center gap-2">
+
+                              <span
+                                className={`flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                  isSelected
+                                    ? "border-[#E91E63] bg-[#E91E63]"
+                                    : "border-gray-300 bg-white"
+                                }`}
+                              >
+
+                                {isSelected && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                                )}
+
+                              </span>
+
+                              <span
+                                className={`text-[11px] font-bold leading-tight ${
+                                  isSelected
+                                    ? "text-[#E91E63]"
+                                    : "text-[#200B3B]"
+                                }`}
+                              >
+                                {
+                                  pricingRow.serviceName
+                                }
+                              </span>
+
+                            </div>
+                          </td>
+
+                          {/* Age Group */}
+                          <td className="py-2.5 text-[10px] text-gray-500">
+                            {
+                              pricingRow.targetAgeGroup
+                            }
+                          </td>
+
+                          {/* Price */}
+                          <td
+                            className={`py-2.5 text-xs font-black text-right whitespace-nowrap ${
+                              isSelected
+                                ? "text-[#E91E63]"
+                                : "text-[#200B3B]"
+                            }`}
                           >
-                            {isSelected && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                            {getRowDisplayPrice(
+                              pricingRow
                             )}
-                          </span>
-                          <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
-                            {pricingRow.serviceName}
-                          </span>
-                        </div>
-                      </td>
+                          </td>
 
-                      {/* Age Group */}
-                      <td className="py-2.5 text-[10px] text-gray-500">
-                        {pricingRow.targetAgeGroup}
-                      </td>
+                        </tr>
+                      );
+                    }
+                  )}
 
-                      {/* Price */}
-                      <td className={`py-2.5 text-xs font-black text-right whitespace-nowrap ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>
-                        {getRowDisplayPrice(pricingRow)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
 
-            {/* Guest Count Selector */}
-            <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Users size={13} className="text-[#E91E63]" />
-                <div>
-                  <span className="block text-[11px] font-bold text-[#200B3B]">
-                    Number of Guests
+              {/* Guest Count Selector */}
+              <div className="bg-[#FBFBFE] py-1.5 px-2.5 rounded-lg border border-gray-100 flex items-center justify-between">
+
+                <div className="flex items-center gap-1.5">
+
+                  <Users
+                    size={13}
+                    className="text-[#E91E63]"
+                  />
+
+                  <div>
+                    <span className="block text-[11px] font-bold text-[#200B3B]">
+                      Number of Guests
+                    </span>
+
+                    <span className="text-[9px] text-gray-400">
+                      Select traveler count
+                    </span>
+                  </div>
+
+                </div>
+
+                <div className="flex items-center gap-1.5">
+
+                  <button
+                    onClick={
+                      handleDecreaseGuestCount
+                    }
+                    disabled={
+                      numberOfGuests <= 1
+                    }
+                    aria-label="Remove one guest"
+                    className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
+                  >
+                    −
+                  </button>
+
+                  <span className="font-black text-xs text-[#200B3B] w-4 text-center">
+                    {numberOfGuests}
                   </span>
-                  <span className="text-[9px] text-gray-400">Select traveler count</span>
+
+                  <button
+                    onClick={
+                      handleIncreaseGuestCount
+                    }
+                    aria-label="Add one more guest"
+                    className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                  >
+                    +
+                  </button>
+
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={handleDecreaseGuestCount}
-                  disabled={numberOfGuests <= 1}
-                  aria-label="Remove one guest"
-                  className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 cursor-pointer"
-                >
-                  −
-                </button>
-                <span className="font-black text-xs text-[#200B3B] w-4 text-center">
-                  {numberOfGuests}
+              {/* Estimated Total */}
+              <div className="pt-0.5">
+
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
+                  Estimated Total
                 </span>
+
+                <span className="text-lg font-black text-[#200B3B]">
+                  {getFormattedEstimatedTotal()}
+                </span>
+
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="space-y-1.5 pt-0.5">
+
                 <button
-                  onClick={handleIncreaseGuestCount}
-                  aria-label="Add one more guest"
-                  className="w-5 h-5 rounded bg-white border border-gray-200 text-[#200B3B] font-black text-xs flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                  onClick={handleBookNow}
+                  // disabled={pricingRows.length === 0}
+                  aria-label="Book this trip"
+                  className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
+                    isBookingConfirmed
+                      ? "bg-emerald-600 text-white"
+                      : "bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
+                  }`}
                 >
-                  +
+
+                  {isBookingConfirmed ? (
+                    <>
+                      <Check size={14} />
+
+                      <span>
+                        Reservation Requested!
+                      </span>
+                    </>
+                  ) : (
+                    <span>
+                      Book This Trip Now
+                    </span>
+                  )}
+
                 </button>
+
+                <button
+                  onClick={
+                    handleWhatsAppInquiry
+                  }
+                  aria-label="Send a WhatsApp inquiry"
+                  className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+
+                  <MessageCircle size={14} />
+
+                  <span>
+                    WhatsApp Instant Inquiry
+                  </span>
+
+                </button>
+
               </div>
             </div>
-
-            {/* Estimated Total */}
-            <div className="pt-0.5">
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">
-                Estimated Total
-              </span>
-              <span className="text-lg font-black text-[#200B3B]">
-                {getFormattedEstimatedTotal()}
-              </span>
-            </div>
-
-            {/* CTA Buttons */}
-            <div className="space-y-1.5 pt-0.5">
-              <button
-                onClick={handleBookNow}
-                // disabled={pricingRows.length === 0}
-                aria-label="Book this trip"
-                className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${isBookingConfirmed
-                  ? "bg-emerald-600 text-white"
-                  : "bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
-                  }`}
-              >
-                {isBookingConfirmed ? (
-                  <>
-                    <Check size={14} />
-                    <span>Reservation Requested!</span>
-                  </>
-                ) : (
-                  <span>Book This Trip Now</span>
-                )}
-              </button>
-
-              <button
-                onClick={handleWhatsAppInquiry}
-                aria-label="Send a WhatsApp inquiry"
-                className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <MessageCircle size={14} />
-                <span>WhatsApp Instant Inquiry</span>
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* =======================================================================
           VERIFICATION & TRUST CARD
           ======================================================================= */}
         <VerificationCard />
+
       </div>
 
       {/* =======================================================================
@@ -448,9 +651,15 @@ const unitPriceForEstimatedTotal: number =
       <BookingModal
         pkg={pkg}
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        initialTierIndex={selectedTierIndex}
-        initialGuests={numberOfGuests}
+        onClose={() =>
+          setIsBookingModalOpen(false)
+        }
+        initialTierIndex={
+          selectedTierIndex
+        }
+        initialGuests={
+          numberOfGuests
+        }
         pricingSource="tier"
       />
     </>

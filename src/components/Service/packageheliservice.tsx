@@ -55,6 +55,8 @@ import {
   Share2,
   Copy,
   BadgeCheck,
+  SlidersHorizontal,
+  Tag,
 } from "lucide-react";
 import {
   useGlobalCurrency,
@@ -465,6 +467,7 @@ export const PackageHeliService: React.FC<{
   const [priceRange, setPriceRange] = useState<number>(500000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
 
   // Booking Modal State
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
@@ -2914,118 +2917,265 @@ export const PackageHeliService: React.FC<{
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             {/* ── LEFT: FILTER SIDEBAR ── */}
-            <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-[#E91E63]" />
-                  <h3 className="text-sm font-black text-[#200B3B]">Filter By</h3>
-                </div>
+            <div className="lg:col-span-1">
+              {/* ══════════════════════════════════════════
+                  MOBILE — compact toggle bar (< lg) matching Packages
+              ══════════════════════════════════════════ */}
+              <div className="lg:hidden">
+                {/* Toggle Button Row */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setPriceRange(500000);
-                    setSelectedRating(0);
-                    setSelectedKeywords([]);
-                    navigate("/service/heli-services");
-                  }}
-                  className="text-[10px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
+                  onClick={() => setMobileFilterOpen((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl shadow-sm border border-gray-100 cursor-pointer"
                 >
-                  CLEAR ALL
-                </button>
-              </div>
-
-              {/* 1. Price Range Slider */}
-              <div className="space-y-3 pb-5 border-b border-gray-100">
-                <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
-                  PRICE RANGE ({selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD"})
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={500000}
-                  step={5000}
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(Number(e.target.value))}
-                  className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
-                />
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-gray-400">
-                    {displayPrice(0, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
-                  </span>
-                  <span className="text-[#E91E63] font-black">
-                    {displayPrice(priceRange, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
-                  </span>
-                </div>
-              </div>
-
-              {/* 2. Star Ratings */}
-              <div className="space-y-3 pb-5 border-b border-gray-100">
-                <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
-                  RATINGS
-                </label>
-                <div className="space-y-1.5">
-                  {[5, 4, 3, 2, 1].map((starCount) => (
-                    <button
-                      key={starCount}
-                      type="button"
-                      onClick={() =>
-                        setSelectedRating(selectedRating === starCount ? 0 : starCount)
-                      }
-                      className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${selectedRating === starCount
-                        ? "bg-pink-50 border border-pink-200"
-                        : "hover:bg-gray-50"
-                        }`}
-                    >
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            size={14}
-                            className={`${i < starCount
-                              ? "text-yellow-400 fill-yellow-400"
-                              : "text-gray-200"
-                              }`}
-                          />
-                        ))}
-                      </div>
-                      {selectedRating === starCount && (
-                        <Check size={14} className="text-[#E91E63]" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 3. Keywords Tags */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
-                  KEYWORDS
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableKeywords.map((kw) => {
-                    const isSelected = selectedKeywords.includes(kw);
-                    return (
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal size={15} className="text-[#E91E63]" />
+                    <span className="text-sm font-bold text-[#200B3B]">Filter</span>
+                    {((selectedRating > 0 ? 1 : 0) + selectedKeywords.length + (priceRange < 500000 ? 1 : 0)) > 0 && (
+                      <span className="bg-[#E91E63] text-white text-[10px] font-black rounded-full px-1.5 py-0.5 leading-none">
+                        {(selectedRating > 0 ? 1 : 0) + selectedKeywords.length + (priceRange < 500000 ? 1 : 0)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {((selectedRating > 0 ? 1 : 0) + selectedKeywords.length + (priceRange < 500000 ? 1 : 0)) > 0 && (
                       <button
-                        key={kw}
                         type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedKeywords((prev) => prev.filter((k) => k !== kw));
-                          } else {
-                            setSelectedKeywords((prev) => [...prev, kw]);
-                          }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchQuery("");
+                          setPriceRange(500000);
+                          setSelectedRating(0);
+                          setSelectedKeywords([]);
+                          navigate("/service/heli-services");
                         }}
-                        className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer uppercase ${isSelected
-                          ? "bg-[#200B3B] text-white border-[#200B3B]"
-                          : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
+                        className="text-[10px] font-bold text-[#E91E63] uppercase tracking-wider cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <ChevronDown
+                      size={16}
+                      className={`text-gray-400 transition-transform duration-200 ${
+                        mobileFilterOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {/* Collapsible Panel */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    mobileFilterOpen ? "max-h-[800px] opacity-100 mt-2" : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+                    {/* 1. Price Range Slider */}
+                    <div className="py-4 border-b border-gray-100">
+                      <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block mb-3">
+                        PRICE RANGE ({selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD"})
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={500000}
+                        step={5000}
+                        value={priceRange}
+                        onChange={(e) => setPriceRange(Number(e.target.value))}
+                        className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
+                      />
+                      <div className="flex justify-between items-center text-xs font-bold mt-2">
+                        <span className="text-gray-400">
+                          {displayPrice(0, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                        </span>
+                        <span className="text-[#E91E63] font-black">
+                          {displayPrice(priceRange, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 2. Star Ratings (5-column grid matching Packages FilterSideBar) */}
+                    <div className="py-4 border-b border-gray-100">
+                      <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block mb-3">
+                        RATINGS
+                      </label>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[5, 4, 3, 2, 1].map((starCount) => {
+                          const isSelected = selectedRating === starCount;
+                          return (
+                            <button
+                              key={starCount}
+                              type="button"
+                              onClick={() => setSelectedRating(isSelected ? 0 : starCount)}
+                              className={`flex flex-col items-center justify-center gap-0.5 py-2 rounded-xl text-[10px] font-bold cursor-pointer transition-colors border ${
+                                isSelected
+                                  ? "bg-pink-50 border-[#E91E63] ring-1 ring-[#E91E63] text-[#E91E63]"
+                                  : "bg-[#2D1347] border-[#2D1347] text-white hover:bg-[#3B145C]"
+                              }`}
+                            >
+                              <Star
+                                size={13}
+                                className={isSelected ? "text-yellow-400 fill-yellow-400" : "text-white/70 fill-white/70"}
+                              />
+                              <span>{starCount}★</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 3. Keywords Tags */}
+                    <div className="pt-4">
+                      <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
+                        <Tag size={12} className="text-[#E91E63]" />
+                        <span>KEYWORDS</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {availableKeywords.map((kw) => {
+                          const isSelected = selectedKeywords.includes(kw);
+                          return (
+                            <button
+                              key={kw}
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedKeywords((prev) => prev.filter((k) => k !== kw));
+                                } else {
+                                  setSelectedKeywords((prev) => [...prev, kw]);
+                                }
+                              }}
+                              className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase transition-colors cursor-pointer border ${
+                                isSelected
+                                  ? "bg-[#E91E63] text-white border-[#E91E63]"
+                                  : "bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100"
+                              }`}
+                            >
+                              {kw}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ══════════════════════════════════════════
+                  DESKTOP — full sidebar card (lg+) (UNTOUCHED)
+              ══════════════════════════════════════════ */}
+              <div className="hidden lg:block w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Filter size={16} className="text-[#E91E63]" />
+                    <h3 className="text-sm font-black text-[#200B3B]">Filter By</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setPriceRange(500000);
+                      setSelectedRating(0);
+                      setSelectedKeywords([]);
+                      navigate("/service/heli-services");
+                    }}
+                    className="text-[10px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
+                  >
+                    CLEAR ALL
+                  </button>
+                </div>
+
+                {/* 1. Price Range Slider */}
+                <div className="space-y-3 pb-5 border-b border-gray-100">
+                  <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
+                    PRICE RANGE ({selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD"})
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={500000}
+                    step={5000}
+                    value={priceRange}
+                    onChange={(e) => setPriceRange(Number(e.target.value))}
+                    className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
+                  />
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="text-gray-400">
+                      {displayPrice(0, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                    </span>
+                    <span className="text-[#E91E63] font-black">
+                      {displayPrice(priceRange, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Star Ratings */}
+                <div className="space-y-3 pb-5 border-b border-gray-100">
+                  <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
+                    RATINGS
+                  </label>
+                  <div className="space-y-1.5">
+                    {[5, 4, 3, 2, 1].map((starCount) => (
+                      <button
+                        key={starCount}
+                        type="button"
+                        onClick={() =>
+                          setSelectedRating(selectedRating === starCount ? 0 : starCount)
+                        }
+                        className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${selectedRating === starCount
+                          ? "bg-pink-50 border border-pink-200"
+                          : "hover:bg-gray-50"
                           }`}
                       >
-                        {kw}
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              size={14}
+                              className={`${i < starCount
+                                ? "text-yellow-400 fill-yellow-400"
+                                : "text-gray-200"
+                                }`}
+                            />
+                          ))}
+                        </div>
+                        {selectedRating === starCount && (
+                          <Check size={14} className="text-[#E91E63]" />
+                        )}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Keywords Tags */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
+                    KEYWORDS
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableKeywords.map((kw) => {
+                      const isSelected = selectedKeywords.includes(kw);
+                      return (
+                        <button
+                          key={kw}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedKeywords((prev) => prev.filter((k) => k !== kw));
+                            } else {
+                              setSelectedKeywords((prev) => [...prev, kw]);
+                            }
+                          }}
+                          className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer uppercase ${isSelected
+                            ? "bg-[#200B3B] text-white border-[#200B3B]"
+                            : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
+                            }`}
+                        >
+                          {kw}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

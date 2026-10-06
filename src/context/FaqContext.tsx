@@ -166,7 +166,7 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const targetCustom = customFaqs.filter(
         (f) =>
           f.targetType === targetType &&
-          f.targetId?.toLowerCase() === targetId?.toLowerCase()
+          String(f.targetId || "").toLowerCase() === String(targetId || "").toLowerCase()
       );
 
       // 3. Combine defaults + custom
@@ -334,7 +334,7 @@ export const FaqProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomFaqs((prev) =>
       prev.filter(
         (f) =>
-          !(f.targetType === targetType && f.targetId.toLowerCase() === targetId.toLowerCase())
+          !(f.targetType === targetType && String(f.targetId || "").toLowerCase() === String(targetId || "").toLowerCase())
       )
     );
 

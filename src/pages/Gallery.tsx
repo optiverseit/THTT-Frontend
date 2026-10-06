@@ -120,16 +120,16 @@ const Gallery: React.FC = () => {
       {/* ── MAIN CONTENT ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-12 md:pb-16">
         
-        {/* Category Filters with Horizontal Scroll & Arrows */}
-        <div className="relative max-w-4xl mx-auto mb-8 sm:mb-10 px-1">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Left Scroll Arrow */}
+        {/* Category Filters with Horizontal Scroll & Arrows on mobile; full row on desktop */}
+        <div className="relative max-w-5xl mx-auto mb-8 sm:mb-10 px-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:justify-center">
+            {/* Left Scroll Arrow — Mobile only */}
             <button
               type="button"
               onClick={() => scrollCategories("left")}
               disabled={!canScrollLeft}
               aria-label="Scroll categories left"
-              className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center transition-all cursor-pointer z-10 ${
+              className={`md:hidden flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center transition-all cursor-pointer z-10 ${
                 canScrollLeft
                   ? "text-slate-700 hover:text-[#FF4FA3] hover:bg-pink-50 hover:border-pink-200 active:scale-95"
                   : "text-slate-300 opacity-40 cursor-not-allowed"
@@ -138,10 +138,10 @@ const Gallery: React.FC = () => {
               <ChevronLeft size={18} />
             </button>
 
-            {/* Scrollable Container with subtle scrollbar */}
+            {/* Container: Slider on mobile, clean centered flex on desktop */}
             <div
               ref={categoryScrollRef}
-              className="flex items-center gap-2 sm:gap-3 overflow-x-auto scroll-smooth py-2 px-1 flex-1 whitespace-nowrap"
+              className="flex items-center gap-2 sm:gap-3 overflow-x-auto md:overflow-visible md:flex-wrap md:justify-center scroll-smooth py-2 px-1 flex-1 md:flex-none whitespace-nowrap"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "#CBD5E1 transparent",
@@ -165,13 +165,13 @@ const Gallery: React.FC = () => {
               ))}
             </div>
 
-            {/* Right Scroll Arrow */}
+            {/* Right Scroll Arrow — Mobile only */}
             <button
               type="button"
               onClick={() => scrollCategories("right")}
               disabled={!canScrollRight}
               aria-label="Scroll categories right"
-              className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center transition-all cursor-pointer z-10 ${
+              className={`md:hidden flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center transition-all cursor-pointer z-10 ${
                 canScrollRight
                   ? "text-slate-700 hover:text-[#FF4FA3] hover:bg-pink-50 hover:border-pink-200 active:scale-95"
                   : "text-slate-300 opacity-40 cursor-not-allowed"

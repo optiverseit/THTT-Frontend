@@ -40,13 +40,6 @@ const PackageDetails: React.FC = () => {
       return;
     }
     let cancelled = false;
-    const updateRelatedData = (key: string, data: any[]) => {
-      if (cancelled) return;
-      setBackendPackage((prev: any) => {
-        if (!prev) return prev;
-        return { ...prev, [key]: data };
-      });
-    };
     const fetchPackageDetails = async () => {
       try {
         setLoading(true);
@@ -60,85 +53,73 @@ const PackageDetails: React.FC = () => {
         const restrictionsRequest = getPackageRestrictions(packageId);
         const whatToBringRequest = getPackageWhatToBring(packageId);
         const faqsRequest = getPackageFaqs(packageId);
-
         const highlightsRequest = getPackageHighlights(packageId);
-        inclusionsRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("INCLUSIONS:", data);
-            updateRelatedData("inclusions", data);
-          })
-          .catch((error) => console.error("Error fetching package inclusions:", error));
-        exclusionsRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("EXCLUSIONS:", data);
-            updateRelatedData("exclusions", data);
-          })
-          .catch((error) => console.error("Error fetching package exclusions:", error));
-        restrictionsRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("RESTRICTIONS:", data);
-            updateRelatedData("restrictions", data);
-          })
-          .catch((error) => console.error("Error fetching package restrictions:", error));
-        whatToBringRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("WHAT TO BRING:", data);
-            updateRelatedData("what_to_bring", data);
-          })
-          .catch((error) => console.error("Error fetching what to bring:", error));
-        faqsRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("FAQS:", data);
-            updateRelatedData("faqs", data);
-          })
-          .catch((error) => console.error("Error fetching package FAQs:", error));
-        pricingRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("PRICING TIERS:", data);
-            updateRelatedData("pricing_tiers", data);
-          })
-          .catch((error) => console.error("Error fetching package pricing tiers:", error));
-        itinerariesRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("ITINERARIES:", data);
-            updateRelatedData("itineraries", data);
-          })
-          .catch((error) => console.error("Error fetching package itineraries:", error));
-        highlightsRequest
-          .then((response) => {
-            const data = Array.isArray(response.data?.data) ? response.data.data : [];
-            console.log("HIGHLIGHTS:", data);
-            updateRelatedData("highlights", data);
-          })
-          .catch((error) => console.error("Error fetching package highlights:", error));
-        const packageResponse = await packageRequest;
-        const packageData = packageResponse.data?.data ?? null;
+
+        const [
+          packageRes,
+          pricingRes,
+          itinerariesRes,
+          inclusionsRes,
+          exclusionsRes,
+          restrictionsRes,
+          whatToBringRes,
+          faqsRes,
+          highlightsRes,
+        ] = await Promise.allSettled([
+          packageRequest,
+          pricingRequest,
+          itinerariesRequest,
+          inclusionsRequest,
+          exclusionsRequest,
+          restrictionsRequest,
+          whatToBringRequest,
+          faqsRequest,
+          highlightsRequest,
+        ]);
+
         if (cancelled) return;
-        if (!packageData) {
+
+        if (packageRes.status !== "fulfilled" || !packageRes.value?.data?.data) {
           setBackendPackage(null);
           setLoading(false);
           setPackageLoadFinished(true);
           return;
         }
+
+        const packageData = packageRes.value.data.data;
+
+        const getArray = (res: PromiseSettledResult<any>) => {
+          if (res.status === "fulfilled") {
+            const d = res.value?.data?.data;
+            if (Array.isArray(d)) return d;
+            if (Array.isArray(res.value?.data)) return res.value.data;
+          }
+          return [];
+        };
+
+        const inclusions = getArray(inclusionsRes);
+        const exclusions = getArray(exclusionsRes);
+        const restrictions = getArray(restrictionsRes);
+        const what_to_bring = getArray(whatToBringRes);
+        const faqs = getArray(faqsRes);
+        const pricing_tiers = getArray(pricingRes);
+        const itineraries = getArray(itinerariesRes);
+        const highlights = getArray(highlightsRes);
+
         console.log("PACKAGE:", packageData);
-        setBackendPackage((prev: any) => ({
+        console.log("FAQS:", faqs);
+
+        setBackendPackage({
           ...packageData,
-          inclusions: prev?.inclusions ?? [],
-          exclusions: prev?.exclusions ?? [],
-          restrictions: prev?.restrictions ?? [],
-          what_to_bring: prev?.what_to_bring ?? [],
-          faqs: prev?.faqs ?? [],
-          pricing_tiers: prev?.pricing_tiers ?? [],
-          itineraries: prev?.itineraries ?? [],
-          highlights: prev?.highlights ?? [],
-        }));
+          inclusions: inclusions.length > 0 ? inclusions : (Array.isArray(packageData.inclusions) ? packageData.inclusions : []),
+          exclusions: exclusions.length > 0 ? exclusions : (Array.isArray(packageData.exclusions) ? packageData.exclusions : []),
+          restrictions: restrictions.length > 0 ? restrictions : (Array.isArray(packageData.restrictions) ? packageData.restrictions : []),
+          what_to_bring: what_to_bring.length > 0 ? what_to_bring : (Array.isArray(packageData.what_to_bring) ? packageData.what_to_bring : []),
+          faqs: faqs.length > 0 ? faqs : (Array.isArray(packageData.faqs) ? packageData.faqs : []),
+          pricing_tiers: pricing_tiers.length > 0 ? pricing_tiers : (Array.isArray(packageData.pricing_tiers) ? packageData.pricing_tiers : []),
+          itineraries: itineraries.length > 0 ? itineraries : (Array.isArray(packageData.itineraries) ? packageData.itineraries : []),
+          highlights: highlights.length > 0 ? highlights : (Array.isArray(packageData.highlights) ? packageData.highlights : []),
+        });
         setLoading(false);
         setPackageLoadFinished(true);
       } catch (error) {

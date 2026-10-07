@@ -80,6 +80,7 @@ export interface VisaDetailPlan {
   visaCategoryId?: number | string;
   visaPricingTierId?: number | string;
   image?: string | null;
+  created_at?: string;
 }
 // Country-specific hero background images
 const countryBgImages: Record<string, string> = {

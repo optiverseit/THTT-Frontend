@@ -317,127 +317,82 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Terms validation
     if (!formData.termsAgreed) {
-      setSubmitError(
-        "Please review and accept the booking terms and conditions to proceed."
-      );
+      setSubmitError("Please review and accept the booking terms and conditions to proceed.");
       return;
     }
-
-    // Package validation
     if (!pkg?.id) {
       setSubmitError("Package information is missing.");
       return;
     }
-
-    // Travel date validation
     const effectiveTravelDate = formData.travelDateFrom || formData.travelDate;
     if (!effectiveTravelDate) {
       setSubmitError("Please select a travel start date.");
       return;
     }
-
     if (!formData.fullName.trim()) {
       setSubmitError("Please enter your full name.");
       return;
     }
-
     if (!formData.email.trim()) {
       setSubmitError("Please enter your email address.");
       return;
     }
-
     if (!formData.phone.trim()) {
       setSubmitError("Please enter your phone/WhatsApp number.");
       return;
     }
-
+    if (!formData.nationality.trim()) {
+      setSubmitError("Please enter your nationality.");
+      return;
+    }
     try {
       setIsSubmitting(true);
       setSubmitError("");
-
-      // ==========================================
-      // BOOKING REQUEST (Tour / Trekking / Adventure)
-      // ==========================================
       const parsedPkgId = Number(pkg.id);
       const numericPkgId = (!isNaN(parsedPkgId) && parsedPkgId > 0) ? parsedPkgId : undefined;
-
-      const bookingData = {
-        booking_type: "PACKAGE" as const,
-        package_id: numericPkgId,
-        pricing_tier_id: currentTier.id ?? null,
-        number_of_people: guestsCount,
-        start_date: effectiveTravelDate,
-        end_date: formData.travelDateTo || null,
-        frontend_total_amount: totalNpr,
-        payment_method: selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later",
-        customer_name: formData.fullName,
-        customer_email: formData.email,
-        customer_phone: `${formData.phoneCode} ${formData.phone}`,
-        nationality: formData.nationality,
-        pickup_address: formData.pickupAddress,
-        special_requests: formData.specialNotes || "",
-      };
-
-      console.log("BOOKING REQUEST:", bookingData);
-
-      let generatedRef = `THTT-PKG-${Math.floor(100000 + Math.random() * 900000)}`;
-      let receiptDate = new Date();
-
-      // ==========================================
-      // CALL BACKEND
-      // POST /bookings
-      // ==========================================
-      try {
-        const response = await createBooking(bookingData);
-        console.log("BOOKING RESPONSE:", response?.data);
-
-        const booking = response?.data?.data || response?.data;
-
-        if (booking?.id) {
-          setBookingId(Number(booking.id));
-        }
-        if (booking?.booking_reference) {
-          generatedRef = booking.booking_reference;
-        }
-        if (booking?.created_at) {
-          receiptDate = new Date(booking.created_at);
-        }
-      } catch (apiError: any) {
-        console.warn("Backend API warning (using fallback booking reference):", apiError);
-        const validationErrors = apiError?.response?.data?.errors;
-        if (validationErrors) {
-          const validationMessage = Object.values(validationErrors)
-            .flat()
-            .join(", ");
-          console.warn("Validation note:", validationMessage);
-        }
+      const bookingData = new FormData();
+      bookingData.append("booking_type", "PACKAGE");
+      if (numericPkgId !== undefined) bookingData.append("package_id", String(numericPkgId));
+      if (currentTier.id !== null && currentTier.id !== undefined) bookingData.append("pricing_tier_id", String(currentTier.id));
+      bookingData.append("number_of_people", String(guestsCount));
+      bookingData.append("start_date", effectiveTravelDate);
+      if (formData.travelDateTo) bookingData.append("end_date", formData.travelDateTo);
+      bookingData.append("frontend_total_amount", String(totalNpr));
+      bookingData.append("payment_method", selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later");
+      bookingData.append("applicant[full_name]", formData.fullName);
+      bookingData.append("applicant[email]", formData.email);
+      bookingData.append("applicant[phone_whatsapp]", `${formData.phoneCode} ${formData.phone}`);
+      bookingData.append("applicant[nationality]", formData.nationality);
+      if (formData.pickupAddress) bookingData.append("applicant[pickup_hotel]", formData.pickupAddress);
+      if (formData.specialNotes) bookingData.append("applicant[dietary_health_notes]", formData.specialNotes);
+      if (uploadedFiles.length > 0) bookingData.append("applicant[document]", uploadedFiles[0]);
+      console.log("BOOKING REQUEST:");
+      for (const [key, value] of bookingData.entries()) console.log(key, value);
+      const response = await createBooking(bookingData);
+      console.log("BOOKING RESPONSE:", response?.data);
+      const booking = response?.data?.data || response?.data;
+      if (!booking?.id) {
+        setSubmitError(response?.data?.message || "Booking could not be created. Please try again.");
+        return;
       }
-
+      setBookingId(Number(booking.id));
+      const generatedRef = booking.booking_reference || `THTT-PKG-${Math.floor(100000 + Math.random() * 900000)}`;
+      const receiptDate = booking.created_at ? new Date(booking.created_at) : new Date();
       setSubmissionId(generatedRef);
-      setSubmittedAt(
-        receiptDate.toLocaleString("en-US", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
-      );
-
-      // ==========================================
-      // REDIRECT TO PAYMENT METHOD SCREEN
-      // ==========================================
+      setSubmittedAt(receiptDate.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }));
       setStep("payment");
-
     } catch (error: any) {
       console.error("BOOKING FAILED:", error);
+      console.error("BACKEND RESPONSE:", error?.response?.data);
       setIsSubmitted(false);
-      const message =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        "Failed to create booking. Please try again.";
-      setSubmitError(message);
+      const validationErrors = error?.response?.data?.errors;
+      if (validationErrors) {
+        const validationMessage = Object.values(validationErrors).flat().join(", ");
+        setSubmitError(validationMessage);
+      } else {
+        setSubmitError(error?.response?.data?.error || error?.response?.data?.message || error?.message || "Failed to create booking. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

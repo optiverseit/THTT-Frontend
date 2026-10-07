@@ -7,6 +7,7 @@ interface VisaCategory {
   id: number | string;
   country_id: number | string;
   name: string;
+  created_at?: string;
   short_description?: string | null;
   description?: string | null;
   visa_image?: string | null;
@@ -55,7 +56,8 @@ const mapBasicPlan = (category: VisaCategory): VisaDetailPlan => {
     costOptions: [],
     countryId: category.country_id,
     visaCategoryId: category.id,
-    image: category.visa_image || null
+    image: category.visa_image || null,
+    created_at: category.created_at,
   };
 };
 const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], information: any[]): VisaDetailPlan => {
@@ -108,7 +110,7 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     countryId: category.country_id,
     visaCategoryId: category.id,
     image: category.visa_image || null,
-    created_at: (category as any).created_at,
+    created_at: category.created_at,
   };
 };
 const VisaPackageDetails: React.FC = () => {

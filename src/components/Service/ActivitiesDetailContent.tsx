@@ -216,7 +216,21 @@ export const ActivitiesDetailContent: React.FC<ActivitiesDetailContentProps> = (
           };
         });
 
-        setActivityPackages(mappedPackages);
+        // Sort packages so the latest inserted card appears first (newest to oldest):
+        const sortedPackages = [...mappedPackages].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
+
+          const idA = Number(a.id) || 0;
+          const idB = Number(b.id) || 0;
+          return idB - idA;
+        });
+
+        setActivityPackages(sortedPackages);
 
       } catch (err: any) {
 

@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { CheckCircle2, Shield, Mountain, HeartPulse, FileText, Check } from "lucide-react";
 import InsuranceIncludesExclude from "./InsuranceIncludesExclude";
 import InsurancePricing from "./InsurancePricing";
+import { formatDescription } from "../../utils/formatDescription";
 
 interface InsuranceOverviewProps {
   pkg: any;
@@ -68,10 +69,13 @@ const InsuranceOverview: React.FC = () => {
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 mt-4 leading-relaxed font-medium">
-              {pkg.description ||
-                `Designed specifically for Himalayan trekkers, climbers, and cultural visitors. This policy delivers zero-hassle coverage for helicopter search and rescue, hospital admission, and trip interruptions.`}
-            </p>
+            <div
+              className="mt-4"
+              dangerouslySetInnerHTML={{
+                __html: formatDescription(pkg.description) ||
+                  `<p style="color:#4B5563;font-size:0.875em;line-height:1.7;">Designed specifically for Himalayan trekkers, climbers, and cultural visitors. This policy delivers zero-hassle coverage for helicopter search and rescue, hospital admission, and trip interruptions.</p>`
+              }}
+            />
           </div>
 
           {/* Quick Specifications Strip */}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, Star, ChevronLeft, ChevronRight, Calendar, Bed, Flame, Award, TrendingUp, Tag, Clock } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import type { Hotel } from "../../assets/data/types";
+import { formatDescription } from "../../utils/formatDescription";
 
 export interface HotelBookingCardProps {
   hotel: Hotel;
@@ -264,10 +265,15 @@ export const HotelBookingCard: React.FC<HotelBookingCardProps> = ({
             {hotel.name}
           </h2>
 
-          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed font-medium">
-            {hotel.description ||
-              `A prestigious property offering world-class hospitality, verified contract rates, and handcrafted comfort in ${hotel.location || hotel.city}.`}
-          </p>
+          <div
+            className="text-xs text-gray-500 overflow-hidden leading-relaxed font-medium"
+            style={{ maxHeight: "3.2rem" }}
+            dangerouslySetInnerHTML={{
+              __html:
+                formatDescription(hotel.description) ||
+                `A prestigious property offering world-class hospitality, verified contract rates, and handcrafted comfort in ${hotel.location || hotel.city}.`,
+            }}
+          />
 
           <div className="pt-4 space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] font-black text-[#2D1347] uppercase tracking-wider">

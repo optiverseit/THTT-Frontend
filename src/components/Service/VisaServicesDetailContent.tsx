@@ -37,6 +37,7 @@ interface VisaCategory {
   id: number | string;
   country_id: number | string;
   name: string;
+  created_at?: string;
   short_description?: string | null;
   description?: string | null;
   visa_image?: string | null;
@@ -351,11 +352,27 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
               countryId: category.country_id,
               visaCategoryId: category.id,
               image: category.visa_image || null,
+              created_at: (category as any).created_at,
             };
           })
         );
+
+        // Sort so the latest inserted card appears first (newest to oldest):
+        const sortedPlans = [...mappedPlans].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
+
+          const idA = Number(a.visaCategoryId ?? a.id) || 0;
+          const idB = Number(b.visaCategoryId ?? b.id) || 0;
+          return idB - idA;
+        });
+
         if (isMounted) {
-          setVisaPlans(mappedPlans);
+          setVisaPlans(sortedPlans);
         }
       } catch (error) {
         console.error("Failed to fetch visa categories:", error);

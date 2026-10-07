@@ -6,6 +6,7 @@ import {
   useGlobalCurrency,
   displayPrice,
 } from "../../context/CurrencyContext";
+import { formatDescription } from "../../utils/formatDescription";
 
 interface PackageCardProps {
   pkg: Package;
@@ -250,20 +251,14 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
 
           {/* Description */}
 
-          <p
-            className="
-              text-xs
-              text-gray-500
-              mt-2
-              line-clamp-2
-              leading-relaxed
-              font-medium
-            "
-          >
-            {pkg.description ||
-              `A curated travel experience with expert planning, flexible options, and memorable adventures in ${pkg.location || "Nepal"
-              }.`}
-          </p>
+          <div
+            className="mt-2 overflow-hidden"
+            style={{ maxHeight: "4rem" }}
+            dangerouslySetInnerHTML={{
+              __html: formatDescription(pkg.description) ||
+                `<p style="color:#6B7280;font-size:0.8em;line-height:1.6;">A curated travel experience with expert planning, flexible options, and memorable adventures in ${pkg.location || "Nepal"}.</p>`
+            }}
+          />
         </div>
 
         {/* Location and Duration */}

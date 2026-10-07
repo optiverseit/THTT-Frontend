@@ -4,6 +4,7 @@ import { useGlobalCurrency } from "../../context/CurrencyContext";
 import { ChevronDown, MessageCircle, CheckCircle2, CalendarCheck, Clock, X, Search, Shield } from "lucide-react";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { getInsurancePlans, getInsurancePricingTiersByPlan } from "../../api/BackendApi";
+import { formatDescription } from "../../utils/formatDescription";
 
 export interface InsuranceFilterCriteria {
   insuranceType: string;
@@ -332,9 +333,13 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
                 {/* Little Plan Details */}
                 <div className="border-t border-gray-100/90 pt-2.5 mt-1">
-                  <p className="text-[10.5px] text-gray-500 leading-relaxed line-clamp-2">
-                    {plan.short_description || plan.description || "Travel insurance protection for your journey."}
-                  </p>
+                  <div
+                    className="overflow-hidden"
+                    style={{ maxHeight: "3.5rem" }}
+                    dangerouslySetInnerHTML={{
+                      __html: formatDescription(plan.short_description || plan.description) || "Travel insurance protection for your journey.",
+                    }}
+                  />
                 </div>
 
                 {/* What Is Covered */}

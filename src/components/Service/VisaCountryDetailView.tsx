@@ -46,6 +46,7 @@ import {
 } from "../../utils/shareUtils";
 import PermitService from "../work-permit/permit-details/PermitService";
 import { services } from "../../assets/data/mockData";
+import { formatDescription } from "../../utils/formatDescription";
 export interface CostOption {
   name: string;
   days: string;
@@ -1024,11 +1025,14 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
               About {plan.country} Visa
             </h3>
-            <div className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-3">
-              <p>
-                {plan.aboutText ||
-                  `Nepali passport holders require a pre-approved tourist visa to enter ${plan.country}. All applicants must fulfill embassy regulations, submit biometric details where applicable, and demonstrate genuine travel intent with verified funds and return reservations.`}
-              </p>
+            <div className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium space-y-3">
+              <div
+                dangerouslySetInnerHTML={{
+                  __html:
+                    formatDescription(plan.aboutText) ||
+                    `<p>Nepali passport holders require a pre-approved tourist visa to enter ${plan.country}. All applicants must fulfill embassy regulations, submit biometric details where applicable, and demonstrate genuine travel intent with verified funds and return reservations.</p>`,
+                }}
+              />
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
                 Trip Himalaya Tours &amp; Travel assists you through the complete process: document auditing, certified translations, embassy application filing, confirmed flight and hotel booking vouchers, and 24/7 dedicated visa assistance.
               </p>

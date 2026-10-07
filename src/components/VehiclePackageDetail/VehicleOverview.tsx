@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { CheckCircle2, Clock, MapPin, Car } from "lucide-react";
 import VehicleIncludesExclude from "./VehicleIncludesExclude";
 import VehiclePricing from "./VehiclePricing";
+import { formatDescription } from "../../utils/formatDescription";
 
 interface VehicleOverviewProps {
   pkg: any;
@@ -41,10 +42,14 @@ const VehicleOverview: React.FC = () => {
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 mt-4 leading-relaxed font-medium">
-              {pkg.description ||
-                `Explore Nepal in comfort with ${pkg.title}. Our well-maintained fleet offers safe and reliable transport for all your travel needs.`}
-            </p>
+            <div
+              className="text-xs sm:text-sm text-gray-600 mt-4 leading-relaxed font-medium"
+              dangerouslySetInnerHTML={{
+                __html:
+                  formatDescription(pkg.description) ||
+                  `Explore Nepal in comfort with ${pkg.title}. Our well-maintained fleet offers safe and reliable transport for all your travel needs.`,
+              }}
+            />
           </div>
 
           {/* Features / Highlights Card */}

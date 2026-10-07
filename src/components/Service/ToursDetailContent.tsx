@@ -5,6 +5,7 @@ import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
+import { formatDescription } from "../../utils/formatDescription";
 
 // CHANGE THIS IMPORT PATH ONLY if your API file has a different location/name
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -118,9 +119,33 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
           response.data?.data ??
           [];
 
-        setTourPackages(
-          Array.isArray(packages) ? packages : []
-        );
+        const mappedPackages = (Array.isArray(packages) ? packages : []).map((pkg: any) => {
+          if (pkg.rating !== undefined && pkg.rating !== null && pkg.rating !== "") {
+            return pkg;
+          }
+          const numId = Number(pkg.id);
+          const computedRating = (!isNaN(numId) && (numId + (pkg.title?.length || 0)) % 2 === 0) ? 4 : 5;
+          return {
+            ...pkg,
+            rating: computedRating,
+          };
+        });
+
+        // Sort packages so the latest inserted card appears first (newest to oldest):
+        const sortedPackages = [...mappedPackages].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
+
+          const idA = Number(a.id) || 0;
+          const idB = Number(b.id) || 0;
+          return idB - idA;
+        });
+
+        setTourPackages(sortedPackages);
       } catch (err: any) {
         console.error("Failed to fetch Tours:", err);
 
@@ -507,9 +532,11 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
                     )}
 
                     {tour.description && (
-                      <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3 mb-6">
-                        {tour.description}
-                      </p>
+                      <div
+                        className="mb-6 overflow-hidden"
+                        style={{ maxHeight: "5.5rem" }}
+                        dangerouslySetInnerHTML={{ __html: formatDescription(tour.description) }}
+                      />
                     )}
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { CheckCircle2, Clock, MapPin, Bed } from "lucide-react";
 import HotelIncludesExclude from "./HotelIncludesExclude";
 import HotelPricing from "./HotelPricing";
+import { formatDescription } from "../../utils/formatDescription";
 
 interface HotelOverviewProps {
   pkg: any;
@@ -42,10 +43,12 @@ const HotelOverview: React.FC = () => {
             </div>
 
             <div className="text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4 leading-relaxed font-medium space-y-2.5">
-              <p>
-                {pkg.description ||
-                  `Experience the finest hospitality at ${pkg.title}. Designed with comfort, luxury, and unforgettable memories in mind.`}
-              </p>
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: formatDescription(pkg.description) ||
+                    `<p style="color:#4B5563;font-size:0.875em;line-height:1.7;">Experience the finest hospitality at ${pkg.title}. Designed with comfort, luxury, and unforgettable memories in mind.</p>`
+                }}
+              />
               <p>
                 Guests can look forward to personalized concierge attention, daily gourmet breakfast, and seamless check-in assistance. Whether you are unwinding after Himalayan excursions or enjoying quiet moments amidst authentic heritage settings, our handpicked suites provide the pinnacle of comfort, discretion, and Nepali warmth.
               </p>

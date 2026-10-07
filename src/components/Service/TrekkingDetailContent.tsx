@@ -8,6 +8,7 @@ import {
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
+import { formatDescription } from "../../utils/formatDescription";
 
 // Change only this path if your API file is located somewhere else
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -162,9 +163,33 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
           response.data?.data ??
           [];
 
-        setTrekPackages(
-          Array.isArray(packages) ? packages : []
-        );
+        const mappedPackages = (Array.isArray(packages) ? packages : []).map((pkg: any) => {
+          if (pkg.rating !== undefined && pkg.rating !== null && pkg.rating !== "") {
+            return pkg;
+          }
+          const numId = Number(pkg.id);
+          const computedRating = (!isNaN(numId) && (numId + (pkg.title?.length || 0)) % 2 === 0) ? 4 : 5;
+          return {
+            ...pkg,
+            rating: computedRating,
+          };
+        });
+
+        // Sort packages so the latest inserted card appears first (newest to oldest):
+        const sortedPackages = [...mappedPackages].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
+
+          const idA = Number(a.id) || 0;
+          const idB = Number(b.id) || 0;
+          return idB - idA;
+        });
+
+        setTrekPackages(sortedPackages);
       } catch (err: any) {
         console.error(
           "Failed to fetch Trekking packages:",
@@ -624,9 +649,11 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
                     )}
 
                     {trek.description && (
-                      <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3 mb-6">
-                        {trek.description}
-                      </p>
+                      <div
+                        className="mb-6 overflow-hidden"
+                        style={{ maxHeight: "5.5rem" }}
+                        dangerouslySetInnerHTML={{ __html: formatDescription(trek.description) }}
+                      />
                     )}
 
                   </div>

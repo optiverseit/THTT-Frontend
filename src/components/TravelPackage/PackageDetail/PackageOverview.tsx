@@ -5,7 +5,7 @@ import { CheckCircle2, Clock, MapPin } from "lucide-react";
 import IncludesExclude from "./IncludesExclude";
 import PackagePricing from "./PackagePricing";
 import TripRoadmap, { type RoadmapStep } from "../../reusable/TripRoadmap";
-
+import { formatDescription } from "../../../utils/formatDescription";
 
 interface PackageProp {
   pkg: Package;
@@ -91,10 +91,13 @@ const PackageOverview: React.FC = () => {
               )}
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4 leading-relaxed font-medium">
-              {pkg.description ||
-                `Discover the breathtaking beauty and thrilling experiences of ${pkg.title}. Designed with safety, comfort, and unforgettable memories in mind.`}
-            </p>
+            <div
+              className="mt-3 sm:mt-4"
+              dangerouslySetInnerHTML={{
+                __html: formatDescription(pkg.description) ||
+                  `<p style="color:#4B5563;font-size:0.875em;line-height:1.7;">Discover the breathtaking beauty and thrilling experiences of ${pkg.title}. Designed with safety, comfort, and unforgettable memories in mind.</p>`
+              }}
+            />
           </div>
 
           {/* ── PRICING TIER ON MOBILE (Just below header info) ── */}

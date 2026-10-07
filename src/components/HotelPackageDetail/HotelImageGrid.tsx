@@ -5,6 +5,7 @@ import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency } from "../../context/CurrencyContext";
 import ShareModal from "../reusable/ShareModal";
 import Logo from "../../assets/images/Logo.png";
+import { formatDescription } from "../../utils/formatDescription";
 import HotelBookingModal from "./HotelBookingModal";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
@@ -268,7 +269,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           </div>
           <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
             <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
-            {pkg.description || `Discover the breathtaking beauty and thrilling experiences of ${pkg.title}. Carefully curated by Trip Himalaya with licensed guides, premier equipment, and unforgettable Himalayan views.`}
+            <span dangerouslySetInnerHTML={{ __html: formatDescription(pkg.description) || `Discover the breathtaking beauty and thrilling experiences of ${pkg.title}. Carefully curated by Trip Himalaya with licensed guides, premier equipment, and unforgettable Himalayan views.` }} />
           </div>
         </div>
 
@@ -500,7 +501,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               </div>
               <p className="text-xs sm:text-sm font-semibold text-white/70 mt-1 max-w-xl">
                 {pkg.description
-                  ? pkg.description.slice(0, 100) + (pkg.description.length > 100 ? "..." : "")
+                  ? <span dangerouslySetInnerHTML={{ __html: pkg.description.slice(0, 100) + (pkg.description.length > 100 ? "..." : "") }} />
                   : `Explore ${pkg.title} with expert guides — safe, thrilling and unforgettable.`}
               </p>
               <div className="flex items-center gap-1.5 mt-1.5">

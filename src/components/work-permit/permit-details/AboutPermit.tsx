@@ -5,6 +5,7 @@ import {
   FileText,
   Zap,
 } from "lucide-react";
+import { formatDescription } from "../../../utils/formatDescription";
 
 interface CountryProps {
   id: number;
@@ -78,10 +79,14 @@ const AboutPermit = ({
               </p>
             </header>
 
-            <p className="text-gray-500 font-semibold py-2 sm:py-4 mb-4 sm:mb-6 text-sm sm:text-base">
-              {country.short_description ||
-                "No description available."}
-            </p>
+            <div
+              className="text-gray-600 font-medium py-2 sm:py-3 mb-4 sm:mb-6 text-xs sm:text-sm leading-relaxed"
+              dangerouslySetInnerHTML={{
+                __html:
+                  formatDescription(country.short_description) ||
+                  "No description available.",
+              }}
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row w-full justify-between gap-6">

@@ -1,6 +1,7 @@
 import { ArrowRight, X, Globe } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useNavigate } from "react-router-dom";
+import { formatDescription } from "../../utils/formatDescription";
 
 interface Country {
   id: number;
@@ -200,9 +201,11 @@ const PermitServices = ({
                   </h3>
 
                   {/* DESCRIPTION */}
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3">
-                    {country.short_description}
-                  </p>
+                  <div
+                    className="text-[10.5px] text-gray-500 font-medium mb-3 overflow-hidden"
+                    style={{ maxHeight: "3rem" }}
+                    dangerouslySetInnerHTML={{ __html: formatDescription(country.short_description) }}
+                  />
 
                   {/* PERMIT TYPE BADGE */}
                   <span className="mb-2 inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-purple-50 border border-purple-200 text-purple-700">

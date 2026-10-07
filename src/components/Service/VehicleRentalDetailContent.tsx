@@ -16,6 +16,7 @@ import VehicleRentalBookingModal, {
 
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
+import { formatDescription } from "../../utils/formatDescription";
 
 // Change this path only if your API file is located somewhere else
 import { getAllVehicles } from "../../api/BackendApi";
@@ -51,6 +52,7 @@ interface BackendVehicle {
   name?: string;
   title?: string;
   slug?: string;
+  created_at?: string;
 
   capacity?: number | string;
   type?: string;
@@ -669,7 +671,21 @@ const VehicleRentalDetailContent: React.FC = () => {
               rating: computedRating,
             };
           });
-          setVehicles(mappedVehicles);
+          // Sort vehicles so the latest inserted card appears first (newest to oldest):
+          const sortedVehicles = [...mappedVehicles].sort((a: any, b: any) => {
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+            if (timeA && timeB && timeA !== timeB) {
+              return timeB - timeA;
+            }
+
+            const idA = Number(a.id) || 0;
+            const idB = Number(b.id) || 0;
+            return idB - idA;
+          });
+
+          setVehicles(sortedVehicles);
         } else {
           // Fallback to mock data if API returned empty array
           setVehicles(MOCK_VEHICLES_FALLBACK);
@@ -1101,10 +1117,14 @@ const VehicleRentalDetailContent: React.FC = () => {
                         </div>
 
                         {/* Vehicle Details / Information */}
-                        <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed font-medium mb-2.5">
-                          {vehicle.description ||
-                            `${vehicle.vehicleType} with professional chauffeur service for reliable Nepal mountain highway and valley travel.`}
-                        </p>
+                        <div
+                          className="mb-2.5 overflow-hidden"
+                          style={{ maxHeight: "3.5rem" }}
+                          dangerouslySetInnerHTML={{
+                            __html: formatDescription(vehicle.description) ||
+                              `<p style="color:#6B7280;font-size:0.8em;line-height:1.6;">${vehicle.vehicleType} with professional chauffeur service for reliable Nepal mountain highway and valley travel.</p>`
+                          }}
+                        />
 
                         {/* Structured Specifications Grid: 6 Balanced Items in 3 Columns */}
                         <div className="my-2">

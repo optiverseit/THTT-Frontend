@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { CheckCircle2, Clock, Globe, FileText, Calendar, ShieldCheck, Check } from "lucide-react";
 import VisaIncludesExclude from "./VisaIncludesExclude";
 import VisaPricing from "./VisaPricing";
+import { formatDescription } from "../../utils/formatDescription";
 
 interface VisaOverviewProps {
   pkg: any;
@@ -79,10 +80,13 @@ const VisaOverview: React.FC = () => {
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 mt-4 leading-relaxed font-medium">
-              {pkg.description ||
-                `Hassle-free visa assistance service for ${pkg.title}. Our certified immigration counselors manage all embassy documentation, appointment scheduling, and personal guidance from start to finish.`}
-            </p>
+            <div
+              className="mt-4"
+              dangerouslySetInnerHTML={{
+                __html: formatDescription(pkg.description) ||
+                  `<p style="color:#4B5563;font-size:0.875em;line-height:1.7;">Hassle-free visa assistance service for ${pkg.title}. Our certified immigration counselors manage all embassy documentation, appointment scheduling, and personal guidance from start to finish.</p>`
+              }}
+            />
           </div>
 
           {/* Quick Specifications Strip */}

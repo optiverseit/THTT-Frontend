@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate, useLocation } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
 import VerificationCard from "./VerificationCard";
 import BookingModal from "../../reusable/packages/BookingModal";
@@ -34,6 +34,8 @@ import {
   formatUSD,
   formatINR,
 } from "../../../context/CurrencyContext";
+import { useAuth } from "../../../context/AuthContext";
+import { isSessionValid, clearAuthSession } from "../../../utils/sessionManager";
 
 // =============================================================================
 // Types
@@ -91,6 +93,9 @@ const WHATSAPP_BUSINESS_NUMBER = "9779851403761";
 // =============================================================================
 
 const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuth();
 
   // ---------------------------------------------------------------------------
   // Pricing Loading State From PackageDetails
@@ -234,6 +239,18 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   };
 
   const handleBookNow = (): void => {
+    if (!isLoggedIn || !isSessionValid()) {
+      clearAuthSession();
+      navigate("/login", {
+        state: {
+          from: location.pathname,
+          packageId: pkg?.id,
+          openBooking: true,
+        },
+      });
+      return;
+    }
+
     setIsBookingModalOpen(true);
   };
 

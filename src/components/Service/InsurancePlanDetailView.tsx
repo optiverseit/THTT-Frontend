@@ -8,6 +8,7 @@ import { shareToPlatform, copyToClipboard, getCurrentUrl, getCrawlerSafeUrl } fr
 import Logo from "../../assets/images/Logo.png";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
+import { formatDescription } from "../../utils/formatDescription";
 interface InsuranceCostOption {
   id?: number;
   name: string;
@@ -799,9 +800,14 @@ export const InsurancePlanDetailView: React.FC = () => {
             <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
               About {plan.name}
             </h3>
-            <div className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-3">
-              <p>{plan.aboutText}</p>
-            </div>
+            <div
+              className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium"
+              dangerouslySetInnerHTML={{
+                __html:
+                  formatDescription(plan.aboutText) ||
+                  `<p>${plan.aboutText || "Comprehensive travel and medical insurance protection."}</p>`,
+              }}
+            />
             <div className="pt-4 border-t border-gray-100">
               <span className="text-[11px] font-black uppercase text-gray-400 tracking-wider block mb-2.5">
                 Key Coverage Highlights:

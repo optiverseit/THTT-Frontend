@@ -6,6 +6,7 @@ import HotelSidebarFilter from "../HotelPackageDetail/HotelSidebarFilter";
 import { getHotels } from "../../api/BackendApi";
 import { Award, Coffee, Car, Clock, ShieldCheck, Headphones, X, Calendar, MapPin, Building2, Globe } from "lucide-react";
 import type { Hotel } from "../../assets/data/types";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 export interface HotelFilterCriteria {
   region: string;
@@ -56,6 +57,7 @@ interface HotelApi {
   id: number;
   hotel_code?: string;
   hotel_name: string;
+  created_at?: string;
   slug?: string | null;
   short_description?: string | null;
   description?: string | null;
@@ -295,8 +297,22 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
           ? responseData.data
           : [];
 
+        // Sort hotels so the latest inserted card appears first (newest to oldest):
+        const sortedApiHotels = [...apiHotels].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
+
+          const idA = Number(a.id) || 0;
+          const idB = Number(b.id) || 0;
+          return idB - idA;
+        });
+
         if (!cancelled) {
-          setHotels(apiHotels.map(mapApiHotelToHotel));
+          setHotels(sortedApiHotels.map(mapApiHotelToHotel));
         }
       } catch (error) {
         console.error("Failed to load hotels:", error);
@@ -515,6 +531,18 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
   };
 
   const handleBookHotel = (hotel: Hotel) => {
+    // ── Auth guard: redirect to login if not logged in ──
+    if (!isSessionValid()) {
+      clearAuthSession();
+      navigate("/login", {
+        state: {
+          from: "/service/hotel-booking",
+          openBooking: true,
+        },
+      });
+      return;
+    }
+
     setSelectedBookingItem({
       id: hotel.backendId || hotel.id,
       hotelId: hotel.backendId || hotel.id,

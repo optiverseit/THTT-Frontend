@@ -78,6 +78,7 @@ import {
 } from "../../api/BackendApi";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
+import { formatDescription } from "../../utils/formatDescription";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 
 // =============================================================================
@@ -96,6 +97,7 @@ export interface PackageFaqApi {
 export interface HeliPackageItem extends HeliTourData {
   id: string;
   backendId: number;
+  created_at?: string;
 
   title: string;
   slug: string;
@@ -185,6 +187,7 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
   return {
     id: String(pkg.id),
     backendId: Number(pkg.id),
+    created_at: pkg.created_at,
 
     title: pkg.title ?? "Helicopter Package",
     slug: pkg.slug ?? String(pkg.id),
@@ -309,13 +312,29 @@ export const PackageHeliService: React.FC<{
         const response = await getPackagesByCategory("Heli Services");
         const rawPackages = Array.isArray(response.data?.data?.data)
           ? response.data.data.data
-          : [];
+          : Array.isArray(response.data?.data)
+            ? response.data.data
+            : [];
 
         const mappedPackages = rawPackages.map((pkg: any) =>
           mapApiPackageToHeliPackage(pkg)
         );
 
-        if (!cancelled) setHeliPackages(mappedPackages);
+        // Sort packages so the latest inserted card appears first (newest to oldest):
+        const sortedPackages = [...mappedPackages].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
+
+          const idA = Number(a.backendId ?? a.id) || 0;
+          const idB = Number(b.backendId ?? b.id) || 0;
+          return idB - idA;
+        });
+
+        if (!cancelled) setHeliPackages(sortedPackages);
       } catch (error) {
         console.error("Failed to load Heli Services packages:", error);
         if (!cancelled) {
@@ -2179,7 +2198,7 @@ export const PackageHeliService: React.FC<{
                   </div>
                   <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
                     <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
-                    {selectedTour.description}
+                    <span dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }} />
                   </div>
                 </div>
 
@@ -2606,9 +2625,10 @@ export const PackageHeliService: React.FC<{
                     EXPERIENCE
                   </span>
                 </div>
-                <p className="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl mb-4 sm:mb-0">
-                  {selectedTour.description}
-                </p>
+                <div
+                  className="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl mb-4 sm:mb-0 max-w-none"
+                  dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }}
+                />
 
                 {/* Mobile-only: action buttons below description */}
                 <div className="flex sm:hidden items-center gap-3 mt-4 print:hidden">
@@ -2708,9 +2728,10 @@ export const PackageHeliService: React.FC<{
 
                     {/* Description + Trip Highlights — single card */}
                     <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
-                        {selectedTour.description}
-                      </p>
+                      <div
+                        className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium max-w-none"
+                        dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }}
+                      />
                       <div className="border-t border-gray-100 pt-4 space-y-3">
                         <h3 className="text-base sm:text-lg font-black text-[#200B3B]">
                           Trip Highlights
@@ -3261,9 +3282,11 @@ export const PackageHeliService: React.FC<{
                           </h3>
 
                           {/* Description */}
-                          <p className="text-xs text-gray-500 font-medium line-clamp-2 mt-1 leading-relaxed">
-                            {tour.description}
-                          </p>
+                          <div
+                            className="text-xs text-gray-500 font-medium overflow-hidden mt-1 leading-relaxed max-w-none"
+                            style={{ maxHeight: "3.5rem" }}
+                            dangerouslySetInnerHTML={{ __html: formatDescription(tour.description) }}
+                          />
                         </div>
 
                         {/* Location & Duration */}

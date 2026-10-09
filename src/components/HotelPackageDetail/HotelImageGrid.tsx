@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer, Mail, Phone, Globe } from "lucide-react";
 import type { Package } from "../../assets/data/types";
@@ -21,7 +21,6 @@ const HotelImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
-
   const handlePrint = () => {
     const originalTitle = document.title;
     const packageTitle = pkg.title || "Travel Package";
@@ -51,16 +50,74 @@ const HotelImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const galleryImages =
-    pkg.gallery && pkg.gallery.length >= 5
-      ? pkg.gallery
+  // ── Extract all available header images from API (supports gallery, images, image) ──
+  const headerImages: string[] = useMemo(() => {
+    const list: string[] = [];
+    const addUrl = (url: any) => {
+      if (!url) return;
+      const str =
+        typeof url === "string"
+          ? url
+          : url.image_url ||
+            url.file_url ||
+            url.secure_url ||
+            url.url ||
+            url.image ||
+            "";
+      if (
+        str &&
+        typeof str === "string" &&
+        str.trim().length > 0 &&
+        !list.includes(str.trim())
+      ) {
+        list.push(str.trim());
+      }
+    };
+
+    if (Array.isArray(pkg.gallery)) {
+      pkg.gallery.forEach(addUrl);
+    }
+    if (Array.isArray(pkg.images)) {
+      pkg.images.forEach(addUrl);
+    }
+    if (pkg.image) {
+      addUrl(pkg.image);
+    }
+
+    return list.length > 0
+      ? list
       : [
-        pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
-        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-        "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
-        "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
-      ];
+          "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
+        ];
+  }, [pkg.gallery, pkg.images, pkg.image]);
+
+  // ── Auto-slide header images every 5 seconds ──
+  const [currentHeaderIndex, setCurrentHeaderIndex] = useState<number>(0);
+
+  useEffect(() => {
+    if (headerImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentHeaderIndex((prev) => (prev + 1) % headerImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [headerImages.length]);
+
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
+    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
+    "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
+  ];
+
+  const galleryImages = useMemo(() => {
+    const list = [...headerImages];
+    for (const fb of fallbackImages) {
+      if (list.length >= 5) break;
+      if (!list.includes(fb)) list.push(fb);
+    }
+    return list;
+  }, [headerImages]);
 
   const outletItems = [
     { name: "OVERVIEW", path: `/hotel-details/${pkg.id}` },
@@ -474,17 +531,38 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
       </div>
 
-      {/* HERO HEADER — visa-page style */}
-      <div
-        className="print:hidden relative overflow-hidden shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end"
-        style={{
-          backgroundImage: `url('${galleryImages[0]}')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40" />
+      {/* HERO HEADER — visa-page style with automatic 5-second slide transition */}
+      <div className="print:hidden relative overflow-hidden shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end">
+        {/* Background Images Cross-Fade */}
+        {headerImages.map((img, idx) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
+              idx === currentHeaderIndex ? "opacity-100 z-0" : "opacity-0 pointer-events-none"
+            }`}
+            style={{
+              backgroundImage: `url('${img}')`,
+            }}
+          />
+        ))}
+
+        {/* Gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 z-[1]" />
+
+        {/* Slide indicators if multiple images */}
+        {headerImages.length > 1 && (
+          <div className="absolute top-4 left-4 sm:top-6 sm:left-6 md:top-8 md:left-8 z-20 flex items-center gap-1.5">
+            {headerImages.map((_, idx) => (
+              <span
+                key={idx}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  idx === currentHeaderIndex ? "w-6 bg-[#E91E63]" : "w-1.5 bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="relative z-10 p-4 sm:p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

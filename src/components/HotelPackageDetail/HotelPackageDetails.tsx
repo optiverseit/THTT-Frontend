@@ -57,30 +57,44 @@ const HotelPackageDetails: React.FC = () => {
     const policies = Array.isArray(hotel.policies) ? hotel.policies : [];
     const faqs = Array.isArray(hotel.faqs) ? hotel.faqs : [];
     const testimonials = Array.isArray(hotel.testimonials) ? hotel.testimonials : [];
-    const images = Array.isArray(hotel.images) ? hotel.images : [];
+    const rawImages = Array.isArray(hotel.images)
+      ? hotel.images
+      : Array.isArray(hotel.hotel_images)
+      ? hotel.hotel_images
+      : Array.isArray(hotel.gallery)
+      ? hotel.gallery
+      : [];
 
     const activePricingTiers = pricingTiers.filter((tier: any) => tier.status !== "INACTIVE");
     const activeInformation = information.filter((item: any) => item.status !== "INACTIVE");
     const activePolicies = policies.filter((item: any) => item.status !== "INACTIVE");
     const activeFaqs = faqs.filter((item: any) => item.status !== "INACTIVE");
     const activeTestimonials = testimonials.filter((item: any) => item.status !== "INACTIVE");
-    const activeImages = images.filter((item: any) => item.status !== "INACTIVE");
+    const activeImages = rawImages.filter((item: any) => item.status !== "INACTIVE");
 
-    const getImageUrl = (image: any) =>
-      image?.image_url ||
-      image?.file_url ||
-      image?.secure_url ||
-      image?.url ||
-      image?.image ||
-      "";
+    const getImageUrl = (image: any) => {
+      if (typeof image === "string") return image;
+      return (
+        image?.image_url ||
+        image?.file_url ||
+        image?.secure_url ||
+        image?.url ||
+        image?.image ||
+        ""
+      );
+    };
 
     const primaryImage =
       activeImages.find((image: any) => image.is_primary) ||
       activeImages.find((image: any) => image.image_type === "COVER") ||
       activeImages[0];
 
-    const image = getImageUrl(primaryImage);
+    const image = getImageUrl(primaryImage) || getImageUrl(hotel.image) || getImageUrl(hotel.cover_image);
     const gallery = activeImages.map((item: any) => getImageUrl(item)).filter(Boolean);
+
+    if (image && !gallery.includes(image)) {
+      gallery.unshift(image);
+    }
 
     const pricingTable = activePricingTiers.map((tier: any) => ({
       id: Number(tier.id),

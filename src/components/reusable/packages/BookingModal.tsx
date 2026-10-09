@@ -288,9 +288,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
+    setSubmitError("");
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else if (name === "phone") {
+      // Phone number: only digits allowed, cannot exceed 10 digits
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({ ...prev, phone: digitsOnly }));
+    } else if (name === "travelDate" || name === "travelDateFrom") {
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (value && value < todayStr) {
+        setSubmitError("Travel date cannot be in the past. Please select today or a future date.");
+        setFormData((prev) => ({ ...prev, [name]: "" }));
+        return;
+      }
+      setFormData((prev) => ({ ...prev, [name]: value }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -325,23 +338,50 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setSubmitError("Package information is missing.");
       return;
     }
+    if (!formData.fullName.trim()) {
+      setSubmitError("Please enter your full name.");
+      return;
+    }
+
+    // 1. Email validation
+    const emailTrimmed = formData.email.trim();
+    if (!emailTrimmed) {
+      setSubmitError("Please enter your email address.");
+      return;
+    }
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      setSubmitError("Please enter a valid email address (e.g. name@example.com).");
+      return;
+    }
+
+    // 2. Phone validation: cannot be greater than 10 digits
+    const phoneDigits = formData.phone.replace(/\D/g, "");
+    if (!phoneDigits) {
+      setSubmitError("Please enter your phone/WhatsApp number.");
+      return;
+    }
+    if (phoneDigits.length > 10) {
+      setSubmitError("Phone number cannot be greater than 10 numbers.");
+      return;
+    }
+    if (phoneDigits.length < 7) {
+      setSubmitError("Please enter a valid phone number (up to 10 digits).");
+      return;
+    }
+
+    // 3. Travel date validation: cannot be in the past
     const effectiveTravelDate = formData.travelDateFrom || formData.travelDate;
     if (!effectiveTravelDate) {
       setSubmitError("Please select a travel start date.");
       return;
     }
-    if (!formData.fullName.trim()) {
-      setSubmitError("Please enter your full name.");
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (effectiveTravelDate < todayStr) {
+      setSubmitError("Travel date cannot be in the past. Please select today or a future date.");
       return;
     }
-    if (!formData.email.trim()) {
-      setSubmitError("Please enter your email address.");
-      return;
-    }
-    if (!formData.phone.trim()) {
-      setSubmitError("Please enter your phone/WhatsApp number.");
-      return;
-    }
+
     if (!formData.nationality.trim()) {
       setSubmitError("Please enter your nationality.");
       return;
@@ -1499,6 +1539,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                           type="tel"
                           name="phone"
                           required
+                          maxLength={10}
+                          inputMode="numeric"
+                          pattern="[0-9]{10}"
                           placeholder="9851400000"
                           value={formData.phone}
                           onChange={handleChange}
@@ -1520,6 +1563,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                           type="date"
                           name="travelDate"
                           required
+                          min={new Date().toISOString().split("T")[0]}
                           value={formData.travelDate}
                           onChange={handleChange}
                           className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:bg-white focus:border-[#2D1347] focus:outline-none transition"

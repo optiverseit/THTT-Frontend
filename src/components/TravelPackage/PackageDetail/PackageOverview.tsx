@@ -9,47 +9,52 @@ import { formatDescription } from "../../../utils/formatDescription";
 
 interface PackageProp {
   pkg: Package;
-  allItenary: { day: string; title: string; desc: string }[];
+  allItenary?: { day: string; title: string; desc: string }[];
+  highlights?: string[];
+  highlightDetails?: any[];
 }
 
-// ─────────────────────────────────────────────
-// MOCK ROADMAP DATA (used as fallback when API itinerary is empty)
-// Replace / remove once the API provides itinerary steps.
-// ─────────────────────────────────────────────
-// const MOCK_ROADMAP_STEPS: RoadmapStep[] = [
-//   {
-//     day: "Day 01",
-//     schedule: "Full Day Schedule",
-//     title: "Arrival & Welcome",
-//     description:
-//       "Our representative will receive you and transfer you to your accommodation. Evening free for local exploration.",
-//     tags: ["Breakfast", "Guided Sightseeing"],
-//   },
-//   {
-//     day: "Day 02",
-//     schedule: "Full Day Schedule",
-//     title: "Full Day Sightseeing",
-//     description:
-//       "Visit the most famous landmarks and cultural heritage sites of the region with our expert guide.",
-//     tags: ["Breakfast", "Guided Sightseeing"],
-//   },
-//   {
-//     day: "Day 03",
-//     schedule: "Full Day Schedule",
-//     title: "Final Departure",
-//     description:
-//       "Transfer to the airport or bus station for your onward journey home with beautiful memories.",
-//     tags: ["Breakfast", "Guided Sightseeing"],
-//   },
-// ];
-
 const PackageOverview: React.FC = () => {
-  const { pkg, allItenary } = useOutletContext<PackageProp>();
+  const context = useOutletContext<PackageProp & { [key: string]: any }>() || {};
+  const { pkg, allItenary } = context;
 
-  // ── Build roadmap steps from real API data; fall back to mock ──
-  const roadmapSteps: RoadmapStep[] =
-    Array.isArray(allItenary)
-      ? allItenary.map((item, idx) => ({
+  // ── Extract highlights safely from context or package data ──
+  const highlightsList: string[] = React.useMemo(() => {
+    const raw = (Array.isArray(context.highlights) && context.highlights.length > 0)
+      ? context.highlights
+      : (Array.isArray(pkg?.highlights) && pkg.highlights.length > 0)
+      ? pkg.highlights
+      : (Array.isArray(context.highlightDetails) && context.highlightDetails.length > 0)
+      ? context.highlightDetails.map((h: any) => h?.highlight || "").filter(Boolean)
+      : (Array.isArray((pkg as any)?.highlightDetails)
+        ? (pkg as any).highlightDetails.map((h: any) => h?.highlight || "").filter(Boolean)
+        : []);
+
+    return raw
+      .map((item: any) => (typeof item === "string" ? item.trim() : (item?.highlight || item?.title || "")))
+      .filter((item: string) => item.length > 0);
+  }, [context.highlights, context.highlightDetails, pkg?.highlights, (pkg as any)?.highlightDetails]);
+
+  // ── Extract roadmap/itinerary steps from real API data ──
+  const rawItinerary = React.useMemo(() => {
+    if (Array.isArray(allItenary) && allItenary.length > 0) return allItenary;
+    if (Array.isArray(pkg?.itinerary) && pkg.itinerary.length > 0) return pkg.itinerary;
+    if (Array.isArray((pkg as any)?.itineraries) && (pkg as any).itineraries.length > 0) return (pkg as any).itineraries;
+    return [];
+  }, [allItenary, pkg?.itinerary, (pkg as any)?.itineraries]);
+
+  const roadmapSteps: RoadmapStep[] = React.useMemo(() => {
+    if (!Array.isArray(rawItinerary) || rawItinerary.length === 0) return [];
+
+    return rawItinerary
+      .filter((item: any) => {
+        if (!item) return false;
+        const title = (item.title || "").trim();
+        const desc = (item.desc || item.description || "").trim();
+        const day = (item.day || "").trim();
+        return title.length > 0 || desc.length > 0 || day.length > 0;
+      })
+      .map((item: any, idx: number) => ({
         step: idx + 1,
         day: item.day || `Day ${String(idx + 1).padStart(2, "0")}`,
         schedule: (item as any).schedule || "",
@@ -58,9 +63,10 @@ const PackageOverview: React.FC = () => {
         tags: Array.isArray((item as any).tags)
           ? (item as any).tags
           : [],
-      }))
-      : [];
+      }));
+  }, [rawItinerary]);
 
+  if (!pkg) return null;
 
   return (
     <div className="w-full">
@@ -74,15 +80,19 @@ const PackageOverview: React.FC = () => {
             </h1>
 
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm font-bold text-gray-500">
-              <span className="flex items-center gap-1.5 text-[#E91E63]">
-                <MapPin size={13} />
-                <span className="text-gray-700">{pkg.location}</span>
-              </span>
+              {pkg.location && (
+                <span className="flex items-center gap-1.5 text-[#E91E63]">
+                  <MapPin size={13} />
+                  <span className="text-gray-700">{pkg.location}</span>
+                </span>
+              )}
 
-              <span className="flex items-center gap-1.5 text-[#E91E63]">
-                <Clock size={13} />
-                <span className="text-gray-700">{pkg.duration}</span>
-              </span>
+              {pkg.duration && (
+                <span className="flex items-center gap-1.5 text-[#E91E63]">
+                  <Clock size={13} />
+                  <span className="text-gray-700">{pkg.duration}</span>
+                </span>
+              )}
 
               {pkg.difficulty && (
                 <span className="bg-pink-50 text-[#E91E63] px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider">
@@ -105,25 +115,29 @@ const PackageOverview: React.FC = () => {
             <PackagePricing pkg={pkg} />
           </div>
 
-          {/* Trip Highlights Card */}
-          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 space-y-3 sm:space-y-4">
-            <h2 className="flex items-center gap-2 sm:gap-2.5 text-base sm:text-xl font-black text-[#200B3B]">
-              <CheckCircle2 size={18} className="text-[#E91E63]" />
-              <span>Trip Highlights</span>
-            </h2>
+          {/* Trip Highlights Card (Only show if highlights data is available) */}
+          {highlightsList.length > 0 && (
+            <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 space-y-3 sm:space-y-4">
+              <h2 className="flex items-center gap-2 sm:gap-2.5 text-base sm:text-xl font-black text-[#200B3B]">
+                <CheckCircle2 size={18} className="text-[#E91E63]" />
+                <span>Trip Highlights</span>
+              </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1 sm:pt-2">
-              {pkg.highlights?.map((item: string, idx: number) => (
-                <div key={idx} className="flex items-start gap-2 sm:gap-2.5 text-xs sm:text-sm font-semibold text-gray-700">
-                  <span className="w-2 h-2 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
-                  <span>{item}</span>
-                </div>
-              ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1 sm:pt-2">
+                {highlightsList.map((item: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-2 sm:gap-2.5 text-xs sm:text-sm font-semibold text-gray-700">
+                    <span className="w-2 h-2 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* ── TRIP ROADMAP ── */}
-          <TripRoadmap steps={roadmapSteps} />
+          {/* ── TRIP ROADMAP (Only show if roadmap/itinerary steps are available) ── */}
+          {roadmapSteps.length > 0 && (
+            <TripRoadmap steps={roadmapSteps} />
+          )}
 
           {/* Inclusions & Exclusions */}
           <IncludesExclude />

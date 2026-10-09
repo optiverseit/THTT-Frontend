@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, Calendar, Users, User, Mail, MessageSquare, MapPin, Send, MessageCircle, Printer, Copy, Check, BadgeCheck, Globe, AlertCircle, Building2, BedDouble } from "lucide-react";
+import { X, Calendar, Users, User, Mail, MessageSquare, MapPin, Send, MessageCircle, Printer, Copy, Check, BadgeCheck, Globe, AlertCircle, Building2, BedDouble, Paperclip, FileText } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
@@ -59,6 +59,59 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
   const [bedsInRoom, setBedsInRoom] = useState<string>("");
   const [hasChildren, setHasChildren] = useState(false);
   const [childrenCount, setChildrenCount] = useState<string>("");
+
+  // ── Single file attachment state (jpg, jpeg, png, pdf, < 1 MB) ──
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError("");
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Single file attachment only
+    const file = files[0];
+
+    // Supported formats: jpg, jpeg, png, pdf
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".pdf"];
+    const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
+    const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+
+    const isExtensionValid = allowedExtensions.includes(ext);
+    const isMimeValid = allowedMimeTypes.includes(file.type);
+
+    if (!isExtensionValid && !isMimeValid) {
+      setFileError("Unsupported file type. Only JPG, JPEG, PNG, and PDF files are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    // Must be strictly less than 1 MB (1024 * 1024 bytes)
+    const MAX_SIZE = 1 * 1024 * 1024;
+    if (file.size >= MAX_SIZE) {
+      setFileError("File size exceeds 1 MB limit. Please upload a file smaller than 1 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setAttachedFile(file);
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    setFileError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
   useEffect(() => {
     if (isOpen) {
       if (isSessionValid()) {
@@ -83,6 +136,8 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
       setSelectedPaymentMethod("esewa");
       setIsProcessingPayment(false);
       setBookingId(null);
+      setAttachedFile(null);
+      setFileError("");
     }
   }, [isOpen, initialTierIndex, initialGuests]);
   useEffect(() => {
@@ -158,6 +213,8 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
     if (!currentTier?.id) return setSubmitError("Please select a valid room type.");
     if (hasChildren && (!childrenCount || Number(childrenCount) < 1)) return setSubmitError("Please enter the number of children.");
     if (hasChildren && Number(childrenCount) > guestsCount) return setSubmitError("Number of children cannot exceed total guests.");
+    if (!attachedFile) return setSubmitError("Please upload the required file attachment (JPG, JPEG, PNG, or PDF under 1 MB).");
+    if (fileError) return setSubmitError(fileError);
     const hotelId = Number(pkg.backendId ?? pkg.id);
     if (!hotelId || Number.isNaN(hotelId)) return setSubmitError("Invalid hotel. Please refresh the page and try again.");
     try {
@@ -172,25 +229,51 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
         const day = String(d.getDate()).padStart(2, "0");
         checkout = `${y}-${m}-${day}`;
       }
-      const bookingData = {
-        hotel_id: hotelId,
-        hotel_pricing_tier_id: Number(currentTier.id),
-        primary_guest_name: formData.fullName.trim(),
-        email: formData.email.trim(),
-        phone_number: `${formData.phoneCode} ${formData.phone}`.trim(),
-        nationality: formData.nationality.trim(),
-        check_in_date: formData.travelDateFrom,
-        check_out_date: checkout,
-        number_of_days: nightsCount,
-        total_guests: guestsCount,
-        beds_in_room: bedsInRoom ? Number(bedsInRoom) : null,
-        travelling_with_children: hasChildren,
-        number_of_children: hasChildren ? Number(childrenCount) : 0,
-        special_requests: formData.specialNotes.trim() || null,
-        frontend_total_amount: totalNpr
-      };
-      console.log("HOTEL BOOKING REQUEST:", bookingData);
-      const response = await createHotelBooking(bookingData);
+      let payload: any;
+      if (attachedFile) {
+        const fd = new FormData();
+        fd.append("hotel_id", String(hotelId));
+        fd.append("hotel_pricing_tier_id", String(currentTier.id));
+        fd.append("primary_guest_name", formData.fullName.trim());
+        fd.append("email", formData.email.trim());
+        fd.append("phone_number", `${formData.phoneCode} ${formData.phone}`.trim());
+        fd.append("nationality", formData.nationality.trim());
+        fd.append("check_in_date", formData.travelDateFrom);
+        if (checkout) fd.append("check_out_date", checkout);
+        fd.append("number_of_days", String(nightsCount));
+        fd.append("total_guests", String(guestsCount));
+        if (bedsInRoom) fd.append("beds_in_room", String(bedsInRoom));
+        fd.append("travelling_with_children", hasChildren ? "1" : "0");
+        fd.append("number_of_children", String(hasChildren ? Number(childrenCount) : 0));
+        if (formData.specialNotes.trim()) {
+          fd.append("special_requests", formData.specialNotes.trim());
+        }
+        fd.append("frontend_total_amount", String(totalNpr));
+        fd.append("attachment", attachedFile);
+        fd.append("document", attachedFile);
+        fd.append("file", attachedFile);
+        payload = fd;
+      } else {
+        payload = {
+          hotel_id: hotelId,
+          hotel_pricing_tier_id: Number(currentTier.id),
+          primary_guest_name: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone_number: `${formData.phoneCode} ${formData.phone}`.trim(),
+          nationality: formData.nationality.trim(),
+          check_in_date: formData.travelDateFrom,
+          check_out_date: checkout,
+          number_of_days: nightsCount,
+          total_guests: guestsCount,
+          beds_in_room: bedsInRoom ? Number(bedsInRoom) : null,
+          travelling_with_children: hasChildren,
+          number_of_children: hasChildren ? Number(childrenCount) : 0,
+          special_requests: formData.specialNotes.trim() || null,
+          frontend_total_amount: totalNpr
+        };
+      }
+      console.log("HOTEL BOOKING REQUEST:", payload);
+      const response = await createHotelBooking(payload);
       const booking = response?.data?.data;
       if (!booking?.id) throw new Error("Hotel booking ID was not returned.");
       setBookingId(Number(booking.id));
@@ -263,7 +346,8 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
     setSubmitError("");
     setBedsInRoom("");
     setHasChildren(false);
-    setChildrenCount("");
+    setAttachedFile(null);
+    setFileError("");
     setFormData({ fullName: "", nationality: "", email: "", phoneCode: "+977", phone: "", travelDateFrom: "", travelDateTo: "", numberOfDays: "1", specialNotes: "", termsAgreed: false });
     onClose();
   };
@@ -365,9 +449,69 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
                 {hasChildren && <div><label className="block text-xs font-bold text-gray-700 mb-1">Number of Children <span className="text-[#E11D48]">*</span></label><input type="number" required min={1} max={guestsCount} value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div>}
               </div>
               <div><label className="block text-xs font-bold text-gray-700 mb-1">Special Requests <span className="text-gray-400 font-normal">(Optional)</span></label><div className="relative"><MessageSquare size={14} className="absolute left-3 top-3 text-gray-400"/><textarea name="specialNotes" rows={2} maxLength={2000} placeholder="Early check-in, quiet room, airport pickup..." value={formData.specialNotes} onChange={handleChange} className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none resize-none"/></div></div>
+              {/* File Attachment Upload (just below Special Requests) */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Attachment <span className="text-gray-500 font-normal">(ID, Citizenship, Passport, Student ID)</span> <span className="text-[#E11D48]">*</span>
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="hotel-attachment-input"
+                />
+                {!attachedFile ? (
+                  <label
+                    htmlFor="hotel-attachment-input"
+                    className="flex flex-col items-center justify-center p-3 sm:p-4 border-2 border-dashed border-gray-200 hover:border-[#E11D48] rounded-xl bg-gray-50/80 hover:bg-pink-50/30 transition-all cursor-pointer group text-center"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white shadow-xs border border-gray-200 flex items-center justify-center text-gray-500 group-hover:text-[#E11D48] group-hover:scale-110 transition-transform mb-1.5">
+                      <Paperclip size={15} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-[#E11D48] transition-colors">
+                      Click to upload ID, Citizenship, Passport, Student ID
+                    </span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">
+                      Supports JPG, JPEG, PNG, PDF (Less than 1 MB, 1 file only)
+                    </span>
+                  </label>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 sm:p-3 bg-pink-50/50 border border-pink-200 rounded-xl">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#E11D48]/10 text-[#E11D48] flex items-center justify-center flex-shrink-0">
+                        <FileText size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-800 truncate max-w-[200px] sm:max-w-[280px]">
+                          {attachedFile.name}
+                        </p>
+                        <p className="text-[10px] text-gray-500 font-medium">
+                          {formatFileSize(attachedFile.size)} • 1 file attached
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="w-7 h-7 rounded-lg hover:bg-white text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
+                      title="Remove file"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                )}
+                {fileError && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-red-500 font-semibold">
+                    <AlertCircle size={13} className="flex-shrink-0" />
+                    <span>{fileError}</span>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center justify-between bg-[#FAF8FF] border border-purple-100 rounded-xl px-4 py-3"><div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estimated Total ({nightsCount} {nightsCount > 1 ? "Days" : "Day"} × {guestsCount} {guestsCount > 1 ? "Guests" : "Guest"} × {unitPriceFormatted})</p><p className="text-xl font-black text-[#2D1347]">{totalPriceFormatted}</p></div></div>
               <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer"><input type="checkbox" name="termsAgreed" checked={formData.termsAgreed} onChange={handleChange} className="mt-0.5 rounded text-[#E11D48]"/><span>I agree to the hotel reservation policy and cancellation terms of Trip Himalaya.</span></label>
-              <button type="submit" disabled={isSubmitting || !currentTier?.id} className="w-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-50">{isSubmitting ? <><Send size={15} className="animate-pulse"/><span>Processing Reservation…</span></> : <><Send size={15}/><span>Book This Hotel Room</span></>}</button>
+              <button type="submit" disabled={isSubmitting || !currentTier?.id || !attachedFile} className="w-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-50">{isSubmitting ? <><Send size={15} className="animate-pulse"/><span>Processing Reservation…</span></> : <><Send size={15}/><span>Book This Hotel Room</span></>}</button>
             </form>
           )}
         </div>

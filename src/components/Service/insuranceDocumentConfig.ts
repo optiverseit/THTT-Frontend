@@ -10,11 +10,11 @@ export interface InsuranceDocumentField {
   /** Document title shown in the modal row */
   title: string;
   /** Subtitle / hint shown below the title */
-  subtitle: string;
+  subtitle?: string;
   /** If true the user must upload before submitting */
   required: boolean;
   /** Accepted MIME / extension string for the file input */
-  accept: string;
+  accept?: string;
 }
 
 /** ---------------------------------------------------------------------
@@ -44,7 +44,7 @@ export const DEFAULT_DOCUMENT_CONFIG: InsuranceDocumentField[] = [
   },
 ];
 
-/** Helper – build an empty file-map object from the config */
+/** Helper â€“ build an empty file-map object from the config */
 export const buildEmptyDocumentFiles = (
   config: InsuranceDocumentField[]
 ): Record<string, File | null> =>

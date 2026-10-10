@@ -1096,7 +1096,9 @@ export const InsurancePlanDetailView: React.FC = () => {
             plan?.documentRequirements?.map((doc) => ({
               id: String(doc.id),
               title: doc.title,
+              subtitle: doc.description || doc.document_type || "Upload required document",
               required: doc.is_required,
+              accept: ".jpg,.jpeg,.png,.pdf",
             })) || []
           }
           requirementConfig={plan?.dynamicRequirements || []}

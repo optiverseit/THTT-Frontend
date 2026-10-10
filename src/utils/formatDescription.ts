@@ -140,7 +140,23 @@ export function formatDescription(raw: string | null | undefined): string {
       continue;
     }
 
-    // ── 6. Regular paragraph text ──
+    // ── 6. Inline title: short line ending with ":" (e.g. "Required Documentation:") ──
+    //    Detection rule: trimmed text ends with ":" AND has no more than 80 characters
+    //    AND does not look like a full sentence (no period before the colon, not a URL)
+    const endsWithColon = trimmed.endsWith(":");
+    const isShortEnough = trimmed.length <= 80;
+    const looksLikeSentence = /[.!?,]\s+\S/.test(trimmed.slice(0, -1)); // has mid-sentence punctuation
+    const isUrl = /https?:\/\//.test(trimmed);
+
+    if (endsWithColon && isShortEnough && !looksLikeSentence && !isUrl) {
+      closeList();
+      parts.push(
+        `<p style="font-weight:800;color:#2D1347;margin:14px 0 3px 0;font-size:0.9em;letter-spacing:0.01em;">${escapeHtml(trimmed)}</p>`
+      );
+      continue;
+    }
+
+    // ── 7. Regular paragraph text ──
     closeList();
     parts.push(
       `<p style="color:#4B5563;margin:5px 0;font-size:0.875em;line-height:1.75;">${escapeHtml(

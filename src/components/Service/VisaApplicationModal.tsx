@@ -70,6 +70,17 @@ export interface ApplicantData {
   documentFiles: Record<string, File | null>;
 }
 
+export interface ApplicantErrors {
+  fullName?: string;
+  nationality?: string;
+  email?: string;
+  phone?: string;
+  passportNumber?: string;
+  passportExpiry?: string;
+  travelDate?: string;
+  [key: string]: string | undefined; // for document requirement errors
+}
+
 const createDefaultApplicant = (): ApplicantData => ({
   fullName: "",
   nationality: "",
@@ -81,6 +92,50 @@ const createDefaultApplicant = (): ApplicantData => ({
   travelDate: "",
   documentFiles: {},
 });
+
+const createDefaultErrors = (): ApplicantErrors => ({});
+
+// ─── Validation helpers ───────────────────────────────────────────────────────
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PASSPORT_RE = /^[A-Za-z0-9]{6,12}$/;
+
+const validateField = (
+  field: keyof ApplicantErrors,
+  value: string,
+  label: string
+): string => {
+  if (!value.trim()) return `${label} is required.`;
+  switch (field) {
+    case "email":
+      if (!EMAIL_RE.test(value.trim())) return "Please enter a valid email address.";
+      break;
+    case "phone":
+      if (!/^\d+$/.test(value.trim())) return "Phone number must contain digits only.";
+      if (value.trim().length < 7) return "Phone number must be at least 7 digits.";
+      if (value.trim().length > 15) return "Phone number must not exceed 15 digits.";
+      break;
+    case "passportNumber":
+      if (!PASSPORT_RE.test(value.trim())) return "Passport number must be 6–12 alphanumeric characters.";
+      break;
+    case "passportExpiry": {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const expiry = new Date(value);
+      if (expiry <= today) return "Passport expiry date must be in the future.";
+      break;
+    }
+    case "travelDate": {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const travel = new Date(value);
+      if (travel < today) return "Travel date cannot be in the past.";
+      break;
+    }
+    default:
+      break;
+  }
+  return "";
+};
 
 export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   isOpen,
@@ -105,6 +160,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   );
   const [activeApplicantIndex, setActiveApplicantIndex] = useState(0);
 
+  // Per-applicant validation errors
+  const [applicantErrors, setApplicantErrors] = useState<ApplicantErrors[]>(() =>
+    Array.from({ length: guests }, createDefaultErrors)
+  );
+  // Top-level form-submission error banner
+  const [formError, setFormError] = useState("");
+
   // Sync applicants array whenever modal opens or guest count changes
   useEffect(() => {
     if (isOpen) {
@@ -116,6 +178,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         }
         return next.slice(0, guests);
       });
+      setApplicantErrors((prev) => {
+        if (prev.length === guests) return prev;
+        const next = [...prev];
+        while (next.length < guests) next.push(createDefaultErrors());
+        return next.slice(0, guests);
+      });
       setActiveApplicantIndex(0);
       setCurrentStep("form");
       setPaymentStatus("unpaid");
@@ -124,6 +192,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       setIsSubmittingApplication(false);
       setVisaApplicationId(null);
       setSubmissionId("");
+      setFormError("");
     }
   }, [guests, isOpen]);
 
@@ -170,6 +239,38 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       };
       return updated;
     });
+    // Clear the error for the updated field on change
+    const field = Object.keys(patch)[0] as keyof ApplicantErrors;
+    if (field) clearFieldError(activeApplicantIndex, field);
+    setFormError("");
+  };
+
+  const clearFieldError = (index: number, field: keyof ApplicantErrors) => {
+    setApplicantErrors((prev) => {
+      const updated = [...prev];
+      if (!updated[index]) return prev;
+      updated[index] = { ...updated[index], [field]: "" };
+      return updated;
+    });
+  };
+
+  const setFieldError = (index: number, field: keyof ApplicantErrors, msg: string) => {
+    setApplicantErrors((prev) => {
+      const updated = [...prev];
+      if (!updated[index]) return prev;
+      updated[index] = { ...updated[index], [field]: msg };
+      return updated;
+    });
+  };
+
+  const handleFieldBlur = (
+    field: keyof ApplicantErrors,
+    value: string,
+    label: string,
+    index: number = activeApplicantIndex
+  ) => {
+    const err = validateField(field, value, label);
+    setFieldError(index, field, err);
   };
 
   const handleDocumentChange = (requirementId: number | string, file: File | null) => {
@@ -196,6 +297,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     if (!isSessionValid()) {
       clearAuthSession();
@@ -203,64 +305,76 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       return;
     }
 
+    // ── Full validation pass across all applicants ──────────────────────────
+    const fieldsToValidate: Array<{ key: keyof ApplicantErrors; label: string }> = [
+      { key: "fullName", label: "Full Name" },
+      { key: "nationality", label: "Nationality" },
+      { key: "email", label: "Email Address" },
+      { key: "phone", label: "WhatsApp / Mobile Phone" },
+      { key: "passportNumber", label: "Passport Number" },
+      { key: "passportExpiry", label: "Passport Expiry Date" },
+      { key: "travelDate", label: "Intended Travel Date" },
+    ];
+
+    let firstErrorApplicant = -1;
+    const newErrors: ApplicantErrors[] = applicants.map(() => ({}));
+
     for (let i = 0; i < guests; i++) {
       const app = applicants[i];
-      if (!app || !app.fullName.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Full Name for Applicant ${i + 1}.`);
-        return;
+      if (!app) continue;
+      const values: Record<string, string> = {
+        fullName: app.fullName,
+        nationality: app.nationality,
+        email: app.email,
+        phone: app.phone,
+        passportNumber: app.passportNumber,
+        passportExpiry: app.passportExpiry,
+        travelDate: app.travelDate,
+      };
+
+      for (const { key, label } of fieldsToValidate) {
+        const err = validateField(key, values[key as string] || "", label);
+        if (err) {
+          newErrors[i][key] = err;
+          if (firstErrorApplicant === -1) firstErrorApplicant = i;
+        }
       }
-      if (!app.nationality.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Nationality for Applicant ${i + 1}.`);
-        return;
-      }
-      if (!app.email.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Email Address for Applicant ${i + 1}.`);
-        return;
-      }
-      if (!app.phone.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter WhatsApp / Mobile Phone for Applicant ${i + 1}.`);
-        return;
-      }
-      if (!app.passportNumber.trim()) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Passport Number for Applicant ${i + 1}.`);
-        return;
-      }
-      if (!app.passportExpiry) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Passport Expiry Date for Applicant ${i + 1}.`);
-        return;
-      }
-      if (!app.travelDate) {
-        setActiveApplicantIndex(i);
-        alert(`Please enter Intended Travel Date for Applicant ${i + 1}.`);
-        return;
-      }
+
+      // Required document check
       for (const requirement of documentRequirements) {
         if (requirement.is_required && !app.documentFiles[String(requirement.id)]) {
-          setActiveApplicantIndex(i);
-          alert(`Please attach ${requirement.title || requirement.document_type || "required document"} for Applicant ${i + 1}.`);
-          return;
+          const docKey = `doc_${requirement.id}`;
+          newErrors[i][docKey] = `"${requirement.title || requirement.document_type || "Required document"}" is required.`;
+          if (firstErrorApplicant === -1) firstErrorApplicant = i;
         }
       }
     }
 
+    // Apply all errors at once
+    setApplicantErrors(newErrors);
+
+    if (firstErrorApplicant !== -1) {
+      setActiveApplicantIndex(firstErrorApplicant);
+      setFormError(
+        firstErrorApplicant === 0
+          ? "Please fix the highlighted errors before submitting."
+          : `Please fix errors for Applicant ${firstErrorApplicant + 1} before submitting.`
+      );
+      return;
+    }
+
     if (!termsAgreed) {
-      alert("Please accept the terms and conditions to proceed.");
+      setFormError("Please accept the terms and conditions to proceed.");
       return;
     }
 
     if (!countryId || !visaCategoryId) {
-      alert("Visa country or category information is missing.");
+      setFormError("Visa country or category information is missing.");
       return;
     }
 
     if (!selectedOption.visaPricingTierId) {
-      alert("Please select a valid visa pricing option.");
+      setFormError("Please select a valid visa pricing option.");
       return;
     }
 
@@ -1382,14 +1496,22 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Full Name (As printed on Passport) <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
-                      required
                       type="text"
+                      placeholder="Ram Bahadur Shrestha"
                       value={currentApplicant.fullName}
-                      onChange={(e) =>
-                        updateCurrentApplicant({ fullName: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
+                      onChange={(e) => updateCurrentApplicant({ fullName: e.target.value })}
+                      onBlur={(e) => handleFieldBlur("fullName", e.target.value, "Full Name")}
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] placeholder:text-[11px] sm:placeholder:text-xs placeholder:font-normal placeholder:text-gray-400 focus:outline-none transition-all ${
+                        applicantErrors[activeApplicantIndex]?.fullName
+                          ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          : "border-gray-200 focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100"
+                      }`}
                     />
+                    {applicantErrors[activeApplicantIndex]?.fullName && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].fullName}
+                      </p>
+                    )}
                   </div>
 
                   {/* Nationality */}
@@ -1398,14 +1520,22 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Nationality <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
-                      required
                       type="text"
+                      placeholder="Nepali"
                       value={currentApplicant.nationality}
-                      onChange={(e) =>
-                        updateCurrentApplicant({ nationality: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
+                      onChange={(e) => updateCurrentApplicant({ nationality: e.target.value })}
+                      onBlur={(e) => handleFieldBlur("nationality", e.target.value, "Nationality")}
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] placeholder:text-[11px] sm:placeholder:text-xs placeholder:font-normal placeholder:text-gray-400 focus:outline-none transition-all ${
+                        applicantErrors[activeApplicantIndex]?.nationality
+                          ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          : "border-gray-200 focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100"
+                      }`}
                     />
+                    {applicantErrors[activeApplicantIndex]?.nationality && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].nationality}
+                      </p>
+                    )}
                   </div>
 
                   {/* Email */}
@@ -1414,14 +1544,22 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Email Address <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
-                      required
                       type="email"
+                      placeholder="rambahadur@gmail.com"
                       value={currentApplicant.email}
-                      onChange={(e) =>
-                        updateCurrentApplicant({ email: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
+                      onChange={(e) => updateCurrentApplicant({ email: e.target.value })}
+                      onBlur={(e) => handleFieldBlur("email", e.target.value, "Email Address")}
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] placeholder:text-[11px] sm:placeholder:text-xs placeholder:font-normal placeholder:text-gray-400 focus:outline-none transition-all ${
+                        applicantErrors[activeApplicantIndex]?.email
+                          ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          : "border-gray-200 focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100"
+                      }`}
                     />
+                    {applicantErrors[activeApplicantIndex]?.email && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].email}
+                      </p>
+                    )}
                   </div>
 
                   {/* WhatsApp Phone with Country Code */}
@@ -1429,13 +1567,15 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <label className="block text-xs font-bold text-gray-700 mb-1">
                       WhatsApp / Mobile Phone <span className="text-[#E91E63]">*</span>
                     </label>
-                    <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-[#E91E63] focus-within:ring-2 focus-within:ring-pink-100 transition-all overflow-hidden">
+                    <div className={`flex items-stretch border rounded-xl bg-white transition-all overflow-hidden ${
+                      applicantErrors[activeApplicantIndex]?.phone
+                        ? "border-red-400 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-100"
+                        : "border-gray-200 focus-within:border-[#E91E63] focus-within:ring-2 focus-within:ring-pink-100"
+                    }`}>
                       {/* Country Code Selector */}
                       <select
                         value={currentApplicant.phoneCode}
-                        onChange={(e) =>
-                          updateCurrentApplicant({ phoneCode: e.target.value })
-                        }
+                        onChange={(e) => updateCurrentApplicant({ phoneCode: e.target.value })}
                         className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 py-2 text-xs font-bold text-[#200B3B] focus:outline-none cursor-pointer"
                         style={{ maxWidth: "110px" }}
                       >
@@ -1447,16 +1587,19 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       </select>
                       {/* Phone Number Input */}
                       <input
-                        required
                         type="tel"
-                        placeholder="9800000000"
+                        placeholder="9841234567"
                         value={currentApplicant.phone}
-                        onChange={(e) =>
-                          updateCurrentApplicant({ phone: e.target.value })
-                        }
-                        className="flex-1 min-w-0 px-3 py-2 bg-white text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none"
+                        onChange={(e) => updateCurrentApplicant({ phone: e.target.value })}
+                        onBlur={(e) => handleFieldBlur("phone", e.target.value, "WhatsApp / Mobile Phone")}
+                        className="flex-1 min-w-0 px-3 py-2 bg-white text-xs sm:text-sm font-semibold text-[#200B3B] placeholder:text-[11px] sm:placeholder:text-xs placeholder:font-normal placeholder:text-gray-400 focus:outline-none"
                       />
                     </div>
+                    {applicantErrors[activeApplicantIndex]?.phone && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].phone}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1484,16 +1627,22 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Passport Number <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
-                      required
                       type="text"
+                      placeholder="09123456 or PA0123456"
                       value={currentApplicant.passportNumber}
-                      onChange={(e) =>
-                        updateCurrentApplicant({
-                          passportNumber: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-mono font-bold text-[#200B3B] uppercase focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
+                      onChange={(e) => updateCurrentApplicant({ passportNumber: e.target.value.toUpperCase() })}
+                      onBlur={(e) => handleFieldBlur("passportNumber", e.target.value, "Passport Number")}
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-mono font-bold text-[#200B3B] uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:text-[11px] sm:placeholder:text-xs placeholder:text-gray-400 focus:outline-none transition-all ${
+                        applicantErrors[activeApplicantIndex]?.passportNumber
+                          ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          : "border-gray-200 focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100"
+                      }`}
                     />
+                    {applicantErrors[activeApplicantIndex]?.passportNumber && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].passportNumber}
+                      </p>
+                    )}
                   </div>
 
                   {/* Passport Expiry Date */}
@@ -1502,16 +1651,22 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Passport Expiry Date <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
-                      required
                       type="date"
                       value={currentApplicant.passportExpiry}
-                      onChange={(e) =>
-                        updateCurrentApplicant({
-                          passportExpiry: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
+                      min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                      onChange={(e) => updateCurrentApplicant({ passportExpiry: e.target.value })}
+                      onBlur={(e) => handleFieldBlur("passportExpiry", e.target.value, "Passport Expiry Date")}
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none transition-all ${
+                        applicantErrors[activeApplicantIndex]?.passportExpiry
+                          ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          : "border-gray-200 focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100"
+                      }`}
                     />
+                    {applicantErrors[activeApplicantIndex]?.passportExpiry && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].passportExpiry}
+                      </p>
+                    )}
                   </div>
 
                   {/* Intended Travel Date */}
@@ -1520,14 +1675,22 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Intended Travel Date <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
-                      required
                       type="date"
                       value={currentApplicant.travelDate}
-                      onChange={(e) =>
-                        updateCurrentApplicant({ travelDate: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100 transition-all"
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => updateCurrentApplicant({ travelDate: e.target.value })}
+                      onBlur={(e) => handleFieldBlur("travelDate", e.target.value, "Intended Travel Date")}
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none transition-all ${
+                        applicantErrors[activeApplicantIndex]?.travelDate
+                          ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          : "border-gray-200 focus:border-[#E91E63] focus:ring-2 focus:ring-pink-100"
+                      }`}
                     />
+                    {applicantErrors[activeApplicantIndex]?.travelDate && (
+                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                        <span>⚠</span> {applicantErrors[activeApplicantIndex].travelDate}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1558,29 +1721,61 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   ) : documentRequirements.length > 0 ? (
                     documentRequirements.map((requirement) => {
                       const requirementId = String(requirement.id);
+                      const docKey = `doc_${requirement.id}`;
                       const file = currentApplicant.documentFiles[requirementId] || null;
                       const inputId = `visa-document-${activeApplicantIndex}-${requirement.id}`;
+                      const docError = applicantErrors[activeApplicantIndex]?.[docKey];
                       return (
-                        <div key={requirement.id} className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${file ? "bg-emerald-50/60 border-emerald-200" : requirement.is_required ? "bg-white border-gray-200 hover:border-[#E91E63]" : "bg-white border-gray-200 hover:border-purple-300"} transition-all`}>
-                          <input id={inputId} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => { handleDocumentChange(requirement.id, e.target.files?.[0] || null); e.target.value = ""; }} />
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${file ? "bg-emerald-100 text-emerald-600" : "bg-pink-50 text-[#E91E63]"}`}>{file ? <CheckCircle2 size={16} /> : <FileText size={15} />}</div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
-                                {requirement.title || requirement.document_type || requirement.name || "Document"}
-                                {requirement.is_required ? <span className="text-[#E91E63] font-black">*</span> : <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>}
-                              </p>
-                              {file ? (
-                                <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">{file.name} <span className="text-emerald-500 font-normal">({(file.size / 1024).toFixed(0)} KB)</span></p>
-                              ) : (
-                                <p className="text-[10px] text-gray-400">{requirement.description || requirement.document_type || "Attach required document"}</p>
-                              )}
+                        <div key={requirement.id}>
+                          <div className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border ${
+                            file
+                              ? "bg-emerald-50/60 border-emerald-200"
+                              : docError
+                                ? "bg-red-50/60 border-red-300"
+                                : requirement.is_required
+                                  ? "bg-white border-gray-200 hover:border-[#E91E63]"
+                                  : "bg-white border-gray-200 hover:border-purple-300"
+                          } transition-all`}>
+                            <input
+                              id={inputId}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                handleDocumentChange(requirement.id, e.target.files?.[0] || null);
+                                // Clear doc error on upload
+                                if (e.target.files?.[0]) clearFieldError(activeApplicantIndex, docKey);
+                                e.target.value = "";
+                              }}
+                            />
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                file ? "bg-emerald-100 text-emerald-600" : docError ? "bg-red-100 text-red-500" : "bg-pink-50 text-[#E91E63]"
+                              }`}>
+                                {file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
+                                  {requirement.title || requirement.document_type || requirement.name || "Document"}
+                                  {requirement.is_required ? <span className="text-[#E91E63] font-black">*</span> : <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>}
+                                </p>
+                                {file ? (
+                                  <p className="text-[10px] text-emerald-700 font-semibold truncate max-w-[180px]">{file.name} <span className="text-emerald-500 font-normal">({(file.size / 1024).toFixed(0)} KB)</span></p>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400">{requirement.description || requirement.document_type || "Attach required document"}</p>
+                                )}
+                              </div>
                             </div>
+                            {file ? (
+                              <button type="button" onClick={() => { handleDocumentChange(requirement.id, null); }} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"><Trash2 size={11} />Remove</button>
+                            ) : (
+                              <label htmlFor={inputId} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E91E63] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"><UploadCloud size={12} />Attach</label>
+                            )}
                           </div>
-                          {file ? (
-                            <button type="button" onClick={() => handleDocumentChange(requirement.id, null)} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors cursor-pointer"><Trash2 size={11} />Remove</button>
-                          ) : (
-                            <label htmlFor={inputId} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E91E63] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"><UploadCloud size={12} />Attach</label>
+                          {docError && (
+                            <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1 px-1">
+                              <span>⚠</span> {docError}
+                            </p>
                           )}
                         </div>
                       );
@@ -1619,6 +1814,14 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </span>
                 </label>
               </div>
+
+              {/* ── FORM-LEVEL ERROR BANNER ── */}
+              {formError && (
+                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-semibold animate-in fade-in duration-200">
+                  <span className="text-base leading-none mt-px">⚠️</span>
+                  <span>{formError}</span>
+                </div>
+              )}
 
               {/* ── ACTION BUTTONS ── */}
               <div className="flex items-center justify-between pt-1 border-t border-gray-100">

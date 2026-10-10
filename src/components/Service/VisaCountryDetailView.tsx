@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
+  FileText,
   MessageCircle,
   Printer,
   Zap,
@@ -73,6 +74,7 @@ export interface VisaDetailPlan {
   requirementDocuments?: string[];
   documentRequirements?: VisaDocumentRequirement[];
   termsAndConditions?: string[];
+  policies?: string[];
   costOptions?: CostOption[];
   successfulApplications?: string;
   successRate?: string;
@@ -80,6 +82,8 @@ export interface VisaDetailPlan {
   visaCategoryId?: number | string;
   visaPricingTierId?: number | string;
   image?: string | null;
+  visa_image?: string | null;
+  shortDescription?: string | null;
   created_at?: string;
 }
 // Country-specific hero background images
@@ -91,6 +95,7 @@ const countryBgImages: Record<string, string> = {
   "Malaysia": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&q=80&w=1400",
   "Singapore": "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=1400",
   "Australia": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1400",
+  "Austrilia": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1400",
   "UK": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=1400",
   "USA": "https://images.unsplash.com/photo-1534430480872-3498386e7856?auto=format&fit=crop&q=80&w=1400",
   "Schengen": "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&q=80&w=1400",
@@ -237,6 +242,14 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     );
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
+  // Hero background image (dynamic from API with fallbacks)
+  const heroBg =
+    plan.image ||
+    plan.visa_image ||
+    (plan as any).visaImage ||
+    countryBgImages[plan.country] ||
+    (plan.country?.toLowerCase().includes("austral") ? countryBgImages["Australia"] : undefined) ||
+    "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400";
   // Share helpers
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareTitle = `${plan.country} ${plan.visaType} | Trip Himalaya Tours & Travel`;
@@ -245,7 +258,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     title: shareTitle,
     text: shareText,
     url: currentUrl,
-    image: countryBgImages[plan.country] || "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400",
+    image: heroBg,
   };
   const shareButtons = [
     {
@@ -315,7 +328,6 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const printNPRTotal = formatNPR(estimatedTotalPrice);
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
-  const heroBg = countryBgImages[plan.country] || "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400";
   const handleQuickCountryChange = (countryName: string) => {
     const found = allPlans.find(
       (p) => p.country.toLowerCase() === countryName.toLowerCase()
@@ -325,6 +337,39 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       window.scrollTo({ top: 180, behavior: "smooth" });
     }
   };
+
+  const rawPolicies = plan.policies || [];
+  const rawTerms = plan.termsAndConditions || [];
+
+  const isPolicyString = (text: string) => {
+    const lower = text.toLowerCase();
+    return (
+      lower.includes("policy") ||
+      lower.includes("cancellation") ||
+      lower.includes("refund") ||
+      lower.includes("reschedul")
+    );
+  };
+
+  const policiesList: string[] =
+    rawPolicies.length > 0
+      ? rawPolicies
+      : rawTerms.filter(isPolicyString);
+
+  const rawTermsFiltered =
+    rawPolicies.length > 0
+      ? rawTerms
+      : rawTerms.filter((t) => !isPolicyString(t));
+
+  const displayTerms: string[] =
+    rawTermsFiltered.length > 0
+      ? rawTermsFiltered
+      : [
+          "Consular Authority: Visa grant, rejection, validity duration, and entry permissions are under the exclusive authority of the respective embassy/consulate.",
+          "Non-Refundable Processing: Consular application charges and counseling documentation fees are non-refundable once processed.",
+          "Document Authenticity: All applicant records, financial statements, and relationship certificates must be authentic, valid, and verifiable.",
+          "Translation & Notarization: Documents issued in Nepali (Civil, Land, Tax) must carry certified English translation and legal notarization."
+        ];
 
   const renderPricingSidebar = () => (
     <div className="space-y-4">
@@ -937,7 +982,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                   )}
                 </div>
                 <p className="text-xs sm:text-sm font-semibold text-white/70 mt-1">
-                  Authorized Counseling &amp; Embassy Submission Support for Nepali Citizens
+                  {plan.shortDescription || "Authorized Counseling & Embassy Submission Support for Nepali Citizens"}
                 </p>
               </div>
             </div>
@@ -962,18 +1007,32 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           </div>
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <Calendar size={14} className="text-pink-300" />
-              <span>{plan.duration.toLowerCase().includes("valid") ? plan.duration : `${plan.duration} Valid`}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <ShieldCheck size={14} className="text-emerald-300" />
-              <span>{plan.entryType}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <Clock size={14} className="text-blue-300" />
-              <span>{plan.processingTime}</span>
-            </div>
+            {(selectedCostOption?.days || plan.duration) ? (
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                <Calendar size={14} className="text-pink-300" />
+                <span>
+                  {(selectedCostOption?.days || plan.duration).toLowerCase().includes("valid")
+                    ? (selectedCostOption?.days || plan.duration)
+                    : `${selectedCostOption?.days || plan.duration} Valid`}
+                </span>
+              </div>
+            ) : null}
+            {(selectedCostOption?.entryType || plan.entryType) ? (
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                <ShieldCheck size={14} className="text-emerald-300" />
+                <span>{selectedCostOption?.entryType || plan.entryType}</span>
+              </div>
+            ) : null}
+            {plan.processingTime ? (
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                <Clock size={14} className="text-blue-300" />
+                <span>
+                  {plan.processingTime.toLowerCase().includes("day") || plan.processingTime.toLowerCase().includes("time")
+                    ? plan.processingTime
+                    : `${plan.processingTime} Days Processing`}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
         {/* ── SHARE BUTTON — top-right of hero ── */}
@@ -1081,6 +1140,55 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <div className="space-y-3">
               {documentsLoading ? (
                 <div className="py-6 text-sm font-semibold text-gray-400">Loading required documents...</div>
+              ) : plan.documentRequirements && plan.documentRequirements.length > 0 ? (
+                plan.documentRequirements.map((doc, idx) => {
+                  const title = doc.title || doc.name || doc.document_type || "Document";
+                  const docType = doc.document_type || "";
+                  const description = doc.description || null;
+                  const isRequired = doc.is_required !== false;
+
+                  return (
+                    <div
+                      key={doc.id ?? idx}
+                      className="flex items-start gap-3 p-4 rounded-2xl bg-gray-50 hover:bg-purple-50/30 border border-gray-100 transition-colors"
+                    >
+                      {/* Icon */}
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          isRequired
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-blue-50 text-blue-500"
+                        }`}
+                      >
+                        <CheckCircle2 size={16} />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-gray-900 leading-snug">{title}</span>
+                          {isRequired ? (
+                            <span className="text-[10px] font-black uppercase tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                              Required
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-black uppercase tracking-wide text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                              Optional
+                            </span>
+                          )}
+                          {docType && docType.toLowerCase() !== title.toLowerCase() && (
+                            <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                              {docType}
+                            </span>
+                          )}
+                        </div>
+                        {description && (
+                          <p className="text-xs text-gray-500 leading-relaxed mt-1">{description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               ) : plan.requirementDocuments && plan.requirementDocuments.length > 0 ? (
                 plan.requirementDocuments.map((req: string, idx: number) => (
                   <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
@@ -1101,21 +1209,92 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               </p>
             </div>
           </div>
-          {/* # Terms and Conditions */}
+          {/* # Policies Card */}
+          {(policiesList.length > 0 || informationLoading) && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-[#2D1347] flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck size={20} />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  Visa Policies
+                </h3>
+              </div>
+              <div className="space-y-3 pt-1">
+                {informationLoading ? (
+                  <div className="py-6 text-sm font-semibold text-gray-400">Loading policies...</div>
+                ) : policiesList.length > 0 ? (
+                  policiesList.map((policy: string, idx: number) => {
+                    const colonIndex = policy.indexOf(":");
+                    const hasColon = colonIndex > 0 && colonIndex < 45;
+                    const heading = hasColon ? policy.slice(0, colonIndex).trim() : null;
+                    const body = hasColon ? policy.slice(colonIndex + 1).trim() : policy;
+
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50/80 hover:bg-purple-50/30 border border-gray-100 transition-colors"
+                      >
+                        <span className="text-[#E91E63] font-black mt-0.5 text-base leading-none">•</span>
+                        <div className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                          {heading ? (
+                            <>
+                              <strong className="text-[#2D1347] font-bold">{heading}: </strong>
+                              <span>{body}</span>
+                            </>
+                          ) : (
+                            <span>{body}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-6 text-sm font-semibold text-gray-400">No policies available.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* # Terms and Conditions Card */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              Terms and Conditions
-            </h3>
-            <div className="space-y-2.5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-pink-50 text-[#E91E63] flex items-center justify-center flex-shrink-0">
+                <FileText size={20} />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                Terms and Conditions
+              </h3>
+            </div>
+            <div className="space-y-3 pt-1">
               {informationLoading ? (
                 <div className="py-6 text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
-              ) : plan.termsAndConditions && plan.termsAndConditions.length > 0 ? (
-                plan.termsAndConditions.map((term: string, idx: number) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700">
-                    <span className="text-[#E91E63] font-black mt-0.5">•</span>
-                    <span className="leading-relaxed">{term}</span>
-                  </div>
-                ))
+              ) : displayTerms.length > 0 ? (
+                displayTerms.map((term: string, idx: number) => {
+                  const colonIndex = term.indexOf(":");
+                  const hasColon = colonIndex > 0 && colonIndex < 45;
+                  const heading = hasColon ? term.slice(0, colonIndex).trim() : null;
+                  const body = hasColon ? term.slice(colonIndex + 1).trim() : term;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50/80 hover:bg-pink-50/30 border border-gray-100 transition-colors"
+                    >
+                      <span className="text-[#2D1347] font-black mt-0.5 text-base leading-none">•</span>
+                      <div className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                        {heading ? (
+                          <>
+                            <strong className="text-[#2D1347] font-bold">{heading}: </strong>
+                            <span>{body}</span>
+                          </>
+                        ) : (
+                          <span>{body}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               ) : (
                 <div className="py-6 text-sm font-semibold text-gray-400">No terms and conditions available.</div>
               )}

@@ -347,11 +347,17 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
               aboutText:
                 category.description || category.short_description || "",
               requirementDocuments: [],
+              policies: [],
               termsAndConditions: [],
               costOptions,
-              countryId: category.country_id,
-              visaCategoryId: category.id,
-              image: category.visa_image || null,
+              image:
+                category.visa_image ||
+                (category as any).image ||
+                (category as any).banner_image ||
+                (category as any).header_image ||
+                (category as any).cover_image ||
+                (category as any).country?.image ||
+                null,
               created_at: (category as any).created_at,
             };
           })

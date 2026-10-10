@@ -9,6 +9,7 @@
  *   1. / 2. / 3. ...      -> Numbered list items (indented, bold title before dash/colon)
  *   a. / b. / c. ...      -> Lowercase lettered list items (indented, lower-alpha)
  *   • / - / *             -> Bullet points (indented, disc)
+ *   Short Title:          -> Inline title heading (bold, dark purple)
  *   Regular text          -> Clean readable paragraphs
  *
  * Handles both plain text (with newlines) and HTML with basic <p>/<br> tags.
@@ -66,9 +67,10 @@ export function formatDescription(raw: string | null | undefined): string {
 
     // ── 1. A. / B. / C. -- Main Section Heading ──
     if (ALPHA_SECTION_RE.test(trimmed)) {
+      const isFirst = parts.length === 0;
       closeList();
       parts.push(
-        `<p style="font-weight:800;color:#200B3B;margin:16px 0 5px 0;font-size:0.95em;letter-spacing:0.01em;">${escapeHtml(
+        `<p style="font-weight:800;color:#200B3B;margin:${isFirst ? "0" : "16px"} 0 5px 0;font-size:0.95em;letter-spacing:0.01em;">${escapeHtml(
           trimmed
         )}</p>`
       );
@@ -77,9 +79,10 @@ export function formatDescription(raw: string | null | undefined): string {
 
     // ── 2. i. / ii. / iii. / iv. -- Sub-section Heading ──
     if (ROMAN_RE.test(trimmed)) {
+      const isFirst = parts.length === 0;
       closeList();
       parts.push(
-        `<p style="font-weight:700;color:#4B1E7A;margin:10px 0 4px 14px;font-size:0.89em;">${escapeHtml(
+        `<p style="font-weight:700;color:#4B1E7A;margin:${isFirst ? "0" : "10px"} 0 4px 14px;font-size:0.89em;">${escapeHtml(
           trimmed
         )}</p>`
       );
@@ -140,10 +143,32 @@ export function formatDescription(raw: string | null | undefined): string {
       continue;
     }
 
-    // ── 6. Regular paragraph text ──
+    // ── 6. Short Title: -- Inline Section Title ──
+    const beforeColon = trimmed.slice(0, -1);
+    const isUrl = /^https?:\/\//i.test(trimmed);
+    const hasSentencePunctuation = /[.!?,]/.test(beforeColon);
+
+    if (
+      trimmed.endsWith(":") &&
+      trimmed.length <= 80 &&
+      !hasSentencePunctuation &&
+      !isUrl
+    ) {
+      const isFirst = parts.length === 0;
+      closeList();
+      parts.push(
+        `<p style="font-weight:800;color:#2D1347;margin:${isFirst ? "0" : "14px"} 0 3px 0;font-size:0.9em;letter-spacing:0.01em;">${escapeHtml(
+          trimmed
+        )}</p>`
+      );
+      continue;
+    }
+
+    // ── 7. Regular paragraph text ──
+    const isFirst = parts.length === 0;
     closeList();
     parts.push(
-      `<p style="color:#4B5563;margin:5px 0;font-size:0.875em;line-height:1.75;">${escapeHtml(
+      `<p style="color:#4B5563;margin:${isFirst ? "0" : "5px"} 0 5px 0;font-size:0.875em;line-height:1.75;">${escapeHtml(
         trimmed
       )}</p>`
     );

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
+  FileText,
   MessageCircle,
   Printer,
   Zap,
@@ -72,6 +73,7 @@ export interface VisaDetailPlan {
   aboutText?: string;
   requirementDocuments?: string[];
   documentRequirements?: VisaDocumentRequirement[];
+  policies?: string[];
   termsAndConditions?: string[];
   costOptions?: CostOption[];
   successfulApplications?: string;
@@ -82,18 +84,18 @@ export interface VisaDetailPlan {
   image?: string | null;
   created_at?: string;
 }
-// Country-specific hero background images
-const countryBgImages: Record<string, string> = {
-  "Thailand": "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?auto=format&fit=crop&q=80&w=1400",
-  "UAE (Dubai / Abu Dhabi)": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=1400",
-  "South Korea": "https://images.unsplash.com/photo-1548115184-bc6544d06a58?auto=format&fit=crop&q=80&w=1400",
-  "Japan": "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?auto=format&fit=crop&q=80&w=1400",
-  "Malaysia": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&q=80&w=1400",
-  "Singapore": "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=1400",
-  "Australia": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1400",
-  "UK": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=1400",
-  "USA": "https://images.unsplash.com/photo-1534430480872-3498386e7856?auto=format&fit=crop&q=80&w=1400",
-  "Schengen": "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&q=80&w=1400",
+
+// Resolves dynamic image coming from API (handles full URLs and relative paths)
+const resolveImageUrl = (img?: string | null): string => {
+  if (!img) return "";
+  const trimmed = String(img).trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+  const baseUrl = (import.meta.env.VITE_BASE_URL || "").replace(/\/api\/?$/i, "").replace(/\/+$/, "");
+  const cleanPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return baseUrl ? `${baseUrl}${cleanPath}` : cleanPath;
 };
 interface VisaCountryDetailViewProps {
   plan: VisaDetailPlan;
@@ -140,6 +142,25 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+
+  // Split policies and terms & conditions cleanly into separate datasets
+  const isPolicyText = (text: string) =>
+    /^(policy|policies|cancellation|refund|embassy authority|rescheduling|disclaimer)/i.test(text.trim()) ||
+    /\b(policy|refund policy|cancellation policy|embassy advisory|authority notice)\b/i.test(text);
+
+  const rawPolicies = plan.policies || [];
+  const rawTerms = plan.termsAndConditions || [];
+
+  let displayPolicies: string[] = [...rawPolicies];
+  let displayTerms: string[] = [...rawTerms];
+
+  if (displayPolicies.length === 0 && displayTerms.length > 0) {
+    const extractedPolicies = displayTerms.filter(isPolicyText);
+    if (extractedPolicies.length > 0) {
+      displayPolicies = extractedPolicies;
+      displayTerms = displayTerms.filter((t) => !isPolicyText(t));
+    }
+  }
   // Update selected option when plan changes
   React.useEffect(() => {
     if (plan.costOptions && plan.costOptions.length > 0) {
@@ -245,7 +266,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     title: shareTitle,
     text: shareText,
     url: currentUrl,
-    image: countryBgImages[plan.country] || "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400",
+    image: resolveImageUrl(plan.image) || undefined,
   };
   const shareButtons = [
     {
@@ -315,7 +336,8 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const printNPRTotal = formatNPR(estimatedTotalPrice);
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
-  const heroBg = countryBgImages[plan.country] || "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400";
+  // Dynamic header image strictly coming from API (plan.image)
+  const heroBg = resolveImageUrl(plan.image);
   const handleQuickCountryChange = (countryName: string) => {
     const found = allPlans.find(
       (p) => p.country.toLowerCase() === countryName.toLowerCase()
@@ -851,20 +873,38 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <p style={{ fontSize: "9px", color: "#be185d", margin: "0 0 6px", lineHeight: 1.4 }}>
               Please tick and prepare the following verified original documents before submission:
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               {documentsLoading ? (
-                <div className="py-6 text-sm font-semibold text-gray-400">Loading required documents...</div>
-              ) : plan.requirementDocuments && plan.requirementDocuments.length > 0 ? (
-                plan.requirementDocuments.map((req: string, idx: number) => (
-                  <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
-                    <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CheckCircle2 size={14} />
+                <div style={{ fontSize: "8.5px", color: "#9ca3af", padding: "6px 0" }}>Loading required documents...</div>
+              ) : (plan.documentRequirements && plan.documentRequirements.length > 0) ? (
+                plan.documentRequirements.map((doc, idx) => {
+                  const title = doc.title || doc.name || doc.document_type || `Document ${idx + 1}`;
+                  return (
+                    <div key={doc.id || idx} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
+                      <span style={{ color: "#E91E63", fontWeight: 900 }}>☑</span>
+                      <div>
+                        <strong>{title}</strong>
+                        {doc.document_type && doc.document_type !== title && (
+                          <span style={{ fontSize: "7.5px", marginLeft: "4px", background: "#fce7f3", color: "#be185d", padding: "1px 4px", borderRadius: "2px" }}>
+                            {doc.document_type}
+                          </span>
+                        )}
+                        {doc.description && (
+                          <div style={{ fontSize: "8px", color: "#701a75", marginTop: "1px" }}>{doc.description}</div>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{req}</span>
+                  );
+                })
+              ) : (plan.requirementDocuments && plan.requirementDocuments.length > 0) ? (
+                plan.requirementDocuments.map((req: string, idx: number) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
+                    <span style={{ color: "#E91E63", fontWeight: 900 }}>☑</span>
+                    <span>{req}</span>
                   </div>
                 ))
               ) : (
-                <div className="py-6 text-sm font-semibold text-gray-400">No document requirements available.</div>
+                <div style={{ fontSize: "8.5px", color: "#9ca3af", padding: "6px 0" }}>No document requirements available.</div>
               )}
             </div>
           </div>
@@ -896,19 +936,29 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           </div>
         </div>
       </div>
-      {/* ── HERO HEADER BANNER with Background Image ── */}
+      {/* ── HERO HEADER BANNER with Dynamic API Image ── */}
       <div
-        className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end"
-        style={{
-          backgroundImage: `url('${heroBg}')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end bg-gradient-to-r from-[#120524] via-[#200B3B] to-[#2D1347]"
+        style={
+          heroBg
+            ? {
+                backgroundImage: `url('${heroBg}')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : undefined
+        }
       >
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/90 via-[#1a0836]/60 to-transparent print:hidden" />
-        {/* Subtle purple tint on the right */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
+        {/* Dark gradient overlay (active when API image is present for high contrast) */}
+        {heroBg && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/95 via-[#1a0836]/65 to-black/30 print:hidden" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
+          </>
+        )}
+        {!heroBg && (
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-800/25 via-transparent to-transparent pointer-events-none" />
+        )}
         {/* Content */}
         <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1078,16 +1128,68 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <p className="text-xs sm:text-sm text-gray-500">
               Please ensure all documents are clear, valid, and prepared prior to embassy submission:
             </p>
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {documentsLoading ? (
                 <div className="py-6 text-sm font-semibold text-gray-400">Loading required documents...</div>
-              ) : plan.requirementDocuments && plan.requirementDocuments.length > 0 ? (
+              ) : (plan.documentRequirements && plan.documentRequirements.length > 0) ? (
+                plan.documentRequirements.map((doc, idx) => {
+                  const title = doc.title || doc.name || doc.document_type || `Document ${idx + 1}`;
+                  const docType = doc.document_type && doc.document_type !== title ? doc.document_type : null;
+                  const hasDescription = Boolean(doc.description && doc.description.trim());
+
+                  return (
+                    <div
+                      key={doc.id || idx}
+                      className="p-4 sm:p-5 rounded-2xl bg-gray-50/80 hover:bg-purple-50/40 border border-gray-100 transition-all space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <CheckCircle2 size={15} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-xs sm:text-sm font-bold text-gray-900 leading-snug">
+                                {title}
+                              </h4>
+                              {docType && (
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2D1347]/10 text-[#2D1347] px-2 py-0.5 rounded-md">
+                                  {docType}
+                                </span>
+                              )}
+                              <span
+                                className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                                  doc.is_required !== false
+                                    ? "bg-rose-50 text-rose-600 border-rose-200"
+                                    : "bg-gray-100 text-gray-500 border-gray-200"
+                                }`}
+                              >
+                                {doc.is_required !== false ? "Required" : "Optional"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {hasDescription && (
+                        <div
+                          className="text-xs sm:text-sm text-gray-600 pl-9 leading-relaxed border-t border-gray-100 pt-2"
+                          dangerouslySetInnerHTML={{ __html: formatDescription(doc.description) }}
+                        />
+                      )}
+                    </div>
+                  );
+                })
+              ) : (plan.requirementDocuments && plan.requirementDocuments.length > 0) ? (
                 plan.requirementDocuments.map((req: string, idx: number) => (
                   <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
                     <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <CheckCircle2 size={14} />
                     </div>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{req}</span>
+                    <div
+                      className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug flex-1"
+                      dangerouslySetInnerHTML={{ __html: formatDescription(req) }}
+                    />
                   </div>
                 ))
               ) : (
@@ -1101,23 +1203,95 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               </p>
             </div>
           </div>
-          {/* # Terms and Conditions */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              Terms and Conditions
-            </h3>
-            <div className="space-y-2.5">
+          {/* ── CARD 1: Policies & Embassy Guidelines ── */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-purple-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 border border-purple-100">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                    Visa &amp; Embassy Policies
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">Consular rules, processing regulations &amp; service policies</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                Official Policy
+              </span>
+            </div>
+
+            <div className="space-y-3 pt-1">
               {informationLoading ? (
-                <div className="py-6 text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
-              ) : plan.termsAndConditions && plan.termsAndConditions.length > 0 ? (
-                plan.termsAndConditions.map((term: string, idx: number) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700">
-                    <span className="text-[#E91E63] font-black mt-0.5">•</span>
-                    <span className="leading-relaxed">{term}</span>
+                <div className="py-6 text-sm font-semibold text-gray-400">Loading visa policies...</div>
+              ) : displayPolicies && displayPolicies.length > 0 ? (
+                displayPolicies.map((policy: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/70 border border-purple-100/70 transition-colors"
+                  >
+                    <div className="w-5 h-5 rounded-lg bg-purple-100 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShieldCheck size={13} />
+                    </div>
+                    <div
+                      className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                      dangerouslySetInnerHTML={{ __html: formatDescription(policy) }}
+                    />
                   </div>
                 ))
               ) : (
-                <div className="py-6 text-sm font-semibold text-gray-400">No terms and conditions available.</div>
+                <div className="py-4 text-xs sm:text-sm text-gray-600 bg-purple-50/30 rounded-2xl p-4 border border-purple-100 flex items-start gap-2.5">
+                  <ShieldCheck size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Visa grant, validity, and entry permissions are under the sole authority of the respective Embassy/Consulate. Consular application fees and processing charges are non-refundable once submitted.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── CARD 2: Terms and Conditions ── */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0 border border-amber-200">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                    Terms &amp; Conditions
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">Application commitments, documentation honesty &amp; client terms</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                Legal Agreement
+              </span>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              {informationLoading ? (
+                <div className="py-6 text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
+              ) : displayTerms && displayTerms.length > 0 ? (
+                displayTerms.map((term: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-amber-50/30 hover:bg-amber-50/60 border border-amber-100/70 transition-colors"
+                  >
+                    <div className="w-5 h-5 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-xs leading-none">
+                      •
+                    </div>
+                    <div
+                      className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                      dangerouslySetInnerHTML={{ __html: formatDescription(term) }}
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="py-4 text-xs sm:text-sm text-gray-500 bg-gray-50/70 rounded-2xl p-4 border border-gray-100">
+                  All submitted paperwork must be genuine and verifiable. Client information is handled under strict data privacy protocols.
+                </div>
               )}
             </div>
           </div>

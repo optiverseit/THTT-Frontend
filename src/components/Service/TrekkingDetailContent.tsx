@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { Package } from "../../assets/data/types";
 import {
   useGlobalCurrency,
@@ -79,6 +79,7 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
   const [error, setError] = useState<string>("");
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     selectedCurrency,
@@ -210,18 +211,51 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
     fetchTrekkingPackages();
   }, []);
 
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isSessionValid() || trekPackages.length === 0) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking && savedState?.packageId) {
+      const target = trekPackages.find((pkg) => String(pkg.id) === String(savedState.packageId));
+      if (target) {
+        setSelectedBookingTrek(target as Package);
+        setIsBookingModalOpen(true);
+        try {
+          sessionStorage.removeItem("post_login_state");
+          sessionStorage.removeItem("post_login_redirect");
+        } catch {}
+      }
+    }
+  }, [trekPackages, location.state]);
+
   // =========================================================
   // BOOK TREK
   // =========================================================
   const handleBookTrek = (trek: any) => {
     if (!isSessionValid()) {
       clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: trek.id,
+        openBooking: true,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
       navigate("/login", {
-        state: {
-          from: "/service/trekking",
-          packageId: trek.id,
-          openBooking: true,
-        },
+        state: returnState,
       });
 
       return;

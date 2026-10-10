@@ -87,8 +87,8 @@ const InsuranceImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     );
 
   const contactTeam = "Travel Insurance & Medical Team";
-  const contactPhone = "+977-9851420882";
-  const contactWhatsApp = "9779851420882";
+  const contactPhone = "+977-9851403760";
+  const contactWhatsApp = "9779851403760";
 
   return (
     <div className="w-full">

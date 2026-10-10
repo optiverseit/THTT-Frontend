@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
@@ -66,6 +66,7 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
   onClearFilter,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeTab, setActiveTab] = useState<string>("all");
   const [visibleCount, setVisibleCount] = useState<number>(9);
@@ -163,6 +164,32 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
     fetchTours();
   }, []);
 
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isSessionValid() || tourPackages.length === 0) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking && savedState?.packageId) {
+      const target = tourPackages.find((pkg) => String(pkg.id) === String(savedState.packageId));
+      if (target) {
+        setSelectedBookingTour(target as Package);
+        setIsBookingModalOpen(true);
+        try {
+          sessionStorage.removeItem("post_login_state");
+          sessionStorage.removeItem("post_login_redirect");
+        } catch {}
+      }
+    }
+  }, [tourPackages, location.state]);
+
   // =========================================================
   // BOOK PACKAGE
   // If not logged in -> login
@@ -171,12 +198,19 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
   const handleBookTour = (tour: any) => {
     if (!isSessionValid()) {
       clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: tour.id,
+        openBooking: true,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
       navigate("/login", {
-        state: {
-          from: "/service/tours",
-          packageId: tour.id,
-          openBooking: true,
-        },
+        state: returnState,
       });
 
       return;

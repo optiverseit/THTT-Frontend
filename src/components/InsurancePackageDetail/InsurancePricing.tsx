@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 import InsuranceVerificationCard from "./InsuranceVerificationCard";
 import InsuranceApplicationModal from "../Service/InsuranceApplicationModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle, ShieldCheck } from "lucide-react";
@@ -9,9 +12,12 @@ interface InsurancePricingProps {
   pkg: any;
 }
 
-const WHATSAPP_BUSINESS_NUMBER = "9779851420882";
+const WHATSAPP_BUSINESS_NUMBER = "9779851403760";
 
 const InsurancePricing: React.FC<InsurancePricingProps> = ({ pkg }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuth();
   const {
     selectedCurrency,
     setSelectedCurrency,
@@ -71,6 +77,55 @@ const InsurancePricing: React.FC<InsurancePricingProps> = ({ pkg }) => {
     if (selectedCurrency === "nepali") return formatNPR(estimatedTotal);
     if (selectedCurrency === "inr") return formatINR(estimatedTotal);
     return formatUSD(estimatedTotal);
+  };
+
+  useEffect(() => {
+    if (!isSessionValid()) return;
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+    if (savedState?.openApplyModal) {
+      if (savedState.selectedOptionId) {
+        const idx = costOptions.findIndex((opt: any) => opt.id === Number(savedState.selectedOptionId));
+        if (idx >= 0) setSelectedOptionIndex(idx);
+      }
+      if (Number(savedState.numberOfTravelers) > 0) {
+        setNumberOfTravelers(Number(savedState.numberOfTravelers));
+      }
+      setIsApplyModalOpen(true);
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+    }
+  }, [location.state]);
+
+  const handleApplyClick = () => {
+    if (!isLoggedIn || !isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        openApplyModal: true,
+        selectedOptionId: (currentOption as any)?.id,
+        numberOfTravelers: numberOfTravelers,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+    setIsApplyModalOpen(true);
   };
 
   const handleWhatsAppInquiry = () => {
@@ -251,7 +306,7 @@ const InsurancePricing: React.FC<InsurancePricingProps> = ({ pkg }) => {
         <div className="space-y-3">
           <button
             type="button"
-            onClick={() => setIsApplyModalOpen(true)}
+            onClick={handleApplyClick}
             className="w-full py-4 bg-gradient-to-r from-[#E91E63] to-[#200B3B] text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg hover:shadow-xl hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <ShieldCheck size={18} />

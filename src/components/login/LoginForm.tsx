@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 
 import { useAuth } from "../../context/AuthContext";
@@ -41,6 +41,7 @@ const LoginForm = () => {
   const { login } = useAuth();
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [data, setData] =
     useState<LoginFormData>({
@@ -296,10 +297,17 @@ const LoginForm = () => {
           responseData
         );
 
+        const redirectUrl =
+          (location.state as any)?.from ||
+          sessionStorage.getItem("post_login_redirect") ||
+          "/dashboard";
+        sessionStorage.removeItem("post_login_redirect");
+
         navigate(
-          "/dashboard",
+          redirectUrl,
           {
             replace: true,
+            state: location.state,
           }
         );
       } else {
@@ -368,10 +376,17 @@ const LoginForm = () => {
             responseData
           );
 
+          const redirectUrl =
+            (location.state as any)?.from ||
+            sessionStorage.getItem("post_login_redirect") ||
+            "/dashboard";
+          sessionStorage.removeItem("post_login_redirect");
+
           navigate(
-            "/dashboard",
+            redirectUrl,
             {
               replace: true,
+              state: location.state,
             }
           );
         } else {

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import HotelBookingSection from "./HotelBookingSection";
 import HotelBookingModal from "../HotelPackageDetail/HotelBookingModal";
 import HotelSidebarFilter from "../HotelPackageDetail/HotelSidebarFilter";
@@ -269,6 +269,7 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
   onClearFilter,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -530,15 +531,65 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
     onClearFilter?.();
   };
 
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isSessionValid() || hotels.length === 0) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking && (savedState?.hotelId || savedState?.packageId)) {
+      const targetId = savedState.hotelId || savedState.packageId;
+      const target = hotels.find((h) => String(h.backendId || h.id) === String(targetId));
+      if (target) {
+        setSelectedBookingItem({
+          id: target.backendId || target.id,
+          hotelId: target.backendId || target.id,
+          title: target.name,
+          slug: target.slug,
+          location: target.location || target.city || "Nepal",
+          duration: "Per Night Stay",
+          price: String(getHotelPriceNPR(target)),
+          image: target.image,
+          gallery: target.gallery || [],
+          pricingTable: target.pricingTable || [],
+          features: target.features || [],
+          amenities: target.amenities || [],
+          type: "hotel",
+          category: "hotel",
+        });
+        setIsBookingModalOpen(true);
+        try {
+          sessionStorage.removeItem("post_login_state");
+          sessionStorage.removeItem("post_login_redirect");
+        } catch {}
+      }
+    }
+  }, [hotels, location.state]);
+
   const handleBookHotel = (hotel: Hotel) => {
     // ── Auth guard: redirect to login if not logged in ──
     if (!isSessionValid()) {
       clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        hotelId: hotel.backendId || hotel.id,
+        openBooking: true,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
       navigate("/login", {
-        state: {
-          from: "/service/hotel-booking",
-          openBooking: true,
-        },
+        state: returnState,
       });
       return;
     }

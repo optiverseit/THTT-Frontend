@@ -220,19 +220,44 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
   const handleInquiry = (planName: string) => {
     const msg = encodeURIComponent(`Hello Trip Himalaya! I would like to inquire about the "${planName}" insurance plan. Please share pricing, policy details, coverage verification, and issuance steps.`);
-    window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://api.whatsapp.com/send?phone=9779851403760&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   const handleViewPlan = (planId: number) => {
     navigate(`/insurance-details/${planId}`);
   };
 
-  const getPlanBadge = (index: number) => {
+  const getPlanBadge = (tier?: string | null, index: number = 0) => {
+    if (tier && tier.trim()) {
+      return tier.trim();
+    }
     const badges = ["SILVER", "GOLD", "PLATINUM", "PREMIUM"];
     return badges[index % badges.length];
   };
 
-  const getPlanBadgeClass = (index: number) => {
+  const getPlanBadgeClass = (tier?: string | null, index: number = 0) => {
+    const t = (tier || "").trim().toLowerCase();
+    if (t.includes("gold")) {
+      return "bg-amber-100 text-amber-900 border border-amber-300";
+    }
+    if (t.includes("silver")) {
+      return "bg-slate-100 text-slate-800 border border-slate-300";
+    }
+    if (t.includes("platinum")) {
+      return "bg-indigo-100 text-indigo-900 border border-indigo-300";
+    }
+    if (t.includes("diamond")) {
+      return "bg-cyan-100 text-cyan-900 border border-cyan-300";
+    }
+    if (t.includes("bronze")) {
+      return "bg-orange-100 text-orange-900 border border-orange-300";
+    }
+    if (t.includes("premium")) {
+      return "bg-rose-100 text-[#E11D48] border border-rose-300";
+    }
+    if (t) {
+      return "bg-purple-100 text-[#2D1347] border border-purple-200";
+    }
     const classes = [
       "bg-slate-100 text-slate-800 border border-slate-300",
       "bg-amber-100 text-amber-900 border border-amber-300",
@@ -300,8 +325,9 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
                   {/* Plan Header */}
                   <div className="flex items-start justify-between gap-3 mb-3.5">
                     <div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-block mb-1.5 ${getPlanBadgeClass(index)}`}>
-                        {getPlanBadge(index)}
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 ${getPlanBadgeClass(plan.tier, index)}`}>
+                        <Shield size={10} className="shrink-0" />
+                        <span>{getPlanBadge(plan.tier, index)}</span>
                       </span>
                       <h4 className="text-base sm:text-lg font-black text-[#2D1347] leading-snug group-hover:text-[#E11D48] transition-colors">
                         {plan.name}

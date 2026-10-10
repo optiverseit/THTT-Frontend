@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import HotelVerificationCard from "./HotelVerificationCard";
 import HotelBookingModal from "./HotelBookingModal";
@@ -28,6 +28,34 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isBookingConfirmed, setIsBookingConfirmed] = useState<boolean>(false);
+
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isSessionValid()) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking) {
+      if (Number(savedState.numberOfGuests) > 0) {
+        setNumberOfGuests(Number(savedState.numberOfGuests));
+      }
+      if (savedState.selectedTierIndex !== undefined) {
+        setSelectedTierIndex(Number(savedState.selectedTierIndex));
+      }
+      setIsBookingModalOpen(true);
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+    }
+  }, [location.state]);
 
   const pricingRows: { serviceName: string; targetAgeGroup: string; priceInNPR: number }[] =
     Array.isArray(pkg.pricingTable)
@@ -170,11 +198,21 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
                 onClick={() => {
                   if (!isSessionValid()) {
                     clearAuthSession();
+                    const returnState = {
+                      from: location.pathname + location.search,
+                      hotelId: pkg?.backendId || pkg?.id,
+                      openBooking: true,
+                      numberOfGuests: numberOfGuests,
+                      selectedTierIndex: selectedTierIndex,
+                    };
+                    try {
+                      sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+                      sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+                    } catch (err) {
+                      console.error("Failed to store post-login state in sessionStorage", err);
+                    }
                     navigate("/login", {
-                      state: {
-                        from: location.pathname,
-                        openBooking: true,
-                      },
+                      state: returnState,
                     });
                     return;
                   }

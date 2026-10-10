@@ -71,7 +71,7 @@ export interface InsuredApplicantData {
 
 const createDefaultApplicant = (docConfig: InsuranceDocumentField[] = DEFAULT_DOCUMENT_CONFIG): InsuredApplicantData => ({
   fullName: "",
-  nationality: "Nepal",
+  nationality: "",
   email: "",
   phoneCode: "+977",
   phone: "",
@@ -131,13 +131,14 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
 
-  // File input refs — one per document config slot (dynamic)
-  const fileRefs = useRef<Record<string, React.RefObject<HTMLInputElement | null>>>({});
-  documentConfig.forEach((field) => {
-    if (!fileRefs.current[field.id]) {
-      fileRefs.current[field.id] = React.createRef<HTMLInputElement>();
+  // Track initial open state so active applicant index is only reset on fresh modal open
+  const prevIsOpenRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && !prevIsOpenRef.current) {
+      setActiveApplicantIndex(0);
     }
-  });
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Sync applicants array whenever travelersCount or modal opens
   useEffect(() => {
@@ -150,7 +151,8 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         }
         return next.slice(0, travelersCount);
       });
-      setActiveApplicantIndex(0);
+      // Keep active traveler within valid bounds without forcing to 0
+      setActiveApplicantIndex((prev) => (prev >= travelersCount ? Math.max(0, travelersCount - 1) : prev));
 
       // Sync dynamic requirement values from config
       setRequirementValues((prev) => {
@@ -163,7 +165,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
         return next;
       });
     }
-  }, [travelersCount, isOpen, plan, documentConfig, safeRequirementConfig]);
+  }, [travelersCount, isOpen]);
 
   if (!isOpen) return null;
 
@@ -182,20 +184,24 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
     });
   };
 
-  /** Universal file handler – works for any document config slot */
-  const handleFileChange = (fieldId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      updateCurrentApplicant({
-        files: { ...currentApplicant.files, [fieldId]: e.target.files[0] },
-      });
-    }
-    e.target.value = "";
+  /** Universal file handler – updates file for the current active traveler */
+  const handleFileChange = (fieldId: string, file: File | null) => {
+    setApplicants((prev) => {
+      const updated = [...prev];
+      if (!updated[activeApplicantIndex]) return prev;
+      updated[activeApplicantIndex] = {
+        ...updated[activeApplicantIndex],
+        files: {
+          ...updated[activeApplicantIndex].files,
+          [fieldId]: file,
+        },
+      };
+      return updated;
+    });
   };
 
   const clearFile = (fieldId: string) => {
-    updateCurrentApplicant({
-      files: { ...currentApplicant.files, [fieldId]: null },
-    });
+    handleFileChange(fieldId, null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -368,16 +374,82 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
   };
 
   const handlePrintSlip = () => {
-    document.body.classList.add("printing-modal-slip");
-    const originalTitle = document.title;
-    document.title = `${submissionId} - Insurance Application Confirmation - Trip Himalaya`;
-    window.print();
-    const cleanup = () => {
-      document.body.classList.remove("printing-modal-slip");
-      document.title = originalTitle;
-    };
-    window.addEventListener("afterprint", cleanup, { once: true });
-    setTimeout(cleanup, 2000);
+    const slipEl = document.getElementById("insurance-slip");
+    if (!slipEl) return;
+
+    const printHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${submissionId} - Insurance Application Confirmation - Trip Himalaya</title>
+  <style>
+    @page { size: A4 portrait; margin: 8mm 10mm; }
+    @media print {
+      html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10.5px;
+      line-height: 1.45;
+      background: #ffffff;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+    }
+    .slip-header-bg { background: linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%) !important; }
+    .slip-coverage-bg { background: #fbf7ff !important; border: 1px solid #e9d5ff !important; }
+    .slip-schedule-bg { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+    .slip-emergency-bg { background: #fff1f2 !important; border: 1px solid #fecdd3 !important; }
+    .slip-table-header { background: #f1f5f9 !important; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 10px; text-align: left; }
+    th { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; }
+    td { font-size: 10px; }
+  </style>
+</head>
+<body>
+  ${slipEl.innerHTML}
+</body>
+</html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(printHtml);
+      doc.close();
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1200);
+      }, 350);
+    } else {
+      const printWindow = window.open("", "_blank", "width=900,height=700");
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      }
+    }
   };
 
   const handleCopyId = () => {
@@ -394,7 +466,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Travel & Trekking Insurance Team)!\n\nI have just submitted an online insurance application.\n\n*Reference ID:* ${submissionId}\n*Plan:* ${plan.name} (${selectedOption.name})\n*Altitude Cap:* ${plan.maxAltitude}\n*Travelers:* ${travelersCount} Person(s) (Lead: ${applicants[0].fullName})\n*Dates:* ${startDate} to ${endDate}\n${reqSummary}\n*Emergency Contact:* ${emergencyContactPhone || "N/A"}\n*Estimated Premium:* ${totalFormatted}\n\nAll required documents have been attached. Please issue the official policy certificate and cashless hospital card.`
     );
-    window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://api.whatsapp.com/send?phone=9779851403760&text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -568,14 +640,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 </div>
               </div>
 
-              {/* Status & Hotline Strip */}
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200/60 rounded-xl flex items-center justify-between text-xs text-emerald-900 flex-wrap gap-2">
-                <div className="flex items-center gap-2 font-medium text-[11px]">
-                  <ShieldCheck size={15} className="text-emerald-600 flex-shrink-0" />
-                  <span>Cashless Hospital Direct Billing &amp; 24/7 Rescue Protocol Active</span>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-800">SOS: +977 9851420882</span>
-              </div>
+
 
               {/* Action Buttons */}
               <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2.5">
@@ -760,7 +825,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
                           </svg>
-                          +977 9851420882
+                          9851403760, Tel: 01-5922697
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -769,7 +834,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                             <polyline points="22,6 12,13 2,6"/>
                           </svg>
-                          dev.triphimalayatt@gmail.com
+                          pradip.triphimalayatt@gmail.com
                         </span>
                         <span style={{ fontSize: "8px", color: "#e9d5ff", display: "inline-flex", alignItems: "center", gap: "3px", whiteSpace: "nowrap" }}>
                           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -807,23 +872,33 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               {/* Policy & Coverage Summary */}
               <div
                 className="slip-coverage-bg grid grid-cols-4 gap-3 p-3.5 rounded-xl border text-xs relative z-1"
-                style={{ background: "#fbf7ff", borderColor: "#e9d5ff" }}
+                style={{
+                  background: "#fbf7ff",
+                  borderColor: "#e9d5ff",
+                  border: "1px solid #e9d5ff",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: "10px",
+                  fontSize: "10.5px",
+                }}
               >
                 <div>
-                  <span className="text-gray-400 block text-[9px] font-bold uppercase tracking-wider">Plan Name</span>
-                  <strong className="text-[#2D1347] font-black text-xs sm:text-sm block mt-0.5">{plan.name}</strong>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Plan Name</span>
+                  <strong style={{ color: "#2D1347", fontWeight: 900, fontSize: "12px", display: "block", marginTop: "3px" }}>{plan.name}</strong>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[9px] font-bold uppercase tracking-wider">Max Altitude</span>
-                  <strong className="text-[#E11D48] font-black text-xs sm:text-sm block mt-0.5">{plan.maxAltitude}</strong>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Max Altitude</span>
+                  <strong style={{ color: "#E11D48", fontWeight: 900, fontSize: "12px", display: "block", marginTop: "3px" }}>{plan.maxAltitude}</strong>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[9px] font-bold uppercase tracking-wider">Medical Coverage</span>
-                  <strong className="text-emerald-700 font-black text-xs sm:text-sm block mt-0.5">{selectedOption.coverageLimit}</strong>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Medical Coverage</span>
+                  <strong style={{ color: "#047857", fontWeight: 900, fontSize: "12px", display: "block", marginTop: "3px" }}>{selectedOption.coverageLimit}</strong>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[9px] font-bold uppercase tracking-wider">Total Premium</span>
-                  <strong className="text-[#2D1347] font-black text-xs sm:text-sm block mt-0.5">
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Total Premium</span>
+                  <strong style={{ color: "#2D1347", fontWeight: 900, fontSize: "12px", display: "block", marginTop: "3px" }}>
                     {displayPrice(totalNprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
                   </strong>
                 </div>
@@ -832,56 +907,64 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               {/* Insurance Requirements & Dates Schedule */}
               <div
                 className="slip-schedule-bg grid grid-cols-3 gap-3 text-xs p-3.5 rounded-xl border relative z-1"
-                style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}
+                style={{
+                  background: "#f8fafc",
+                  borderColor: "#e2e8f0",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "10px",
+                  fontSize: "10.5px",
+                }}
               >
                 <div>
-                  <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">Policy Coverage Dates</span>
-                  <span className="font-bold text-[#2D1347] block mt-0.5">{startDate} to {endDate}</span>
+                  <span style={{ color: "#94a3b8", fontWeight: 700, display: "block", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Policy Coverage Dates</span>
+                  <span style={{ fontWeight: 700, color: "#2D1347", display: "block", marginTop: "3px", fontSize: "11px" }}>{startDate} to {endDate}</span>
                 </div>
                 {safeRequirementConfig.map((field) => (
                   <div key={field.id}>
-                    <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">{field.name}</span>
-                    <span className="font-bold text-gray-800 block mt-0.5">{requirementValues[field.id] || "N/A"}</span>
+                    <span style={{ color: "#94a3b8", fontWeight: 700, display: "block", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{field.name}</span>
+                    <span style={{ fontWeight: 700, color: "#1e293b", display: "block", marginTop: "3px", fontSize: "11px" }}>{requirementValues[field.id] || "N/A"}</span>
                   </div>
                 ))}
                 <div>
-                  <span className="text-gray-400 font-bold block text-[9px] uppercase tracking-wider">Emergency Contact</span>
-                  <span className="font-bold text-gray-800 block mt-0.5">{emergencyContactPhone || "Optional (Not provided)"}</span>
+                  <span style={{ color: "#94a3b8", fontWeight: 700, display: "block", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Emergency Contact</span>
+                  <span style={{ fontWeight: 700, color: "#1e293b", display: "block", marginTop: "3px", fontSize: "11px" }}>{emergencyContactPhone || "Optional (Not provided)"}</span>
                 </div>
               </div>
 
               {/* Travelers Table */}
               <div className="relative z-1">
-                <h5 className="text-[10.5px] font-black text-[#2D1347] uppercase tracking-wider mb-1.5">
+                <h5 style={{ fontSize: "10.5px", fontWeight: 900, color: "#2D1347", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 6px" }}>
                   Insured Persons ({travelersCount})
                 </h5>
-                <div className="overflow-x-auto border border-gray-200 rounded-xl" style={{ borderColor: "#e2e8f0" }}>
-                  <table className="w-full text-left text-xs">
-                    <thead className="slip-table-header text-gray-700 font-bold text-[9px] uppercase tracking-wider" style={{ background: "#f1f5f9" }}>
+                <div style={{ border: "1px solid #e2e8f0", borderRadius: "10px", overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                    <thead style={{ background: "#f1f5f9" }}>
                       <tr>
-                        <th className="py-2 px-3">#</th>
-                        <th className="py-2 px-3">Full Name</th>
-                        <th className="py-2 px-3">Passport / NID / Citizenship No.</th>
-                        <th className="py-2 px-3">Nationality</th>
-                        <th className="py-2 px-3">Contact</th>
-                        <th className="py-2 px-3">Documents Uploaded</th>
+                        <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#475569" }}>#</th>
+                        <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#475569" }}>Full Name</th>
+                        <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#475569" }}>Passport / NID / Citizenship No.</th>
+                        <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#475569" }}>Nationality</th>
+                        <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#475569" }}>Contact</th>
+                        <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#475569" }}>Documents Uploaded</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 font-medium text-gray-800 text-[10.5px]">
+                    <tbody style={{ fontSize: "10px", color: "#1e293b" }}>
                       {applicants.map((app, idx) => (
-                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#ffffff" : "#fcfbfd" }}>
-                          <td className="py-2 px-3 font-bold text-gray-400">{idx + 1}</td>
-                          <td className="py-2 px-3 font-bold text-[#2D1347]">{app.fullName}</td>
-                          <td className="py-2 px-3 font-mono">{app.passportNumber}</td>
-                          <td className="py-2 px-3">{app.nationality}</td>
-                          <td className="py-2 px-3">{app.phoneCode} {app.phone}</td>
-                          <td className="py-2 px-3">
-                            <span className="inline-flex items-center gap-1 text-[9.5px] font-bold" style={{ color: "#15803d" }}>
-                              <CheckCircle2 size={11} /> {(() => {
-                                const count = Object.values(app.files || {}).filter(Boolean).length;
-                                return count > 0 ? `${count} File${count > 1 ? "s" : ""} (Attached)` : "Pending";
-                              })()}
-                            </span>
+                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#ffffff" : "#fcfbfd", borderBottom: idx < applicants.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                          <td style={{ padding: "7px 10px", fontWeight: 700, color: "#94a3b8" }}>{idx + 1}</td>
+                          <td style={{ padding: "7px 10px", fontWeight: 700, color: "#2D1347" }}>{app.fullName}</td>
+                          <td style={{ padding: "7px 10px", fontFamily: "monospace" }}>{app.passportNumber}</td>
+                          <td style={{ padding: "7px 10px" }}>{app.nationality}</td>
+                          <td style={{ padding: "7px 10px" }}>{app.phoneCode} {app.phone}</td>
+                          <td style={{ padding: "7px 10px", color: "#15803d", fontWeight: 700 }}>
+                            {(() => {
+                              const count = Object.values(app.files || {}).filter(Boolean).length;
+                              return count > 0 ? `✓ ${count} File${count > 1 ? "s" : ""} (Attached)` : "Pending";
+                            })()}
                           </td>
                         </tr>
                       ))}
@@ -893,44 +976,51 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
               {/* Hospital & Helicopter Protocol */}
               <div
                 className="slip-emergency-bg p-3.5 rounded-xl border text-xs space-y-1.5 relative z-1"
-                style={{ background: "#fff1f2", borderColor: "#fecdd3" }}
+                style={{
+                  background: "#fff1f2",
+                  borderColor: "#fecdd3",
+                  border: "1px solid #fecdd3",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  fontSize: "10px",
+                }}
               >
-                <div className="flex items-center gap-1.5 text-[#E11D48] font-black text-xs">
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#E11D48", fontWeight: 900, fontSize: "11px", marginBottom: "4px" }}>
                   <ShieldCheck size={14} />
                   <span>Cashless Hospital Direct Billing &amp; 24/7 Helicopter Protocol</span>
                 </div>
-                <p className="text-gray-700 leading-relaxed text-[10px]">
+                <p style={{ color: "#334155", margin: 0, lineHeight: 1.5, fontSize: "9.5px" }}>
                   Direct cashless billing active at <strong>CIWEC Hospital &amp; Travel Medicine Center (Kathmandu &amp; Pokhara)</strong> and <strong>Swacon International Hospital</strong>. 24/7 Flight operations center coordinates emergency helicopter rescue.
                 </p>
-                <div className="pt-1 flex flex-wrap gap-4 text-[9.5px] font-bold text-gray-600">
-                  <span>📞 24/7 SOS Desk: +977 9851420882</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", marginTop: "6px", fontSize: "9.5px", fontWeight: 700, color: "#475569" }}>
+                  <span>📞 24/7 SOS Desk: 9851403760, Tel: 01-5922697</span>
                   <span>🏥 CIWEC Clinic: 01-4424111</span>
                   <span>🏥 Swacon Hospital: 01-4112211</span>
-                  <span>✉ emergency@triphimalaya.com.np</span>
+                  <span>✉ pradip.triphimalayatt@gmail.com</span>
                 </div>
               </div>
 
               {/* Official Seal / Signature Bar */}
-              <div className="pt-2 flex items-center justify-between text-xs border-t border-gray-200 relative z-1">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-[10.5px]">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "10px", borderTop: "1px solid #e2e8f0", fontSize: "10.5px", position: "relative", zIndex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#047857", fontWeight: 700, fontSize: "10.5px" }}>
                     <CheckCircle2 size={13} />
                     <span>Application Logged &amp; Verified for Policy Underwriting</span>
                   </div>
-                  <p className="text-[9px] text-gray-400">
+                  <p style={{ margin: "2px 0 0", fontSize: "9px", color: "#94a3b8" }}>
                     Policy certificate with digital QR code will be dispatched via WhatsApp and Email upon confirmation.
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="inline-block border-b border-gray-400 w-36 mb-1"></div>
-                  <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Authorized Officer Signature</div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ borderBottom: "1px solid #94a3b8", width: "140px", marginBottom: "4px", display: "inline-block" }}></div>
+                  <div style={{ fontSize: "9px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Authorized Officer Signature</div>
                 </div>
               </div>
 
               {/* Footer Stamp */}
-              <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-[9px] text-gray-400">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid #f1f5f9", fontSize: "8.5px", color: "#94a3b8" }}>
                 <span>Trip Himalaya Tours &amp; Travel Pvt. Ltd. • Authorized Insurance Brokerage (Govt. Reg. No. 2490)</span>
-                <span className="font-mono">System Generated Confirmation • Page 1 of 1</span>
+                <span style={{ fontFamily: "monospace" }}>System Generated Confirmation • Page 1 of 1</span>
               </div>
               </div> {/* end content wrapper */}
             </div>
@@ -1050,7 +1140,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Nepali"
+                    placeholder="Nepali"
                     value={currentApplicant.nationality}
                     onChange={(e) => updateCurrentApplicant({ nationality: e.target.value })}
                     className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
@@ -1080,7 +1170,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                   <input
                     type="email"
                     required
-                    placeholder="e.g. john@email.com"
+                    placeholder="ram12@gmail.com"
                     value={currentApplicant.email}
                     onChange={(e) => updateCurrentApplicant({ email: e.target.value })}
                     className="ins-modal-input w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-[#200B3B] focus:outline-none focus:border-[#E11D48] focus:ring-2 focus:ring-pink-100 transition-all"
@@ -1170,12 +1260,12 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                   </div>
                 ) : safeRequirementConfig.map((field) => (
                   <div key={field.id} className={safeRequirementConfig.length === 1 ? "sm:col-span-2" : ""}>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
                       <span>{field.name}</span>
                       {field.required ? (
-                        <span className="text-[#E11D48]">*</span>
+                        <span className="text-[#E11D48] font-black ml-1 inline">*</span>
                       ) : (
-                        <span className="text-gray-400 font-normal text-[10px]">(Optional)</span>
+                        <span className="text-gray-400 font-normal text-[10px] ml-1.5">(Optional)</span>
                       )}
                     </label>
 
@@ -1289,18 +1379,6 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                 Attach for Traveler {travelersCount > 1 ? activeApplicantIndex + 1 : "1"} ({currentApplicant.fullName || "Current"}). PDF, JPG, PNG, WEBP (max 5 MB each).
               </p>
 
-              {/* Hidden file inputs — one per document config entry */}
-              {documentConfig.map((field) => (
-                <input
-                  key={field.id}
-                  ref={fileRefs.current[field.id]}
-                  type="file"
-                  accept={field.accept}
-                  onChange={(e) => handleFileChange(field.id, e)}
-                  className="hidden"
-                />
-              ))}
-
               <div className="space-y-2.5">
                 {documentConfig.map((field) => {
                   const file = currentApplicant.files[field.id] ?? null;
@@ -1308,6 +1386,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                     travelersCount > 1
                       ? `${field.title} (Traveler ${activeApplicantIndex + 1})`
                       : field.title;
+                  const inputId = `insurance-doc-${activeApplicantIndex}-${field.id}`;
                   return (
                     <div
                       key={field.id}
@@ -1319,6 +1398,18 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                           : "bg-white border-gray-200 hover:border-purple-300"
                       } transition-all`}
                     >
+                      {/* Hidden file input bound to unique inputId for current traveler */}
+                      <input
+                        id={inputId}
+                        type="file"
+                        accept={field.accept}
+                        onChange={(e) => {
+                          handleFileChange(field.id, e.target.files?.[0] || null);
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+
                       {/* Left: icon + label */}
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -1326,13 +1417,13 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                         }`}>
                           {file ? <CheckCircle2 size={16} /> : <FileText size={15} />}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
-                            {label}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-[#200B3B] leading-snug">
+                            <span>{label}</span>
                             {field.required ? (
-                              <span className="text-[#E11D48] font-black">*</span>
+                              <span className="text-[#E11D48] font-black inline whitespace-nowrap ml-1">*</span>
                             ) : (
-                              <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Optional</span>
+                              <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full inline-block ml-1.5 align-middle">Optional</span>
                             )}
                           </p>
                           {file ? (
@@ -1357,14 +1448,13 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                           Remove
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => fileRefs.current[field.id]?.current?.click()}
+                        <label
+                          htmlFor={inputId}
                           className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 hover:bg-pink-100 text-[#E11D48] text-[10px] font-bold transition-colors cursor-pointer border border-pink-200"
                         >
                           <UploadCloud size={12} />
                           Attach
-                        </button>
+                        </label>
                       )}
                     </div>
                   );

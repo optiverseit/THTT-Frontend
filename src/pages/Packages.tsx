@@ -21,7 +21,7 @@ import {
   getCategories,
 } from "../api/BackendApi";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useGlobalCurrency } from "../context/CurrencyContext";
 import { isSessionValid, clearAuthSession } from "../utils/sessionManager";
 
@@ -38,6 +38,7 @@ interface Category {
 const Packages: React.FC = () => {
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { nprPerOneDollar } = useGlobalCurrency();
 
 
@@ -311,6 +312,32 @@ const Packages: React.FC = () => {
 
   }, []);
 
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isSessionValid() || packages.length === 0) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking && savedState?.packageId) {
+      const targetPkg = packages.find((p) => String(p.id) === String(savedState.packageId));
+      if (targetPkg) {
+        setSelectedBookingPkg(targetPkg);
+        setIsBookingModalOpen(true);
+        try {
+          sessionStorage.removeItem("post_login_state");
+          sessionStorage.removeItem("post_login_redirect");
+        } catch {}
+      }
+    }
+  }, [packages, location.state]);
+
 
   // =========================================================
   // BOOK PACKAGE
@@ -321,13 +348,19 @@ const Packages: React.FC = () => {
   ) => {
     if (!isSessionValid()) {
       clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: pkgToBook.id,
+        openBooking: true,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
       navigate("/login", {
-        state: {
-          from: "/packages",
-          packageId:
-            pkgToBook.id,
-          openBooking: true,
-        },
+        state: returnState,
       });
       return;
     }

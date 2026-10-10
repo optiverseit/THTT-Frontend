@@ -15,7 +15,7 @@
  * -----------------------------------------------------------------
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useOutletContext, useNavigate, useLocation } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
 import VerificationCard from "./VerificationCard";
@@ -137,6 +137,34 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   const [isBookingConfirmed, setIsBookingConfirmed] =
     useState<boolean>(false);
 
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isLoggedIn || !isSessionValid()) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking) {
+      if (Number(savedState.numberOfGuests) > 0) {
+        setNumberOfGuests(Number(savedState.numberOfGuests));
+      }
+      if (savedState.selectedTierIndex !== undefined) {
+        setSelectedTierIndex(Number(savedState.selectedTierIndex));
+      }
+      setIsBookingModalOpen(true);
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+    }
+  }, [location.state, isLoggedIn]);
+
   // ---------------------------------------------------------------------------
   // Pricing Data Preparation
   // ---------------------------------------------------------------------------
@@ -241,12 +269,21 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   const handleBookNow = (): void => {
     if (!isLoggedIn || !isSessionValid()) {
       clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: pkg?.id,
+        openBooking: true,
+        numberOfGuests: numberOfGuests,
+        selectedTierIndex: selectedTierIndex,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
       navigate("/login", {
-        state: {
-          from: location.pathname,
-          packageId: pkg?.id,
-          openBooking: true,
-        },
+        state: returnState,
       });
       return;
     }

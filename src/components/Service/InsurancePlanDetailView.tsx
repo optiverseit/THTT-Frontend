@@ -1,9 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Calendar, CheckCircle2, AlertCircle, ShieldCheck, MessageCircle, Printer, Zap, Users, RefreshCw, Share2, Check, Link2 } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR, displayPrice } from "../../context/CurrencyContext";
+import { useAuth } from "../../context/AuthContext";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 import { InsuranceApplicationModal, InsuranceRequirementField } from "./InsuranceApplicationModal";
-import { getInsurancePlanById, getInsuranceDynamicFieldsByPlan } from "../../api/BackendApi";
+import { getInsurancePlanById, getInsuranceDynamicFieldsByPlan, getInsurancePricingTiersByPlan } from "../../api/BackendApi";
 import { shareToPlatform, copyToClipboard, getCurrentUrl, getCrawlerSafeUrl } from "../../utils/shareUtils";
 import Logo from "../../assets/images/Logo.png";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
@@ -44,6 +46,8 @@ interface InsurancePlanView {
     is_required: boolean;
   }[];
   dynamicRequirements: InsuranceRequirementField[];
+  policyConditions: string[];
+  termsConditions: string[];
   termsAndConditions: string[];
   costOptions: InsuranceCostOption[];
   emergencyHelpline?: string;
@@ -72,8 +76,21 @@ const normalizeDynamicOptions = (value: any): string[] => {
   }
   return [];
 };
+const getBadgeColor = (tier?: string | null) => {
+  const t = (tier || "").trim().toLowerCase();
+  if (t.includes("gold")) return "bg-amber-100 text-amber-900 border border-amber-300";
+  if (t.includes("silver")) return "bg-slate-100 text-slate-800 border border-slate-300";
+  if (t.includes("platinum")) return "bg-indigo-100 text-indigo-900 border border-indigo-300";
+  if (t.includes("diamond")) return "bg-cyan-100 text-cyan-900 border border-cyan-300";
+  if (t.includes("bronze")) return "bg-orange-100 text-orange-900 border border-orange-300";
+  if (t.includes("premium")) return "bg-rose-100 text-[#E11D48] border border-rose-300";
+  return "bg-pink-100 text-[#E11D48] border border-pink-300";
+};
+
 export const InsurancePlanDetailView: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuth();
   const { insuranceId } = useParams<{ insuranceId: string }>();
   const { selectedCurrency, setSelectedCurrency, nprPerOneDollar, nprPerOneINR, isRateLoading, rateLoadFailed } = useGlobalCurrency();
   const [plan, setPlan] = useState<InsurancePlanView | null>(null);
@@ -95,13 +112,19 @@ export const InsurancePlanDetailView: React.FC = () => {
       try {
         setLoading(true);
         setLoadError("");
-        const [response, dynamicFieldsResponse] = await Promise.all([
+        const [response, dynamicFieldsResponse, pricingTiersResponse] = await Promise.all([
           getInsurancePlanById(insuranceId),
           getInsuranceDynamicFieldsByPlan(insuranceId),
+          getInsurancePricingTiersByPlan(insuranceId).catch(() => null),
         ]);
         const raw = response?.data?.data;
         if (!response?.data?.status || !raw) throw new Error(response?.data?.message || "Insurance plan not found");
-        const pricingTiers = sortByDisplayOrder(toArray(raw.pricing_tiers ?? raw.pricingTiers).filter((item: any) => !item?.status || item.status === "ACTIVE"));
+        // Pricing tiers: prefer dedicated endpoint (not always nested in plan detail)
+        const rawPricingTiers =
+          Array.isArray(pricingTiersResponse?.data?.data)
+            ? pricingTiersResponse.data.data
+            : toArray(raw.pricing_tiers ?? raw.pricingTiers);
+        const pricingTiers = sortByDisplayOrder(rawPricingTiers.filter((item: any) => !item?.status || item.status === "ACTIVE"));
         const information = sortByDisplayOrder(toArray(raw.information).filter((item: any) => !item?.status || item.status === "ACTIVE"));
         const documentRequirements = sortByDisplayOrder(toArray(raw.document_requirements ?? raw.documentRequirements).filter((item: any) => !item?.status || item.status === "ACTIVE"));
         const dynamicFieldsData = dynamicFieldsResponse?.data?.data;
@@ -137,12 +160,13 @@ export const InsurancePlanDetailView: React.FC = () => {
           backendId: Number(raw.id),
           name: raw.name || "Insurance Plan",
           subtitle: raw.short_description || "",
-          badge: "Insurance",
-          badgeColor: "bg-pink-100 text-[#E11D48] border border-pink-300",
+          badge: raw.tier?.trim() || "Insurance",
+          badgeColor: getBadgeColor(raw.tier),
           maxAltitude: "See Policy Details",
           priceUSD: firstOption?.usdPrice || 0,
           baseNPRPrice: firstOption?.nprPrice || 0,
-          durationCovered: firstOption?.days || raw.processing_time || "See Pricing",
+          durationCovered: firstOption?.days
+            || (raw.processing_time ? `${raw.processing_time} Days` : "See Pricing"),
           coverageLimit: "See Policy Details",
           highlights: coverage.slice(0, 4),
           inclusions: coverage,
@@ -158,12 +182,44 @@ export const InsurancePlanDetailView: React.FC = () => {
             is_required: doc.is_required === true || doc.is_required === 1,
           })),
           dynamicRequirements,
+          policyConditions: policy,
+          termsConditions: terms,
           termsAndConditions: [...policy, ...terms],
           costOptions,
         };
         setPlan(mappedPlan);
-        setSelectedCostOption(firstOption || null);
-        setNumberOfTravelers(1);
+
+        // Check if returning from login with previously saved state
+        const savedState = (location.state as any) || (() => {
+          try {
+            const raw = sessionStorage.getItem("post_login_state");
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })();
+
+        const preferredOption =
+          (savedState?.selectedOptionId &&
+            costOptions.find((opt) => opt.id === Number(savedState.selectedOptionId))) ||
+          firstOption ||
+          null;
+
+        const preferredTravelers =
+          Number(savedState?.numberOfTravelers) > 0
+            ? Number(savedState.numberOfTravelers)
+            : 1;
+
+        setSelectedCostOption(preferredOption);
+        setNumberOfTravelers(preferredTravelers);
+
+        if (savedState?.openApplyModal && isSessionValid()) {
+          setIsAppModalOpen(true);
+          try {
+            sessionStorage.removeItem("post_login_state");
+            sessionStorage.removeItem("post_login_redirect");
+          } catch {}
+        }
       } catch (error: any) {
         console.error("Failed to fetch insurance plan:", error);
         setLoadError(error?.response?.data?.message || error?.message || "Failed to load insurance plan.");
@@ -175,6 +231,35 @@ export const InsurancePlanDetailView: React.FC = () => {
     };
     fetchPlan();
   }, [insuranceId]);
+
+  // Handle returning from login if plan was already cached or when location state updates
+  useEffect(() => {
+    if (!plan || !isSessionValid()) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openApplyModal) {
+      if (savedState.selectedOptionId) {
+        const matched = plan.costOptions.find((opt) => opt.id === Number(savedState.selectedOptionId));
+        if (matched) setSelectedCostOption(matched);
+      }
+      if (Number(savedState.numberOfTravelers) > 0) {
+        setNumberOfTravelers(Number(savedState.numberOfTravelers));
+      }
+      setIsAppModalOpen(true);
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+    }
+  }, [plan, location.state]);
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (shareRef.current && !shareRef.current.contains(e.target as Node)) setIsShareOpen(false);
@@ -210,7 +295,7 @@ export const InsurancePlanDetailView: React.FC = () => {
     const totalFormatted = getFormattedEstimatedTotal();
     const optionText = selectedCostOption ? ` Option: ${selectedCostOption.name} (${selectedCostOption.days}).` : "";
     const msg = encodeURIComponent(`Hello Trip Himalaya (Insurance Team)! I am inquiring about travel insurance for "${plan.name}".${optionText} For ${numberOfTravelers} traveler(s). Estimated Premium: ${selectedCostOption ? totalFormatted : "Not available"} (${currencyText}). Please guide me through the next steps.`);
-    window.open(`https\://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https\://api.whatsapp.com/send?phone=9779851403760&text=${msg}`, "_blank", "noopener,noreferrer");
   };
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareData = { title: `${plan.name} | Trip Himalaya Travel Insurance`, text: `Check out ${plan.name} starting from ${selectedCostOption ? getFormattedEstimatedTotal() : "Not Available"} on Trip Himalaya!`, url: currentUrl, image: plan.heroImage };
@@ -228,6 +313,33 @@ export const InsurancePlanDetailView: React.FC = () => {
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
   const heroBg = plan.heroImage;
+
+  const handleApplyClick = () => {
+    if (!selectedCostOption) return;
+
+    // Validate and authenticate that user is logged in
+    if (!isLoggedIn || !isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        openApplyModal: true,
+        selectedOptionId: selectedCostOption.id,
+        numberOfTravelers: numberOfTravelers,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to save post-login state to sessionStorage:", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+
+    setIsAppModalOpen(true);
+  };
 
   const renderPricingSidebar = () => (
     <div className="space-y-4">
@@ -345,9 +457,7 @@ export const InsurancePlanDetailView: React.FC = () => {
           <div className="space-y-1.5 pt-0.5">
             <button
               type="button"
-              onClick={() => {
-                if (selectedCostOption) setIsAppModalOpen(true);
-              }}
+              onClick={handleApplyClick}
               disabled={!selectedCostOption}
               className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm ${selectedCostOption
                   ? "cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
@@ -527,7 +637,7 @@ export const InsurancePlanDetailView: React.FC = () => {
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z" />
                         </svg>
-                        +977 9851420882
+                        +977 9851403760
                       </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -677,7 +787,7 @@ export const InsurancePlanDetailView: React.FC = () => {
             <div className="print-emergency-bg" style={{ display: "grid", gridTemplateColumns: "1.2fr 1.1fr 1.1fr 1fr", gap: "8px", padding: "8px 12px", fontSize: "8.5px", background: "#fff1f2", alignItems: "center" }}>
               <div style={{ borderRight: "1px solid #fecdd3", paddingRight: "6px" }}>
                 <span style={{ color: "#9f1239", fontWeight: 800, display: "block", fontSize: "8px", textTransform: "uppercase" }}>24/7 Alpine Rescue Hotline</span>
-                <strong style={{ color: "#881337", fontSize: "9.5px" }}>📞 +977 9851420882</strong>
+                <strong style={{ color: "#881337", fontSize: "9.5px" }}>📞 +977 9851403760</strong>
                 <span style={{ color: "#4c0519", fontSize: "7.5px", display: "block" }}>WhatsApp &amp; Direct Voice Call</span>
               </div>
               <div style={{ borderRight: "1px solid #fecdd3", paddingRight: "6px" }}>
@@ -699,7 +809,7 @@ export const InsurancePlanDetailView: React.FC = () => {
           </div>
           <div className="print-footer-bar" style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "7px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8px", color: "#ffffff" }}>
             <div><strong>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> • Nepal Govt. Reg. No. 2490 • Shambhu Marg, Kathmandu</div>
-            <div style={{ color: "#fce7f3" }}>24/7 SOS: +977 9851420882 • Cashless Heli Guarantee</div>
+            <div style={{ color: "#fce7f3" }}>24/7 SOS: +977 9851403760 • Cashless Heli Guarantee</div>
             <div style={{ fontWeight: 800, color: "#f472b6" }}>Computer-Generated Quotation • Valid 30 Days • Page 1 of 1</div>
           </div>
         </div>
@@ -800,27 +910,14 @@ export const InsurancePlanDetailView: React.FC = () => {
             <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
               About {plan.name}
             </h3>
-            <div
-              className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium"
-              dangerouslySetInnerHTML={{
-                __html:
-                  formatDescription(plan.aboutText) ||
-                  `<p>${plan.aboutText || "Comprehensive travel and medical insurance protection."}</p>`,
-              }}
-            />
-            <div className="pt-4 border-t border-gray-100">
-              <span className="text-[11px] font-black uppercase text-gray-400 tracking-wider block mb-2.5">
-                Key Coverage Highlights:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {plan.highlights.map((hl, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 font-medium bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
-                    <span>{hl}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {plan.aboutText ? (
+              <div
+                className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium"
+                dangerouslySetInnerHTML={{
+                  __html: formatDescription(plan.aboutText) || `<p>${plan.aboutText}</p>`,
+                }}
+              />
+            ) : null}
           </div>
 
           {/* ── PRICING & TRUST CARDS ON MOBILE (just below About card) ── */}
@@ -828,117 +925,164 @@ export const InsurancePlanDetailView: React.FC = () => {
             {renderPricingSidebar()}
           </div>
 
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                What Is Covered
-              </h3>
-              <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
-                Full Policy Inclusions
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Your policy covers all of the following benefits upon activation:
-            </p>
-            <div className="space-y-2.5">
-              {plan.inclusions.map((inc, idx) => (
-                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
-                  <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <CheckCircle2 size={14} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{inc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-rose-100 shadow-sm space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                What Is Not Covered
-              </h3>
-              <span className="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-                Policy Exclusions
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-500">
-              The following situations and incidents fall outside the scope of this policy:
-            </p>
-            <div className="space-y-2.5">
-              {(plan.exclusions && plan.exclusions.length > 0
-                ? plan.exclusions
-                : [
-                  "Pre-existing chronic medical conditions not declared during application",
-                  "Participation in unguided or unauthorized solo mountaineering above permitted zone",
-                  "Losses resulting from alcohol, drugs, or illegal substance intoxication",
-                  "Personal electronic gadgets (laptops, cameras) without supplementary riders",
-                  "Self-inflicted injuries or participation in illegal activities",
-                  "Losses arising from civil conflict, war, or government-imposed travel bans",
-                ]
-              ).map((exc, idx) => (
-                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-50 border border-rose-100/80 transition-colors">
-                  <div className="w-5 h-5 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-xs">
-                    ✕
-                  </div>
-                  <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{exc}</span>
-                </div>
-              ))}
-            </div>
-            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
-              <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                <strong>Note:</strong> This list is not exhaustive. Please review the full policy document or contact our team for a complete list of exclusions applicable to your specific plan.
+          {plan.inclusions.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  What Is Covered
+                </h3>
+                <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
+                  Full Policy Inclusions
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Your policy covers all of the following benefits upon activation:
               </p>
-            </div>
-          </div>
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                Required Documents
-              </h3>
-              <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
-                Official Checklist
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Prepare and submit the following documents to activate your insurance policy:
-            </p>
-            <div className="space-y-3">
-              {plan.requirementDocuments.map((doc, idx) => (
-                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
-                  <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <CheckCircle2 size={14} />
+              <div className="space-y-2.5">
+                {plan.inclusions.map((inc, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
+                    <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle2 size={14} />
+                    </div>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{inc}</span>
                   </div>
-                  <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{doc}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
-              <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                <strong>Important:</strong> All documents must be in a clear digital format (JPG, PNG, or PDF). Upload them directly in the online application form. For group applications, individual documents are required for each traveler.
+          )}
+          {plan.exclusions && plan.exclusions.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-rose-100 shadow-sm space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  What Is Not Covered
+                </h3>
+                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                  Policy Exclusions
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-500">
+                The following situations and incidents fall outside the scope of this policy:
               </p>
+              <div className="space-y-2.5">
+                {plan.exclusions.map((exc, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-50 border border-rose-100/80 transition-colors">
+                    <div className="w-5 h-5 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-xs">
+                      ✕
+                    </div>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug">{exc}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  <strong>Note:</strong> This list is not exhaustive. Please review the full policy document or contact our team for a complete list of exclusions applicable to your specific plan.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              Policy Terms &amp; Conditions
-            </h3>
-            <div className="space-y-2.5">
-              {plan.termsAndConditions.map((term, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700">
-                  <span className="text-[#E91E63] font-black mt-0.5">•</span>
-                  <span className="leading-relaxed">{term}</span>
-                </div>
-              ))}
+          )}
+          {plan.documentRequirements.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  Required Documents
+                </h3>
+                <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
+                  Official Checklist
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Prepare and submit the following documents to activate your insurance policy:
+              </p>
+              <div className="space-y-3">
+                {plan.documentRequirements.map((doc, idx) => (
+                  <div key={doc.id || idx} className="flex items-start gap-3 p-4 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle2 size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Document Type + Required badge row */}
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        {doc.document_type && (
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2D1347]/10 text-[#2D1347] px-2 py-0.5 rounded-md">
+                            {doc.document_type}
+                          </span>
+                        )}
+                        {doc.is_required && (
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-600 px-2 py-0.5 rounded-md border border-rose-200">
+                            Required
+                          </span>
+                        )}
+                      </div>
+                      {/* Title */}
+                      <p className="text-xs sm:text-sm font-bold text-gray-800 leading-snug">
+                        {doc.title}
+                      </p>
+                      {/* Description */}
+                      {doc.description && (
+                        <p className="text-xs text-gray-500 leading-relaxed">
+                          {doc.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  <strong>Important:</strong> All documents must be in a clear digital format (JPG, PNG, or PDF). Upload them directly in the online application form. For group applications, individual documents are required for each traveler.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
+          {plan.policyConditions.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-blue-100 shadow-sm space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  Policy Conditions
+                </h3>
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                  Policy Guidelines
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {plan.policyConditions.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 p-3 rounded-xl bg-blue-50/40 border border-blue-100/70">
+                    <span className="text-blue-500 font-black mt-0.5 flex-shrink-0">•</span>
+                    <span className="leading-relaxed">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {plan.termsConditions.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-sm space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  Terms &amp; Conditions
+                </h3>
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                  Legal Terms
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {plan.termsConditions.map((term, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 p-3 rounded-xl bg-amber-50/40 border border-amber-100/70">
+                    <span className="text-amber-600 font-black mt-0.5 flex-shrink-0">•</span>
+                    <span className="leading-relaxed">{term}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         {/* RIGHT COLUMN: Desktop Only */}
         <div id="pricing-section" className="hidden lg:block lg:col-span-1 lg:sticky lg:top-[150px] self-start space-y-4">
           {renderPricingSidebar()}
         </div>
       </div>
-      <div className="mt-10">
+      <div className="mt-10 print:hidden">
         <OtherServicesComponent service={services} />
       </div>
       {isAppModalOpen && selectedCostOption && (
@@ -948,8 +1092,14 @@ export const InsurancePlanDetailView: React.FC = () => {
           plan={plan as any}
           selectedOption={selectedCostOption}
           numberOfTravelers={numberOfTravelers}
-          documentConfig={plan.documentRequirements.map((doc) => ({ id: String(doc.id), title: doc.title, required: doc.is_required })) as any}
-          requirementConfig={plan.dynamicRequirements}
+          documentConfig={
+            plan?.documentRequirements?.map((doc) => ({
+              id: String(doc.id),
+              title: doc.title,
+              required: doc.is_required,
+            })) || []
+          }
+          requirementConfig={plan?.dynamicRequirements || []}
         />
       )}
     </div>

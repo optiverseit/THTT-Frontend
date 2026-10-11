@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import VisaVerificationCard from "./VisaVerificationCard";
 import VisaApplicationModal from "../Service/VisaApplicationModal";
 import { MessageCircle, Users, Check, Zap, RefreshCw, AlertCircle, FileCheck } from "lucide-react";
 import { useGlobalCurrency, formatNPR, formatUSD, formatINR } from "../../context/CurrencyContext";
+import { useAuth } from "../../context/AuthContext";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 interface VisaPricingProps {
   pkg: any;
@@ -11,6 +14,11 @@ interface VisaPricingProps {
 const WHATSAPP_BUSINESS_NUMBER = "9779851420882";
 
 const VisaPricing: React.FC<VisaPricingProps> = ({ pkg }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuth();
+  const hasRestoredPostLoginRef = useRef(false);
+
   const {
     selectedCurrency,
     setSelectedCurrency,
@@ -22,6 +30,56 @@ const VisaPricing: React.FC<VisaPricingProps> = ({ pkg }) => {
 
   const [numberOfApplicants, setNumberOfApplicants] = useState<number>(1);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isLoggedIn || !isSessionValid() || hasRestoredPostLoginRef.current) return;
+
+    const savedState =
+      (location.state as any) ||
+      (() => {
+        try {
+          const raw = sessionStorage.getItem("post_login_state");
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      })();
+
+    if (savedState?.openApplyModal) {
+      hasRestoredPostLoginRef.current = true;
+      if (Number(savedState.numberOfApplicants) > 0) {
+        setNumberOfApplicants(Number(savedState.numberOfApplicants));
+      }
+      setIsApplyModalOpen(true);
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, [location.state, isLoggedIn, navigate, location.pathname, location.search]);
+
+  const handleApplyNow = () => {
+    if (!isLoggedIn || !isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        openApplyModal: true,
+        numberOfApplicants: numberOfApplicants,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+    setIsApplyModalOpen(true);
+  };
 
   const priceInNPR = Number(pkg.baseNPRPrice || pkg.price || 12000);
 
@@ -163,7 +221,7 @@ const VisaPricing: React.FC<VisaPricingProps> = ({ pkg }) => {
         <div className="space-y-3">
           <button
             type="button"
-            onClick={() => setIsApplyModalOpen(true)}
+            onClick={handleApplyNow}
             className="w-full py-4 bg-gradient-to-r from-[#E91E63] to-[#200B3B] text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg hover:shadow-xl hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <FileCheck size={18} />

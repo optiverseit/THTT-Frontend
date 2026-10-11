@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import ReactCountryFlag from "react-country-flag";
 import Logo from "../../assets/images/Logo.png";
 import {
@@ -34,6 +34,8 @@ import {
   formatUSD,
   formatINR,
 } from "../../context/CurrencyContext";
+import { useAuth } from "../../context/AuthContext";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 import VisaApplicationModal, {
   type VisaDocumentRequirement,
 } from "./VisaApplicationModal";
@@ -75,7 +77,6 @@ export interface VisaDetailPlan {
   documentRequirements?: VisaDocumentRequirement[];
   policies?: string[];
   termsAndConditions?: string[];
-  policies?: string[];
   costOptions?: CostOption[];
   successfulApplications?: string;
   successRate?: string;
@@ -147,6 +148,11 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuth();
+  const hasRestoredPostLoginRef = useRef(false);
+  const previousPlanIdRef = useRef(plan.id);
 
   // Split policies and terms & conditions cleanly into separate datasets
   const isPolicyText = (text: string) =>
@@ -166,22 +172,90 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       displayTerms = displayTerms.filter((t) => !isPolicyText(t));
     }
   }
-  // Update selected option when plan changes
-  React.useEffect(() => {
-    if (plan.costOptions && plan.costOptions.length > 0) {
-      setSelectedCostOption(plan.costOptions[0]);
-    } else {
-      setSelectedCostOption({
-        name: plan.entryType,
-        days: plan.duration,
-        nprPrice: plan.baseNPRPrice,
-        entryType: plan.entryType,
-        visaPricingTierId: plan.visaPricingTierId,
-        countryId: plan.countryId,
-        visaCategoryId: plan.visaCategoryId,
+
+  if (displayTerms.length === 0) {
+    displayTerms = [
+      "Consular Authority: Visa grant, rejection, validity duration, and entry permissions are under the exclusive authority of the respective embassy/consulate.",
+      "Non-Refundable Processing: Consular application charges and counseling documentation fees are non-refundable once processed.",
+      "Document Authenticity: All applicant records, financial statements, and relationship certificates must be authentic, valid, and verifiable.",
+      "Translation & Notarization: Documents issued in Nepali (Civil, Land, Tax) must carry certified English translation and legal notarization."
+    ];
+  }
+  // Update selected option when plan changes or extra options arrive
+  useEffect(() => {
+    if (previousPlanIdRef.current !== plan.id) {
+      previousPlanIdRef.current = plan.id;
+      if (plan.costOptions && plan.costOptions.length > 0) {
+        setSelectedCostOption(plan.costOptions[0]);
+      } else {
+        setSelectedCostOption({
+          name: plan.entryType,
+          days: plan.duration,
+          nprPrice: plan.baseNPRPrice,
+          entryType: plan.entryType,
+          visaPricingTierId: plan.visaPricingTierId,
+          countryId: plan.countryId,
+          visaCategoryId: plan.visaCategoryId,
+        });
+      }
+    } else if (plan.costOptions && plan.costOptions.length > 0) {
+      setSelectedCostOption((current) => {
+        const found = plan.costOptions?.find(
+          (opt) =>
+            (current?.visaPricingTierId && opt.visaPricingTierId === current.visaPricingTierId) ||
+            opt.name === current?.name
+        );
+        return found || current || plan.costOptions![0];
       });
     }
   }, [plan]);
+
+  // Restore application modal and state after login
+  useEffect(() => {
+    if (!isLoggedIn || !isSessionValid() || hasRestoredPostLoginRef.current) return;
+
+    const savedState =
+      (location.state as any) ||
+      (() => {
+        try {
+          const raw = sessionStorage.getItem("post_login_state");
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      })();
+
+    if (savedState?.openApplyModal) {
+      hasRestoredPostLoginRef.current = true;
+
+      if (Number(savedState.numberOfGuests) > 0) {
+        setNumberOfGuests(Number(savedState.numberOfGuests));
+      }
+
+      if (savedState.selectedCostOption) {
+        setSelectedCostOption(savedState.selectedCostOption);
+      } else if (savedState.visaPricingTierId && plan.costOptions) {
+        const matched = plan.costOptions.find(
+          (opt) => opt.visaPricingTierId === savedState.visaPricingTierId
+        );
+        if (matched) setSelectedCostOption(matched);
+      } else if (savedState.selectedOptionName && plan.costOptions) {
+        const matched = plan.costOptions.find(
+          (opt) => opt.name === savedState.selectedOptionName
+        );
+        if (matched) setSelectedCostOption(matched);
+      }
+
+      setIsAppModalOpen(true);
+
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, [location.state, isLoggedIn, plan, navigate, location.pathname, location.search]);
   // Close share popup on outside click
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -254,6 +328,36 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       document.title = originalTitle;
     }, 2000);
   };
+  const handleProcessApplication = () => {
+    // Authenticate: check if user is logged in with a valid session
+    if (!isLoggedIn || !isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        openApplyModal: true,
+        selectedCostOption,
+        selectedOptionName: selectedCostOption?.name,
+        visaPricingTierId: selectedCostOption?.visaPricingTierId,
+        numberOfGuests: numberOfGuests,
+      };
+
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
+
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+
+    // Already logged in: open the form directly
+    setIsAppModalOpen(true);
+  };
+
   const handleWhatsAppInquiry = () => {
     const currencyText =
       selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
@@ -264,13 +368,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
   // Hero background image (dynamic from API with fallbacks)
-  const heroBg =
-    plan.image ||
-    plan.visa_image ||
-    (plan as any).visaImage ||
-    countryBgImages[plan.country] ||
-    (plan.country?.toLowerCase().includes("austral") ? countryBgImages["Australia"] : undefined) ||
-    "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400";
+  const heroBg = resolveImageUrl(
+    plan.image || plan.visa_image || (plan as any)?.visaImage
+  );
   // Share helpers
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareTitle = `${plan.country} ${plan.visaType} | Trip Himalaya Tours & Travel`;
@@ -352,8 +452,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
 
-  // Dynamic header image strictly coming from API (plan.image)
-  const heroBg = resolveImageUrl(plan.image);
+
 
   const handleQuickCountryChange = (countryName: string) => {
     const found = allPlans.find(
@@ -365,38 +464,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     }
   };
 
-  const rawPolicies = plan.policies || [];
-  const rawTerms = plan.termsAndConditions || [];
 
-  const isPolicyString = (text: string) => {
-    const lower = text.toLowerCase();
-    return (
-      lower.includes("policy") ||
-      lower.includes("cancellation") ||
-      lower.includes("refund") ||
-      lower.includes("reschedul")
-    );
-  };
-
-  const policiesList: string[] =
-    rawPolicies.length > 0
-      ? rawPolicies
-      : rawTerms.filter(isPolicyString);
-
-  const rawTermsFiltered =
-    rawPolicies.length > 0
-      ? rawTerms
-      : rawTerms.filter((t) => !isPolicyString(t));
-
-  const displayTerms: string[] =
-    rawTermsFiltered.length > 0
-      ? rawTermsFiltered
-      : [
-          "Consular Authority: Visa grant, rejection, validity duration, and entry permissions are under the exclusive authority of the respective embassy/consulate.",
-          "Non-Refundable Processing: Consular application charges and counseling documentation fees are non-refundable once processed.",
-          "Document Authenticity: All applicant records, financial statements, and relationship certificates must be authentic, valid, and verifiable.",
-          "Translation & Notarization: Documents issued in Nepali (Civil, Land, Tax) must carry certified English translation and legal notarization."
-        ];
 
   const renderPricingSidebar = () => (
     <div className="space-y-4">
@@ -604,7 +672,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           <div className="space-y-1.5 pt-0.5">
             <button
               type="button"
-              onClick={() => setIsAppModalOpen(true)}
+              onClick={handleProcessApplication}
               aria-label="Process Visa Application Now"
               className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer bg-[#E91E63] hover:bg-pink-600 active:scale-[0.98] text-white"
             >
@@ -1152,25 +1220,53 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                 Trip Himalaya Tours &amp; Travel assists you through the complete process: document auditing, certified translations, embassy application filing, confirmed flight and hotel booking vouchers, and 24/7 dedicated visa assistance.
               </p>
             </div>
-            {/* Inclusions Pill Bar */}
-            <div className="pt-4 border-t border-gray-100">
-              <span className="text-[11px] font-black uppercase text-gray-400 tracking-wider block mb-2.5">
-                Our Service Includes:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {informationLoading ? (
-                  <div className="text-sm font-semibold text-gray-400 py-4">Loading service information...</div>
-                ) : plan.inclusions.length > 0 ? (
-                  plan.inclusions.map((inc: string, idx: number) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 font-medium bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                      <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
-                      <span>{inc}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm font-semibold text-gray-400 py-4">No service information available.</div>
-                )}
+          </div>
+
+          {/* # What Is Covered */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm space-y-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 border border-emerald-200 shadow-xs">
+                  <CheckCircle2 size={20} className="stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                    What is Covered
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">Included services, counseling scope &amp; visa guidance</p>
+                </div>
               </div>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+                Service Inclusions
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed">
+              Our comprehensive visa counseling and documentation assistance covers the following key services:
+            </p>
+
+            <div className="space-y-2.5 pt-1">
+              {informationLoading ? (
+                <div className="py-6 text-sm font-semibold text-gray-400">Loading covered services...</div>
+              ) : plan.inclusions.length > 0 ? (
+                plan.inclusions.map((inc: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50/30 hover:bg-emerald-50/60 border border-emerald-100/70 transition-all group"
+                  >
+                    <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-emerald-200 transition-colors">
+                      <CheckCircle2 size={13} className="text-emerald-700 stroke-[2.5]" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-gray-800 font-semibold leading-relaxed flex-1">
+                      {inc}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="py-4 text-xs sm:text-sm text-gray-500 bg-emerald-50/20 rounded-2xl p-4 border border-emerald-100">
+                  No service information available.
+                </div>
+              )}
             </div>
           </div>
 

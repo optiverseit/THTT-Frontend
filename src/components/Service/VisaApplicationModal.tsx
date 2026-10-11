@@ -1945,9 +1945,10 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       const requirementId = String(requirement.id);
                       const docKey = `doc_${requirement.id}`;
                       const file = currentApplicant.documentFiles[requirementId] || null;
-                      const docError = currentApplicantErrors[`doc_${requirement.id}`];
+                      const docError =
+                        currentApplicantErrors[docKey] ||
+                        applicantErrors[activeApplicantIndex]?.[docKey];
                       const inputId = `visa-document-${activeApplicantIndex}-${requirement.id}`;
-                      const docError = applicantErrors[activeApplicantIndex]?.[docKey];
                       return (
 
                         <div key={requirement.id} id={`field-doc_${requirement.id}`} className="space-y-1">

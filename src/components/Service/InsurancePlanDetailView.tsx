@@ -1048,9 +1048,12 @@ export const InsurancePlanDetailView: React.FC = () => {
               </div>
               <div className="space-y-2.5">
                 {plan.policyConditions.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 p-3 rounded-xl bg-blue-50/40 border border-blue-100/70">
+                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 p-3.5 rounded-xl bg-blue-50/40 border border-blue-100/70">
                     <span className="text-blue-500 font-black mt-0.5 flex-shrink-0">•</span>
-                    <span className="leading-relaxed">{item}</span>
+                    <div
+                      className="leading-relaxed flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                      dangerouslySetInnerHTML={{ __html: formatDescription(item) }}
+                    />
                   </div>
                 ))}
               </div>
@@ -1068,9 +1071,12 @@ export const InsurancePlanDetailView: React.FC = () => {
               </div>
               <div className="space-y-2.5">
                 {plan.termsConditions.map((term, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 p-3 rounded-xl bg-amber-50/40 border border-amber-100/70">
+                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 p-3.5 rounded-xl bg-amber-50/40 border border-amber-100/70">
                     <span className="text-amber-600 font-black mt-0.5 flex-shrink-0">•</span>
-                    <span className="leading-relaxed">{term}</span>
+                    <div
+                      className="leading-relaxed flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                      dangerouslySetInnerHTML={{ __html: formatDescription(term) }}
+                    />
                   </div>
                 ))}
               </div>

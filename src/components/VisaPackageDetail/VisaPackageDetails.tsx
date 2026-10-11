@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import VisaCountryDetailView, { VisaDetailPlan, CostOption } from "../Service/VisaCountryDetailView";
+import type { VisaDocumentRequirement } from "../Service/VisaApplicationModal";
 import { Compass } from "lucide-react";
 import { getVisaCategories, getVisaPublicDocumentRequirements, getVisaPublicInformation, getVisaPublicPricingTiers } from "../../api/BackendApi";
 interface VisaCategory {
@@ -23,9 +24,16 @@ interface VisaCategory {
   } | null;
 }
 const getApiArray = (response: any): any[] => {
-  const data = response?.data?.data;
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  const resData = response?.data;
+  if (Array.isArray(resData)) return resData;
+  if (Array.isArray(resData?.data)) return resData.data;
+  if (Array.isArray(resData?.data?.data)) return resData.data.data;
+  for (const key of ["documents", "document_requirements", "requirements", "pricing_tiers", "information", "categories", "items", "results", "records"]) {
+    if (Array.isArray(resData?.[key])) return resData[key];
+    if (Array.isArray(resData?.data?.[key])) return resData.data[key];
+  }
   return [];
 };
 const getRegionFromCountryCode = (countryCode: string): VisaDetailPlan["region"] => {
@@ -36,6 +44,27 @@ const getRegionFromCountryCode = (countryCode: string): VisaDetailPlan["region"]
   if (["US", "GB", "CA", "AU", "NZ", "ZA", "BR"].includes(code)) return "west";
   return "all";
 };
+const extractApiImage = (category: any): string | null => {
+  if (!category) return null;
+  const raw =
+    category.visa_image ||
+    category.image ||
+    category.banner_image ||
+    category.header_image ||
+    category.cover_image ||
+    category.country_image ||
+    category.photo ||
+    category.country?.image ||
+    category.country?.country_image ||
+    category.country?.banner_image ||
+    category.country?.cover_image ||
+    null;
+
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed || null;
+};
+
 const mapBasicPlan = (category: VisaCategory): VisaDetailPlan => {
   const countryCode = String(category.country?.iso_2 || category.country?.flag_code || category.country?.country_code || "").toUpperCase();
   return {
@@ -52,14 +81,17 @@ const mapBasicPlan = (category: VisaCategory): VisaDetailPlan => {
     aboutText: category.description || category.short_description || "",
     requirementDocuments: [],
     documentRequirements: [],
+    policies: [],
     termsAndConditions: [],
     policies: [],
     costOptions: [],
     countryId: category.country_id,
     visaCategoryId: category.id,
+
     image: category.visa_image || null,
     visa_image: category.visa_image || null,
     shortDescription: category.short_description || null,
+
     created_at: category.created_at,
   };
 };
@@ -69,6 +101,7 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
     .map((item) => String(item?.content || ""))
     .filter(Boolean);
+
   const isPolicyItem = (item: any) => {
     const type = String(item?.type || "").toUpperCase();
     if (["POLICY", "POLICIES"].includes(type)) return true;
@@ -94,6 +127,7 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
 
   const termsAndConditions = [...information]
     .filter(isTermsItem)
+
     .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
     .map((item) => String(item?.content || item?.title || ""))
     .filter(Boolean);
@@ -131,14 +165,17 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     aboutText: category.description || category.short_description || "",
     requirementDocuments,
     documentRequirements,
+    policies,
     termsAndConditions,
     policies,
     costOptions,
     countryId: category.country_id,
     visaCategoryId: category.id,
+
     image: category.visa_image || null,
     visa_image: category.visa_image || null,
     shortDescription: category.short_description || null,
+
     created_at: category.created_at,
   };
 };
@@ -194,29 +231,60 @@ const VisaPackageDetails: React.FC = () => {
       getVisaPublicDocumentRequirements(category.id)
         .then((response) => {
           if (!active) return;
-          const documentRequirements = getApiArray(response)
-            .filter((item) => item?.status !== "INACTIVE")
-            .sort(
-              (a, b) =>
-                Number(a?.display_order || 0) -
-                Number(b?.display_order || 0)
-            );
-          const requirementDocuments = documentRequirements
+          const rawDocs = getApiArray(response);
+          const normalizedDocs: VisaDocumentRequirement[] = [];
+
+          rawDocs
+            .filter((item) => String(item?.status || "").toUpperCase() !== "INACTIVE")
+            .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
+            .forEach((item) => {
+              if (Array.isArray(item?.documents) && item.documents.length > 0) {
+                item.documents.forEach((subDoc: any) => {
+                  normalizedDocs.push({
+                    id: subDoc.id || `${item.id}-${Math.random()}`,
+                    visa_category_id: category.id,
+                    title: subDoc.title || subDoc.name || item.title || "Required Document",
+                    name: subDoc.name || subDoc.title,
+                    document_type: subDoc.document_type || item.document_type,
+                    description: subDoc.description || item.description || null,
+                    is_required: subDoc.is_required !== false && subDoc.is_required !== 0,
+                    status: subDoc.status || item.status,
+                    display_order: Number(subDoc.display_order ?? item.display_order ?? 0),
+                  });
+                });
+              } else {
+                normalizedDocs.push({
+                  id: item.id,
+                  visa_category_id: item.visa_category_id ?? category.id,
+                  title: item.title || item.name || item.document_type || "Required Document",
+                  name: item.name || item.title,
+                  document_type: item.document_type,
+                  description: item.description || null,
+                  is_required: item.is_required !== false && item.is_required !== 0,
+                  status: item.status,
+                  display_order: Number(item.display_order ?? 0),
+                });
+              }
+            });
+
+          const requirementDocuments = normalizedDocs
             .map((item) =>
               String(
                 item?.title ||
+                item?.name ||
                 item?.document_type ||
                 item?.description ||
                 ""
               )
             )
             .filter(Boolean);
+
           setMatchedVisa((prev) =>
             prev
               ? {
                 ...prev,
                 requirementDocuments,
-                documentRequirements,
+                documentRequirements: normalizedDocs,
               }
               : prev
           );
@@ -234,6 +302,7 @@ const VisaPackageDetails: React.FC = () => {
             .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
             .map((item) => String(item?.content || ""))
             .filter(Boolean);
+
           const isPolicyItem = (item: any) => {
             const type = String(item?.type || "").toUpperCase();
             if (["POLICY", "POLICIES"].includes(type)) return true;
@@ -259,6 +328,7 @@ const VisaPackageDetails: React.FC = () => {
 
           const termsAndConditions = information
             .filter(isTermsItem)
+
             .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
             .map((item) => String(item?.content || item?.title || ""))
             .filter(Boolean);

@@ -349,7 +349,6 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
               requirementDocuments: [],
               policies: [],
               termsAndConditions: [],
-              policies: [],
               costOptions,
 
               countryId: category.country_id,

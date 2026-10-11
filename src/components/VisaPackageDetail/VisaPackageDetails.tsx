@@ -83,10 +83,15 @@ const mapBasicPlan = (category: VisaCategory): VisaDetailPlan => {
     documentRequirements: [],
     policies: [],
     termsAndConditions: [],
+    policies: [],
     costOptions: [],
     countryId: category.country_id,
     visaCategoryId: category.id,
-    image: extractApiImage(category),
+
+    image: category.visa_image || null,
+    visa_image: category.visa_image || null,
+    shortDescription: category.short_description || null,
+
     created_at: category.created_at,
   };
 };
@@ -96,15 +101,35 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
     .map((item) => String(item?.content || ""))
     .filter(Boolean);
+
+  const isPolicyItem = (item: any) => {
+    const type = String(item?.type || "").toUpperCase();
+    if (["POLICY", "POLICIES"].includes(type)) return true;
+    if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return false;
+    const text = String(item?.title || item?.content || "").toLowerCase();
+    return text.includes("policy") || text.includes("cancellation") || text.includes("refund");
+  };
+
+  const isTermsItem = (item: any) => {
+    const type = String(item?.type || "").toUpperCase();
+    if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return true;
+    if (["POLICY", "POLICIES"].includes(type)) return false;
+    if (type === "INCLUDED") return false;
+    const text = String(item?.title || item?.content || "").toLowerCase();
+    return !text.includes("policy");
+  };
+
   const policies = [...information]
-    .filter((item) => ["POLICY", "POLICIES"].includes(String(item?.type || "").toUpperCase()))
+    .filter(isPolicyItem)
     .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
-    .map((item) => String(item?.content || ""))
+    .map((item) => String(item?.content || item?.title || ""))
     .filter(Boolean);
+
   const termsAndConditions = [...information]
-    .filter((item) => ["TERMS", "TERM", "TERMS_CONDITION", "TERMS_CONDITIONS", "TERMS_AND_CONDITIONS"].includes(String(item?.type || "").toUpperCase()))
+    .filter(isTermsItem)
+
     .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
-    .map((item) => String(item?.content || ""))
+    .map((item) => String(item?.content || item?.title || ""))
     .filter(Boolean);
   const documentRequirements = [...documents]
     .filter((item) => item?.status !== "INACTIVE")
@@ -142,10 +167,15 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     documentRequirements,
     policies,
     termsAndConditions,
+    policies,
     costOptions,
     countryId: category.country_id,
     visaCategoryId: category.id,
-    image: extractApiImage(category),
+
+    image: category.visa_image || null,
+    visa_image: category.visa_image || null,
+    shortDescription: category.short_description || null,
+
     created_at: category.created_at,
   };
 };
@@ -272,16 +302,37 @@ const VisaPackageDetails: React.FC = () => {
             .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
             .map((item) => String(item?.content || ""))
             .filter(Boolean);
+
+          const isPolicyItem = (item: any) => {
+            const type = String(item?.type || "").toUpperCase();
+            if (["POLICY", "POLICIES"].includes(type)) return true;
+            if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return false;
+            const text = String(item?.title || item?.content || "").toLowerCase();
+            return text.includes("policy") || text.includes("cancellation") || text.includes("refund");
+          };
+
+          const isTermsItem = (item: any) => {
+            const type = String(item?.type || "").toUpperCase();
+            if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return true;
+            if (["POLICY", "POLICIES"].includes(type)) return false;
+            if (type === "INCLUDED") return false;
+            const text = String(item?.title || item?.content || "").toLowerCase();
+            return !text.includes("policy");
+          };
+
           const policies = information
-            .filter((item) => ["POLICY", "POLICIES"].includes(String(item?.type || "").toUpperCase()))
+            .filter(isPolicyItem)
             .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
-            .map((item) => String(item?.content || ""))
+            .map((item) => String(item?.content || item?.title || ""))
             .filter(Boolean);
+
           const termsAndConditions = information
-            .filter((item) => ["TERMS", "TERM", "TERMS_CONDITION", "TERMS_CONDITIONS", "TERMS_AND_CONDITIONS"].includes(String(item?.type || "").toUpperCase()))
+            .filter(isTermsItem)
+
             .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
-            .map((item) => String(item?.content || ""))
+            .map((item) => String(item?.content || item?.title || ""))
             .filter(Boolean);
+
           setMatchedVisa((prev) => prev ? {
             ...prev,
             inclusions: inclusions.length > 0 ? inclusions : prev.inclusions,

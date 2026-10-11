@@ -143,6 +143,7 @@ export function formatDescription(raw: string | null | undefined): string {
       continue;
     }
 
+
     // ── 6. Short Title: -- Inline Section Title ──
     const beforeColon = trimmed.slice(0, -1);
     const isUrl = /^https?:\/\//i.test(trimmed);
@@ -160,12 +161,15 @@ export function formatDescription(raw: string | null | undefined): string {
         `<p style="font-weight:800;color:#2D1347;margin:${isFirst ? "0" : "14px"} 0 3px 0;font-size:0.9em;letter-spacing:0.01em;">${escapeHtml(
           trimmed
         )}</p>`
+
       );
       continue;
     }
 
     // ── 7. Regular paragraph text ──
+
     const isFirst = parts.length === 0;
+
     closeList();
     parts.push(
       `<p style="color:#4B5563;margin:${isFirst ? "0" : "5px"} 0 5px 0;font-size:0.875em;line-height:1.75;">${escapeHtml(

@@ -71,6 +71,17 @@ export interface ApplicantData {
   documentFiles: Record<string, File | null>;
 }
 
+export interface ApplicantErrors {
+  fullName?: string;
+  nationality?: string;
+  email?: string;
+  phone?: string;
+  passportNumber?: string;
+  passportExpiry?: string;
+  travelDate?: string;
+  [key: string]: string | undefined; // for document requirement errors
+}
+
 const createDefaultApplicant = (): ApplicantData => ({
   fullName: "",
   nationality: "",
@@ -82,6 +93,50 @@ const createDefaultApplicant = (): ApplicantData => ({
   travelDate: "",
   documentFiles: {},
 });
+
+const createDefaultErrors = (): ApplicantErrors => ({});
+
+// ─── Validation helpers ───────────────────────────────────────────────────────
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PASSPORT_RE = /^[A-Za-z0-9]{6,12}$/;
+
+const validateField = (
+  field: keyof ApplicantErrors,
+  value: string,
+  label: string
+): string => {
+  if (!value.trim()) return `${label} is required.`;
+  switch (field) {
+    case "email":
+      if (!EMAIL_RE.test(value.trim())) return "Please enter a valid email address.";
+      break;
+    case "phone":
+      if (!/^\d+$/.test(value.trim())) return "Phone number must contain digits only.";
+      if (value.trim().length < 7) return "Phone number must be at least 7 digits.";
+      if (value.trim().length > 15) return "Phone number must not exceed 15 digits.";
+      break;
+    case "passportNumber":
+      if (!PASSPORT_RE.test(value.trim())) return "Passport number must be 6–12 alphanumeric characters.";
+      break;
+    case "passportExpiry": {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const expiry = new Date(value);
+      if (expiry <= today) return "Passport expiry date must be in the future.";
+      break;
+    }
+    case "travelDate": {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const travel = new Date(value);
+      if (travel < today) return "Travel date cannot be in the past.";
+      break;
+    }
+    default:
+      break;
+  }
+  return "";
+};
 
 export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   isOpen,
@@ -106,6 +161,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
   );
   const [activeApplicantIndex, setActiveApplicantIndex] = useState(0);
 
+  // Per-applicant validation errors
+  const [applicantErrors, setApplicantErrors] = useState<ApplicantErrors[]>(() =>
+    Array.from({ length: guests }, createDefaultErrors)
+  );
+  // Top-level form-submission error banner
+  const [formError, setFormError] = useState("");
+
   // Sync applicants array whenever modal opens or guest count changes
   useEffect(() => {
     if (isOpen) {
@@ -117,6 +179,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         }
         return next.slice(0, guests);
       });
+      setApplicantErrors((prev) => {
+        if (prev.length === guests) return prev;
+        const next = [...prev];
+        while (next.length < guests) next.push(createDefaultErrors());
+        return next.slice(0, guests);
+      });
       setActiveApplicantIndex(0);
       setCurrentStep("form");
       setPaymentStatus("unpaid");
@@ -125,9 +193,11 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       setIsSubmittingApplication(false);
       setVisaApplicationId(null);
       setSubmissionId("");
+
       setFormErrors({});
       setTermsError("");
       setHasSubmitted(false);
+
     }
   }, [guests, isOpen]);
 
@@ -185,6 +255,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
       return updated;
     });
 
+
     if (hasSubmitted) {
       setFormErrors((prev) => {
         const currentErrs = { ...(prev[activeApplicantIndex] || {}) };
@@ -197,6 +268,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         };
       });
     }
+
   };
 
   const handleDocumentChange = (requirementId: number | string, file: File | null) => {
@@ -425,12 +497,14 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     if (!isSessionValid()) {
       clearAuthSession();
       window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
       return;
     }
+
 
     setHasSubmitted(true);
     const { isValid, firstFailingIndex, newErrors, termsValid } = validateAll();
@@ -440,16 +514,17 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
         setActiveApplicantIndex(firstFailingIndex);
       }
       scrollToFirstError(firstFailingIndex, newErrors, !termsValid);
+
       return;
     }
 
     if (!countryId || !visaCategoryId) {
-      alert("Visa country or category information is missing.");
+      setFormError("Visa country or category information is missing.");
       return;
     }
 
     if (!selectedOption.visaPricingTierId) {
-      alert("Please select a valid visa pricing option.");
+      setFormError("Please select a valid visa pricing option.");
       return;
     }
 
@@ -1596,6 +1671,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Full Name (As printed on Passport) <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
+
                       id="field-fullName"
                       type="text"
                       placeholder="Ram Bahadur Thapa"
@@ -1613,6 +1689,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.fullName}</span>
+
                       </p>
                     )}
                   </div>
@@ -1623,6 +1700,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Nationality <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
+
                       id="field-nationality"
                       type="text"
                       placeholder="Nepali"
@@ -1640,6 +1718,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.nationality}</span>
+
                       </p>
                     )}
                   </div>
@@ -1650,6 +1729,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Email Address <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
+
                       id="field-email"
                       type="email"
                       placeholder="ram.thapa@gmail.com"
@@ -1667,6 +1747,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.email}</span>
+
                       </p>
                     )}
                   </div>
@@ -1676,6 +1757,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                     <label htmlFor="field-phone" className="block text-xs font-bold text-gray-700 mb-1">
                       WhatsApp / Mobile Phone <span className="text-[#E91E63]">*</span>
                     </label>
+
                     <div
                       className={`flex items-stretch border rounded-xl bg-white transition-all overflow-hidden ${
                         currentApplicantErrors.phone
@@ -1683,12 +1765,11 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                           : "border-gray-200 focus-within:border-[#E91E63] focus-within:ring-2 focus-within:ring-pink-100"
                       }`}
                     >
+
                       {/* Country Code Selector */}
                       <select
                         value={currentApplicant.phoneCode}
-                        onChange={(e) =>
-                          updateCurrentApplicant({ phoneCode: e.target.value })
-                        }
+                        onChange={(e) => updateCurrentApplicant({ phoneCode: e.target.value })}
                         className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 py-2 text-xs font-bold text-[#200B3B] focus:outline-none cursor-pointer"
                         style={{ maxWidth: "110px" }}
                       >
@@ -1700,6 +1781,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       </select>
                       {/* Phone Number Input */}
                       <input
+
                         id="field-phone"
                         type="tel"
                         placeholder="9841234567"
@@ -1714,6 +1796,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.phone}</span>
+
                       </p>
                     )}
                   </div>
@@ -1743,6 +1826,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Passport Number <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
+
                       id="field-passportNumber"
                       type="text"
                       placeholder="09876543"
@@ -1762,6 +1846,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.passportNumber}</span>
+
                       </p>
                     )}
                   </div>
@@ -1772,10 +1857,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Passport Expiry Date <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
+
                       id="field-passportExpiry"
+
                       type="date"
                       min={todayStr}
                       value={currentApplicant.passportExpiry}
+
                       onChange={(e) =>
                         updateCurrentApplicant({
                           passportExpiry: e.target.value,
@@ -1791,6 +1879,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.passportExpiry}</span>
+
                       </p>
                     )}
                   </div>
@@ -1801,10 +1890,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       Intended Travel Date <span className="text-[#E91E63]">*</span>
                     </label>
                     <input
+
                       id="field-travelDate"
+
                       type="date"
                       min={todayStr}
                       value={currentApplicant.travelDate}
+
                       onChange={(e) =>
                         updateCurrentApplicant({ travelDate: e.target.value })
                       }
@@ -1818,6 +1910,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                       <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium mt-1">
                         <AlertCircle size={12} className="flex-shrink-0" />
                         <span>{currentApplicantErrors.travelDate}</span>
+
                       </p>
                     )}
                   </div>
@@ -1850,10 +1943,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   ) : documentRequirements.length > 0 ? (
                     documentRequirements.map((requirement) => {
                       const requirementId = String(requirement.id);
+                      const docKey = `doc_${requirement.id}`;
                       const file = currentApplicant.documentFiles[requirementId] || null;
                       const docError = currentApplicantErrors[`doc_${requirement.id}`];
                       const inputId = `visa-document-${activeApplicantIndex}-${requirement.id}`;
+                      const docError = applicantErrors[activeApplicantIndex]?.[docKey];
                       return (
+
                         <div key={requirement.id} id={`field-doc_${requirement.id}`} className="space-y-1">
                           <div
                             className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border transition-all ${
@@ -1866,6 +1962,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                                 : "bg-white border-gray-200 hover:border-purple-300"
                             }`}
                           >
+
                             <input
                               id={inputId}
                               type="file"
@@ -1873,10 +1970,13 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                               className="hidden"
                               onChange={(e) => {
                                 handleDocumentChange(requirement.id, e.target.files?.[0] || null);
+
+
                                 e.target.value = "";
                               }}
                             />
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
+
                               <div
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                   file
@@ -1891,10 +1991,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                                 ) : (
                                   <FileText size={15} />
                                 )}
+
                               </div>
                               <div className="min-w-0">
                                 <p className="text-xs font-bold text-[#200B3B] flex items-center gap-1 flex-wrap">
                                   {requirement.title || requirement.document_type || requirement.name || "Document"}
+
                                   {requirement.is_required ? (
                                     <span className="text-[#E91E63] font-black">*</span>
                                   ) : (
@@ -1914,10 +2016,12 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                                   <p className="text-[10px] text-gray-400">
                                     {requirement.description || requirement.document_type || "Attach required document"}
                                   </p>
+
                                 )}
                               </div>
                             </div>
                             {file ? (
+
                               <button
                                 type="button"
                                 onClick={() => handleDocumentChange(requirement.id, null)}
@@ -1944,6 +2048,7 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                             <p className="flex items-center gap-1 text-[11px] text-rose-500 font-medium px-1">
                               <AlertCircle size={12} className="flex-shrink-0" />
                               <span>{docError}</span>
+
                             </p>
                           )}
                         </div>
@@ -2000,6 +2105,14 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* ── FORM-LEVEL ERROR BANNER ── */}
+              {formError && (
+                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-semibold animate-in fade-in duration-200">
+                  <span className="text-base leading-none mt-px">⚠️</span>
+                  <span>{formError}</span>
+                </div>
+              )}
 
               {/* ── ACTION BUTTONS ── */}
               <div className="flex items-center justify-between pt-1 border-t border-gray-100">

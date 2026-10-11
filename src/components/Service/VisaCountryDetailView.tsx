@@ -75,6 +75,7 @@ export interface VisaDetailPlan {
   documentRequirements?: VisaDocumentRequirement[];
   policies?: string[];
   termsAndConditions?: string[];
+  policies?: string[];
   costOptions?: CostOption[];
   successfulApplications?: string;
   successRate?: string;
@@ -82,8 +83,11 @@ export interface VisaDetailPlan {
   visaCategoryId?: number | string;
   visaPricingTierId?: number | string;
   image?: string | null;
+  visa_image?: string | null;
+  shortDescription?: string | null;
   created_at?: string;
 }
+
 
 // Resolves dynamic image coming from API (handles full URLs and relative paths)
 const resolveImageUrl = (img?: string | null): string => {
@@ -96,6 +100,7 @@ const resolveImageUrl = (img?: string | null): string => {
   const baseUrl = (import.meta.env.VITE_BASE_URL || "").replace(/\/api\/?$/i, "").replace(/\/+$/, "");
   const cleanPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return baseUrl ? `${baseUrl}${cleanPath}` : cleanPath;
+
 };
 interface VisaCountryDetailViewProps {
   plan: VisaDetailPlan;
@@ -258,6 +263,14 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     );
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
+  // Hero background image (dynamic from API with fallbacks)
+  const heroBg =
+    plan.image ||
+    plan.visa_image ||
+    (plan as any).visaImage ||
+    countryBgImages[plan.country] ||
+    (plan.country?.toLowerCase().includes("austral") ? countryBgImages["Australia"] : undefined) ||
+    "https://images.unsplash.com/photo-1488085061387-422e29b40080?auto=format&fit=crop&q=80&w=1400";
   // Share helpers
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareTitle = `${plan.country} ${plan.visaType} | Trip Himalaya Tours & Travel`;
@@ -266,7 +279,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     title: shareTitle,
     text: shareText,
     url: currentUrl,
+
     image: resolveImageUrl(plan.image) || undefined,
+
   };
   const shareButtons = [
     {
@@ -336,8 +351,10 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const printNPRTotal = formatNPR(estimatedTotalPrice);
   const printUSDTotal = formatUSD(estimatedTotalPrice / nprPerOneDollar);
   const printINRTotal = formatINR(estimatedTotalPrice / nprPerOneINR);
+
   // Dynamic header image strictly coming from API (plan.image)
   const heroBg = resolveImageUrl(plan.image);
+
   const handleQuickCountryChange = (countryName: string) => {
     const found = allPlans.find(
       (p) => p.country.toLowerCase() === countryName.toLowerCase()
@@ -347,6 +364,39 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       window.scrollTo({ top: 180, behavior: "smooth" });
     }
   };
+
+  const rawPolicies = plan.policies || [];
+  const rawTerms = plan.termsAndConditions || [];
+
+  const isPolicyString = (text: string) => {
+    const lower = text.toLowerCase();
+    return (
+      lower.includes("policy") ||
+      lower.includes("cancellation") ||
+      lower.includes("refund") ||
+      lower.includes("reschedul")
+    );
+  };
+
+  const policiesList: string[] =
+    rawPolicies.length > 0
+      ? rawPolicies
+      : rawTerms.filter(isPolicyString);
+
+  const rawTermsFiltered =
+    rawPolicies.length > 0
+      ? rawTerms
+      : rawTerms.filter((t) => !isPolicyString(t));
+
+  const displayTerms: string[] =
+    rawTermsFiltered.length > 0
+      ? rawTermsFiltered
+      : [
+          "Consular Authority: Visa grant, rejection, validity duration, and entry permissions are under the exclusive authority of the respective embassy/consulate.",
+          "Non-Refundable Processing: Consular application charges and counseling documentation fees are non-refundable once processed.",
+          "Document Authenticity: All applicant records, financial statements, and relationship certificates must be authentic, valid, and verifiable.",
+          "Translation & Notarization: Documents issued in Nepali (Civil, Land, Tax) must carry certified English translation and legal notarization."
+        ];
 
   const renderPricingSidebar = () => (
     <div className="space-y-4">
@@ -987,7 +1037,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                   )}
                 </div>
                 <p className="text-xs sm:text-sm font-semibold text-white/70 mt-1">
-                  Authorized Counseling &amp; Embassy Submission Support for Nepali Citizens
+                  {plan.shortDescription || "Authorized Counseling & Embassy Submission Support for Nepali Citizens"}
                 </p>
               </div>
             </div>
@@ -1012,18 +1062,32 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           </div>
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <Calendar size={14} className="text-pink-300" />
-              <span>{plan.duration.toLowerCase().includes("valid") ? plan.duration : `${plan.duration} Valid`}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <ShieldCheck size={14} className="text-emerald-300" />
-              <span>{plan.entryType}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
-              <Clock size={14} className="text-blue-300" />
-              <span>{plan.processingTime}</span>
-            </div>
+            {(selectedCostOption?.days || plan.duration) ? (
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                <Calendar size={14} className="text-pink-300" />
+                <span>
+                  {(selectedCostOption?.days || plan.duration).toLowerCase().includes("valid")
+                    ? (selectedCostOption?.days || plan.duration)
+                    : `${selectedCostOption?.days || plan.duration} Valid`}
+                </span>
+              </div>
+            ) : null}
+            {(selectedCostOption?.entryType || plan.entryType) ? (
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                <ShieldCheck size={14} className="text-emerald-300" />
+                <span>{selectedCostOption?.entryType || plan.entryType}</span>
+              </div>
+            ) : null}
+            {plan.processingTime ? (
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                <Clock size={14} className="text-blue-300" />
+                <span>
+                  {plan.processingTime.toLowerCase().includes("day") || plan.processingTime.toLowerCase().includes("time")
+                    ? plan.processingTime
+                    : `${plan.processingTime} Days Processing`}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
         {/* ── SHARE BUTTON — top-right of hero ── */}
@@ -1131,6 +1195,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <div className="space-y-3.5">
               {documentsLoading ? (
                 <div className="py-6 text-sm font-semibold text-gray-400">Loading required documents...</div>
+
               ) : (plan.documentRequirements && plan.documentRequirements.length > 0) ? (
                 plan.documentRequirements.map((doc, idx) => {
                   const title = doc.title || doc.name || doc.document_type || `Document ${idx + 1}`;
@@ -1181,6 +1246,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                   );
                 })
               ) : (plan.requirementDocuments && plan.requirementDocuments.length > 0) ? (
+
                 plan.requirementDocuments.map((req: string, idx: number) => (
                   <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
                     <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -1203,6 +1269,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               </p>
             </div>
           </div>
+
           {/* ── CARD 1: Policies & Embassy Guidelines ── */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-purple-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1288,6 +1355,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                     />
                   </div>
                 ))
+
               ) : (
                 <div className="py-4 text-xs sm:text-sm text-gray-500 bg-gray-50/70 rounded-2xl p-4 border border-gray-100">
                   All submitted paperwork must be genuine and verifiable. Client information is handled under strict data privacy protocols.

@@ -439,7 +439,7 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenInquiry }) => {
             <a href="https://www.youtube.com/@triphimalaya" target="_blank" rel="noreferrer" aria-label="YouTube" className="hover:text-red-500">
               <Youtube size={17} />
             </a>
-            <a href="https://www.linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="hover:text-blue-400">
+            <a href="https://www.linkedin.com/company/trip-himalaya-tours-and-travels/" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="hover:text-blue-400">
               <Linkedin size={16} />
             </a>
           </div>

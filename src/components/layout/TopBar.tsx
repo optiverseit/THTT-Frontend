@@ -323,7 +323,7 @@ const TopBar: React.FC<TopBarProps> = () => {
                 <Youtube size={13.5} />
               </a>
               <a
-                href="https://www.linkedin.com/"
+                href="https://www.linkedin.com/company/trip-himalaya-tours-and-travels/"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="LinkedIn"

@@ -1258,7 +1258,20 @@ const ServiceDetail: React.FC = () => {
             : "Search options or connect with our specialist team for personalized guidance."
         }
         btn1={isHeliTourDetailPage ? "Call Us Now" : "Call Hotline"}
-        btn2={isHeliTourDetailPage ? "Request Custom Quote" : "WhatsApp Inquiry"}
+        btn2={
+          service.id === "heli-services" || isHeliTourDetailPage
+            ? "WhatsApp Inquiry"
+            : isHeliTourDetailPage
+            ? "Request Custom Quote"
+            : "WhatsApp Inquiry"
+        }
+        telPhone="+9779851420882"
+        whatsappPhone="9779851420882"
+        whatsappMessage={
+          service.id === "heli-services" || isHeliTourDetailPage
+            ? "Hello Trip Himalaya (Heli Operations Desk)! I would like to inquire about helicopter services and flight packages."
+            : undefined
+        }
       />
     </>
   );

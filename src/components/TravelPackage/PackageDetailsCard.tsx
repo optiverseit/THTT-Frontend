@@ -251,14 +251,20 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
 
           {/* Description */}
 
-          <div
-            className="mt-2 overflow-hidden"
-            style={{ maxHeight: "4rem" }}
-            dangerouslySetInnerHTML={{
-              __html: formatDescription(pkg.description) ||
-                `<p style="color:#6B7280;font-size:0.8em;line-height:1.6;">A curated travel experience with expert planning, flexible options, and memorable adventures in ${pkg.location || "Nepal"}.</p>`
-            }}
-          />
+          <p className="mt-2 text-xs sm:text-[13px] text-gray-500 font-normal leading-relaxed line-clamp-2 sm:line-clamp-3">
+            {(pkg.description ? (
+              pkg.description
+                .replace(/<[^>]+>/g, " ")
+                .replace(/^[A-Z][\.\)]\s+/gm, "")
+                .replace(/^[iIvVxX]+[\.\)]\s+/gm, "")
+                .replace(/^#+\s+/gm, "")
+                .replace(/\*\*/g, "")
+                .replace(/[\r\n]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+            ) : "") ||
+              `A curated travel experience with expert planning, flexible options, and memorable adventures in ${pkg.location || "Nepal"}.`}
+          </p>
         </div>
 
         {/* Location and Duration */}

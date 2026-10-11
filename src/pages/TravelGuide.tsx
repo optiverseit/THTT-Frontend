@@ -3,6 +3,7 @@ import PreFooter from "../components/reusable/PreFooter";
 import React, { useState, useEffect } from "react";
 import { ChevronRight, Plane, Phone } from "lucide-react";
 import { getTravelGuides } from "../api/BackendApi";
+import { formatDescription } from "../utils/formatDescription";
 
 interface TravelGuideItem {
   id: number;
@@ -90,16 +91,17 @@ const TravelGuide: React.FC = () => {
 
               {/* Content */}
               {activeGuide ? (
-                <div className="space-y-4 sm:space-y-6 text-gray-700 leading-relaxed text-base sm:text-lg">
-                  <p className="text-base sm:text-lg whitespace-pre-line">
-                    {activeGuide.description || "No description available."}
-                  </p>
-                </div>
+                <div
+                  className="travel-guide-content text-gray-700 leading-relaxed text-base sm:text-lg"
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      formatDescription(activeGuide.description) ||
+                      "<p>No description available.</p>",
+                  }}
+                />
               ) : (
-                <div className="space-y-4 sm:space-y-6 text-gray-700 leading-relaxed text-base sm:text-lg">
-                  <p className="text-base sm:text-lg">
-                    No travel guide information is available.
-                  </p>
+                <div className="text-gray-700 text-base sm:text-lg">
+                  <p>No travel guide information is available.</p>
                 </div>
               )}
 

@@ -265,15 +265,20 @@ export const HotelBookingCard: React.FC<HotelBookingCardProps> = ({
             {hotel.name}
           </h2>
 
-          <div
-            className="text-xs text-gray-500 overflow-hidden leading-relaxed font-medium"
-            style={{ maxHeight: "3.2rem" }}
-            dangerouslySetInnerHTML={{
-              __html:
-                formatDescription(hotel.description) ||
-                `A prestigious property offering world-class hospitality, verified contract rates, and handcrafted comfort in ${hotel.location || hotel.city}.`,
-            }}
-          />
+          <p className="text-xs text-gray-500 leading-relaxed font-medium line-clamp-2 mt-1">
+            {(hotel.description ? (
+              hotel.description
+                .replace(/<[^>]+>/g, " ")
+                .replace(/^[A-Z][\.\)]\s+/gm, "")
+                .replace(/^[iIvVxX]+[\.\)]\s+/gm, "")
+                .replace(/^#+\s+/gm, "")
+                .replace(/\*\*/g, "")
+                .replace(/[\r\n]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+            ) : "") ||
+              `A prestigious property offering world-class hospitality, verified contract rates, and handcrafted comfort in ${hotel.location || hotel.city}.`}
+          </p>
 
           <div className="pt-4 space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] font-black text-[#2D1347] uppercase tracking-wider">

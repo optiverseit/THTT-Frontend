@@ -17,12 +17,20 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Mail,
   Phone,
-  MessageCircle,
   ChevronDown,
   Facebook,
   Instagram,
   Youtube,
   Linkedin,
+  Plane,
+  Map,
+  Mountain,
+  Hotel,
+  FileText,
+  Bus,
+  Car,
+  Shield,
+  BadgeDollarSign,
 } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, type CurrencyMode } from "../../context/CurrencyContext";
@@ -30,6 +38,50 @@ import { useGlobalCurrency, type CurrencyMode } from "../../context/CurrencyCont
 // =============================================================================
 // Social Icons
 // =============================================================================
+
+export const WhatsAppIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 14,
+  className = "",
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.964 9.964 0 0 0 1.333 4.993L2 22l5.233-1.237a9.994 9.994 0 0 0 4.779 1.217h.004c5.505 0 9.988-4.478 9.989-9.984 0-2.669-1.037-5.176-2.925-7.062A9.925 9.925 0 0 0 12.012 2zm0 18.293h-.003a8.318 8.318 0 0 1-4.233-1.157l-.304-.18-3.146.744.757-3.067-.198-.314a8.308 8.308 0 0 1-1.272-4.335c0-4.588 3.733-8.318 8.324-8.318 2.223 0 4.312.865 5.884 2.435a8.272 8.272 0 0 1 2.432 5.885c0 4.59-3.733 8.32-8.324 8.32zm4.561-6.225c-.25-.125-1.478-.73-1.707-.813-.229-.083-.396-.125-.562.125-.167.25-.646.813-.792.979-.146.167-.292.188-.542.063s-1.06-.391-2.019-1.246c-.746-.665-1.25-1.488-1.396-1.738-.146-.25-.016-.385.109-.51.113-.112.25-.292.375-.438.125-.146.167-.25.25-.417.083-.167.042-.313-.021-.438s-.562-1.354-.771-1.854c-.203-.487-.41-.421-.562-.429h-.479c-.167 0-.438.063-.667.313s-.875.854-.875 2.083c0 1.229.896 2.417 1.021 2.583.125.167 1.762 2.69 4.269 3.773.596.258 1.061.412 1.424.527.599.19 1.144.163 1.575.099.48-.072 1.478-.604 1.687-1.188.208-.583.208-1.083.146-1.188-.063-.104-.229-.167-.479-.292z" />
+  </svg>
+);
+
+export const HelicopterIcon: React.FC<{ size?: number; color?: string; className?: string }> = ({
+  size = 15,
+  color = "#ffffff",
+  className = "",
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M4 4h16" />
+    <path d="M12 4v3" />
+    <path d="M6 10a4 4 0 0 1 4-3h4a4 4 0 0 1 4 4v2a2 2 0 0 1-2 2H9a3 3 0 0 1-3-3v-2z" />
+    <path d="M6 10l-4-2" />
+    <path d="M2 6.5v3" />
+    <path d="M8 15v3" />
+    <path d="M15 15v3" />
+    <path d="M5 18h14" />
+  </svg>
+);
 
 export const TikTokIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 13,
@@ -133,22 +185,104 @@ const TopBar: React.FC<TopBarProps> = () => {
   const whatsappTeams = useMemo(
     () => [
       {
+        icon: Plane,
+        iconColor: "#ffffff",
+        bgColor: "#2563eb",
+        hoverBg: "#1d4ed8",
+        label: "Air Ticketing Team",
+        phone: "9779851420882",
+        email: "dev.triphimalayatt@gmail.com",
+        message: "Hi Air Ticketing Team, I need help with air ticket booking.",
+      },
+      {
+        icon: Map,
+        iconColor: "#ffffff",
+        bgColor: "#7c3aed",
+        hoverBg: "#6d28d9",
         label: "Tours & Holidays Team",
         phone: "9779851403761",
-        status: "Available",
+        email: "pradip.triphimalayatt@gmail.com",
         message: "Hi Tours & Holidays Team, I'd like to plan a tour/holiday package.",
       },
       {
-        label: "Trekking & Adventure Activity",
+        icon: Mountain,
+        iconColor: "#ffffff",
+        bgColor: "#059669",
+        hoverBg: "#047857",
+        label: "Trekking & Adventure Team",
         phone: "9779851403761",
-        status: "Available",
+        email: "pradip.triphimalayatt@gmail.com",
         message: "Hi Trekking & Adventure Team, I need help with trekking/adventure activities.",
       },
       {
+        icon: Hotel,
+        iconColor: "#ffffff",
+        bgColor: "#d97706",
+        hoverBg: "#b45309",
+        label: "Hotel Booking Team",
+        phone: "9779851403761",
+        email: "pradip.triphimalayatt@gmail.com",
+        message: "Hi Hotel Booking Team, I need help with hotel reservations.",
+      },
+      {
+        icon: FileText,
+        iconColor: "#ffffff",
+        bgColor: "#dc2626",
+        hoverBg: "#b91c1c",
         label: "Visa & Documentation Team",
         phone: "9779851420882",
-        status: "Available",
+        email: "dev.triphimalayatt@gmail.com",
         message: "Hi Visa & Documentation Team, I need help with visa application and documentation.",
+      },
+      {
+        icon: Bus,
+        iconColor: "#ffffff",
+        bgColor: "#0891b2",
+        hoverBg: "#0e7490",
+        label: "Regular Route Team",
+        phone: "9779851356882",
+        email: "samarpan.triphimalayatt@gmail.com",
+        message: "Hi Regular Route Team, I need help with regular route transport.",
+      },
+      {
+        icon: Car,
+        iconColor: "#ffffff",
+        bgColor: "#7c3aed",
+        hoverBg: "#6d28d9",
+        label: "Vehicle Rental Team",
+        phone: "9779851356882",
+        email: "samarpan.triphimalayatt@gmail.com",
+        message: "Hi Vehicle Rental Team, I need help with vehicle rental services.",
+      },
+      {
+        icon: Shield,
+        iconColor: "#ffffff",
+        bgColor: "#0284c7",
+        hoverBg: "#0369a1",
+        label: "Travel Insurance Team",
+        phone: "9779851403760",
+        email: "pradip.triphimalayatt@gmail.com",
+        message: "Hi Travel Insurance Team, I need help with travel insurance.",
+      },
+      {
+        icon: HelicopterIcon,
+        iconColor: "#ffffff",
+        bgColor: "#db2777",
+        hoverBg: "#be185d",
+        label: "Heli Services Team",
+        phone: "9779851420882",
+        email: "dev.triphimalayatt@gmail.com",
+        message: "Hi Heli Services Team, I need help with helicopter service booking.",
+      },
+      {
+        icon: BadgeDollarSign,
+        iconColor: "#ffffff",
+        bgColor: "#16a34a",
+        hoverBg: "#15803d",
+        label: "Accounts & Billing Team",
+        phone: "9779851403759",
+        email: "actriphimalaya@gmail.com",
+        message: "Hi Accounts & Billing Team, I need help with billing and payments.",
       },
     ],
     []
@@ -220,11 +354,11 @@ const TopBar: React.FC<TopBarProps> = () => {
               <button
                 type="button"
                 onClick={() => setIsWhatsappDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-1 text-green-600 hover:text-green-700 transition-colors py-0.5 cursor-pointer font-medium"
+                className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 transition-colors py-0.5 cursor-pointer font-medium"
                 aria-expanded={isWhatsappDropdownOpen}
                 aria-label="Open WhatsApp team selector"
               >
-                <MessageCircle size={12} className="text-green-500" />
+                <WhatsAppIcon size={14} className="text-[#25D366]" />
                 <span>WhatsApp</span>
                 <ChevronDown
                   size={9}
@@ -233,30 +367,57 @@ const TopBar: React.FC<TopBarProps> = () => {
               </button>
 
               {isWhatsappDropdownOpen && (
-                <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-64 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden py-2">
-                  <div className="px-4 py-1.5 border-b border-gray-100">
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
-                      Chat with our team
-                    </p>
+                <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                  {/* Header */}
+                  <div className="px-4 py-2.5 border-b border-gray-100 bg-gradient-to-r from-emerald-50/70 via-green-50/30 to-white sticky top-0 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <WhatsAppIcon size={14} className="text-[#25D366]" />
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500">
+                        Chat with our team
+                      </p>
+                    </div>
+                    <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                      10 Teams
+                    </span>
                   </div>
-                  {whatsappTeams.map((team, index) => (
-                    <a
-                      key={index}
-                      href={buildWhatsAppLink(team.phone, team.message)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-purple-50 transition-colors group"
-                      onClick={() => setIsWhatsappDropdownOpen(false)}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors flex items-center justify-center flex-shrink-0">
-                        <MessageCircle size={15} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-xs text-gray-800">{team.label}</p>
-                        <p className="text-[10px] text-green-600 font-semibold">{team.status}</p>
-                      </div>
-                    </a>
-                  ))}
+                  {/* Scrollable list — 4 rows visible (~56px each), rest scrollable */}
+                  <div
+                    className="overflow-y-auto divide-y divide-gray-50"
+                    style={{ maxHeight: "228px" }}
+                  >
+                    {whatsappTeams.map((team, index) => {
+                      const IconComp = team.icon;
+                      return (
+                        <a
+                          key={index}
+                          href={buildWhatsAppLink(team.phone, team.message)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex items-center gap-3 px-4 py-2.5 hover:bg-emerald-50/40 transition-colors"
+                          onClick={() => setIsWhatsappDropdownOpen(false)}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105"
+                            style={{ backgroundColor: team.bgColor }}
+                          >
+                            <IconComp size={15} color={team.iconColor} strokeWidth={2.5} />
+                          </div>
+                          <div className="min-w-0 flex-1 pr-1">
+                            <p className="font-bold text-[11px] text-gray-800 truncate leading-tight group-hover:text-emerald-700 transition-colors">
+                              {team.label}
+                            </p>
+                            <p className="text-[9.5px] text-gray-500 truncate mt-0.5 select-all">
+                              {team.email}
+                            </p>
+                          </div>
+                          <div className="ml-auto flex items-center gap-1 bg-emerald-50 group-hover:bg-[#25D366] text-emerald-700 group-hover:text-white border border-emerald-200/80 group-hover:border-[#25D366] px-2 py-0.5 rounded-full text-[9px] font-bold transition-all flex-shrink-0 shadow-xs">
+                            <WhatsAppIcon size={10} className="text-[#25D366] group-hover:text-white transition-colors" />
+                            <span>Chat</span>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

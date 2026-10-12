@@ -231,6 +231,16 @@ export const getPackageHighlights = (
   );
 };
 
+export const getPublicPackageTestimonials = (packageId: string | number) => {
+  return axiosInstance.get(`/package-public-testimonials/${packageId}`);
+};
+export const getPublicPackagePolicies = (packageId: string | number) => {
+  return axiosInstance.get(`/package-public-policies/${packageId}`);
+};
+export const getPublicPackageGallery = (packageId: string | number) => {
+  return axiosInstance.get(`/package-public-gallery/${packageId}`);
+};
+
 // Helper: derive backend root URL (strips trailing /api from VITE_BASE_URL)
 // e.g.  https://thtt-backend.onrender.com/api  →  https://thtt-backend.onrender.com
 const getBackendRootUrl = () =>

@@ -5,22 +5,33 @@ import { Star, CheckCircle2 } from "lucide-react";
 import PackagePricing from "./PackagePricing";
 
 interface TestimonialProp {
-  allTestimonies?: Package["testimonies"];
+  allTestimonies?: any[];
   pkg: Package;
 }
 
 type SortType = "recent" | "highest" | "lowest";
 
 const PackageTestimonial: React.FC = () => {
-  const { allTestimonies = [], pkg } = useOutletContext<TestimonialProp>();
+  const context = useOutletContext<TestimonialProp>() || {};
+  const { pkg } = context;
+  const allTestimonies =
+    (Array.isArray(context.allTestimonies) && context.allTestimonies.length > 0)
+      ? context.allTestimonies
+      : (Array.isArray((pkg as any)?.testimonies) && (pkg as any).testimonies.length > 0)
+      ? (pkg as any).testimonies
+      : (Array.isArray((pkg as any)?.testimonials) && (pkg as any).testimonials.length > 0)
+      ? (pkg as any).testimonials
+      : [];
   const [sortBy, setSortBy] = useState<SortType>("recent");
 
   const defaultTestimonies = [
     {
       id: "t1",
       userName: "Alexander Wright",
+      name: "Alexander Wright",
       userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150",
       location: "United Kingdom",
+      country: "United Kingdom",
       rating: 5,
       date: "August 2026",
       comment: "Absolutely breathtaking experience! The pilot was extremely experienced and made me feel safe throughout the whole flight. The GoPro footage was fantastic!",
@@ -28,8 +39,10 @@ const PackageTestimonial: React.FC = () => {
     {
       id: "t2",
       userName: "Sophia Martinez",
+      name: "Sophia Martinez",
       userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
       location: "Spain",
+      country: "Spain",
       rating: 5,
       date: "July 2026",
       comment: "Best highlight of our trip to Nepal! Seamless hotel pickup and flawless coordination by Trip Himalaya team. Highly recommend!",
@@ -43,9 +56,9 @@ const PackageTestimonial: React.FC = () => {
 
     switch (sortBy) {
       case "highest":
-        return sorted.sort((a, b) => b.rating - a.rating);
+        return sorted.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
       case "lowest":
-        return sorted.sort((a, b) => a.rating - b.rating);
+        return sorted.sort((a, b) => Number(a.rating || 0) - Number(b.rating || 0));
       case "recent":
       default:
         return sorted;
@@ -55,7 +68,7 @@ const PackageTestimonial: React.FC = () => {
   const averageRating =
     testimonies.length > 0
       ? (
-          testimonies.reduce((acc, t) => acc + t.rating, 0) /
+          testimonies.reduce((acc: number, t: any) => acc + Number(t.rating || 5), 0) /
           testimonies.length
         ).toFixed(1)
       : "4.9";
@@ -133,7 +146,7 @@ const PackageTestimonial: React.FC = () => {
 
           {/* Testimonials List */}
           <div className="space-y-4">
-            {sortedTestimonials.map((t) => (
+            {sortedTestimonials.map((t: any) => (
               <div
                 key={t.id}
                 className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 hover:border-pink-100 transition-all space-y-4"
@@ -143,18 +156,21 @@ const PackageTestimonial: React.FC = () => {
                     <img
                       src={
                         t.userAvatar ||
+                        t.avatar ||
+                        t.image ||
+                        t.photo ||
                         "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"
                       }
-                      alt={t.userName}
+                      alt={t.userName || t.name || "Traveler"}
                       className="w-12 h-12 rounded-full object-cover border-2 border-pink-100 shadow-xs"
                     />
                     <div>
                       <h4 className="font-extrabold text-sm sm:text-base text-[#200B3B] flex items-center gap-1.5">
-                        <span>{t.userName}</span>
+                        <span>{t.userName || t.name || "Verified Traveler"}</span>
                         <CheckCircle2 size={14} className="text-emerald-500" />
                       </h4>
                       <p className="text-xs text-gray-400 font-medium">
-                        {t.location || "Nepal"} • Verified Traveler
+                        {t.location || t.country || "Nepal"} • Verified Traveler
                       </p>
                     </div>
                   </div>
@@ -167,7 +183,7 @@ const PackageTestimonial: React.FC = () => {
                           key={index}
                           size={14}
                           className={
-                            index < t.rating
+                            index < Number(t.rating || 5)
                               ? "text-yellow-400 fill-yellow-400"
                               : "text-gray-200"
                           }
@@ -175,14 +191,14 @@ const PackageTestimonial: React.FC = () => {
                       ))}
                     </div>
                     <span className="text-[11px] font-semibold text-gray-400 mt-1 block">
-                      {t.date}
+                      {t.date || "Recent"}
                     </span>
                   </div>
                 </div>
 
                 <div className="relative pl-4 border-l-2 border-[#E91E63]/40">
                   <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium">
-                    "{t.comment}"
+                    "{t.comment || t.review || t.message || ""}"
                   </p>
                 </div>
               </div>

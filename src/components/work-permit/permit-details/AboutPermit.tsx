@@ -64,85 +64,83 @@ const AboutPermit = ({
   ];
 
   return (
-    <div className="col-span-1 lg:col-span-2">
-      <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-300">
-        <div className="p-5 sm:p-8 md:p-10">
-          <div>
-            <header className="flex items-center gap-2">
-              <FileText
-                size={18}
-                className="text-pink-500"
-              />
-
-              <p className="text-purple-950 text-lg sm:text-xl font-bold mb-2">
-                About {country.country_name} Permit
-              </p>
-            </header>
-
-            <div
-              className="text-gray-600 font-medium py-2 sm:py-3 mb-4 sm:mb-6 text-xs sm:text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{
-                __html:
-                  formatDescription(country.short_description) ||
-                  "No description available.",
-              }}
-            />
+    <div className="col-span-1 lg:col-span-2 flex flex-col gap-6">
+      {/* ── CARD 1: ABOUT PERMIT ── */}
+      <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-200 border border-gray-100 p-6 sm:p-8">
+        <header className="flex items-center gap-2.5 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0">
+            <FileText size={18} />
           </div>
+          <h2 className="text-purple-950 text-lg sm:text-xl font-bold">
+            About {country.country_name} Permit
+          </h2>
+        </header>
 
-          <div className="flex flex-col sm:flex-row w-full justify-between gap-6">
-            <div className="w-full sm:w-[48%]">
-              <h1 className="flex items-center gap-2 text-purple-950 font-bold text-base sm:text-xl">
-                <CircleCheck
-                  size={16}
-                  className="text-green-500 flex-shrink-0"
-                />
-                REQUIREMENT DOCUMENTS
-              </h1>
+        <div
+          className="text-gray-600 font-medium text-xs sm:text-sm leading-relaxed"
+          dangerouslySetInnerHTML={{
+            __html:
+              formatDescription(country.short_description) ||
+              "No description available.",
+          }}
+        />
+      </div>
 
-              {documentRequirements.length > 0 ? (
-                <ul className="list-disc marker:text-pink-500 list-inside mt-2">
-                  {documentRequirements.map(
-                    (document) => (
-                      <li
-                        key={document.id}
-                        className="text-gray-500 font-semibold mb-1 text-sm sm:text-base"
-                      >
-                        {document.title}
-                        {!document.is_required &&
-                          " (Optional)"}
-                      </li>
-                    )
-                  )}
-                </ul>
-              ) : (
-                <p className="text-gray-400 font-semibold mt-2 text-sm">
-                  No document requirements available.
-                </p>
-              )}
-            </div>
-
-            <div className="w-full sm:w-[48%]">
-              <h1 className="flex items-center gap-2 text-purple-950 font-bold text-base sm:text-xl">
-                <Zap
-                  size={16}
-                  className="text-pink-500 flex-shrink-0"
-                />
-                WHAT&apos;S INCLUDED
-              </h1>
-
-              <ul className="list-disc marker:text-green-500 list-inside mt-2">
-                {included.map((item, index) => (
-                  <li
-                    key={index}
-                    className="text-gray-500 font-semibold mb-1 text-sm sm:text-base"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* ── CARD 2: REQUIREMENT DOCUMENTS ── */}
+      <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-200 border border-gray-100 p-6 sm:p-8">
+        <header className="flex items-center gap-2.5 mb-3.5">
+          <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-600 flex-shrink-0">
+            <CircleCheck size={18} />
           </div>
-        </div>
+          <h2 className="text-purple-950 font-bold text-base sm:text-xl tracking-tight">
+            REQUIREMENT DOCUMENTS
+          </h2>
+        </header>
+
+        {documentRequirements.length > 0 ? (
+          <ul className="list-disc marker:text-pink-500 list-inside space-y-2 mt-2">
+            {documentRequirements.map((document) => (
+              <li
+                key={document.id}
+                className="text-gray-600 font-semibold text-sm sm:text-base"
+              >
+                {document.title}
+                {!document.is_required && (
+                  <span className="text-gray-400 font-normal text-xs ml-1">
+                    (Optional)
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-400 font-semibold text-sm">
+            No document requirements available.
+          </p>
+        )}
+      </div>
+
+      {/* ── CARD 3: WHAT'S INCLUDED ── */}
+      <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-200 border border-gray-100 p-6 sm:p-8">
+        <header className="flex items-center gap-2.5 mb-3.5">
+          <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0">
+            <Zap size={18} />
+          </div>
+          <h2 className="text-purple-950 font-bold text-base sm:text-xl tracking-tight">
+            WHAT&apos;S INCLUDED
+          </h2>
+        </header>
+
+        <ul className="list-disc marker:text-green-500 list-inside space-y-2 mt-2">
+          {included.map((item, index) => (
+            <li
+              key={index}
+              className="text-gray-600 font-semibold text-sm sm:text-base"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* POLICY */}

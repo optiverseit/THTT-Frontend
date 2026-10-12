@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useSearchParams, useLocation, Link } from "react-router-dom";
 import PermitBanner from "./PermitBanner";
 import AboutPermit from "./AboutPermit";
 import CostDetails from "./CostDetails";
@@ -8,7 +8,11 @@ import { services } from "../../../assets/data/mockData";
 import WorkPermitModal from "../WorkPermitModal";
 import WorkPermitPrintDossier from "./WorkPermitPrintDossier";
 import { Globe } from "lucide-react";
-import { getWorkPermitDocumentRequirementsByType } from "../../../api/BackendApi";
+import {
+  getWorkPermitDocumentRequirementsByType,
+  getPermitFeeTiers,
+} from "../../../api/BackendApi";
+import { isSessionValid } from "../../../utils/sessionManager";
 
 interface Country {
   id: number;
@@ -35,9 +39,27 @@ export interface DocumentRequirement {
   country?: Country;
 }
 
+export interface PermitFeeTier {
+  id: number;
+  country_id: number;
+  permit_type: string;
+  age_group_label: string;
+  min_age: number;
+  max_age: number | null;
+  welfare_fund_npr: string;
+  ssf_contribution_npr: string;
+  insurance_premium_npr: string;
+  service_fee_npr: string;
+  total_cost_npr: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 const WorkPermitDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const rawPermitType = searchParams.get("permitType") || "NEW_LABOUR_PERMIT";
   const apiPermitType = rawPermitType;
@@ -45,7 +67,46 @@ const WorkPermitDetails = () => {
 
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [documentRequirements, setDocumentRequirements] = useState<DocumentRequirement[]>([]);
+  const [feeTiers, setFeeTiers] = useState<PermitFeeTier[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasRestoredPostLoginRef = useRef(false);
+
+  // Restore post-login state to automatically open the modal after successful login
+  useEffect(() => {
+    if (loading || !selectedCountry || hasRestoredPostLoginRef.current) return;
+
+    let shouldOpen = false;
+    const locationState = location.state as { openWorkPermitModal?: boolean } | null;
+    if (locationState?.openWorkPermitModal) {
+      shouldOpen = true;
+    } else {
+      try {
+        const stored = sessionStorage.getItem("post_login_state");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.openWorkPermitModal) {
+            shouldOpen = true;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse post_login_state", e);
+      }
+    }
+
+    if (shouldOpen && isSessionValid()) {
+      hasRestoredPostLoginRef.current = true;
+      try {
+        sessionStorage.removeItem("post_login_state");
+      } catch (e) {
+        console.error("Failed to clear post_login_state", e);
+      }
+
+      setTimeout(() => {
+        const modal = document.getElementById("work_permit_modal") as HTMLDialogElement;
+        modal?.showModal();
+      }, 300);
+    }
+  }, [loading, selectedCountry, location.state]);
 
   useEffect(() => {
     const fetchPermitDetails = async () => {
@@ -69,6 +130,7 @@ const WorkPermitDetails = () => {
         if (!Array.isArray(requirements) || requirements.length === 0) {
           setSelectedCountry(null);
           setDocumentRequirements([]);
+          setFeeTiers([]);
           return;
         }
 
@@ -76,10 +138,24 @@ const WorkPermitDetails = () => {
 
         const countryData = requirements[0]?.country ?? null;
         setSelectedCountry(countryData);
+
+        if (countryData?.id) {
+          try {
+            const feeResponse = await getPermitFeeTiers(countryData.id, apiPermitType);
+            const tiers = feeResponse.data?.data?.data ?? [];
+            setFeeTiers(Array.isArray(tiers) ? tiers : []);
+          } catch (err) {
+            console.error("Failed to fetch permit fee tiers in WorkPermitDetails:", err);
+            setFeeTiers([]);
+          }
+        } else {
+          setFeeTiers([]);
+        }
       } catch (error) {
         console.error("Failed to fetch work permit details:", error);
         setSelectedCountry(null);
         setDocumentRequirements([]);
+        setFeeTiers([]);
       } finally {
         setLoading(false);
       }
@@ -130,6 +206,9 @@ const WorkPermitDetails = () => {
       <WorkPermitPrintDossier
         id={id}
         country={selectedCountry}
+        permitType={apiPermitType}
+        documentRequirements={documentRequirements}
+        feeTiers={feeTiers}
       />
 
       <div className="print:hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

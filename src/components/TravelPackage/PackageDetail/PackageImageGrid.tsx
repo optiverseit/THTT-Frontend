@@ -6,11 +6,9 @@ import { useGlobalCurrency } from "../../../context/CurrencyContext";
 import ShareModal from "../../reusable/ShareModal";
 import Logo from "../../../assets/images/Logo.png";
 import { formatDescription } from "../../../utils/formatDescription";
-
 interface PackageProp {
   pkg: any;
 }
-
 const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const [copied, setCopied] = useState<boolean>(false);
@@ -18,7 +16,6 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
-
   const handlePrint = () => {
     const originalTitle = document.title;
     const packageTitle = pkg.title || "Travel Package";
@@ -35,50 +32,26 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
       document.title = originalTitle;
     }, 2000);
   };
-
   const basePackagePriceNPR = Number(pkg.price || 0);
-
   const startsFromDisplayPrice = `NPR ${basePackagePriceNPR.toLocaleString(
     "en-IN",
     {
       maximumFractionDigits: 0,
     }
   )}`;
-
   const navigate = useNavigate();
   const location = useLocation();
-
-  const defaultFallbacks = [
-    pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
-    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-    "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
-  ];
-
+  const mainImage = pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600";
   const rawGallery = Array.isArray(pkg.gallery)
-    ? pkg.gallery
-        .map((g: any) => (typeof g === "string" ? g : (g?.image_url || g?.image || g?.url || "")))
-        .filter(Boolean)
+    ? pkg.gallery.map((g: any) => typeof g === "string" ? g : (g?.image_url || g?.image || g?.url || "")).filter(Boolean)
     : [];
-
-  const galleryImages =
-    rawGallery.length >= 5
-      ? rawGallery
-      : rawGallery.length > 0
-      ? [
-          ...rawGallery,
-          ...defaultFallbacks.filter((img) => !rawGallery.includes(img)),
-        ].slice(0, Math.max(5, rawGallery.length))
-      : defaultFallbacks;
-
+  const galleryImages = [mainImage, ...rawGallery];
   const outletItems = [
     { name: "OVERVIEW", path: `/details/${pkg.id}` },
     { name: "POLICIES", path: `/details/${pkg.id}/policies` },
     { name: "FAQS", path: `/details/${pkg.id}/faqs` },
     { name: "TESTIMONIES", path: `/details/${pkg.id}/testimonies` },
   ];
-
   const isTabActive = (tabPath: string) => {
     if (tabPath === `/details/${pkg.id}`) {
       return (
@@ -88,34 +61,27 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     }
     return location.pathname.startsWith(tabPath);
   };
-
   const openLightbox = (index: number) => {
     setCurrentImageIndex(index);
     setLightboxOpen(true);
   };
-
   const nextImage = () =>
     setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
-
   const prevImage = () =>
     setCurrentImageIndex(
       (prev) => (prev - 1 + galleryImages.length) % galleryImages.length
     );
-
   const isTour = pkg.type === "tour";
   const isActivity = pkg.type === "activity" || pkg.type === "combo";
   const isTrekking = pkg.type === "trekking";
-
   const contactTeam = isTour
     ? "Tours & Holidays Team"
     : isActivity
       ? "Adventure Activity Team"
       : "Trekking & Adventure Activity Team";
-
   const contactPhone = "+977 9851403761";
   const contactEmail = "pradip.triphimalayatt@gmail.com";
   const contactWhatsApp = "9779851403761";
-
   const handleWhatsAppInquiry = () => {
     const locationInfo = pkg.location ? ` (${pkg.location})` : "";
     const durationInfo = pkg.duration ? ` - Duration: ${pkg.duration}.` : "";
@@ -125,44 +91,31 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     );
     window.open(`https://wa.me/${contactWhatsApp}?text=${msg}`, "_blank", "noopener,noreferrer");
   };
-
   const categoryLabel =
     pkg.type === "trekking" ? "Trekking" :
       pkg.type === "tour" ? "Tour Package" :
         pkg.type === "activity" ? "Adventure Activity" :
           pkg.category === "international" ? "International" : "Experience";
-
   const categoryColor =
     pkg.type === "trekking" ? "bg-emerald-500" :
       pkg.type === "tour" ? "bg-blue-500" :
         pkg.type === "activity" ? "bg-[#E91E63]" : "bg-purple-500";
-
   const packageIconText =
     pkg.type === "trekking" ? "T" :
       pkg.type === "tour" ? "T" :
         pkg.type === "activity" ? "A" : "P";
-
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
-
   /* ── Comprehensive data fallback lists for complete PDF / Print dossier ── */
 const printingTable = Array.isArray(pkg.pricingTable) ? pkg.pricingTable : [];
-
 const itineraryList = Array.isArray(pkg.allItenary) ? pkg.allItenary : [];
-
 const highlightsList = Array.isArray(pkg.highlights) ? pkg.highlights : [];
-
 const includesList = Array.isArray(pkg.allIncludes) ? pkg.allIncludes : [];
-
 const excludesList = Array.isArray(pkg.allExcludes) ? pkg.allExcludes : [];
-
 const restrictionsList = Array.isArray(pkg.restrictions) ? pkg.restrictions : [];
-
 const whatToBringList = Array.isArray(pkg.whatToBring) ? pkg.whatToBring : [];
-
 const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
   return (
     <div className="w-full bg-[#FBFBFE]">
-
       {/* ══════════════════════════════════════════════════════════
           PRINT-ONLY COMPREHENSIVE DOSSIER & QUOTATION
           Includes all details: Itinerary, Inclusions, Exclusions,
@@ -215,7 +168,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             Trip Himalaya Tours and Travels
           </div>
         </div>
-
         {/* ── 1. CORPORATE LETTERHEAD ── */}
         <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "10px 10px 0 0", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -262,7 +214,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
         {/* Project brand accent strip */}
         <div style={{ height: "4px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "10px" }} />
-
         {/* ── PACKAGE SUMMARY & OVERVIEW CARD ── */}
         <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
@@ -286,7 +237,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             <span dangerouslySetInnerHTML={{ __html: formatDescription(pkg.description) || `Discover the breathtaking beauty and thrilling experiences of ${pkg.title}. Carefully curated by Trip Himalaya with licensed guides, premier equipment, and unforgettable Himalayan views.` }} />
           </div>
         </div>
-
         {/* ── SECTION 1: PRICING SCHEDULE ── */}
         <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "5px" }}>
@@ -316,7 +266,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             * Rates include certified pilot/guide fees, all safety gear, hotel pickup/drop within city, local tax, and emergency support.
           </div>
         </div>
-
         {/* ── SECTION 2: DAY-BY-DAY / STEP-BY-STEP ITINERARY ── */}
         <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
@@ -360,7 +309,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             ))}
           </div>
         </div>
-
         {/* ── SECTION 3: TRIP HIGHLIGHTS ── */}
         <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
@@ -377,7 +325,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             </div>
           </div>
         </div>
-
         {/* ── SECTION 4: INCLUSIONS & EXCLUSIONS (2 columns) ── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
           {/* What's Included */}
@@ -394,7 +341,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               ))}
             </div>
           </div>
-
           {/* What's Excluded */}
           <div style={{ border: "1.5px solid #fecdd3", borderRadius: "6px", padding: "8px 10px", background: "#fff1f2" }}>
             <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "3px", marginBottom: "5px" }}>
@@ -410,7 +356,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             </div>
           </div>
         </div>
-
         {/* ── SECTION 5: SAFETY GUIDELINES, RESTRICTIONS & WHAT TO BRING (2 columns) ── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
           {/* Restrictions */}
@@ -427,7 +372,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
               ))}
             </div>
           </div>
-
           {/* What to Bring */}
           <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
             <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
@@ -443,7 +387,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             </div>
           </div>
         </div>
-
         {/* ── SECTION 6: FREQUENTLY ASKED QUESTIONS ── */}
         <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
@@ -460,7 +403,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             </div>
           </div>
         </div>
-
         {/* ── SECTION 7: BOOKING TERMS & CANCELLATION POLICIES ── */}
         <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 10px", marginBottom: "10px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
@@ -473,7 +415,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             <div><strong style={{ color: "#2D1347" }}>Insurance &amp; Safety:</strong> Personal travel insurance is mandatory. Participants must follow instructor instructions at all times.</div>
           </div>
         </div>
-
         {/* ── CORPORATE FOOTER ── */}
         <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "8px 14px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8.5px", color: "#ffffff" }}>
           <div>
@@ -487,22 +428,19 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           </div>
         </div>
       </div>
-
       {/* HERO HEADER — visa-page style */}
       <div
         className="print:hidden relative overflow-hidden shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end"
         style={{
-          backgroundImage: `url('${galleryImages[0]}')`,
+          backgroundImage: `url('${mainImage}')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40" />
-
         <div className="relative z-10 p-4 sm:p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
             {/* Left: title + meta */}
             <div className="min-w-0 flex-1 pr-12 sm:pr-14 md:pr-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -530,7 +468,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
                 </span>
               </div>
             </div>
-
             {/* CTA Buttons — bottom on mobile, right on desktop */}
             <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-0 md:mr-3 lg:mr-6 xl:mr-8">
               <button
@@ -552,10 +489,8 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
                 <span>Print / Save PDF</span>
               </button>
             </div>
-
           </div>
         </div>
-
         {/* Share button — top-right corner of hero */}
         <div className="absolute top-8 right-4 sm:top-10 sm:right-8 md:top-16 md:right-11 lg:right-14 xl:right-16 z-20">
           {isShareOpen && (
@@ -666,10 +601,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             <Share2 size={15} />
           </button>
         </div>
-
-
       </div>
-
       {/* THUMBNAIL GRID — compact 4-col single row on mobile, wide layout on desktop */}
       <div className="print:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
         {/* Mobile: 4-col single row with small thumbnails containing much less vertical space */}
@@ -696,27 +628,26 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
         {/* Tablet/Desktop: original wide layout */}
         <div className="hidden sm:grid grid-cols-12 gap-3 w-full">
-          <div onClick={() => openLightbox(1)} className="col-span-3 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+          {galleryImages[1] && <div onClick={() => openLightbox(1)} className="col-span-3 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
             <img src={galleryImages[1]} alt={`${pkg.title} 2`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-          </div>
-          <div onClick={() => openLightbox(2)} className="col-span-6 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+          </div>}
+          {galleryImages[2] && <div onClick={() => openLightbox(2)} className="col-span-6 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
             <img src={galleryImages[2]} alt={`${pkg.title} 3`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-          </div>
-          <div className="col-span-3 flex flex-col gap-2 h-36 md:h-40">
-            <div onClick={() => openLightbox(3)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+          </div>}
+          {(galleryImages[3] || galleryImages[4]) && <div className="col-span-3 flex flex-col gap-2 h-36 md:h-40">
+            {galleryImages[3] && <div onClick={() => openLightbox(3)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
               <img src={galleryImages[3]} alt={`${pkg.title} 4`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-            </div>
-            <div onClick={() => openLightbox(4)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+            </div>}
+            {galleryImages[4] && <div onClick={() => openLightbox(4)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
               <img src={galleryImages[4]} alt={`${pkg.title} 5`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-            </div>
-          </div>
+            </div>}
+          </div>}
         </div>
       </div>
-
       {/* SUB-NAVIGATION & PRICING BAR */}
       <div className="print:hidden w-full bg-white border-y border-gray-100 shadow-sm relative z-10 mt-3 sm:mt-6">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -758,7 +689,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           </div>
         </div>
       </div>
-
       {/* LIGHTBOX */}
       {lightboxOpen && (
         <div className="print:hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
@@ -777,7 +707,6 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           </button>
         </div>
       )}
-
       {/* Share Modal */}
       <ShareModal
         isOpen={isShareModalOpen}
@@ -792,5 +721,4 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
     </div>
   );
 };
-
 export default PackageImageGrid;

@@ -61,7 +61,7 @@ const PackageTestimonial: React.FC = () => {
         return sorted.sort((a, b) => Number(a.rating || 0) - Number(b.rating || 0));
       case "recent":
       default:
-        return sorted;
+        return sorted.sort((a, b) => new Date(b.review_date || b.created_at || b.date || 0).getTime() - new Date(a.review_date || a.created_at || a.date || 0).getTime());
     }
   }, [testimonies, sortBy]);
 
@@ -155,22 +155,23 @@ const PackageTestimonial: React.FC = () => {
                   <div className="flex items-center gap-3.5">
                     <img
                       src={
+                        t.profile_image ||
                         t.userAvatar ||
                         t.avatar ||
                         t.image ||
                         t.photo ||
                         "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"
                       }
-                      alt={t.userName || t.name || "Traveler"}
+                      alt={t.traveler_name || t.userName || t.name || "Traveler"}
                       className="w-12 h-12 rounded-full object-cover border-2 border-pink-100 shadow-xs"
                     />
                     <div>
                       <h4 className="font-extrabold text-sm sm:text-base text-[#200B3B] flex items-center gap-1.5">
-                        <span>{t.userName || t.name || "Verified Traveler"}</span>
-                        <CheckCircle2 size={14} className="text-emerald-500" />
+                        <span>{t.traveler_name || t.userName || t.name || "Traveler"}</span>
+                        {t.is_verified === true && <CheckCircle2 size={14} className="text-emerald-500" />}
                       </h4>
                       <p className="text-xs text-gray-400 font-medium">
-                        {t.location || t.country || "Nepal"} • Verified Traveler
+                        {t.location || t.country || "Nepal"}{t.is_verified === true ? " • Verified Traveler" : ""}
                       </p>
                     </div>
                   </div>
@@ -191,7 +192,7 @@ const PackageTestimonial: React.FC = () => {
                       ))}
                     </div>
                     <span className="text-[11px] font-semibold text-gray-400 mt-1 block">
-                      {t.date || "Recent"}
+                      {t.review_date ? new Date(`${t.review_date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : t.date || "Recent"}
                     </span>
                   </div>
                 </div>

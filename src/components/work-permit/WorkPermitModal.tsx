@@ -97,6 +97,8 @@ const WorkPermitModal = ({
   const [applicationId, setApplicationId] = useState("");
   const [workPermitId, setWorkPermitId] = useState<number | null>(null);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [missingDocTypes, setMissingDocTypes] = useState<Record<string, boolean>>({});
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"esewa" | "pay_later">("esewa");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -240,6 +242,27 @@ useEffect(() => {
     documentType: string,
     file: File | null
   ) => {
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setStepErrors([`File "${file.name}" exceeds the maximum limit of 10MB.`]);
+        return;
+      }
+      const allowedExt = ["jpg", "jpeg", "png", "pdf"];
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      if (!allowedExt.includes(ext)) {
+        setStepErrors([`File "${file.name}" has an unsupported format. Only JPG, PNG, and PDF are allowed.`]);
+        return;
+      }
+    }
+    // Clear missing document error for this doc
+    if (missingDocTypes[documentType]) {
+      setMissingDocTypes((prev) => {
+        const next = { ...prev };
+        delete next[documentType];
+        return next;
+      });
+    }
+    setStepErrors((prev) => prev.filter((err) => !err.toLowerCase().includes(documentType.toLowerCase())));
     setFormData((prev) => ({
       ...prev,
       files: {
@@ -249,6 +272,13 @@ useEffect(() => {
     }));
   };
   const handleConvert = (value: string) => {
+    if (fieldErrors.adDate) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.adDate;
+        return next;
+      });
+    }
     if (!value) {
       setFormData((prev) => ({
         ...prev,
@@ -268,6 +298,10 @@ useEffect(() => {
         bsDate: "Invalid (Future Date)",
         age: -1,
       }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        adDate: "Date of birth cannot be in the future",
+      }));
       return;
     }
     // Accurate Age Calculation
@@ -275,6 +309,17 @@ useEffect(() => {
     const monthDiff = now.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
       calculatedAge--;
+    }
+    if (calculatedAge < 18) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        adDate: "Applicant must be at least 18 years of age for foreign employment",
+      }));
+    } else if (calculatedAge > 75) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        adDate: "Applicant exceeds maximum working age limit (75 years)",
+      }));
     }
     // Attempt BS conversion without throwing or wiping age
     let bs = "";
@@ -310,74 +355,171 @@ useEffect(() => {
         ...prev,
         [name]: checked,
       }));
+    } else if (name === "passportNumber") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value.toUpperCase(),
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
     }
+    // Clear field-specific error as user types
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
   const validateStepA = () => {
     const errors: string[] = [];
+    const newFieldErrors: Record<string, string> = {};
     let firstErrorFieldId: string | null = null;
+
+    // Full Name
     if (!formData.name.trim()) {
-      errors.push("Full Name is required");
+      const msg = "Full Name is required";
+      errors.push(msg);
+      newFieldErrors.name = msg;
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_name";
+    } else if (formData.name.trim().length < 3) {
+      const msg = "Full Name must be at least 3 characters";
+      errors.push(msg);
+      newFieldErrors.name = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_name";
     }
+
+    // Email Address
+    if (!formData.email.trim()) {
+      const msg = "Email address is required";
+      errors.push(msg);
+      newFieldErrors.email = msg;
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      const msg = "Please enter a valid email address (e.g. name@example.com)";
+      errors.push(msg);
+      newFieldErrors.email = msg;
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
+    }
+
+    // Passport Number
     if (!formData.passportNumber.trim()) {
-      errors.push("Passport Number is required");
+      const msg = "Passport Number is required";
+      errors.push(msg);
+      newFieldErrors.passportNumber = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_passportNumber";
     } else if (!/^[A-Za-z0-9]{6,20}$/.test(formData.passportNumber.trim())) {
-      errors.push("Passport Number must be 6–20 alphanumeric characters");
+      const msg = "Passport Number must be 6–20 alphanumeric characters";
+      errors.push(msg);
+      newFieldErrors.passportNumber = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_passportNumber";
     }
+
+    // Passport Expiry Date
     if (!formData.passportExpiryDate) {
-      errors.push("Passport Expiry Date is required");
+      const msg = "Passport Expiry Date is required";
+      errors.push(msg);
+      newFieldErrors.passportExpiryDate = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_passportExpiryDate";
+    } else {
+      const expiry = new Date(formData.passportExpiryDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (isNaN(expiry.getTime())) {
+        const msg = "Please enter a valid Passport Expiry Date";
+        errors.push(msg);
+        newFieldErrors.passportExpiryDate = msg;
+        if (!firstErrorFieldId) firstErrorFieldId = "wp_passportExpiryDate";
+      } else if (expiry < today) {
+        const msg = "Passport has expired. Expiry date cannot be in the past.";
+        errors.push(msg);
+        newFieldErrors.passportExpiryDate = msg;
+        if (!firstErrorFieldId) firstErrorFieldId = "wp_passportExpiryDate";
+      }
     }
-    if (!formData.email.trim()) {
-      errors.push("Email is required");
-      if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.push("Please enter a valid email address");
-      if (!firstErrorFieldId) firstErrorFieldId = "wp_email";
-    }
+
+    // Phone / WhatsApp Number
     const cleanPhone = formData.phone.replace(/[\s\-]/g, "");
     if (!cleanPhone) {
-      errors.push("Phone / WhatsApp number is required");
+      const msg = "Phone / WhatsApp number is required";
+      errors.push(msg);
+      newFieldErrors.phone = msg;
+      if (!firstErrorFieldId) firstErrorFieldId = "wp_phone";
+    } else if (formData.phoneCode === "+977" && !/^\d{10}$/.test(cleanPhone)) {
+      const msg = "Nepal mobile number must be 10 digits";
+      errors.push(msg);
+      newFieldErrors.phone = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_phone";
     } else if (!/^\d{6,15}$/.test(cleanPhone)) {
-      errors.push("Phone must be a valid number (6–15 digits)");
+      const msg = "Phone must be a valid number (6–15 digits)";
+      errors.push(msg);
+      newFieldErrors.phone = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_phone";
     }
+
+    // Destination Country
     if (!formData.countryId) {
-      errors.push("Destination Country is required");
+      const msg = "Destination Country is required";
+      errors.push(msg);
+      newFieldErrors.countryId = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_countryId";
     }
+
+    // Date of Birth
     if (!formData.adDate) {
-      errors.push("Date of birth is required");
+      const msg = "Date of birth is required";
+      errors.push(msg);
+      newFieldErrors.adDate = msg;
       if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
-    } else if (formData.age !== null && formData.age < 0) {
-      errors.push("Date of birth cannot be in the future");
-      if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
-    } else if (formData.age !== null && formData.age < 18) {
-      errors.push("Applicant must be at least 18 years of age for foreign employment");
-      if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
+    } else {
+      const dob = new Date(formData.adDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (isNaN(dob.getTime())) {
+        const msg = "Please enter a valid Date of Birth";
+        errors.push(msg);
+        newFieldErrors.adDate = msg;
+        if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
+      } else if (dob > today || (formData.age !== null && formData.age < 0)) {
+        const msg = "Date of birth cannot be in the future";
+        errors.push(msg);
+        newFieldErrors.adDate = msg;
+        if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
+      } else if (formData.age !== null && formData.age < 18) {
+        const msg = "Applicant must be at least 18 years of age for foreign employment";
+        errors.push(msg);
+        newFieldErrors.adDate = msg;
+        if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
+      } else if (formData.age !== null && formData.age > 75) {
+        const msg = "Applicant exceeds maximum working age limit (75 years)";
+        errors.push(msg);
+        newFieldErrors.adDate = msg;
+        if (!firstErrorFieldId) firstErrorFieldId = "wp_adDate";
+      }
     }
+
+    setFieldErrors(newFieldErrors);
     setStepErrors(errors);
     return { isValid: errors.length === 0, firstErrorFieldId, errors };
   };
   const validateStepB = () => {
     const errors: string[] = [];
+    const missingDocs: Record<string, boolean> = {};
     let firstMissingDocType: string | null = null;
     filteredDocumentRequirements.forEach((document) => {
       if (document.is_required && !formData.files[document.document_type]) {
         errors.push(`${document.title} is required`);
+        missingDocs[document.document_type] = true;
         if (!firstMissingDocType) {
           firstMissingDocType = document.document_type;
         }
       }
     });
+    setMissingDocTypes(missingDocs);
     setStepErrors(errors);
     return { isValid: errors.length === 0, firstMissingDocType, errors };
   };
@@ -385,6 +527,7 @@ useEffect(() => {
     const result = validateStepA();
     if (result.isValid) {
       setStepErrors([]);
+      setFieldErrors({});
       setCurrentStep("stepB");
     } else if (result.firstErrorFieldId) {
       setTimeout(() => {
@@ -400,6 +543,7 @@ useEffect(() => {
     const result = validateStepB();
     if (result.isValid) {
       setStepErrors([]);
+      setMissingDocTypes({});
       setCurrentStep("stepC");
     } else if (result.firstMissingDocType) {
       setTimeout(() => {
@@ -716,6 +860,33 @@ const totalPriceFormatted = loadingFeeTiers
       renewal_permit: "Renewal Permit",
       individual_permit: "Individual Work Permit",
     } as Record<string, string>)[formData.permitType] ?? formData.permitType.replace(/_/g, " ");
+    // ── Build full-page printable slip ──
+    const paymentMethodLabel = selectedPaymentMethod === "esewa" ? "&#128178; eSewa Digital Wallet" : "&#128203; Pay Later (Pay at Office)";
+    const amountPaid = paymentStatus === "paid" ? totalPriceFormatted : "NPR 0.00 (Pending)";
+    const balanceDue = paymentStatus === "paid" ? "NPR 0.00 (Cleared)" : totalPriceFormatted;
+    const payStatusClass = paymentStatus === "paid" ? "status-paid" : "status-unpaid";
+    const payStatusText = paymentStatus === "paid" ? "&#10003; PAID" : "&#9888; UNPAID";
+    const payCardClass = paymentStatus === "paid" ? "green" : "amber";
+    const txNote = paymentStatus === "paid"
+      ? "Payment received via eSewa. Verification in progress."
+      : "Payment pending. Please complete payment at the office or via eSewa before processing begins.";
+    const docRows = filteredDocumentRequirements.map((document) => {
+      const hasFile = !!formData.files[document.document_type];
+      const isRequired = document.is_required;
+      let statusCell: string;
+      if (hasFile) {
+        statusCell = '<span style="display:inline-block;padding:2px 7px;background:#D1FAE5;color:#047857;border:1px solid #6EE7B7;border-radius:3px;font-size:7.8px;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;">&#10003; Uploaded</span>';
+      } else if (isRequired) {
+        statusCell = '<span style="display:inline-block;padding:2px 7px;background:#FEE2E2;color:#DC2626;border:1px solid #FCA5A5;border-radius:3px;font-size:7.8px;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;">&#10007; Missing</span>';
+      } else {
+        statusCell = '<span style="color:#9ca3af;font-size:8px;font-style:italic;">&#8212; Not provided</span>';
+      }
+      const reqStar = isRequired ? ' <span style="color:#e11d48;">*</span>' : '';
+      return `<tr><td class="td-label">${document.title}${reqStar}</td><td class="td-val" style="text-align:center;">${statusCell}</td></tr>`;
+    }).join("");
+    const emptyDocs = filteredDocumentRequirements.length === 0
+      ? '<tr><td class="td-val" colspan="2" style="text-align:center;color:#9ca3af;font-style:italic;font-size:8.5px;">No documents required</td></tr>'
+      : '';
     const slipHtml = `
       <!DOCTYPE html>
       <html lang="en">
@@ -724,559 +895,294 @@ const totalPriceFormatted = loadingFeeTiers
         <title>Work_Permit_Slip_${applicationId}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-          @page { size: A4 portrait; margin: 0; }
+          @page { size: A4 portrait; margin: 6mm 8mm; }
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          /* Force background colors to print */
-          html, body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
+          html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'Inter', Arial, sans-serif; background: #fff; color: #111; font-size: 8.8px; line-height: 1.35; }
+          .page { width: 100%; max-width: 195mm; margin: 0 auto; padding: 0; display: flex; flex-direction: column; gap: 0; page-break-inside: avoid !important; break-inside: avoid !important; }
+          /* watermark */
+          .wm-wrap { position:fixed; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; pointer-events:none; user-select:none; z-index:999; }
+          .wm { transform:rotate(-28deg); font-size:36px; font-weight:900; color:rgba(0,0,0,0.035); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
+          /* letterhead */
+          .lh { display:flex; align-items:center; justify-content:space-between; padding-bottom:5px; border-bottom:1.5px solid #200B3B; margin-bottom:5px; }
+          .lh-left { display:flex; align-items:center; gap:9px; }
+          .logo { height:42px; width:auto; object-fit:contain; }
+          .co-name { font-size:13px; font-weight:900; color:#200B3B; line-height:1.1; }
+          .co-tag { font-size:8.5px; color:#4B1E7A; font-weight:600; margin-top:1.5px; }
+          .co-contact { font-size:7.5px; color:#555; margin-top:1.5px; }
+          .lh-right { text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+          .badge { display:inline-block; background:#200B3B; color:#fff; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:0.7px; padding:2.5px 7px; border-radius:3px; }
+          .slip-date { font-size:8px; color:#555; }
+          /* title band */
+          .title-band { background:linear-gradient(135deg,#200B3B 0%,#4B1E7A 100%); color:#fff; padding:5px 10px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; border-radius:3px; }
+          .title-band h1 { font-size:11px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; }
+          .title-band .dest { font-size:8.5px; color:#D8C4F5; font-weight:600; margin-top:1px; }
+          .title-band .doc-id { text-align:right; }
+          .title-band .doc-id-label { font-size:7.5px; color:#C4ADE8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+          .title-band .doc-id-val { font-family:'Courier New',monospace; font-size:11.5px; font-weight:700; color:#fff; letter-spacing:0.7px; }
+          /* ref box */
+          .ref-box { display:flex; align-items:stretch; border:1px solid #9B6FD4; border-radius:3px; overflow:hidden; margin-bottom:5px; background:#FAF6FF; }
+          .ref-accent { width:4px; background:linear-gradient(180deg,#200B3B 0%,#9B6FD4 100%); flex-shrink:0; }
+          .ref-content { flex:1; padding:3.5px 10px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+          .ref-lbl { font-size:7.8px; font-weight:800; color:#4B1E7A; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:1px; }
+          .ref-val { font-family:'Courier New',monospace; font-size:11.5px; font-weight:800; color:#200B3B; letter-spacing:0.7px; }
+          .ref-meta { text-align:right; }
+          .ref-meta-lbl { font-size:7.2px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#666; }
+          .ref-meta-val { font-size:9px; font-weight:800; margin-top:1px; }
+          /* section heading */
+          .sh { display:flex; align-items:center; gap:5px; margin-bottom:2.5px; margin-top:4.5px; }
+          .sh-line { flex:1; height:1px; background:linear-gradient(90deg,#200B3B 0%,#C4ADE8 100%); }
+          .sh-text { font-size:8px; font-weight:900; color:#200B3B; text-transform:uppercase; letter-spacing:0.6px; white-space:nowrap; background:#EDE5F8; padding:2px 7px; border-radius:2.5px; }
+          /* table */
+          .tbl { width:100%; border-collapse:collapse; border:1px solid #9B6FD4; }
+          .tbl th { padding:2.8px 6px; border:1px solid #6B3FA0; text-align:left; vertical-align:middle; font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:0.3px; background:#200B3B; color:#fff; }
+          .tbl td { padding:2.8px 6px; border:1px solid #D8C4F5; vertical-align:middle; line-height:1.3; font-size:8.4px; }
+          .tbl tbody tr:nth-child(even) td { background:#F8F4FF; }
+          .tbl tbody tr:nth-child(odd) td { background:#fff; }
+          .td-label { font-size:7.8px; font-weight:700; color:#4B1E7A; text-transform:uppercase; letter-spacing:0.3px; background:#EDE5F8 !important; border-right:1px solid #9B6FD4 !important; }
+          .td-val { font-size:8.4px; font-weight:600; color:#1A0B2E; }
+          .td-val.bold { font-weight:800; color:#200B3B; }
+          .td-val.mono { font-family:'Courier New',monospace; letter-spacing:0.2px; }
+          .td-val.fee { font-size:9.5px; font-weight:900; }
+          /* payment cards */
+          .pay-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:2.5px; margin-bottom:3.5px; }
+          .pay-card { border:1px solid #D8C4F5; border-radius:3px; padding:4px 8px; background:#FAF6FF; }
+          .pay-card-lbl { font-size:7.5px; font-weight:800; color:#4B1E7A; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:1px; }
+          .pay-card-val { font-size:10.5px; font-weight:900; color:#200B3B; }
+          .pay-card-val.green { color:#047857; }
+          .pay-card-val.amber { color:#B45309; }
+          /* status badges */
+          .status-badge { display:inline-block; padding:2px 6px; border-radius:2.5px; font-size:7.8px; font-weight:900; text-transform:uppercase; letter-spacing:0.3px; }
+          .status-paid { background:#D1FAE5; color:#047857; border:1px solid #6EE7B7; }
+          .status-unpaid { background:#FEF3C7; color:#B45309; border:1px solid #FCD34D; }
+          .status-pending { background:#DBEAFE; color:#1D4ED8; border:1px solid #93C5FD; }
+          /* two col */
+          .two-col { display:grid; grid-template-columns:1fr 1fr; gap:7px; align-items:start; }
+          .two-col .col-blk { display:flex; flex-direction:column; }
+          .two-col .sh { margin-top:0; }
+          /* notice */
+          .notice { border-left:3px solid #9B6FD4; background:#FAF6FF; border-radius:0 3px 3px 0; padding:5px 9px; font-size:7.8px; color:#1A0B2E; line-height:1.4; }
+          .notice strong { color:#200B3B; }
+          /* checklist */
+          .cl-box { border:1px solid #D8C4F5; border-radius:3px; padding:5px 9px; background:#FAF6FF; }
+          .cl-title { font-size:8px; font-weight:900; color:#200B3B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2.5px; border-bottom:1px solid #D8C4F5; padding-bottom:1.5px; }
+          .cl-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px 9px; }
+          .cl-item { display:flex; align-items:flex-start; gap:3px; font-size:7.6px; color:#374151; line-height:1.35; }
+          .ci { color:#047857; font-weight:900; font-size:9px; flex-shrink:0; margin-top:0; }
+          /* signature */
+          .sig-block { display:flex; justify-content:space-between; margin-top:14px; padding-top:6px; border-top:1px dashed #9B6FD4; }
+          .sig-col { text-align:center; min-width:95px; }
+          .sig-line { border-top:1px solid #000; margin:18px auto 3px auto; width:95px; }
+          .sig-lbl { font-size:8px; color:#555; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; }
+          .sig-name { font-size:8px; color:#777; margin-top:1px; }
+          /* footer */
+          .footer { margin-top:8px; padding-top:4px; border-top:1.2px solid #200B3B; display:flex; justify-content:space-between; align-items:flex-start; font-size:7.2px; color:#555; }
+          .footer-l { line-height:1.4; }
+          .footer-r { text-align:right; line-height:1.4; }
+          @media print {
+            @page { size: A4 portrait; margin: 6mm 8mm; }
+            html, body { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }
+            .page { width: 100% !important; max-width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; page-break-inside: avoid !important; break-inside: avoid !important; page-break-after: avoid !important; break-after: avoid !important; }
+            * { page-break-inside: avoid !important; break-inside: avoid !important; }
           }
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: #ffffff;
-            color: #000000;
-            font-size: 11.5px;
-            line-height: 1.5;
-          }
-          /* ── PAGE WRAPPER ── */
-          .page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 14mm 14mm 12mm 14mm;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-          }
-          /* ── WATERMARK ── */
-          .watermark-wrapper {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            user-select: none;
-            z-index: 999;
-          }
-          .watermark {
-            transform: rotate(-28deg);
-            font-size: 42px;
-            font-weight: 900;
-            color: rgba(0, 0, 0, 0.04);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            line-height: 2.2;
-            white-space: nowrap;
-            text-align: center;
-          }
-          /* ── LETTERHEAD ── */
-          .letterhead {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #000;
-            margin-bottom: 12px;
-          }
-          .lh-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-          }
-          .logo-img {
-            height: 80px;
-            width: auto;
-            object-fit: contain;
-            flex-shrink: 0;
-          }
-          .company-name-block {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-          }
-          .company-name-main {
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: -0.3px;
-            line-height: 1.1;
-            color: #000;
-          }
-          .company-tagline {
-            font-size: 9.5px;
-            color: #000;
-            font-weight: 600;
-            margin-top: 3px;
-          }
-          .company-contact-row {
-            font-size: 9px;
-            color: #222;
-            margin-top: 2px;
-            font-weight: 500;
-          }
-          .lh-right {
-            text-align: right;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 4px;
-          }
-          .official-badge {
-            display: inline-block;
-            border: 1.5px solid #000;
-            color: #000;
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 3px 10px;
-            border-radius: 3px;
-          }
-          .slip-date {
-            font-size: 9.5px;
-            color: #000;
-            font-weight: 500;
-          }
-          /* ── DOC TITLE BAND ── */
-          .title-band {
-            background: #000;
-            color: #fff;
-            padding: 9px 14px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .title-band h1 {
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.3px;
-            text-transform: uppercase;
-          }
-          .title-band .destination {
-            font-size: 10px;
-            color: #ccc;
-            font-weight: 600;
-          }
-          .title-band .doc-id {
-            text-align: right;
-          }
-          .title-band .doc-id-label {
-            font-size: 8px;
-            color: #aaa;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .title-band .doc-id-val {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: 0.5px;
-          }
-          /* ── REFERENCE BOX ── */
-          .ref-box {
-            display: flex;
-            align-items: stretch;
-            border: 1px solid #000;
-            border-radius: 6px;
-            overflow: hidden;
-            margin-bottom: 14px;
-          }
-          .ref-accent {
-            width: 5px;
-            background: #000;
-            flex-shrink: 0;
-          }
-          .ref-content {
-            flex: 1;
-            padding: 8px 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fafafa;
-          }
-          .ref-label {
-            font-size: 8.5px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-          }
-          .ref-value {
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            font-weight: 700;
-            color: #000;
-            letter-spacing: 0.5px;
-          }
-          /* ── SECTION HEADING ── */
-          .section-heading {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 4px;
-            margin-top: 8px;
-          }
-          .section-heading .sh-line {
-            flex: 1;
-            height: 1px;
-            background: #000;
-          }
-          .section-heading .sh-text {
-            font-size: 7.5px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            white-space: nowrap;
-          }
-          /* ── DETAIL TABLE ── */
-          .detail-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 2px;
-            border: 1.5px solid #3B145C;
-          }
-          .detail-table th {
-            padding: 5px 8px;
-            border: 1px solid #3B145C;
-            text-align: left;
-            vertical-align: middle;
-            font-size: 7.5px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            background: #200B3B;
-            color: #ffffff;
-          }
-          .detail-table td {
-            padding: 5px 8px;
-            border: 1px solid #C4ADE8;
-            vertical-align: middle;
-          }
-          .detail-table tbody tr:nth-child(even) td {
-            background: #F3EEFF;
-          }
-          .detail-table tbody tr:nth-child(odd) td {
-            background: #ffffff;
-          }
-          .td-label {
-            font-size: 7.5px;
-            font-weight: 700;
-            color: #3B145C;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-            width: 38%;
-            background: #EDE5F8 !important;
-            border-right: 2px solid #9B6FD4 !important;
-          }
-          .td-value {
-            font-size: 9.5px;
-            font-weight: 600;
-            color: #1A0B2E;
-          }
-          .td-value.mono { font-family: 'Courier New', monospace; }
-          .td-value.accent { color: #200B3B; font-weight: 800; }
-          .td-value.fee {
-            color: #1A0B2E;
-            font-size: 11px;
-            font-weight: 900;
-            font-family: 'Inter', sans-serif;
-          }
-          /* ── TWO-COLUMN GRID ── */
-          .two-col-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 0;
-          }
-          .two-col-grid .col-block {
-            display: flex;
-            flex-direction: column;
-          }
-          .two-col-grid .col-block .section-heading {
-            margin-top: 0;
-          }
-          .two-col-grid .detail-table {
-            flex: 1;
-          }
-          /* ── NOTICE BOX ── */
-          .notice-box {
-            border: 1px solid #999;
-            background: #f9f9f9;
-            border-radius: 6px;
-            padding: 9px 12px;
-            margin-top: 12px;
-            font-size: 10px;
-            color: #000;
-            line-height: 1.5;
-          }
-          .notice-box strong { color: #000; }
-          /* ── CHECKLIST ── */
-          .checklist-box {
-            border: 1px solid #999;
-            border-radius: 6px;
-            padding: 9px 12px;
-            margin-top: 10px;
-            background: #f9f9f9;
-          }
-          .checklist-title {
-            font-size: 8.5px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #999;
-            padding-bottom: 4px;
-          }
-          .checklist-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3px 20px;
-          }
-          .checklist-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 5px;
-            font-size: 9px;
-            color: #222;
-            line-height: 1.4;
-          }
-          .ci-icon {
-            color: #000;
-            font-weight: 900;
-            font-size: 10px;
-            flex-shrink: 0;
-            margin-top: 1px;
-          }
-          /* ── FOOTER ── */
-          .doc-footer {
-            margin-top: auto;
-            padding-top: 10px;
-            border-top: 2px solid #000;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            font-size: 8.5px;
-            color: #444;
-          }
-          .footer-left { line-height: 1.6; }
-          .footer-right { text-align: right; line-height: 1.6; }
         </style>
       </head>
       <body>
         <div class="page">
+
           <!-- WATERMARK -->
-          <div class="watermark-wrapper"><div class="watermark">Trip Himalaya Tours and Travels</div></div>
+          <div class="wm-wrap"><div class="wm">Trip Himalaya Tours and Travels</div></div>
+
           <!-- LETTERHEAD -->
-          <div class="letterhead">
+          <div class="lh">
             <div class="lh-left">
-              <img src="${THTTLogo}" class="logo-img" alt="Trip Himalaya Tours and Travels" />
-              <div class="company-name-block">
-                <div class="company-name-main">Trip Himalaya Tours &amp; Travels Pvt. Ltd.</div>
-                <div class="company-tagline">Govt. Approved Travel &amp; Foreign Employment Documentation Agency</div>
-                <div class="company-contact-row">
-                  Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; 977-9851403761 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com
-                </div>
+              <img src="${THTTLogo}" class="logo" alt="THTT" />
+              <div>
+                <div class="co-name">Trip Himalaya Tours &amp; Travels Pvt. Ltd.</div>
+                <div class="co-tag">Govt. Approved Travel &amp; Foreign Employment Documentation Agency</div>
+                <div class="co-contact">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; +977-9851403761 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np</div>
               </div>
             </div>
             <div class="lh-right">
-              <div class="official-badge">Official Document</div>
+              <div class="badge">&#10003; Official Document</div>
               <div class="slip-date">Issued: ${submittedAt}</div>
             </div>
           </div>
-          <!-- DOC TITLE BAND -->
+
+          <!-- TITLE BAND -->
           <div class="title-band">
             <div>
               <h1>Work Permit (Shram Swikriti) Application Slip</h1>
-              <div class="destination">Destination: ${selectedCountryName || "Nepal"} &nbsp;/&nbsp; ${permitTypeLabel}</div>
+              <div class="dest">Destination: ${selectedCountryName || "Nepal"} &nbsp;/&nbsp; ${permitTypeLabel}</div>
             </div>
             <div class="doc-id">
-              <div class="doc-id-label">Document ID</div>
+              <div class="doc-id-label">Reference Number</div>
               <div class="doc-id-val">${applicationId}</div>
             </div>
           </div>
-          <!-- SUBMISSION REFERENCE -->
+
+          <!-- REFERENCE + STATUS -->
           <div class="ref-box">
             <div class="ref-accent"></div>
             <div class="ref-content">
               <div>
-                <div class="ref-label">Official Submission Reference Number</div>
-                <div class="ref-value">${applicationId}</div>
+                <div class="ref-lbl">Official Submission Reference</div>
+                <div class="ref-val">${applicationId}</div>
+              </div>
+              <div class="ref-meta">
+                <div class="ref-meta-lbl">Application Status</div>
+                <div class="ref-meta-val" style="color:#047857;">&#10003; SUBMITTED</div>
+              </div>
+              <div class="ref-meta">
+                <div class="ref-meta-lbl">Submitted On</div>
+                <div class="ref-meta-val" style="font-size:7px; color:#374151; font-weight:700;">${submittedAt}</div>
               </div>
             </div>
           </div>
-          <!-- TOP ROW: APPLICANT DETAILS + SUBMITTED DOCUMENTS (2 columns) -->
-          <div class="two-col-grid">
-            <!-- LEFT: APPLICANT DETAILS -->
-            <div class="col-block">
-              <div class="section-heading" style="margin-top:0;">
-                <div class="sh-text">Applicant Details</div>
+
+          <!-- TWO-COLUMN: APPLICANT + DOCUMENTS -->
+          <div class="two-col">
+            <!-- APPLICANT DETAILS -->
+            <div class="col-blk">
+              <div class="sh">
+                <div class="sh-text">&#128100; Applicant Details</div>
                 <div class="sh-line"></div>
               </div>
-              <table class="detail-table">
-                <thead>
-                  <tr>
-                    <th style="width:42%;">Field</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
+              <table class="tbl">
+                <thead><tr><th style="width:44%;">Field</th><th>Information</th></tr></thead>
                 <tbody>
-                  <tr>
-                    <td class="td-label">Full Name</td>
-                    <td class="td-value accent">${formData.name || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Passport Number</td>
-                    <td class="td-value mono accent">${formData.passportNumber ? formData.passportNumber.toUpperCase() : "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Passport Expiry Date</td>
-                    <td class="td-value mono">${formData.passportExpiryDate || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Contact / WhatsApp</td>
-                    <td class="td-value">${formData.phoneCode} ${formData.phone || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Destination Country</td>
-                    <td class="td-value accent">${selectedCountryName || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Permit Service Type</td>
-                    <td class="td-value">${permitTypeLabel}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Date of Birth (A.D.)</td>
-                    <td class="td-value mono">${formData.adDate || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Date of Birth (B.S.)</td>
-                    <td class="td-value mono">${formData.bsDate || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Age Category</td>
-                    <td class="td-value">${formData.age !== null ? `${getFeeTierLabel()} (${formData.age} yrs)` : "—"}</td>
-                  </tr>
-                  <tr>
-                    <td class="td-label">Company Transfer</td>
-                    <td class="td-value">${formData.companyChange ? "Yes" : "No"}</td>
-                  </tr>
+                  <tr><td class="td-label">Full Name</td><td class="td-val bold">${formData.name || "—"}</td></tr>
+                  <tr><td class="td-label">Email Address</td><td class="td-val">${formData.email || "—"}</td></tr>
+                  <tr><td class="td-label">Passport Number</td><td class="td-val mono bold">${formData.passportNumber ? formData.passportNumber.toUpperCase() : "—"}</td></tr>
+                  <tr><td class="td-label">Passport Expiry</td><td class="td-val mono">${formData.passportExpiryDate || "—"}</td></tr>
+                  <tr><td class="td-label">Phone / WhatsApp</td><td class="td-val bold">${formData.phoneCode} ${formData.phone || "—"}</td></tr>
+                  <tr><td class="td-label">Date of Birth (A.D.)</td><td class="td-val mono">${formData.adDate || "—"}</td></tr>
+                  <tr><td class="td-label">Date of Birth (B.S.)</td><td class="td-val mono">${formData.bsDate || "—"}</td></tr>
+                  <tr><td class="td-label">Age / Category</td><td class="td-val">${formData.age !== null ? getFeeTierLabel() + " " + formData.age + " yrs" : "—"}</td></tr>
+                  <tr><td class="td-label">Destination Country</td><td class="td-val bold">${selectedCountryName || "—"}</td></tr>
+                  <tr><td class="td-label">Permit Type</td><td class="td-val">${permitTypeLabel}</td></tr>
+                  <tr><td class="td-label">Company Transfer</td><td class="td-val">${formData.companyChange ? "&#10003; Yes" : "&#10007; No"}</td></tr>
                 </tbody>
               </table>
             </div>
-           <!-- RIGHT: SUBMITTED DOCUMENTS -->
-<div class="col-block">
-  <div class="section-heading" style="margin-top:0;">
-    <div class="sh-text">Submitted Documents</div>
-    <div class="sh-line"></div>
-  </div>
-  <table class="detail-table">
-    <thead>
-      <tr>
-        <th style="width:48%;">Document</th>
-        <th>Status / Filename</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${filteredDocumentRequirements
-        .map((document) => {
-          const file = formData.files[document.document_type];
-          return `
-            <tr>
-              <td class="td-label">
-                ${document.title}
-              </td>
-              <td class="td-value">
-                ${file
-              ? `<span style="color:#047857; font-weight:700;">
-                        ✓ ${file.name}
-                      </span>`
-              : document.is_required
-                ? `<span style="color:#dc2626; font-weight:700;">
-                          Missing (Required)
-                        </span>`
-                : `<span style="color:#9ca3af; font-style:italic;">
-                          Not provided
-                        </span>`
-            }
-              </td>
-            </tr>
-          `;
-        })
-        .join("")}
-    </tbody>
-  </table>
-</div>
-          </div><!-- end .two-col-grid -->
-          <!-- PAYMENT INFORMATION (full width) -->
-          <div class="section-heading">
-            <div class="sh-text">Payment Information</div>
+
+            <!-- SUBMITTED DOCUMENTS -->
+            <div class="col-blk">
+              <div class="sh">
+                <div class="sh-text">&#128196; Submitted Documents</div>
+                <div class="sh-line"></div>
+              </div>
+              <table class="tbl">
+                <thead><tr><th style="width:58%;">Document</th><th>Status</th></tr></thead>
+                <tbody>${docRows}${emptyDocs}</tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- PAYMENT SECTION -->
+          <div class="sh">
+            <div class="sh-text">&#128179; Payment Information</div>
             <div class="sh-line"></div>
           </div>
-          <table class="detail-table">
-            <thead>
-              <tr>
-                <th style="width:38%;">Field</th>
-                <th>Details</th>
-              </tr>
-            </thead>
+
+          <!-- 3-card summary -->
+          <div class="pay-grid">
+            <div class="pay-card">
+              <div class="pay-card-lbl">&#128181; Total Processing Fee</div>
+              <div class="pay-card-val">${totalPriceFormatted}</div>
+            </div>
+            <div class="pay-card">
+              <div class="pay-card-lbl">&#128179; Amount Paid</div>
+              <div class="pay-card-val ${payCardClass}">${amountPaid}</div>
+            </div>
+            <div class="pay-card">
+              <div class="pay-card-lbl">&#9989; Payment Status</div>
+              <div class="pay-card-val ${payCardClass}">${paymentStatus === "paid" ? "PAID" : "PENDING"}</div>
+            </div>
+          </div>
+
+          <!-- Full payment table (compact 4-column key-value layout) -->
+          <table class="tbl" style="margin-top:2px;">
             <tbody>
               <tr>
-                <td class="td-label">Payment Method</td>
-                <td class="td-value" style="font-weight:700;">${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later (Deferred / Pay at Office)"}</td>
-              </tr>
-              <tr>
-                <td class="td-label">Total Processing Fee</td>
-                <td class="td-value fee">${totalPriceFormatted}</td>
+                <td class="td-label" style="width:20%;">Payment Method</td>
+                <td class="td-val bold" style="width:30%;">${paymentMethodLabel}</td>
+                <td class="td-label" style="width:20%;">Total Service Fee</td>
+                <td class="td-val fee" style="width:30%;">${totalPriceFormatted}</td>
               </tr>
               <tr>
                 <td class="td-label">Amount Paid</td>
-                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"
-      }</td>
+                <td class="td-val fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"}">${amountPaid}</td>
+                <td class="td-label">Balance Due</td>
+                <td class="td-val fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"}">${balanceDue}</td>
               </tr>
               <tr>
                 <td class="td-label">Payment Status</td>
-                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus.toUpperCase()
-      }</td>
+                <td class="td-val"><span class="status-badge ${payStatusClass}">${payStatusText}</span></td>
+                <td class="td-label">Verification</td>
+                <td class="td-val"><span class="status-badge status-pending">&#128270; UNDER REVIEW</span></td>
               </tr>
               <tr>
-                <td class="td-label">Payment Verification</td>
-                <td class="td-value" style="font-weight:900; font-size:10px; color:#1d4ed8;">PENDING</td>
+                <td class="td-label">Transaction Note</td>
+                <td class="td-val" colspan="3" style="font-size:6.5px; color:#555;">${txNote}</td>
               </tr>
             </tbody>
           </table>
-          <!-- NOTICE -->
-          <div class="notice-box">
-            <strong>Next Steps:</strong> Our licensed documentation officer will review your file and contact you within <strong>24 hours</strong> via WhatsApp or phone to verify your credentials and guide you through the DoFE / FEIMS submission process. Keep Reference No. <strong>${applicationId}</strong> for all follow-ups.
-          </div>
-          <!-- FEO CHECKLIST -->
-          <div class="checklist-box">
-            <div class="checklist-title">Foreign Employment Office (FEO) Checklist</div>
-            <div class="checklist-grid">
-              <div class="checklist-item"><span class="ci-icon">✓</span> Original Passport (min 6 months validity)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Valid Job Offer / Demand Letter</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> MRP Size Photograph (white background)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Insurance Registration (SSF / Welfare Fund)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> FEIMS Online Registration Slip</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Police Clearance (if required by employer)</div>
+
+          <!-- TWO-COLUMN: NOTICE + CHECKLIST -->
+          <div class="two-col" style="margin-top:2.5px;">
+            <!-- NEXT STEPS NOTICE -->
+            <div class="notice">
+              <strong>&#128276; What Happens Next:</strong> Our licensed documentation officer will review your application and contact you within <strong>24 hours</strong> via WhatsApp (<strong>${formData.phoneCode} ${formData.phone}</strong>) or phone to verify your credentials and guide you through the DoFE / FEIMS submission process. Keep Reference No. <strong>${applicationId}</strong> for all follow-ups.
+            </div>
+
+            <!-- FEO CHECKLIST -->
+            <div class="cl-box">
+              <div class="cl-title">&#9745; Foreign Employment Office (FEO) &ndash; Document Checklist</div>
+              <div class="cl-grid">
+                <div class="cl-item"><span class="ci">&#10003;</span> Original Passport (valid, not expired)</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> Valid Job Offer / Demand Letter</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> MRP Size Photograph (white background)</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> Insurance Registration (SSF / Welfare Fund)</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> FEIMS Online Registration Slip</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> Police Clearance (if required by employer)</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> GAMCA Medical Fitness Report</div>
+                <div class="cl-item"><span class="ci">&#10003;</span> Pre-Departure Orientation Certificate</div>
+              </div>
             </div>
           </div>
+
+          <!-- SIGNATURE BLOCK -->
+          <div class="sig-block">
+            <div class="sig-col">
+              <div class="sig-line"></div>
+              <div class="sig-lbl">Applicant Signature</div>
+              <div class="sig-name">${formData.name || "_______________"}</div>
+            </div>
+            <div class="sig-col">
+              <div class="sig-line"></div>
+              <div class="sig-lbl">Documentation Officer</div>
+              <div class="sig-name">Trip Himalaya Tours &amp; Travels</div>
+            </div>
+            <div class="sig-col">
+              <div class="sig-line"></div>
+              <div class="sig-lbl">Official Stamp</div>
+              <div class="sig-name">Company Seal</div>
+            </div>
+          </div>
+
           <!-- FOOTER -->
-          <div class="doc-footer">
-            <div class="footer-left">
-              System-generated slip &mdash; no physical signature required.<br>
-              &#x1F4DE; 977-9851403761 &nbsp;|&nbsp; &#x2709; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; &#x1F310; www.triphimalaya.com.np
+          <div class="footer">
+            <div class="footer-l">
+              &#9888; System-generated slip &mdash; valid without physical signature unless stamped.<br>
+              &#128222; +977-9851403761 &nbsp;|&nbsp; &#9993; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; &#127760; www.triphimalaya.com.np
             </div>
-            <div class="footer-right">
-              Trip Himalaya Tours &amp; Travels<br>
+            <div class="footer-r">
+              <strong>Trip Himalaya Tours &amp; Travels Pvt. Ltd.</strong><br>
               Ref: ${applicationId} &nbsp;|&nbsp; ${submittedAt}
             </div>
           </div>
+
         </div>
       </body>
       </html>
@@ -1448,8 +1354,18 @@ const totalPriceFormatted = loadingFeeTiers
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g. Ram Bahadur Thapa"
-                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                  className={`input w-full mt-1 border rounded-xl px-3 py-2 text-sm transition-colors ${
+                    fieldErrors.name
+                      ? "border-red-500 focus:border-red-500 bg-red-50/20 focus:ring-1 focus:ring-red-200"
+                      : "border-gray-200 focus:border-pink-500"
+                  }`}
                 />
+                {fieldErrors.name && (
+                  <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {fieldErrors.name}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs text-gray-600 font-bold">
@@ -1462,8 +1378,18 @@ const totalPriceFormatted = loadingFeeTiers
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="e.g. ram@gmail.com"
-                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                  className={`input w-full mt-1 border rounded-xl px-3 py-2 text-sm transition-colors ${
+                    fieldErrors.email
+                      ? "border-red-500 focus:border-red-500 bg-red-50/20 focus:ring-1 focus:ring-red-200"
+                      : "border-gray-200 focus:border-pink-500"
+                  }`}
                 />
+                {fieldErrors.email && (
+                  <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
               {/* Passport Number */}
               <div>
@@ -1474,9 +1400,19 @@ const totalPriceFormatted = loadingFeeTiers
                   value={formData.passportNumber}
                   onChange={handleChange}
                   placeholder="e.g. A1234567"
-                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                  className={`input w-full mt-1 border rounded-xl px-3 py-2 text-sm transition-colors ${
+                    fieldErrors.passportNumber
+                      ? "border-red-500 focus:border-red-500 bg-red-50/20 focus:ring-1 focus:ring-red-200"
+                      : "border-gray-200 focus:border-pink-500"
+                  }`}
                   style={{ textTransform: "uppercase" }}
                 />
+                {fieldErrors.passportNumber && (
+                  <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {fieldErrors.passportNumber}
+                  </p>
+                )}
               </div>
               {/* Passport Expiry Date */}
               <div>
@@ -1485,19 +1421,53 @@ const totalPriceFormatted = loadingFeeTiers
                   id="wp_passportExpiryDate"
                   type="date"
                   name="passport_expiry_date"
+                  min={todayStr}
                   value={formData.passportExpiryDate}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, passportExpiryDate: e.target.value }))}
-                  className="input w-full mt-1 border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({ ...prev, passportExpiryDate: val }));
+                    if (fieldErrors.passportExpiryDate) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.passportExpiryDate;
+                        return next;
+                      });
+                    }
+                  }}
+                  className={`input w-full mt-1 border rounded-xl px-3 py-2 text-sm transition-colors ${
+                    fieldErrors.passportExpiryDate
+                      ? "border-red-500 focus:border-red-500 bg-red-50/20 focus:ring-1 focus:ring-red-200"
+                      : "border-gray-200 focus:border-pink-500"
+                  }`}
                 />
+                {fieldErrors.passportExpiryDate && (
+                  <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {fieldErrors.passportExpiryDate}
+                  </p>
+                )}
               </div>
               {/* Phone with Country Code */}
               <div>
                 <label className="text-xs text-gray-600 font-bold">Phone / WhatsApp Number*</label>
-                <div className="flex items-stretch border border-gray-200 rounded-xl bg-white focus-within:border-pink-500 focus-within:ring-2 focus-within:ring-pink-100 transition-all overflow-hidden mt-1">
+                <div className={`flex items-stretch border rounded-xl bg-white focus-within:ring-2 transition-all overflow-hidden mt-1 ${
+                  fieldErrors.phone
+                    ? "border-red-500 focus-within:border-red-500 focus-within:ring-red-100"
+                    : "border-gray-200 focus-within:border-pink-500 focus-within:ring-pink-100"
+                }`}>
                   <select
                     name="phoneCode"
                     value={formData.phoneCode}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, phoneCode: e.target.value }))}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, phoneCode: e.target.value }));
+                      if (fieldErrors.phone) {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.phone;
+                          return next;
+                        });
+                      }
+                    }}
                     className="flex-shrink-0 bg-gray-50 border-r border-gray-200 px-2 py-2 text-xs font-bold text-[#200B3B] focus:outline-none cursor-pointer"
                     style={{ maxWidth: "110px" }}
                   >
@@ -1517,6 +1487,12 @@ const totalPriceFormatted = loadingFeeTiers
                     className="flex-1 min-w-0 px-3 py-2 bg-white text-xs sm:text-sm font-semibold text-[#200B3B] focus:outline-none"
                   />
                 </div>
+                {fieldErrors.phone && (
+                  <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {fieldErrors.phone}
+                  </p>
+                )}
               </div>
               {/* DOB & BS Conversion */}
               <div>
@@ -1530,7 +1506,11 @@ const totalPriceFormatted = loadingFeeTiers
                       max={todayStr}
                       value={formData.adDate}
                       onChange={(e) => handleConvert(e.target.value)}
-                      className="input w-full border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm mt-0.5"
+                      className={`input w-full border rounded-xl px-3 py-2 text-sm mt-0.5 transition-colors ${
+                        fieldErrors.adDate
+                          ? "border-red-500 focus:border-red-500 bg-red-50/20 focus:ring-1 focus:ring-red-200"
+                          : "border-gray-200 focus:border-pink-500"
+                      }`}
                     />
                   </div>
                   <div>
@@ -1543,6 +1523,12 @@ const totalPriceFormatted = loadingFeeTiers
                     />
                   </div>
                 </div>
+                {fieldErrors.adDate && (
+                  <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {fieldErrors.adDate}
+                  </p>
+                )}
               </div>
               {/* Age Category */}
               <div>
@@ -1573,7 +1559,11 @@ const totalPriceFormatted = loadingFeeTiers
                     name="countryId"
                     value={formData.countryId}
                     onChange={handleChange}
-                    className="select w-full border border-gray-200 focus:border-pink-500 rounded-xl px-3 py-2 text-sm mt-1 cursor-pointer"
+                    className={`select w-full border rounded-xl px-3 py-2 text-sm mt-1 cursor-pointer transition-colors ${
+                      fieldErrors.countryId
+                        ? "border-red-500 focus:border-red-500 bg-red-50/20"
+                        : "border-gray-200 focus:border-pink-500"
+                    }`}
                   >
                     <option value="">Select Destination</option>
                     {country.map((c) => (
@@ -1582,6 +1572,12 @@ const totalPriceFormatted = loadingFeeTiers
                       </option>
                     ))}
                   </select>
+                  {fieldErrors.countryId && (
+                    <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {fieldErrors.countryId}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 font-bold">Permit Service Type</label>
@@ -1628,77 +1624,101 @@ const totalPriceFormatted = loadingFeeTiers
                   No document requirements found for this permit type.
                 </div>
               ) : (
-                filteredDocumentRequirements.map((document) => (
-                  <div
-                    key={document.id}
-                    id={`wp_doc_${document.document_type}`}
-                    className="rounded-2xl bg-gray-50 p-4 border border-gray-100 hover:border-pink-200 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <label className="text-xs text-gray-800 font-bold block">
-                        {document.title}
-                        {document.is_required && (
-                          <span className="text-pink-500 ml-1">*</span>
-                        )}
-                      </label>
-                      {document.is_required ? (
-                        <span className="text-[10px] font-extrabold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
-                          Required
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                          Optional
-                        </span>
-                      )}
-                    </div>
-                    {document.description && (
-                      <p className="text-[10px] text-gray-500 mb-2.5 leading-relaxed">
-                        {document.description}
-                      </p>
-                    )}
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      className="hidden"
-                      ref={(el) => {
-                        fileRefs.current[document.document_type] = el;
-                      }}
-                      onChange={(e) =>
-                        handleFileChange(
-                          document.document_type,
-                          e.target.files?.[0] || null
-                        )
-                      }
-                    />
-                    <div className="flex items-center gap-3">
-                      <button
-                        id={`wp_doc_btn_${document.document_type}`}
-                        type="button"
-                        onClick={() =>
-                          handleButtonClick(document.document_type)
-                        }
-                        className="cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold bg-pink-600 text-white hover:bg-pink-700 transition-colors shadow-xs"
-                      >
-                        Choose File
-                      </button>
-                      {formData.files[document.document_type] ? (
-                        <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5 truncate">
-                          <CheckCircle2
-                            size={14}
-                            className="text-emerald-600 flex-shrink-0"
-                          />
-                          <span className="truncate">
-                            {formData.files[document.document_type]?.name}
+                filteredDocumentRequirements.map((document) => {
+                  const isMissing = !!missingDocTypes[document.document_type];
+                  const file = formData.files[document.document_type];
+                  return (
+                    <div
+                      key={document.id}
+                      id={`wp_doc_${document.document_type}`}
+                      className={`rounded-2xl p-4 border transition-all ${
+                        isMissing
+                          ? "bg-red-50/40 border-red-400 ring-1 ring-red-200"
+                          : "bg-gray-50 border-gray-100 hover:border-pink-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <label className="text-xs text-gray-800 font-bold block">
+                          {document.title}
+                          {document.is_required && (
+                            <span className="text-pink-500 ml-1">*</span>
+                          )}
+                        </label>
+                        {document.is_required ? (
+                          <span
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                              isMissing
+                                ? "text-red-700 bg-red-100 border-red-300"
+                                : "text-pink-600 bg-pink-50 border-pink-100"
+                            }`}
+                          >
+                            Required
                           </span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">
-                          No file selected yet
-                        </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            Optional
+                          </span>
+                        )}
+                      </div>
+                      {document.description && (
+                        <p className="text-[10px] text-gray-500 mb-2.5 leading-relaxed">
+                          {document.description}
+                        </p>
+                      )}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        className="hidden"
+                        ref={(el) => {
+                          fileRefs.current[document.document_type] = el;
+                        }}
+                        onChange={(e) =>
+                          handleFileChange(
+                            document.document_type,
+                            e.target.files?.[0] || null
+                          )
+                        }
+                      />
+                      <div className="flex items-center gap-3">
+                        <button
+                          id={`wp_doc_btn_${document.document_type}`}
+                          type="button"
+                          onClick={() =>
+                            handleButtonClick(document.document_type)
+                          }
+                          className={`cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold text-white transition-colors shadow-xs ${
+                            isMissing
+                              ? "bg-red-600 hover:bg-red-700 ring-2 ring-red-200"
+                              : "bg-pink-600 hover:bg-pink-700"
+                          }`}
+                        >
+                          Choose File
+                        </button>
+                        {file ? (
+                          <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5 truncate">
+                            <CheckCircle2
+                              size={14}
+                              className="text-emerald-600 flex-shrink-0"
+                            />
+                            <span className="truncate">
+                              {file.name}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">
+                            No file selected yet
+                          </span>
+                        )}
+                      </div>
+                      {isMissing && (
+                        <p className="text-red-500 text-[11px] font-semibold mt-2.5 flex items-center gap-1">
+                          <AlertCircle size={12} className="shrink-0" />
+                          <span>This document is required. Please upload a file (JPG, PNG, or PDF).</span>
+                        </p>
                       )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               {/* Optional Company Change Checkbox */}
               <div className="rounded-2xl bg-purple-50/70 p-4 border border-purple-100">

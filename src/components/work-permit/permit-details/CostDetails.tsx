@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, MessageCircle, Users } from "lucide-react";
 import {
   useGlobalCurrency,
   displayPrice,
 } from "../../../context/CurrencyContext";
+import { useAuth } from "../../../context/AuthContext";
+import { isSessionValid, clearAuthSession } from "../../../utils/sessionManager";
 import { getPermitFeeTiers } from "../../../api/BackendApi";
 
 interface CountryProps {
@@ -44,6 +47,10 @@ const CostDetails: React.FC<CostDetailsProps> = ({
   country,
   permitType,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuth();
+
   const {
     selectedCurrency,
     nprPerOneDollar,
@@ -268,85 +275,38 @@ const CostDetails: React.FC<CostDetailsProps> = ({
                 </div>
               </div>
 
-              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-4">
-                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-3">
-                  Fee Breakdown
-                </p>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-semibold">
-                      Insurance Premium
-                    </span>
-
-                    <span className="text-xs text-purple-950 font-bold">
-                      {displayPrice(
-                        toNumber(
-                          activeTier.insurance_premium_npr
-                        ),
-                        selectedCurrency,
-                        nprPerOneDollar,
-                        nprPerOneINR
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-semibold">
-                      Welfare Fund
-                    </span>
-
-                    <span className="text-xs text-purple-950 font-bold">
-                      {displayPrice(
-                        toNumber(
-                          activeTier.welfare_fund_npr
-                        ),
-                        selectedCurrency,
-                        nprPerOneDollar,
-                        nprPerOneINR
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-semibold">
-                      SSF Contribution
-                    </span>
-
-                    <span className="text-xs text-purple-950 font-bold">
-                      {displayPrice(
-                        toNumber(
-                          activeTier.ssf_contribution_npr
-                        ),
-                        selectedCurrency,
-                        nprPerOneDollar,
-                        nprPerOneINR
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-semibold">
-                      Service Fee
-                    </span>
-
-                    <span className="text-xs text-purple-950 font-bold">
-                      {displayPrice(
-                        toNumber(
-                          activeTier.service_fee_npr
-                        ),
-                        selectedCurrency,
-                        nprPerOneDollar,
-                        nprPerOneINR
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
+                    if (!isLoggedIn || !isSessionValid()) {
+                      clearAuthSession();
+                      const returnState = {
+                        from: location.pathname + location.search,
+                        openWorkPermitModal: true,
+                      };
+
+                      try {
+                        sessionStorage.setItem(
+                          "post_login_redirect",
+                          location.pathname + location.search
+                        );
+                        sessionStorage.setItem(
+                          "post_login_state",
+                          JSON.stringify(returnState)
+                        );
+                      } catch (err) {
+                        console.error(
+                          "Failed to store post-login state in sessionStorage",
+                          err
+                        );
+                      }
+
+                      navigate("/login", {
+                        state: returnState,
+                      });
+                      return;
+                    }
+
                     const modal =
                       document.getElementById(
                         "work_permit_modal"

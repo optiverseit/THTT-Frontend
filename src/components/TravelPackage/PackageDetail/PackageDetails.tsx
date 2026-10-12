@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
+// Module-level Set — survives React 18 StrictMode remounts (unlike useRef).
+// Tracks which packageIds have already been fetched in this browser session.
+const _fetchedPackageIds = new Set<string>();
 
 import PackageImageGrid from "./PackageImageGrid";
 
@@ -22,6 +26,9 @@ import {
   getPackagePricingTiers,
   getPackageItineraries,
   getPackageHighlights,
+  getPackagePublicTestimonials,
+  getPackagePublicPolicies,
+  getPackagePublicGallery,
 } from "../../../api/BackendApi";
 
 const PackageDetails: React.FC = () => {
@@ -37,6 +44,9 @@ const PackageDetails: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const [packageLoadFinished, setPackageLoadFinished] = useState(false);
+
+  // AbortController ref — used to cancel in-flight requests on cleanup
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // ============================================================
   // PRICING LOADING
@@ -69,24 +79,23 @@ const PackageDetails: React.FC = () => {
       return;
     }
 
-    let cancelled = false;
+    // Module-level guard — prevents double-fetch in React 18 StrictMode
+    // (useRef resets on StrictMode remount; module-level Set does not)
+    if (_fetchedPackageIds.has(packageId)) {
+      return;
+    }
+    _fetchedPackageIds.add(packageId);
 
+    // Cancel any previous in-flight requests
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const fetchPackageDetails = async () => {
       try {
         setLoading(true);
         setPackageLoadFinished(false);
         setBackendPackage(null);
-
-        const packageRequest = getPackageById(packageId);
-        const pricingRequest = getPackagePricingTiers(packageId);
-        const itinerariesRequest = getPackageItineraries(packageId);
-        const inclusionsRequest = getPackageInclusions(packageId);
-        const exclusionsRequest = getPackageExclusions(packageId);
-        const restrictionsRequest = getPackageRestrictions(packageId);
-        const whatToBringRequest = getPackageWhatToBring(packageId);
-        const faqsRequest = getPackageFaqs(packageId);
-        const highlightsRequest = getPackageHighlights(packageId);
 
         const [
           packageRes,
@@ -98,36 +107,36 @@ const PackageDetails: React.FC = () => {
           whatToBringRes,
           faqsRes,
           highlightsRes,
+          testimonialsRes,
+          policiesRes,
+          galleryRes,
         ] = await Promise.allSettled([
-          packageRequest,
-          pricingRequest,
-          itinerariesRequest,
-          inclusionsRequest,
-          exclusionsRequest,
-          restrictionsRequest,
-          whatToBringRequest,
-          faqsRequest,
-          highlightsRequest,
+          getPackageById(packageId),
+          getPackagePricingTiers(packageId),
+          getPackageItineraries(packageId),
+          getPackageInclusions(packageId),
+          getPackageExclusions(packageId),
+          getPackageRestrictions(packageId),
+          getPackageWhatToBring(packageId),
+          getPackageFaqs(packageId),
+          getPackageHighlights(packageId),
+          getPackagePublicTestimonials(packageId),
+          getPackagePublicPolicies(packageId),
+          getPackagePublicGallery(packageId),
         ]);
 
-        if (cancelled) return;
-
-        if (packageRes.status !== "fulfilled" || !packageRes.value?.data?.data) {
-
-
-        // Pricing starts loading independently.
-        setPricingLoading(true);
-
-        // ========================================================
-        // API REQUESTS
-        // ========================================================
-          setBackendPackage(null);
-          setLoading(false);
-          setPackageLoadFinished(true);
-
+        // If this component was unmounted before results arrived, discard
+        if (controller.signal.aborted) {
           return;
         }
 
+        if (packageRes.status !== "fulfilled" || !packageRes.value?.data?.data) {
+          setPricingLoading(true);
+          setBackendPackage(null);
+          setLoading(false);
+          setPackageLoadFinished(true);
+          return;
+        }
 
         const packageData = packageRes.value.data.data;
 
@@ -148,9 +157,108 @@ const PackageDetails: React.FC = () => {
         const pricing_tiers = getArray(pricingRes);
         const itineraries = getArray(itinerariesRes);
         const highlights = getArray(highlightsRes);
+        const rawTestimonials = getArray(testimonialsRes);
+        const rawPolicies = getArray(policiesRes);
+        const rawGallery = getArray(galleryRes);
 
-        console.log("PACKAGE:", packageData);
-        console.log("FAQS:", faqs);
+        const formattedTestimonials = rawTestimonials
+          .filter((item: any) => !item.status || item.status !== "INACTIVE")
+          .sort((a: any, b: any) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0))
+          .map((item: any, idx: number) => {
+            const name =
+              item.name ||
+              item.userName ||
+              item.user_name ||
+              item.customer_name ||
+              item.guest_name ||
+              "Verified Traveler";
+
+            const avatar =
+              item.userAvatar ||
+              item.avatar ||
+              item.image ||
+              item.image_url ||
+              item.photo ||
+              item.profile_image ||
+              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150";
+
+            const comment =
+              item.comment ||
+              item.review ||
+              item.message ||
+              item.testimonial ||
+              item.content ||
+              "";
+
+            const location =
+              item.location ||
+              item.country ||
+              item.guest_country ||
+              "Nepal";
+
+            const rating = Number(item.rating) || 5;
+
+            let date = "Recent";
+            if (item.date) {
+              date = item.date;
+            } else if (item.created_at) {
+              try {
+                const d = new Date(item.created_at);
+                if (!isNaN(d.getTime())) {
+                  date = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+                }
+              } catch {
+                date = "Recent";
+              }
+            }
+
+            return {
+              id: item.id ? String(item.id) : `testimony-${idx}`,
+              userName: name,
+              name: name,
+              userAvatar: avatar,
+              avatar: avatar,
+              location: location,
+              country: location,
+              rating: rating,
+              date: date,
+              comment: comment,
+              review: comment,
+              message: comment,
+            };
+          });
+
+        const formattedPolicies = rawPolicies
+          .filter((item: any) => !item.status || item.status !== "INACTIVE")
+          .sort((a: any, b: any) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0))
+          .map((item: any, idx: number) => ({
+            id: item.id ? Number(item.id) : idx + 1,
+            title: item.title || item.policy_title || item.name || (item.type ? String(item.type).replace(/_/g, " ") : "Policy"),
+            type: item.type || "POLICY",
+            content: item.content || item.description || item.policy || item.policy_content || item.details || "",
+            description: item.content || item.description || item.policy || item.policy_content || item.details || "",
+            displayOrder: Number(item.display_order ?? item.displayOrder ?? idx),
+          }));
+
+        const combinedGalleryRaw = rawGallery.length > 0
+          ? rawGallery
+          : (Array.isArray(packageData.gallery) ? packageData.gallery : []);
+
+        const galleryImages = combinedGalleryRaw
+          .filter((item: any) => !item?.status || item.status !== "INACTIVE")
+          .sort((a: any, b: any) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0))
+          .map((item: any) => {
+            if (typeof item === "string") return item;
+            return (
+              item?.image_url ||
+              item?.image ||
+              item?.file_url ||
+              item?.url ||
+              item?.secure_url ||
+              ""
+            );
+          })
+          .filter(Boolean);
 
         setBackendPackage({
           ...packageData,
@@ -162,17 +270,20 @@ const PackageDetails: React.FC = () => {
           pricing_tiers: pricing_tiers.length > 0 ? pricing_tiers : (Array.isArray(packageData.pricing_tiers) ? packageData.pricing_tiers : []),
           itineraries: itineraries.length > 0 ? itineraries : (Array.isArray(packageData.itineraries) ? packageData.itineraries : []),
           highlights: highlights.length > 0 ? highlights : (Array.isArray(packageData.highlights) ? packageData.highlights : []),
+          gallery: galleryImages.length > 0 ? galleryImages : (Array.isArray(packageData.gallery) ? packageData.gallery : []),
+          policies: formattedPolicies.length > 0 ? formattedPolicies : (Array.isArray(packageData.policies) ? packageData.policies : []),
+          testimonies: formattedTestimonials.length > 0 ? formattedTestimonials : (Array.isArray(packageData.testimonies) ? packageData.testimonies : (Array.isArray(packageData.testimonials) ? packageData.testimonials : [])),
         });
 
         setLoading(false);
         setPackageLoadFinished(true);
-      } catch (error) {
-        if (cancelled) return;
+      } catch (error: any) {
+        if (controller.signal.aborted) return;
 
-        console.error(
-          "Error fetching package details:",
-          error
-        );
+        // Remove from cache so user can retry on re-navigation
+        _fetchedPackageIds.delete(packageId);
+
+        console.error("Error fetching package details:", error);
 
         setBackendPackage(null);
         setLoading(false);
@@ -184,7 +295,9 @@ const PackageDetails: React.FC = () => {
     fetchPackageDetails();
 
     return () => {
-      cancelled = true;
+      // Abort only if we navigate AWAY (not StrictMode remount,
+      // since the module-level guard already prevents the second call)
+      abortControllerRef.current?.abort();
     };
   }, [packageId, isNumericPackageId]);
 
@@ -635,8 +748,15 @@ const PackageDetails: React.FC = () => {
     normalizedFaqs;
 
   const allTestimonies =
-    Array.isArray(pkg.testimonies)
+    Array.isArray(pkg.testimonies) && pkg.testimonies.length > 0
       ? pkg.testimonies
+      : Array.isArray(pkg.testimonials) && pkg.testimonials.length > 0
+      ? pkg.testimonials
+      : [];
+
+  const allPolicies =
+    Array.isArray(pkg.policies) && pkg.policies.length > 0
+      ? pkg.policies
       : [];
 
   const pricingTable =
@@ -650,6 +770,18 @@ const PackageDetails: React.FC = () => {
     ...normalizedPkg,
 
     gallery,
+
+    policies:
+      allPolicies,
+
+    allPolicies:
+      allPolicies,
+
+    testimonies:
+      allTestimonies,
+
+    allTestimonies:
+      allTestimonies,
 
     pricingTable,
 
@@ -708,6 +840,14 @@ const PackageDetails: React.FC = () => {
             allfaqs,
 
             allTestimonies,
+
+            policies:
+              allPolicies,
+
+            allPolicies:
+              allPolicies,
+
+            gallery,
 
             pricingTable,
 

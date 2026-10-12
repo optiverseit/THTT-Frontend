@@ -48,16 +48,29 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const defaultFallbacks = [
+    pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
+    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
+    "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
+  ];
+
+  const rawGallery = Array.isArray(pkg.gallery)
+    ? pkg.gallery
+        .map((g: any) => (typeof g === "string" ? g : (g?.image_url || g?.image || g?.url || "")))
+        .filter(Boolean)
+    : [];
+
   const galleryImages =
-    pkg.gallery && pkg.gallery.length >= 5
-      ? pkg.gallery
-      : [
-        pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
-        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800",
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200",
-        "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=800",
-        "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
-      ];
+    rawGallery.length >= 5
+      ? rawGallery
+      : rawGallery.length > 0
+      ? [
+          ...rawGallery,
+          ...defaultFallbacks.filter((img) => !rawGallery.includes(img)),
+        ].slice(0, Math.max(5, rawGallery.length))
+      : defaultFallbacks;
 
   const outletItems = [
     { name: "OVERVIEW", path: `/details/${pkg.id}` },
@@ -513,7 +526,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
                 </div>
                 <span className="text-white font-extrabold text-xs">{pkg.rating || 4.9}</span>
                 <span className="text-white/60 text-[10px] font-semibold">
-                  ({pkg.testimonies?.length || 1} reviews)
+                  ({Array.isArray(pkg.testimonies) && pkg.testimonies.length > 0 ? pkg.testimonies.length : (Array.isArray(pkg.testimonials) && pkg.testimonials.length > 0 ? pkg.testimonials.length : 1)} reviews)
                 </span>
               </div>
             </div>

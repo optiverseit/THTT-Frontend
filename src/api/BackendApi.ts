@@ -231,6 +231,63 @@ export const getPackageHighlights = (
   );
 };
 
+// Helper: derive backend root URL (strips trailing /api from VITE_BASE_URL)
+// e.g.  https://thtt-backend.onrender.com/api  →  https://thtt-backend.onrender.com
+const getBackendRootUrl = () =>
+  (import.meta.env.VITE_BASE_URL as string || "")
+    .replace(/\/api\/?$/i, "")
+    .replace(/\/+$/, "");
+
+
+// ==========================================
+// PACKAGE PUBLIC TESTIMONIALS
+// Route: /package-public-testimonials/{packageId}
+// Lives OUTSIDE the /api prefix in Laravel.
+// We use axiosInstance with an absolute URL so that:
+//   1. The /api baseURL is bypassed (axios uses absolute URLs as-is)
+//   2. Auth interceptors still run, satisfying CORS preflight
+// ==========================================
+
+export const getPackagePublicTestimonials = (
+  packageId: number | string
+) => {
+  const rootUrl = getBackendRootUrl();
+  return axiosInstance.get(
+    `${rootUrl}/package-public-testimonials/${packageId}`
+  );
+};
+
+
+// ==========================================
+// PACKAGE PUBLIC POLICIES
+// Route: /package-public-policies/{packageId}
+// ==========================================
+
+export const getPackagePublicPolicies = (
+  packageId: number | string
+) => {
+  const rootUrl = getBackendRootUrl();
+  return axiosInstance.get(
+    `${rootUrl}/package-public-policies/${packageId}`
+  );
+};
+
+
+// ==========================================
+// PACKAGE PUBLIC GALLERY
+// Route: /package-public-gallery/{packageId}
+// ==========================================
+
+export const getPackagePublicGallery = (
+  packageId: number | string
+) => {
+  const rootUrl = getBackendRootUrl();
+  return axiosInstance.get(
+    `${rootUrl}/package-public-gallery/${packageId}`
+  );
+};
+
+
 // VEHICLES
 // PUBLIC - active vehicles for frontend
 export const getAllVehicles = () => {

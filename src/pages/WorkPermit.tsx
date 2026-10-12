@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { Globe, ShieldCheck, Clock, Zap, FileText } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import {
+  Globe,
+  ShieldCheck,
+  Clock,
+  Zap,
+  FileText,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import PermitServices from "../components/work-permit/PermitServices";
 import Testimonials from "../components/reusable/Testimonials";
 import { workPermitTestimonials } from "../assets/data/mockData";
@@ -30,6 +38,9 @@ interface PermitServiceItem {
 const WorkPermit = () => {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [appliedCountry, setAppliedCountry] = useState("");
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] =
+    useState(false);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
 
   const [selectedPermitType, setSelectedPermitType] =
     useState("all");
@@ -43,6 +54,32 @@ const WorkPermit = () => {
 
   const [countriesLoading, setCountriesLoading] =
     useState(true);
+
+  // Close country dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        countryDropdownRef.current &&
+        !countryDropdownRef.current.contains(
+          event.target as Node
+        )
+      ) {
+        setIsCountryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const fetchPermitServices = async () => {
@@ -95,6 +132,10 @@ const WorkPermit = () => {
         item.country,
       ])
     ).values()
+  ).sort((a, b) =>
+    a.country_name.localeCompare(b.country_name, undefined, {
+      sensitivity: "base",
+    })
   );
 
   const scrollToSection = (id: string) => {
@@ -162,51 +203,109 @@ const WorkPermit = () => {
 
                   {/* COUNTRY */}
 
-                  <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <div
+                    ref={countryDropdownRef}
+                    className="relative w-full border-b sm:border-b-0 sm:border-r border-gray-100"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        !countriesLoading &&
+                        setIsCountryDropdownOpen((prev) => !prev)
+                      }
+                      disabled={countriesLoading}
+                      className="w-full flex items-center justify-between px-3 py-2 text-left cursor-pointer transition-colors hover:bg-gray-50/50 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Globe
+                          size={18}
+                          className="text-pink-500 flex-shrink-0"
+                        />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+                            SELECT COUNTRY
+                          </span>
+                          <span className="text-sm font-semibold text-gray-800 truncate py-0.5 block">
+                            {countriesLoading
+                              ? "Loading Countries..."
+                              : selectedCountry
+                              ? countries.find(
+                                  (c) =>
+                                    String(c.id) ===
+                                    String(selectedCountry)
+                                )?.country_name || "All Countries"
+                              : "All Countries"}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+                          isCountryDropdownOpen
+                            ? "rotate-180 text-pink-500"
+                            : ""
+                        }`}
+                      />
+                    </button>
 
-                    <Globe
-                      size={18}
-                      className="text-pink-500 flex-shrink-0"
-                    />
+                    {isCountryDropdownOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[240px] overflow-y-auto py-1 divide-y divide-gray-50">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCountry("");
+                            setIsCountryDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors flex items-center justify-between cursor-pointer ${
+                            selectedCountry === ""
+                              ? "bg-pink-50 text-pink-600 font-bold"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span>All Countries</span>
+                          {selectedCountry === "" && (
+                            <Check
+                              size={14}
+                              className="text-pink-600 flex-shrink-0"
+                            />
+                          )}
+                        </button>
 
-                    <div className="flex flex-col w-full text-left">
+                        {countries.map((country) => {
+                          const isSelected =
+                            String(country.id) ===
+                            String(selectedCountry);
 
-                      <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                        SELECT COUNTRY
-                      </label>
-
-                      <select
-                        className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-                        value={selectedCountry}
-                        onChange={(e) =>
-                          setSelectedCountry(
-                            e.target.value
-                          )
-                        }
-                        disabled={countriesLoading}
-                      >
-
-                        <option value="">
-                          {countriesLoading
-                            ? "Loading Countries..."
-                            : "All Countries"}
-                        </option>
-
-                        {countries.map((country) => (
-                          <option
-                            key={country.id}
-                            value={String(
-                              country.id
-                            )}
-                          >
-                            {country.country_name}
-                          </option>
-                        ))}
-
-                      </select>
-
-                    </div>
-
+                          return (
+                            <button
+                              type="button"
+                              key={country.id}
+                              onClick={() => {
+                                setSelectedCountry(
+                                  String(country.id)
+                                );
+                                setIsCountryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors flex items-center justify-between cursor-pointer ${
+                                isSelected
+                                  ? "bg-pink-50 text-pink-600 font-bold"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              <span className="truncate">
+                                {country.country_name}
+                              </span>
+                              {isSelected && (
+                                <Check
+                                  size={14}
+                                  className="text-pink-600 flex-shrink-0"
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* PERMIT TYPE */}

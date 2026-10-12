@@ -3962,20 +3962,6 @@ export const PackageHeliService: React.FC<{
                               BOOK NOW
                             </button>
                           </div>
-
-                          {/* WhatsApp Inquiry Button on Card */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWhatsAppInquiry(tour);
-                            }}
-                            className="w-full mt-2 py-1.5 px-3 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider bg-[#25D366] hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
-                            title="Instant WhatsApp Inquiry"
-                          >
-                            <MessageCircle size={13} />
-                            <span>WhatsApp</span>
-                          </button>
                         </div>
                       </div>
                     </div>

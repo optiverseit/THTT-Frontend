@@ -134,7 +134,13 @@ const TravelGuide: React.FC = () => {
                   </h2>
                 </div>
 
-                <div className="divide-y divide-gray-100">
+                <div
+                  className="divide-y divide-gray-100 max-h-[490px] overflow-y-auto"
+                  style={{
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "#CBD5E1 transparent",
+                  }}
+                >
                   {travelGuides.map((item) => (
                     <button
                       key={item.id}

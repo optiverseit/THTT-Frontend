@@ -6,7 +6,6 @@ import {
   Shield,
   Heart,
   Car,
-  BookOpen,
   Package,
   ArrowRight,
   X,
@@ -26,7 +25,7 @@ import {
   getVisaCategories,
   getInsurancePlans,
 } from "../api/BackendApi";
-import { services, blogPosts } from "../assets/data/mockData";
+import { services } from "../assets/data/mockData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,9 +109,6 @@ const ALIAS_MAP: Record<string, string[]> = {
   air:          ["air", "ticket", "flight", "airline"],
   ticket:       ["air", "ticket", "flight"],
   flight:       ["air", "ticket", "airline"],
-  blog:         ["blog", "article", "story", "guide"],
-  article:      ["blog", "story", "read"],
-  guide:        ["travel", "guide", "blog"],
 };
 
 function tokenize(text: string): string[] {
@@ -350,7 +346,6 @@ const SECTION_CONFIG: Omit<Section, "cards">[] = [
   { key: "vehicles",  label: "Vehicle Rental",   icon: Car,      accentHex: "#3D1F5E", viewAllRoute: "/service/vehicle-rental" },
   { key: "visa",      label: "Visa Services",    icon: Shield,   accentHex: "#C2185B", viewAllRoute: "/service/visa-services" },
   { key: "insurance", label: "Travel Insurance", icon: Heart,    accentHex: "#AD1457", viewAllRoute: "/service/travel-insurance" },
-  { key: "blogs",     label: "Blog & Articles",  icon: BookOpen, accentHex: "#512DA8", viewAllRoute: "/blog" },
 ];
 
 const SUGGESTIONS = ["Work Permit", "Everest", "Vehicle Rental", "Visa", "Hotel", "Trekking", "Paragliding", "Insurance"];
@@ -545,22 +540,6 @@ const SearchResultsInner: React.FC = () => {
         .sort((a, b) => b.score - a.score)
         .map((x) => x.item);
 
-      // 7. Blogs
-      const matchedBlogs = (Array.isArray(blogPosts) ? blogPosts : [])
-        .map((b) => ({
-          item: b,
-          score: scoreFields(tokens, expanded, [
-            b.title,
-            b.category,
-            b.author,
-            b.excerpt,
-            b.content,
-          ]),
-        }))
-        .filter((x) => x.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map((x) => x.item);
-
       const cardsMap: Record<string, ResultCard[]> = {
         services: matchedServices.map((s) => ({
           id: s.id,
@@ -613,15 +592,6 @@ const SearchResultsInner: React.FC = () => {
           image: safeString(ins.image),
           route: `/insurance-details/${ins.id}`,
         })),
-        blogs: matchedBlogs.map((b) => ({
-          id: b.id,
-          title: safeString(b.title),
-          subtitle: safeString(b.category),
-          description: safeString(b.excerpt),
-          image: safeString(b.image),
-          meta: safeString(b.readTime),
-          route: `/blog/${b.slug}`,
-        })),
       };
 
       return SECTION_CONFIG
@@ -643,19 +613,25 @@ const SearchResultsInner: React.FC = () => {
     const q = inputValue.trim();
     if (!q) return;
     setQuery(q);
-    setSearchParams({ q }, { replace: true });
+    const newParams: Record<string, string> = { q };
+    if (searchParams.get("exclude")) newParams.exclude = searchParams.get("exclude")!;
+    setSearchParams(newParams, { replace: true });
   };
 
   const handleClear = () => {
     setInputValue("");
     setQuery("");
-    setSearchParams({}, { replace: true });
+    const newParams: Record<string, string> = {};
+    if (searchParams.get("exclude")) newParams.exclude = searchParams.get("exclude")!;
+    setSearchParams(newParams, { replace: true });
   };
 
   const handleSuggestion = (s: string) => {
     setInputValue(s);
     setQuery(s);
-    setSearchParams({ q: s }, { replace: true });
+    const newParams: Record<string, string> = { q: s };
+    if (searchParams.get("exclude")) newParams.exclude = searchParams.get("exclude")!;
+    setSearchParams(newParams, { replace: true });
   };
 
   const isLoading = !dataReady && !query;

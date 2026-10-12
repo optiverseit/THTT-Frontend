@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoutes/ProtecteRoutes";
 // Pages
 import Home from "./pages/Home";
 import About from "./pages/About";
+import Contact from "./pages/Contact";
 import ServicesPage from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
 import Blog from "./pages/Blog";
@@ -147,6 +148,9 @@ const MainLayout = () => {
 
         {/* ── ABOUT ── */}
         <Route path="/about" element={<About />} />
+
+        {/* ── CONTACT ── */}
+        <Route path="/contact" element={<Contact />} />
 
         {/* ── SERVICES ── */}
         <Route path="/service" element={<ServicesPage />} />

@@ -17,7 +17,6 @@ import {
   Car,
   Wind,
   FileText,
-  BookOpen,
   Compass,
   Loader2,
 } from "lucide-react";
@@ -29,7 +28,7 @@ import {
   getVisaCategories,
   getInsurancePlans,
 } from "../../api/BackendApi";
-import { services, blogPosts } from "../../assets/data/mockData";
+import { services } from "../../assets/data/mockData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +39,6 @@ interface SearchResult {
   type:
     | "package"
     | "service"
-    | "blog"
     | "hotel"
     | "vehicle"
     | "visa"
@@ -71,7 +69,6 @@ const SERVICE_ICON_MAP: Record<string, React.ElementType> = {
 const TYPE_COLOR_MAP: Record<string, string> = {
   package: "bg-pink-100 text-pink-600",
   service: "bg-purple-100 text-purple-600",
-  blog: "bg-blue-100 text-blue-600",
   hotel: "bg-amber-100 text-amber-600",
   vehicle: "bg-green-100 text-green-600",
   visa: "bg-indigo-100 text-indigo-600",
@@ -85,7 +82,6 @@ const TYPE_COLOR_MAP: Record<string, string> = {
 const TYPE_LABEL_MAP: Record<string, string> = {
   package: "Package",
   service: "Service",
-  blog: "Blog",
   hotel: "Hotel",
   vehicle: "Vehicle",
   visa: "Visa",
@@ -110,14 +106,6 @@ const STATIC_SEARCH_ITEMS: SearchResult[] = [
     type: "service" as const,
     route: s.slug === "work-permit" ? "/work-permit" : `/service/${s.slug}`,
     icon: SERVICE_ICON_MAP[s.slug] ?? FileText,
-  })),
-  ...blogPosts.map((b) => ({
-    id: b.id,
-    label: b.title,
-    sublabel: b.category,
-    type: "blog" as const,
-    route: `/blog/${b.slug}`,
-    icon: BookOpen,
   })),
 ];
 
@@ -295,7 +283,6 @@ const Banner: React.FC = () => {
     tour: ["tour", "holiday", "safari", "sightseeing", "cultural"],
     heli: ["heli", "helicopter", "chopper"],
     service: ["air", "ticket", "flight", "airline"],
-    blog: ["blog", "article", "story", "read"],
   };
 
   // ── Search logic ──────────────────────────────────────────────────────────
@@ -393,7 +380,7 @@ const Banner: React.FC = () => {
     }
     if (query.trim()) {
       setIsOpen(false);
-      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      navigate(`/search?q=${encodeURIComponent(query.trim())}&exclude=blogs`);
     }
   };
 
@@ -447,12 +434,8 @@ const Banner: React.FC = () => {
               Your Journey, Our Expertise.
             </p>
             <button
-              onClick={() => {
-                const message = encodeURIComponent(
-                  "Hello Trip Himalaya! I would like to inquire about your travel and trekking packages."
-                );
-                window.open(`https://wa.me/9779800000003?text=${message}`, "_blank", "noopener,noreferrer");
-              }}
+              id="home-send-inquiry-btn"
+              onClick={() => navigate("/contact")}
               className="mt-7 w-fit px-8 py-3.5 border border-white/40 bg-white/10 backdrop-blur-md hover:bg-white hover:text-[#2D1347] rounded-xl cursor-pointer transition-all duration-200 shadow-lg group"
             >
               <span className="flex items-center gap-2.5 font-bold text-sm">
@@ -463,7 +446,7 @@ const Banner: React.FC = () => {
           </div>
 
           {/* ─── Search Card ─────────────────────────────────────────────── */}
-          <div className="w-full md:w-[400px] lg:w-[420px] p-5 rounded-3xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl">
+          <div className="w-full md:w-[420px] lg:w-[440px] xl:w-[455px] p-5 sm:p-6 rounded-3xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl">
 
             {/* Mobile heading */}
             <div className="md:hidden text-white mb-4">
@@ -473,11 +456,11 @@ const Banner: React.FC = () => {
               <p className="mt-1 text-sm text-gray-200">Your Journey, Our Expertise.</p>
             </div>
 
-            <h2 className="text-base font-extrabold flex items-center gap-2 text-white">
-              <Navigation size={16} className="text-pink-400" />
+            <h2 className="text-base sm:text-lg font-extrabold flex items-center gap-2 text-white">
+              <Navigation size={17} className="text-pink-400" />
               Plan Your Journey
             </h2>
-            <p className="text-[10px] font-bold text-gray-300 mt-1 mb-4 uppercase tracking-wider">
+            <p className="text-[11px] font-bold text-gray-300 mt-1 mb-4 uppercase tracking-wider">
               Search Tours, Treks, Hotels, Visa &amp; More
             </p>
 
@@ -485,11 +468,11 @@ const Banner: React.FC = () => {
             <div ref={containerRef} className="relative">
 
               {/* Input row */}
-              <div className="flex items-center gap-2 border border-white/30 p-3 rounded-xl bg-white/20 text-white text-xs font-bold focus-within:border-pink-400 focus-within:bg-white/25 transition-all duration-200">
+              <div className="flex items-center gap-2 border border-white/30 p-3 sm:p-3.5 rounded-xl bg-white/20 text-white text-xs sm:text-sm font-bold focus-within:border-pink-400 focus-within:bg-white/25 transition-all duration-200">
                 {loading ? (
-                  <Loader2 size={12} className="text-pink-400 flex-shrink-0 animate-spin" />
+                  <Loader2 size={14} className="text-pink-400 flex-shrink-0 animate-spin" />
                 ) : (
-                  <Search size={12} className="text-pink-400 flex-shrink-0" />
+                  <Search size={14} className="text-pink-400 flex-shrink-0" />
                 )}
                 <input
                   ref={inputRef}
@@ -497,7 +480,7 @@ const Banner: React.FC = () => {
                   type="text"
                   value={query}
                   placeholder="Search Everest, Visa, Hotels, Bali..."
-                  className="bg-transparent outline-none w-full placeholder-gray-300 text-white text-xs"
+                  className="bg-transparent outline-none w-full placeholder-gray-300 text-white text-xs sm:text-sm font-medium"
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => { if (results.length > 0) setIsOpen(true); }}
@@ -514,7 +497,7 @@ const Banner: React.FC = () => {
                     }}
                     className="flex-shrink-0 text-gray-400 hover:text-white transition-colors cursor-pointer"
                   >
-                    <X size={12} />
+                    <X size={13} />
                   </button>
                 )}
               </div>
@@ -523,7 +506,7 @@ const Banner: React.FC = () => {
               {isOpen && (
                 <div
                   className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl bg-[#1e0a35]/95"
-                  style={{ maxHeight: "340px", overflowY: "auto" }}
+                  style={{ maxHeight: "350px", overflowY: "auto" }}
                 >
                   {results.length === 0 ? (
                     <div className="px-4 py-6 text-center">
@@ -570,7 +553,7 @@ const Banner: React.FC = () => {
                       <li
                         onClick={() => {
                           setIsOpen(false);
-                          navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+                          navigate(`/search?q=${encodeURIComponent(query.trim())}&exclude=blogs`);
                         }}
                         className="flex items-center justify-between px-4 py-3 cursor-pointer bg-pink-600/20 hover:bg-pink-600/35 transition-colors"
                       >
@@ -590,14 +573,14 @@ const Banner: React.FC = () => {
               type="button"
               id="home-search-btn"
               onClick={handleSearchSubmit}
-              className="w-full mt-4 bg-pink-500 text-white p-3 rounded-xl hover:bg-pink-600 flex items-center justify-center gap-2 font-bold text-xs shadow-lg transition-colors cursor-pointer"
+              className="w-full mt-3.5 bg-pink-500 text-white p-3 sm:p-3.5 rounded-xl hover:bg-pink-600 active:scale-[0.98] flex items-center justify-center gap-2 font-bold text-xs sm:text-sm tracking-wider shadow-lg transition-all cursor-pointer"
             >
               SEARCH
-              <ArrowRight size={12} />
+              <ArrowRight size={13} />
             </button>
 
             {/* Quick search */}
-            <p className="mt-5 text-[9px] font-bold text-gray-300 flex items-center gap-2 uppercase tracking-widest">
+            <p className="mt-4 sm:mt-5 text-[10px] sm:text-[11px] font-bold text-gray-300 flex items-center gap-1.5 uppercase tracking-widest">
               <TrendingUp size={12} />
               Quick Search
             </p>
@@ -607,7 +590,7 @@ const Banner: React.FC = () => {
                   key={q}
                   type="button"
                   onClick={() => handleQuickSearch(q)}
-                  className="px-3 py-1.5 rounded-lg backdrop-blur-xl bg-white/20 text-[10px] font-bold text-gray-200 hover:bg-white/30 hover:text-white transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg backdrop-blur-xl bg-white/20 text-[10px] sm:text-[11px] font-bold text-gray-200 hover:bg-white/30 hover:text-white transition-all cursor-pointer active:scale-95"
                 >
                   {q}
                 </button>

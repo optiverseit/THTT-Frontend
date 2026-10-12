@@ -37,7 +37,7 @@ const OtherServicesComponent: React.FC<OtherServicesComponentProps> = ({ service
   };
 
   return (
-    <div className="mb-12">
+    <div className="mb-12 print:hidden">
       <header className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-[#2D1347]">

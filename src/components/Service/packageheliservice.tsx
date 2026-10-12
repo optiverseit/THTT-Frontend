@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import {
   Search,
   MapPin,
@@ -73,6 +73,13 @@ import {
   getPackagesByCategory,
   getPackagePricingTiers,
   getPackageFaqs,
+  getPackageInclusions,
+  getPackageExclusions,
+  getPackageRestrictions,
+  getPackageWhatToBring,
+  getPackageHighlights,
+  getPackageItineraries,
+  getPackageById,
   createBooking,
   initiatePayment,
 } from "../../api/BackendApi";
@@ -80,6 +87,9 @@ import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
 import { formatDescription } from "../../utils/formatDescription";
 import { PaymentMethod } from "../reusable/PaymentMethod";
+import DynamicFaqSection from "../reusable/DynamicFaqSection";
+import TripRoadmap, { type RoadmapStep } from "../reusable/TripRoadmap";
+import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 // =============================================================================
 // Comprehensive Helicopter Tours Data
@@ -92,6 +102,12 @@ export interface PackageFaqApi {
   answer?: string;
   q?: string;
   a?: string;
+  question_np?: string;
+  questionNp?: string;
+  qNp?: string;
+  answer_np?: string;
+  answerNp?: string;
+  aNp?: string;
 }
 
 export interface HeliPackageItem extends HeliTourData {
@@ -118,6 +134,7 @@ export interface HeliPackageItem extends HeliTourData {
   category: "ebc" | "abc" | "langtang" | "pilgrimage" | "rescue";
 
   tag: string;
+  apiCategory?: string;
   image: string;
   gallery: string[];
   description: string;
@@ -192,7 +209,8 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
     title: pkg.title ?? "Helicopter Package",
     slug: pkg.slug ?? String(pkg.id),
 
-    tag: pkg.tag ?? pkg.adventure_category ?? "",
+    tag: pkg.tag ? String(pkg.tag).trim() : "",
+    apiCategory: pkg.adventure_category ? String(pkg.adventure_category).trim() : (pkg.category ? String(pkg.category).trim() : ""),
 
     location: pkg.location ?? "Nepal",
     duration: pkg.duration ?? "",
@@ -212,15 +230,40 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
     charterDesc: pkg.charter_description ?? pkg.charterDesc ?? "",
     sharingDesc: pkg.sharing_description ?? pkg.sharingDesc ?? "",
 
-    image: pkg.image ?? "",
-    gallery: pkg.image ? [pkg.image] : [],
+    image:
+      pkg.image ||
+      pkg.cover_image ||
+      pkg.image_url ||
+      pkg.thumbnail ||
+      (Array.isArray(pkg.gallery) && pkg.gallery[0]
+        ? (typeof pkg.gallery[0] === "string" ? pkg.gallery[0] : pkg.gallery[0]?.url || pkg.gallery[0]?.image)
+        : "") ||
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
+    gallery:
+      Array.isArray(pkg.gallery) && pkg.gallery.length > 0
+        ? pkg.gallery.map((g: any) => (typeof g === "string" ? g : g?.url || g?.image)).filter(Boolean)
+        : (pkg.image ? [pkg.image] : ["https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600"]),
 
     description: pkg.description ?? "",
 
     category: getCategoryFromPackage(pkg),
 
     tripHighlights: Array.isArray(pkg.highlights)
-      ? pkg.highlights.map((item: any) => item?.title ?? item?.item ?? item?.description ?? "").filter(Boolean)
+      ? pkg.highlights
+          .map((item: any) =>
+            typeof item === "string"
+              ? item.trim()
+              : (item?.highlight ?? item?.title ?? item?.item ?? item?.description ?? "")
+          )
+          .filter(Boolean)
+      : Array.isArray(pkg.highlightDetails)
+      ? pkg.highlightDetails
+          .map((item: any) =>
+            typeof item === "string"
+              ? item.trim()
+              : (item?.highlight ?? item?.title ?? item?.item ?? item?.description ?? "")
+          )
+          .filter(Boolean)
       : [],
 
     whatsIncluded: Array.isArray(pkg.inclusions)
@@ -282,13 +325,24 @@ export const PackageHeliService: React.FC<{
   const navigate = useNavigate();
   const { tourId } = useParams<{ tourId?: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const routeTourId = tourId || searchParams.get("tour");
 
   const [pricingTiers, setPricingTiers] = useState<PricingTierApi[]>([]);
   const [pricingLoading, setPricingLoading] = useState(false);
 
   const [heliPackages, setHeliPackages] = useState<HeliPackageItem[]>([]);
-  const [packageFaqs, setPackageFaqs] = useState<Array<{ q: string; a: string }>>([]);
+  const [packageFaqs, setPackageFaqs] = useState<
+    Array<{
+      id?: number | string;
+      q: string;
+      a: string;
+      question?: string;
+      answer?: string;
+      questionNp?: string;
+      answerNp?: string;
+    }>
+  >([]);
   const [packagesLoading, setPackagesLoading] = useState<boolean>(true);
   const [packagesError, setPackagesError] = useState<string>("");
   const [bookingPricingTierId, setBookingPricingTierId] = useState<number | null>(null);
@@ -300,6 +354,14 @@ export const PackageHeliService: React.FC<{
   const [submissionId, setSubmissionId] = useState<string>("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copiedId, setCopiedId] = useState<boolean>(false);
+
+  // â”€â”€ Separately-fetched sub-resources (not included in category listing) â”€â”€
+  const [heliInclusions, setHeliInclusions] = useState<string[]>([]);
+  const [heliExclusions, setHeliExclusions] = useState<string[]>([]);
+  const [heliRestrictions, setHeliRestrictions] = useState<string[]>([]);
+  const [heliWhatToBring, setHeliWhatToBring] = useState<string[]>([]);
+  const [heliHighlights, setHeliHighlights] = useState<string[]>([]);
+  const [heliItineraries, setHeliItineraries] = useState<RoadmapStep[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -365,6 +427,171 @@ export const PackageHeliService: React.FC<{
     ) || null
     : null;
 
+  // =========================
+  // FETCH SUB-RESOURCES (inclusions, exclusions, restrictions, what-to-bring)
+  // PERFORMANCE: When routeTourId is numeric we can derive backendId immediately
+  // and fire all 4 requests IN PARALLEL with the category listing — no waterfall.
+  // =========================
+  useEffect(() => {
+    let cancelled = false;
+
+    // Derive numeric backendId from URL param directly (no need to wait for category listing)
+    const numericId = routeTourId && /^\d+$/.test(routeTourId)
+      ? Number(routeTourId)
+      : selectedTour?.backendId ?? null;
+
+    if (!numericId) {
+      setHeliInclusions([]);
+      setHeliExclusions([]);
+      setHeliRestrictions([]);
+      setHeliWhatToBring([]);
+      setHeliHighlights([]);
+      setHeliItineraries([]);
+      return;
+    }
+
+    const fetchSubResources = async () => {
+      const [incRes, excRes, resRes, wtbRes, hlRes, itinRes, pkgRes] = await Promise.allSettled([
+        getPackageInclusions(numericId),
+        getPackageExclusions(numericId),
+        getPackageRestrictions(numericId),
+        getPackageWhatToBring(numericId),
+        getPackageHighlights(numericId),
+        getPackageItineraries(numericId),
+        getPackageById(numericId),
+      ]);
+
+      const extractItems = (
+        res: PromiseSettledResult<any>,
+        preferredField?: string
+      ): string[] => {
+        if (res.status !== "fulfilled") return [];
+        const raw = res.value?.data;
+        const list = Array.isArray(raw?.data?.data)
+          ? raw.data.data
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw)
+          ? raw
+          : [];
+        return list
+          .map((item: any) => {
+            if (typeof item === "string") return item.trim();
+            if (!item || typeof item !== "object") return "";
+            if (preferredField && item[preferredField]) return String(item[preferredField]).trim();
+            return String(
+              item.highlight ??
+              item.item ??
+              item.title ??
+              item.name ??
+              item.restriction ??
+              item.description ??
+              item.point ??
+              ""
+            ).trim();
+          })
+          .filter(Boolean);
+      };
+
+      if (!cancelled) {
+        setHeliInclusions(extractItems(incRes, "item"));
+        setHeliExclusions(extractItems(excRes, "item"));
+        // restrictions API returns { restriction: "..." } not { item: "..." }
+        setHeliRestrictions(extractItems(resRes, "restriction"));
+        setHeliWhatToBring(extractItems(wtbRes, "item"));
+
+        // Extract highlights from dedicated highlights endpoint:
+        let fetchedHighlights = extractItems(hlRes, "highlight");
+        if (fetchedHighlights.length === 0) {
+          fetchedHighlights = extractItems(hlRes, "title");
+        }
+        if (fetchedHighlights.length === 0) {
+          fetchedHighlights = extractItems(hlRes);
+        }
+
+        // Fallback: If dedicated endpoint returned empty, check package detail response
+        if (fetchedHighlights.length === 0 && pkgRes.status === "fulfilled") {
+          const pkgData = pkgRes.value?.data?.data ?? pkgRes.value?.data;
+          const pkgHl =
+            pkgData?.highlights ??
+            pkgData?.highlight_details ??
+            pkgData?.highlightDetails;
+          if (Array.isArray(pkgHl)) {
+            fetchedHighlights = pkgHl
+              .map((item: any) => {
+                if (typeof item === "string") return item.trim();
+                return String(
+                  item?.highlight ??
+                  item?.title ??
+                  item?.item ??
+                  item?.description ??
+                  ""
+                ).trim();
+              })
+              .filter(Boolean);
+          }
+        }
+
+        setHeliHighlights(fetchedHighlights);
+
+        // Extract itineraries from dedicated itineraries endpoint:
+        let rawItineraries: any[] = [];
+        if (itinRes.status === "fulfilled") {
+          const raw = itinRes.value?.data;
+          rawItineraries = Array.isArray(raw?.data?.data)
+            ? raw.data.data
+            : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw)
+            ? raw
+            : [];
+        }
+
+        // Fallback: If dedicated itineraries endpoint returned empty, check package detail response
+        if (rawItineraries.length === 0 && pkgRes.status === "fulfilled") {
+          const pkgData = pkgRes.value?.data?.data ?? pkgRes.value?.data;
+          const fallbackItin =
+            pkgData?.itineraries ??
+            pkgData?.itinerary ??
+            pkgData?.allItenary;
+          if (Array.isArray(fallbackItin)) {
+            rawItineraries = fallbackItin;
+          }
+        }
+
+        const mappedItineraries: RoadmapStep[] = rawItineraries
+          .filter((item: any) => {
+            if (!item) return false;
+            const title = String(item.title || item.heading || item.name || "").trim();
+            const desc = String(item.description || item.desc || item.body || "").trim();
+            const day = String(item.day || "").trim();
+            return title.length > 0 || desc.length > 0 || day.length > 0;
+          })
+          .map((item: any, idx: number) => ({
+            step: Number(item.step || item.display_order || item.order) || idx + 1,
+            day: typeof item.day === "number"
+              ? `Day ${String(item.day).padStart(2, "0")}`
+              : String(item.day || `Day ${String(idx + 1).padStart(2, "0")}`),
+            schedule: item.schedule || item.time || "",
+            title: item.title || item.heading || item.name || `Flight Segment ${idx + 1}`,
+            description: item.desc || item.description || item.body || "",
+            tags: Array.isArray(item.tags)
+              ? item.tags
+              : typeof item.tags === "string"
+              ? item.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+              : [],
+          }));
+
+        setHeliItineraries(mappedItineraries);
+      }
+    };
+
+    fetchSubResources();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTourId, selectedTour?.backendId]);
+
+
   useEffect(() => {
     let cancelled = false;
 
@@ -382,10 +609,15 @@ export const PackageHeliService: React.FC<{
 
         const mappedFaqs = rawFaqs
           .map((faq) => ({
+            id: faq.id,
             q: faq.question ?? faq.q ?? "",
             a: faq.answer ?? faq.a ?? "",
+            question: faq.question ?? faq.q ?? "",
+            answer: faq.answer ?? faq.a ?? "",
+            questionNp: faq.question_np ?? faq.questionNp ?? faq.qNp ?? "",
+            answerNp: faq.answer_np ?? faq.answerNp ?? faq.aNp ?? "",
           }))
-          .filter((faq) => faq.q && faq.a);
+          .filter((faq) => (faq.q || faq.question) && (faq.a || faq.answer));
 
         if (!cancelled) setPackageFaqs(mappedFaqs);
       } catch (error) {
@@ -460,22 +692,44 @@ export const PackageHeliService: React.FC<{
     )
     : "";
 
-  const rateUSD = nprPerOneDollar || 133;
-  const printCharterPriceNPR = selectedTour?.charterPriceNPR || 0;
-  const printSharingPriceNPR = selectedTour?.sharingPriceNPR || 0;
-  const printCharterPriceUSD = Math.round(printCharterPriceNPR / rateUSD);
-  const printSharingPriceUSD = Math.round(printSharingPriceNPR / rateUSD);
-  const printVipPriceNPR = Math.round(printSharingPriceNPR * 1.15);
-  const printVipPriceUSD = Math.round(printSharingPriceUSD * 1.15);
+  const combinedHighlights = useMemo(() => {
+    if (heliHighlights && heliHighlights.length > 0) return heliHighlights;
+    if (selectedTour?.tripHighlights && selectedTour.tripHighlights.length > 0) return selectedTour.tripHighlights;
+    return [];
+  }, [heliHighlights, selectedTour?.tripHighlights]);
 
-  const heliItineraryList = [
-    { phase: "Phase 1", title: "Private Hotel Pickup & Airport Transfer", desc: "Private vehicle transfer from your hotel to the domestic airport helicopter terminal. Check-in, passenger weighing & CAAN flight manifest clearance." },
-    { phase: "Phase 2", title: "Captain Safety Briefing & Boarding", desc: "Meet your CAAN-certified alpine captain. Comprehensive briefing on headsets, emergency oxygen protocols, and high-altitude flight safety." },
-    { phase: "Phase 3", title: `Scenic Helicopter Flight to ${selectedTour?.location || "Alpine Destination"}`, desc: "Take off and enjoy breathtaking aerial views of Himalayan massifs, deep valleys, and alpine rivers from panoramic window seats." },
-    { phase: "Phase 4", title: "Alpine Ground Landing & Photography", desc: `Land at ${selectedTour?.maxAltitude ? `${selectedTour.location} (${selectedTour.maxAltitude})` : (selectedTour?.location || "Alpine Base")}. Savor 30-45 minutes of ground time for photography, fresh mountain air, and tea/coffee.` },
-    { phase: "Phase 5", title: "Return Scenic Flight & Hotel Drop-off", desc: "Scenic return flight with aerial panorama of snow-capped peaks. Touchdown and private transfer back to your hotel." },
-  ];
-
+  const combinedItineraries: RoadmapStep[] = useMemo(() => {
+    if (heliItineraries && heliItineraries.length > 0) return heliItineraries;
+    const fallback =
+      (selectedTour as any)?.itineraries ||
+      (selectedTour as any)?.itinerary ||
+      (selectedTour as any)?.allItenary;
+    if (Array.isArray(fallback) && fallback.length > 0) {
+      return fallback
+        .filter((item: any) => {
+          if (!item) return false;
+          const title = String(item.title || item.heading || item.name || "").trim();
+          const desc = String(item.description || item.desc || item.body || "").trim();
+          const day = String(item.day || "").trim();
+          return title.length > 0 || desc.length > 0 || day.length > 0;
+        })
+        .map((item: any, idx: number) => ({
+          step: Number(item.step || item.display_order || item.order) || idx + 1,
+          day: typeof item.day === "number"
+            ? `Day ${String(item.day).padStart(2, "0")}`
+            : String(item.day || `Day ${String(idx + 1).padStart(2, "0")}`),
+          schedule: item.schedule || item.time || "",
+          title: item.title || item.heading || item.name || `Flight Segment ${idx + 1}`,
+          description: item.desc || item.description || item.body || "",
+          tags: Array.isArray(item.tags)
+            ? item.tags
+            : typeof item.tags === "string"
+            ? item.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+            : [],
+        }));
+    }
+    return [];
+  }, [heliItineraries, selectedTour]);
   // Active Tab in Details Page: "OVERVIEW" | "POLICIES" | "FAQS" | "TESTIMONIES"
   const [activeDetailTab, setActiveDetailTab] = useState<
     "OVERVIEW" | "POLICIES" | "FAQS" | "TESTIMONIES"
@@ -631,59 +885,62 @@ export const PackageHeliService: React.FC<{
     value: any,
     index: number
   ): string | undefined => {
-    const label = `Applicant ${index + 1}`;
+    const isMulti = bookingFlightOption !== "charter" && bookingSeatCount > 1;
+    const prefix = isMulti ? `Applicant ${index + 1}: ` : "";
     switch (field) {
       case "fullName":
         if (!value || !String(value).trim())
-          return `${label}: Full name is required`;
+          return `${prefix}Full name is required (as printed on passport/ID)`;
         if (String(value).trim().length < 2)
-          return `${label}: Name must be at least 2 characters`;
+          return `${prefix}Name must be at least 2 characters`;
+        if (!/^[a-zA-Z\s.'-]+$/.test(String(value).trim()))
+          return `${prefix}Name can only contain letters, spaces, and hyphens`;
         return undefined;
       case "nationality":
         if (!value || !String(value).trim())
-          return `${label}: Nationality is required`;
+          return `${prefix}Nationality is required`;
         if (String(value).trim().length < 2)
-          return `${label}: Please enter valid nationality`;
+          return `${prefix}Please enter a valid nationality`;
         return undefined;
       case "idNumber":
         if (!value || !String(value).trim())
-          return `${label}: Passport or NID number is required`;
+          return `${prefix}Passport, Citizenship, or NID number is required`;
         if (String(value).trim().length < 4)
-          return `${label}: ID must be at least 4 characters`;
+          return `${prefix}ID number must be at least 4 characters`;
         return undefined;
       case "bodyWeightKg":
         if (value === "" || value === null || value === undefined)
-          return `${label}: Weight declaration is mandatory for flight safety`;
+          return `${prefix}Weight declaration is mandatory for flight safety`;
         const weightNum = Number(value);
         if (isNaN(weightNum) || weightNum < 20 || weightNum > 160)
-          return `${label}: Weight must be between 20 kg and 160 kg`;
+          return `${prefix}Body weight must be between 20 kg and 160 kg`;
         return undefined;
       case "luggageKg":
         if (value === "" || value === null || value === undefined) return undefined;
         const lugNum = Number(value);
-        if (isNaN(lugNum)) return `${label}: Please enter a valid luggage weight in kg`;
-        if (lugNum < 0) return `${label}: Luggage weight cannot be negative`;
-        if (lugNum > 20) return `${label}: Luggage cannot exceed 20 kg per person`;
+        if (isNaN(lugNum)) return `${prefix}Please enter a valid luggage weight in kg`;
+        if (lugNum < 0) return `${prefix}Luggage weight cannot be negative`;
+        if (lugNum > 20) return `${prefix}Luggage cannot exceed 20 kg per person`;
         return undefined;
       case "email":
         if (!value || !String(value).trim())
-          return `${label}: Email address is required`;
+          return `${prefix}Email address is required`;
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim()))
-          return `${label}: Please enter a valid email address`;
+          return `${prefix}Please enter a valid email address`;
         return undefined;
       case "phone":
         if (!value || !String(value).trim())
-          return `${label}: WhatsApp phone number is required`;
+          return `${prefix}WhatsApp phone number is required`;
         const cleanPhone = String(value).replace(/[\s\-()]/g, "");
         if (!/^\d{6,15}$/.test(cleanPhone))
-          return `${label}: Enter a valid phone number (6-15 digits)`;
+          return `${prefix}Enter a valid phone number (6-15 digits)`;
         return undefined;
       case "preferredDate":
-        if (!value) return `${label}: Preferred flight date is required`;
+        if (!value) return `${prefix}Preferred flight date is required`;
         const selected = new Date(value);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        if (selected < today) return `${label}: Flight date cannot be in the past`;
+        if (selected < today) return `${prefix}Flight date cannot be in the past`;
         return undefined;
       case "pickupHotel":
         return undefined;
@@ -697,6 +954,10 @@ export const PackageHeliService: React.FC<{
     docType: "passportFile" | "photoFile" | "flightFile" | "hotelFile" | "insuranceFile",
     file: File | null
   ) => {
+    if (file && file.size > 10 * 1024 * 1024) {
+      alert("File size exceeds 10 MB limit. Please select a smaller file.");
+      return;
+    }
     setBookingFormData((prev) => {
       const updated = [...(prev.applicants || [])];
       while (updated.length <= index) {
@@ -899,8 +1160,104 @@ export const PackageHeliService: React.FC<{
     scrollToTop();
   };
 
-  // Open booking modal
-  const handleOpenBooking = (tour: HeliPackageItem, option: "charter" | "sharing" = "charter") => {
+  // Restore booking modal state after login
+  const hasRestoredPostLoginRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (!isSessionValid() || hasRestoredPostLoginRef.current) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking) {
+      const targetTour =
+        selectedTour ||
+        (savedState.packageId
+          ? heliPackages.find(
+              (t) =>
+                String(t.id).toLowerCase() === String(savedState.packageId).toLowerCase() ||
+                String(t.backendId) === String(savedState.packageId) ||
+                t.slug?.toLowerCase() === String(savedState.packageId).toLowerCase()
+            )
+          : null);
+
+      if (targetTour) {
+        hasRestoredPostLoginRef.current = true;
+        if (savedState.bookingType === "priceModel" || savedState.pricingTierId) {
+          handlePriceModelBookNow(
+            {
+              flightType: savedState.flightType || "charter",
+              seatCount: Number(savedState.seatCount) || 1,
+              totalPriceNPR:
+                Number(savedState.totalPriceNPR) ||
+                (savedState.flightType === "sharing"
+                  ? targetTour.sharingPriceNPR
+                  : targetTour.charterPriceNPR),
+              pricingTierId: Number(savedState.pricingTierId) || 0,
+            },
+            true
+          );
+        } else {
+          handleOpenBooking(targetTour, savedState.flightType || "charter", true);
+        }
+
+        try {
+          sessionStorage.removeItem("post_login_state");
+          sessionStorage.removeItem("post_login_redirect");
+        } catch {}
+      }
+    }
+  }, [selectedTour, heliPackages, location.state]);
+
+  // Open booking modal with authentication verification
+  const handleOpenBooking = (
+    tour: HeliPackageItem,
+    option: "charter" | "sharing" = "charter",
+    skipAuthCheck: boolean = false
+  ) => {
+    if (!skipAuthCheck && !isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: tour.id,
+        openBooking: true,
+        isHeliBooking: true,
+        bookingType: "openBooking",
+        flightType: option,
+        seatCount: 1,
+        totalPriceNPR: option === "charter" ? tour.charterPriceNPR : tour.sharingPriceNPR,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+
+    const storedUser = (() => {
+      try {
+        const u = localStorage.getItem("user");
+        return u ? JSON.parse(u) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    const initialName = storedUser?.name || storedUser?.fullName || "";
+    const initialEmail = storedUser?.email || "";
+    const initialPhone = storedUser?.phone || "";
+    const initialNationality = storedUser?.nationality || "";
+
     const seatCount = 1;
     setBookingTour(tour);
     setBookingFlightOption(option);
@@ -909,18 +1266,22 @@ export const PackageHeliService: React.FC<{
     setBookingTotalPriceNPR(option === "charter" ? tour.charterPriceNPR : tour.sharingPriceNPR);
     setBookingFormData((prev) => ({
       ...prev,
+      fullName: prev.fullName || initialName,
+      email: prev.email || initialEmail,
+      phone: prev.phone || initialPhone,
+      nationality: prev.nationality || initialNationality,
       applicants: Array.from(
         { length: seatCount },
         (_, i) =>
           prev.applicants?.[i] || {
-            fullName: i === 0 ? prev.fullName : "",
-            nationality: i === 0 ? prev.nationality : "",
+            fullName: i === 0 ? (prev.fullName || initialName) : "",
+            nationality: i === 0 ? (prev.nationality || initialNationality) : "",
             idNumber: i === 0 ? prev.idNumber : "",
             bodyWeightKg: i === 0 ? prev.bodyWeightKg : "",
             luggageKg: i === 0 ? prev.luggageKg : "",
-            email: i === 0 ? prev.email : "",
+            email: i === 0 ? (prev.email || initialEmail) : "",
             phoneCode: i === 0 ? prev.phoneCode || "+977" : "+977",
-            phone: i === 0 ? prev.phone : "",
+            phone: i === 0 ? (prev.phone || initialPhone) : "",
             preferredDate: prev.preferredDate || "",
             pickupHotel: prev.pickupHotel || "",
             passportFile: null,
@@ -945,15 +1306,58 @@ export const PackageHeliService: React.FC<{
     setIsBookingModalOpen(true);
   };
 
-  // Handler for PriceModel book now trigger
-  const handlePriceModelBookNow = (details: {
-    flightType: "charter" | "sharing";
-    seatCount: number;
-    totalPriceNPR: number;
-    formattedPrice: string;
-    pricingTierId: number;
-  }) => {
+  // Handler for PriceModel book now trigger with authentication verification
+  const handlePriceModelBookNow = (
+    details: {
+      flightType: "charter" | "sharing";
+      seatCount: number;
+      totalPriceNPR: number;
+      formattedPrice?: string;
+      pricingTierId: number;
+    },
+    skipAuthCheck: boolean = false
+  ) => {
     if (!selectedTour) return;
+
+    if (!skipAuthCheck && !isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: selectedTour.id,
+        openBooking: true,
+        isHeliBooking: true,
+        bookingType: "priceModel",
+        flightType: details.flightType,
+        seatCount: details.seatCount,
+        totalPriceNPR: details.totalPriceNPR,
+        pricingTierId: details.pricingTierId,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+
+    const storedUser = (() => {
+      try {
+        const u = localStorage.getItem("user");
+        return u ? JSON.parse(u) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    const initialName = storedUser?.name || storedUser?.fullName || "";
+    const initialEmail = storedUser?.email || "";
+    const initialPhone = storedUser?.phone || "";
+    const initialNationality = storedUser?.nationality || "";
+
     const seatCount = details.flightType === "charter" ? 1 : Math.max(1, details.seatCount || 1);
     setBookingTour(selectedTour);
     setBookingFlightOption(details.flightType);
@@ -963,18 +1367,22 @@ export const PackageHeliService: React.FC<{
     setBookingPricingTierId(details.pricingTierId);
     setBookingFormData((prev) => ({
       ...prev,
+      fullName: prev.fullName || initialName,
+      email: prev.email || initialEmail,
+      phone: prev.phone || initialPhone,
+      nationality: prev.nationality || initialNationality,
       applicants: Array.from(
         { length: seatCount },
         (_, i) =>
           prev.applicants?.[i] || {
-            fullName: i === 0 ? prev.fullName : "",
-            nationality: i === 0 ? prev.nationality : "",
+            fullName: i === 0 ? (prev.fullName || initialName) : "",
+            nationality: i === 0 ? (prev.nationality || initialNationality) : "",
             idNumber: i === 0 ? prev.idNumber : "",
             bodyWeightKg: i === 0 ? prev.bodyWeightKg : "",
             luggageKg: i === 0 ? prev.luggageKg : "",
-            email: i === 0 ? prev.email : "",
+            email: i === 0 ? (prev.email || initialEmail) : "",
             phoneCode: i === 0 ? prev.phoneCode || "+977" : "+977",
-            phone: i === 0 ? prev.phone : "",
+            phone: i === 0 ? (prev.phone || initialPhone) : "",
             preferredDate: prev.preferredDate || "",
             pickupHotel: prev.pickupHotel || "",
             passportFile: null,
@@ -1066,23 +1474,57 @@ export const PackageHeliService: React.FC<{
     setFormErrors({});
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setPaymentError("");
 
     try {
+      const primaryApplicant = bookingFormData.applicants?.[0];
+      const primaryEmail = primaryApplicant?.email || bookingFormData.email || "";
+      const primaryPhone = primaryApplicant?.phone || bookingFormData.phone || "";
+      const primaryCode = primaryApplicant?.phoneCode || bookingFormData.phoneCode || "+977";
+      const primaryPhoneWhatsapp = `${primaryCode} ${primaryPhone}`.trim();
+      const primaryDate = primaryApplicant?.preferredDate || bookingFormData.preferredDate || "";
+      const primaryHotel = primaryApplicant?.pickupHotel || bookingFormData.pickupHotel || "";
+
       const data = new FormData();
       data.append("booking_type", "HELI");
       data.append("package_id", String(bookingTour?.backendId));
       data.append("number_of_people", String(bookingFormData.applicants?.length || 1));
-      data.append("start_date", bookingFormData.applicants?.[0]?.preferredDate || "");
+      data.append("start_date", primaryDate);
       data.append("frontend_total_amount", String(bookingTotalPriceNPR));
+      data.append("payment_method", selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later");
 
       if (bookingPricingTierId) {
         data.append("pricing_tier_id", String(bookingPricingTierId));
       }
 
+      // Top-level applicant details
+      data.append("applicant[full_name]", primaryApplicant?.fullName || bookingFormData.fullName || "");
+      data.append("applicant[email]", primaryEmail);
+      data.append("applicant[phone_whatsapp]", primaryPhoneWhatsapp);
+      data.append("applicant[nationality]", primaryApplicant?.nationality || bookingFormData.nationality || "");
+      if (primaryHotel) {
+        data.append("applicant[pickup_hotel]", primaryHotel);
+      }
+
+      // Dedicated HELI travellers manifest
       bookingFormData.applicants?.forEach((applicant, index) => {
+        const appEmail = applicant?.email || primaryEmail;
+        const appPhone = applicant?.phone || primaryPhone;
+        const appCode = applicant?.phoneCode || primaryCode;
+        const appWhatsapp = `${appCode} ${appPhone}`.trim();
+        const appDate = applicant?.preferredDate || primaryDate;
+        const appHotel = applicant?.pickupHotel || primaryHotel;
+
         data.append(`travellers[${index}][name]`, applicant?.fullName || "");
+        data.append(`travellers[${index}][email]`, appEmail);
+        data.append(`travellers[${index}][whatsapp_phone]`, appWhatsapp);
+        data.append(`travellers[${index}][preferred_flight_date]`, appDate);
         data.append(`travellers[${index}][nationality]`, applicant?.nationality || "");
         data.append(`travellers[${index}][identity_number]`, applicant?.idNumber || "");
+
+        if (appHotel) {
+          data.append(`travellers[${index}][pickup_hotel]`, appHotel);
+        }
 
         if (applicant?.bodyWeightKg) {
           data.append(`travellers[${index}][weight]`, String(applicant.bodyWeightKg));
@@ -1131,24 +1573,92 @@ export const PackageHeliService: React.FC<{
     } catch (error: any) {
       console.error("Booking failed:", error?.response?.data || error);
 
-      setPaymentError(
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create booking. Please try again."
-      );
+      const validationErrors = error?.response?.data?.errors;
+      let errorMsg = error?.response?.data?.message || error?.message || "Failed to create booking. Please try again.";
+      if (validationErrors && typeof validationErrors === "object") {
+        const firstErr = Object.values(validationErrors).flat()[0];
+        if (firstErr) {
+          errorMsg = String(firstErr);
+        }
+      }
+
+      setPaymentError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Print quotation dossier from Details View
+  // Print quotation dossier from Details View (Isolated iframe guarantees single-page print without empty 2nd page)
   const handlePrintQuotation = () => {
-    const originalTitle = document.title;
-    document.title = `${selectedTour?.title || "Heli Tour"} - Quotation Slip - Trip Himalaya`;
-    window.print();
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 2000);
+    const dossierEl = document.getElementById("heli-print-dossier");
+    if (!dossierEl) {
+      window.print();
+      return;
+    }
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <title>${selectedTour?.title || "Heli Tour"} - Quotation Slip - Trip Himalaya</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+            @page {
+              size: A4 portrait;
+              margin: 4mm 6mm;
+            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html, body {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+              background: #fff;
+              color: #1e293b;
+              margin: 0;
+              padding: 0;
+              height: auto;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .print-wrapper {
+              width: 100%;
+              position: relative;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-wrapper">
+            ${dossierEl.innerHTML}
+          </div>
+        </body>
+        </html>
+      `);
+      doc.close();
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1200);
+      }, 350);
+    } else {
+      window.print();
+    }
   };
 
   const handleEsewaPayment = async () => {
@@ -1212,11 +1722,31 @@ export const PackageHeliService: React.FC<{
     }
   };
 
-  const handlePayLater = () => {
-    setSelectedPaymentMethod("pay_later");
-    setPaymentStatus("unpaid");
-    setPaymentError("");
-    setIsBookingModalOpen(false);
+  const handlePayLater = async () => {
+    try {
+      setIsProcessingPayment(true);
+      setSelectedPaymentMethod("pay_later");
+      setPaymentError("");
+
+      if (bookingId) {
+        try {
+          await initiatePayment({
+            booking_id: bookingId,
+            provider: "PAYLATER",
+          });
+        } catch (err) {
+          console.warn("Pay Later payment initiation note:", err);
+        }
+      }
+
+      setPaymentStatus("unpaid");
+      setCurrentStep("submitted");
+    } catch (error: any) {
+      console.error("Pay Later selection failed:", error);
+      setPaymentError(error?.message || "Failed to proceed with Pay Later.");
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   // Print booking receipt / slip from Modal (Matches Tour Package PDF/Print Slip exactly)
@@ -1250,8 +1780,8 @@ export const PackageHeliService: React.FC<{
             ${isLead ? '<span style="font-size:7.5px; font-weight:800; text-transform:uppercase; background:#fdf2f8; color:#be185d; border:1px solid #fbcfe8; padding:1px 5px; border-radius:3px; margin-left:5px;">Lead Pax</span>' : ''}
           </td>
           <td style="font-size:9px; color:#334155; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.nationality || bookingFormData.nationality || "Nepali / International"}</td>
-          <td style="font-size:9px; font-family:'Courier New', monospace; font-weight:600; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.idNumber || bookingFormData.idNumber || "—"}</td>
-          <td style="font-size:9px; font-weight:700; text-align:center; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.bodyWeightKg || bookingFormData.bodyWeightKg || "—"} kg</td>
+          <td style="font-size:9px; font-family:'Courier New', monospace; font-weight:600; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.idNumber || bookingFormData.idNumber || "-"}</td>
+          <td style="font-size:9px; font-weight:700; text-align:center; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.bodyWeightKg || bookingFormData.bodyWeightKg || "-"} kg</td>
           <td style="font-size:9px; font-weight:600; text-align:center; color:#0f172a; background:#ffffff; border:1px solid #cbd5e1; padding:5px 8px;">${app.luggageKg ? `${app.luggageKg} kg` : "0 kg"}</td>
         </tr>
       `;
@@ -1280,7 +1810,7 @@ export const PackageHeliService: React.FC<{
             print-color-adjust: exact !important;
           }
 
-          /* ── PAGE WRAPPER ── */
+          /* â”€â”€ PAGE WRAPPER â”€â”€ */
           .page {
             width: 210mm;
             min-height: 297mm;
@@ -1292,7 +1822,7 @@ export const PackageHeliService: React.FC<{
             background: #fff;
           }
 
-          /* ── WATERMARK ── */
+          /* â”€â”€ WATERMARK â”€â”€ */
           .watermark-wrapper {
             position: fixed;
             top: 0;
@@ -1319,7 +1849,7 @@ export const PackageHeliService: React.FC<{
             mix-blend-mode: multiply;
           }
 
-          /* ── LETTERHEAD ── */
+          /* â”€â”€ LETTERHEAD â”€â”€ */
           .letterhead {
             display: flex;
             align-items: center;
@@ -1390,7 +1920,7 @@ export const PackageHeliService: React.FC<{
             font-weight: 600;
           }
 
-          /* ── DOC TITLE BAND ── */
+          /* â”€â”€ DOC TITLE BAND â”€â”€ */
           .title-band {
             background: #0f172a;
             color: #fff;
@@ -1433,7 +1963,7 @@ export const PackageHeliService: React.FC<{
             letter-spacing: 0.5px;
           }
 
-          /* ── REFERENCE BOX ── */
+          /* â”€â”€ REFERENCE BOX â”€â”€ */
           .ref-box {
             display: flex;
             align-items: stretch;
@@ -1498,7 +2028,7 @@ export const PackageHeliService: React.FC<{
             font-weight: 600;
           }
 
-          /* ── SECTION HEADING ── */
+          /* â”€â”€ SECTION HEADING â”€â”€ */
           .section-heading {
             display: flex;
             align-items: center;
@@ -1520,7 +2050,7 @@ export const PackageHeliService: React.FC<{
             white-space: nowrap;
           }
 
-          /* ── DETAIL TABLE ── */
+          /* â”€â”€ DETAIL TABLE â”€â”€ */
           .detail-table {
             width: 100%;
             table-layout: fixed;
@@ -1562,7 +2092,7 @@ export const PackageHeliService: React.FC<{
             border-color: #f472b6 !important;
           }
 
-          /* ── NOTICE BOX ── */
+          /* â”€â”€ NOTICE BOX â”€â”€ */
           .notice-box {
             border: 1px solid #cbd5e1;
             background: #f8fafc;
@@ -1577,7 +2107,7 @@ export const PackageHeliService: React.FC<{
           }
           .notice-box strong { color: #0f172a; }
 
-          /* ── CHECKLIST ── */
+          /* â”€â”€ CHECKLIST â”€â”€ */
           .checklist-box {
             border: 1px solid #cbd5e1;
             border-radius: 5px;
@@ -1612,13 +2142,14 @@ export const PackageHeliService: React.FC<{
           }
           .ci-icon {
             color: #0f172a;
-            font-weight: 900;
-            font-size: 9.5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
             margin-top: 1px;
           }
 
-          /* ── INFO CARD GRID ── */
+          /* â”€â”€ INFO CARD GRID â”€â”€ */
           .info-card-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -1684,7 +2215,7 @@ export const PackageHeliService: React.FC<{
             print-color-adjust: exact !important;
           }
 
-          /* ── FARE HIGHLIGHT BOX ── */
+          /* â”€â”€ FARE HIGHLIGHT BOX â”€â”€ */
           .fare-box {
             border: 1.5px solid #f9a8d4;
             border-radius: 6px;
@@ -1721,7 +2252,7 @@ export const PackageHeliService: React.FC<{
             line-height: 1.4;
           }
 
-          /* ── FOOTER ── */
+          /* â”€â”€ FOOTER â”€â”€ */
           .doc-footer {
             margin-top: auto;
             padding-top: 8px;
@@ -1745,7 +2276,7 @@ export const PackageHeliService: React.FC<{
               <div class="company-name-block">
                 <div class="company-name-main">Trip Himalaya <span class="name-pink">Tours &amp; Travels Pvt. Ltd.</span></div>
                 <div class="company-tagline">Govt. Approved Travel &amp; Tour Counseling Agency</div>
-                <div class="company-contact-row">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; 977-9851403761 &nbsp;|&nbsp; pradip.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np</div>
+                <div class="company-contact-row">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; 977-9851420882 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np</div>
               </div>
             </div>
             <div class="lh-right">
@@ -1789,7 +2320,7 @@ export const PackageHeliService: React.FC<{
           <div class="info-card-grid">
             <div class="info-card">
               <div class="ic-label">Lead Passenger</div>
-              <div class="ic-value accent">${bookingFormData.fullName || "—"}</div>
+              <div class="ic-value accent">${bookingFormData.fullName || "-"}</div>
             </div>
             <div class="info-card">
               <div class="ic-label">Nationality</div>
@@ -1805,15 +2336,15 @@ export const PackageHeliService: React.FC<{
             </div>
             <div class="info-card">
               <div class="ic-label">Contact / WhatsApp</div>
-              <div class="ic-value mono">${bookingFormData.phone ? `${bookingFormData.phoneCode} ${bookingFormData.phone}` : "—"}</div>
+              <div class="ic-value mono">${bookingFormData.phone ? `${bookingFormData.phoneCode} ${bookingFormData.phone}` : "-"}</div>
             </div>
             <div class="info-card span2">
               <div class="ic-label">Email Address</div>
-              <div class="ic-value">${bookingFormData.email || "—"}</div>
+              <div class="ic-value">${bookingFormData.email || "-"}</div>
             </div>
             <div class="info-card">
               <div class="ic-label">Passport / ID Number</div>
-              <div class="ic-value mono">${bookingFormData.idNumber || "—"}</div>
+              <div class="ic-value mono">${bookingFormData.idNumber || "-"}</div>
             </div>
             <div class="info-card span2">
               <div class="ic-label">Pickup Hotel / Location</div>
@@ -1879,17 +2410,17 @@ export const PackageHeliService: React.FC<{
 
           <!-- OFFICER NOTICE -->
           <div class="notice-box">
-            <strong>Next Step:</strong> Our dedicated <strong>Heli Flight Operations Officer</strong> will contact you within <strong>15–30 minutes</strong> via WhatsApp or phone call to verify passenger manifests, coordinate Tribhuvan International Airport (TIA) domestic VIP helipad terminal entry, and confirm CAAN flight slot clearance.
+            <strong>Next Step:</strong> Our dedicated <strong>Heli Flight Operations Officer</strong> will contact you within <strong>15-30 minutes</strong> via WhatsApp or phone call to verify passenger manifests, coordinate Tribhuvan International Airport (TIA) domestic VIP helipad terminal entry, and confirm CAAN flight slot clearance.
           </div>
 
           <!-- CHECKLIST -->
           <div class="checklist-box">
             <div class="checklist-title">Heli Flight Preparation Checklist</div>
             <div class="checklist-grid">
-              <div class="checklist-item"><span class="ci-icon">✓</span> Original Passport or National ID Card (Mandatory for airport security check)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Flight booking confirmation slip (printed / digital copy)</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> High-altitude windproof down jacket &amp; 100% UV sunglasses</div>
-              <div class="checklist-item"><span class="ci-icon">✓</span> Accurate payload declaration (Luggage limited to max 20 kg per passenger)</div>
+              <div class="checklist-item"><span class="ci-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span> Original Passport or National ID Card (Mandatory for airport security check)</div>
+              <div class="checklist-item"><span class="ci-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span> Flight booking confirmation slip (printed / digital copy)</div>
+              <div class="checklist-item"><span class="ci-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span> High-altitude windproof down jacket &amp; 100% UV sunglasses</div>
+              <div class="checklist-item"><span class="ci-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span> Accurate payload declaration (Luggage limited to max 20 kg per passenger)</div>
             </div>
           </div>
 
@@ -1897,7 +2428,7 @@ export const PackageHeliService: React.FC<{
           <div class="doc-footer">
             <div class="footer-left">
               This is a system-generated confirmation slip. No physical signature is required.<br>
-              24/7 Heli Operations Desk: 977-9851403761 &nbsp;|&nbsp; pradip.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np
+              24/7 Heli Operations Desk: 977-9851420882 &nbsp;|&nbsp; dev.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np
             </div>
             <div class="footer-right">
               Trip Himalaya Tours &amp; Travels<br>
@@ -1948,10 +2479,10 @@ export const PackageHeliService: React.FC<{
     const msg = encodeURIComponent(
       `Hello Trip Himalaya (Heli Operations Desk)! I am interested in booking "${tour.title}" (${tour.location}, Duration: ${tour.duration}). Starting price: ${basePrice}. Please share current flight availability and CAAN slot details.`
     );
-    window.open(`https://wa.me/9779851403761?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
-  // ─── FAST FILTER: applies top-bar Location + Name search + sidebar filters ───
+  // â”€â”€â”€ FAST FILTER: applies top-bar Location + Name search + sidebar filters â”€â”€â”€
   const LISTING_PACKAGES = heliPackages;
   const filteredTours = useMemo(() => {
     const locQuery = (filter?.location || "").toLowerCase().trim();
@@ -2061,54 +2592,54 @@ export const PackageHeliService: React.FC<{
   return (
     <div className="w-full">
       {/* ========================================================================= */}
-      {/* ── DETAIL VIEW (Matching Image 2) ─────────────────────────────────────── */}
+      {/* â”€â”€ DETAIL VIEW (Matching Image 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {/* ========================================================================= */}
       {selectedTour ? (
         <>
-          <div className="w-full space-y-8 animate-in fade-in duration-300">
-            {/* ══════════════════════════════════════════════════════════
+          <div className="w-full space-y-8 print:space-y-0 print:m-0 print:p-0 animate-in fade-in duration-300">
+            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               PRINT-ONLY COMPREHENSIVE DOSSIER & QUOTATION
               Includes all details: Itinerary, Inclusions, Exclusions,
               Restrictions, What to Bring, Pricing, FAQs, and Policies.
-              ══════════════════════════════════════════════════════════ */}
+              â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
             {!isBookingModalOpen && (
               <div
                 id="heli-print-dossier"
                 className="hidden print:block relative"
                 style={{
                   fontFamily: "'Inter', Arial, sans-serif",
-                  fontSize: "9.5px",
-                  lineHeight: "1.45",
+                  fontSize: "9px",
+                  lineHeight: "1.38",
                   color: "#1e293b",
                   width: "100%",
                   position: "relative",
                   WebkitPrintColorAdjust: "exact",
                   printColorAdjust: "exact",
+                  pageBreakAfter: "avoid",
+                  breakAfter: "avoid",
                 }}
               >
-                {/* ── BACKGROUND WATERMARK ── */}
+                {/* â”€â”€ BACKGROUND WATERMARK (Contained strictly to single page) â”€â”€ */}
                 <div
                   aria-hidden="true"
                   style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+                    position: "absolute",
+                    inset: 0,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     pointerEvents: "none",
                     userSelect: "none",
                     zIndex: 999,
+                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
                       transform: "rotate(-28deg)",
-                      fontSize: "38px",
+                      fontSize: "36px",
                       fontWeight: 900,
-                      color: "rgba(45, 19, 71, 0.06)",
+                      color: "rgba(45, 19, 71, 0.05)",
                       textTransform: "uppercase",
                       letterSpacing: "0.05em",
                       lineHeight: 2.2,
@@ -2121,291 +2652,294 @@ export const PackageHeliService: React.FC<{
                   </div>
                 </div>
 
-                {/* ── 1. CORPORATE LETTERHEAD ── */}
-                <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "10px 10px 0 0", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-                    <div style={{ background: "#ffffff", borderRadius: "8px", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <img src={Logo} alt="Trip Himalaya" style={{ height: "68px", width: "auto", objectFit: "contain", display: "block" }} />
+                {/* â”€â”€ 1. CORPORATE LETTERHEAD â”€â”€ */}
+                <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "8px 8px 0 0", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+                    <div style={{ background: "#ffffff", borderRadius: "6px", padding: "3px 5px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <img src={Logo} alt="Trip Himalaya" style={{ height: "54px", width: "auto", objectFit: "contain", display: "block" }} />
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: "16px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0, whiteSpace: "nowrap" }}>
+                      <div style={{ fontSize: "15px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0, whiteSpace: "nowrap" }}>
                         Trip Himalaya Tours &amp; Travel Pvt. Ltd.
                       </div>
                       <div
                         style={{
                           display: "flex",
                           flexDirection: "column",
-                          gap: "2.5px",
-                          marginTop: "4px",
-                          fontSize: "8.5px",
+                          gap: "2px",
+                          marginTop: "3px",
+                          fontSize: "8px",
                           color: "#f3e8ff",
-                          lineHeight: "1.35",
+                          lineHeight: "1.3",
                         }}
                       >
                         {/* Row 1: Address */}
                         <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                          <MapPin size={10} color="#f472b6" style={{ flexShrink: 0 }} />
+                          <MapPin size={9} color="#f472b6" style={{ flexShrink: 0 }} />
                           <span>Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal</span>
                         </div>
                         {/* Row 2: Phone + Website */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                            <span style={{ color: "#f472b6" }}>📞</span>
-                            <span>+977 9851403761</span>
+                            <span style={{ color: "#f472b6", fontWeight: 700 }}>Tel:</span>
+                            <span>+977 9851420882</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                            <span style={{ color: "#f472b6" }}>🌐</span>
+                            <span style={{ color: "#f472b6", fontWeight: 700 }}>Web:</span>
                             <span>www.triphimalaya.com.np</span>
                           </div>
                         </div>
                         {/* Row 3: Email */}
                         <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
-                          <span style={{ color: "#f472b6" }}>✉</span>
-                          <span>pradip.triphimalayatt@gmail.com</span>
+                          <span style={{ color: "#f472b6", fontWeight: 700 }}>Email:</span>
+                          <span>dev.triphimalayatt@gmail.com</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", alignSelf: "flex-end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", paddingBottom: "2px" }}>
-                    <div style={{ fontSize: "8.5px", background: "rgba(233, 30, 99, 0.25)", color: "#fbcfe8", padding: "2px 8px", borderRadius: "4px", fontWeight: 700, border: "1px solid rgba(233, 30, 99, 0.4)" }}>
+                  <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", alignSelf: "flex-end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "3px", paddingBottom: "2px" }}>
+                    <div style={{ fontSize: "8px", background: "rgba(233, 30, 99, 0.25)", color: "#fbcfe8", padding: "2px 7px", borderRadius: "3px", fontWeight: 700, border: "1px solid rgba(233, 30, 99, 0.4)" }}>
                       Helicopter Operations Team
                     </div>
-                    <div style={{ fontSize: "9.5px", color: "#e9d5ff", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: "8.5px", color: "#e9d5ff", whiteSpace: "nowrap" }}>
                       Date: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                     </div>
                   </div>
                 </div>
                 {/* Project brand accent strip */}
-                <div style={{ height: "4px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "10px" }} />
+                <div style={{ height: "3px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "6px" }} />
 
-                {/* ── PACKAGE SUMMARY & OVERVIEW CARD ── */}
-                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                {/* â”€â”€ PACKAGE SUMMARY & OVERVIEW CARD â”€â”€ */}
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 11px", marginBottom: "6px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>{selectedTour.title}</div>
-                      <div style={{ fontSize: "8.5px", color: "#6b21a8", marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                        <span style={{ background: "#2D1347", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>Heli Services</span>
-                        {selectedTour.location && <span style={{ background: "#7c3aed", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>📍 {selectedTour.location}</span>}
-                        {selectedTour.duration && <span style={{ background: "#9333ea", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⏱ {selectedTour.duration}</span>}
-                        {selectedTour.maxAltitude && <span style={{ background: "#c026d3", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>⚡ Max Alt: {selectedTour.maxAltitude}</span>}
-                        <span style={{ background: "#E91E63", color: "#ffffff", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>★ {selectedTour.rating || 4.9} / 5.0 ({selectedTour.reviewsCount || 1} reviews)</span>
+                      <div style={{ fontSize: "14px", fontWeight: 900, color: "#2D1347", lineHeight: 1.2 }}>{selectedTour.title}</div>
+                      <div style={{ fontSize: "8px", color: "#6b21a8", marginTop: "3px", display: "flex", gap: "5px", flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ background: "#2D1347", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>Heli Services</span>
+                        {selectedTour.location && <span style={{ background: "#7c3aed", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>Loc: {selectedTour.location}</span>}
+                        {selectedTour.duration && <span style={{ background: "#9333ea", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>Time: {selectedTour.duration}</span>}
+                        {selectedTour.maxAltitude && <span style={{ background: "#c026d3", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>Max Alt: {selectedTour.maxAltitude}</span>}
+                        <span style={{ background: "#E91E63", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>&#9733; {selectedTour.rating || 4.9} / 5.0 ({selectedTour.reviewsCount || 1} reviews)</span>
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: "8px", color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Starting From</div>
-                      <div style={{ fontSize: "16px", fontWeight: 900, color: "#2D1347" }}>{startsFromDisplayPrice}</div>
+                      <div style={{ fontSize: "7.5px", color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Starting From</div>
+                      <div style={{ fontSize: "15px", fontWeight: 900, color: "#2D1347" }}>{startsFromDisplayPrice}</div>
                     </div>
                   </div>
-                  <div style={{ marginTop: "7px", paddingTop: "7px", borderTop: "1px solid #f3e8ff", fontSize: "9px", color: "#4a154b", lineHeight: "1.45" }}>
+                  <div style={{ marginTop: "5px", paddingTop: "5px", borderTop: "1px solid #f3e8ff", fontSize: "8.5px", color: "#4a154b", lineHeight: "1.35", maxHeight: "3.2rem", overflow: "hidden" }}>
                     <strong style={{ color: "#2D1347" }}>Experience Overview: </strong>
                     <span dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }} />
                   </div>
                 </div>
 
-                {/* ── SECTION 1: PRICING SCHEDULE ── */}
-                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "5px" }}>
-                    1. Pricing Schedule &amp; Package Tiers
-                  </div>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px", border: "1px solid #e9d5ff" }}>
-                    <thead>
-                      <tr style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", color: "#ffffff" }}>
-                        <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 800, width: "42%" }}>Service / Experience Tier</th>
-                        <th style={{ padding: "6px 8px", textAlign: "center", fontWeight: 800, width: "22%" }}>Group / Age Bracket</th>
-                        <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (NPR)</th>
-                        <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (USD)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
-                        <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Private Charter (Full Helicopter)</td>
-                        <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Up to 5 Pax (Private Flight)</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printCharterPriceNPR.toLocaleString("en-IN")}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printCharterPriceUSD.toLocaleString()}</td>
-                      </tr>
-                      <tr style={{ background: "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
-                        <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>Group Joining (Per Seat Sharing)</td>
-                        <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Guaranteed Seat)</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printSharingPriceNPR.toLocaleString("en-IN")}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printSharingPriceUSD.toLocaleString()}</td>
-                      </tr>
-                      <tr style={{ background: "#ffffff", borderBottom: "1px solid #f3e8ff" }}>
-                        <td style={{ padding: "5px 8px", fontWeight: 700, color: "#2D1347" }}>VIP Priority (Front Window View)</td>
-                        <td style={{ padding: "5px 8px", textAlign: "center", color: "#6b21a8" }}>Per Person (Front Window Seat)</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>NPR {printVipPriceNPR.toLocaleString("en-IN")}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>${printVipPriceUSD.toLocaleString()}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div style={{ fontSize: "8px", color: "#7c3aed", marginTop: "3px", fontWeight: 500 }}>
-                    * Rates include certified captain/pilot fees, aviation passenger insurance, landing permits, national park fees, and emergency ground support.
-                  </div>
-                </div>
+                {/* â”€â”€ PRICING SCHEDULE (Only if pricing tiers exist from API) â”€â”€ */}
+                {pricingTiers && pricingTiers.length > 0 && (
+                  <div style={{ marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3px solid #E91E63", paddingLeft: "6px", marginBottom: "4px" }}>
+                      Pricing Schedule &amp; Package Tiers
+                    </div>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5px", border: "1px solid #e9d5ff" }}>
+                      <thead>
+                        <tr style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", color: "#ffffff" }}>
+                          <th style={{ padding: "4px 7px", textAlign: "left", fontWeight: 800, width: "42%" }}>Option / Tier</th>
+                          <th style={{ padding: "4px 7px", textAlign: "center", fontWeight: 800, width: "22%" }}>Group Bracket</th>
+                          <th style={{ padding: "4px 7px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (NPR)</th>
+                          <th style={{ padding: "4px 7px", textAlign: "right", fontWeight: 800, width: "18%" }}>Price (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pricingTiers.map((tier: any, idx: number) => {
+                          const tierName = tier.service || tier.name || `Tier ${idx + 1}`;
+                          const bracket = tier.age_group || (tier.min_pax ? (tier.min_pax === tier.max_pax ? `${tier.min_pax} Pax` : `${tier.min_pax} - ${tier.max_pax} Pax`) : "Per Person / All Pax");
+                          const nprPrice = Number(tier.price_npr ?? tier.price ?? 0);
+                          const usdPrice = tier.price_usd ? Number(tier.price_usd) : Math.round(nprPrice / (nprPerOneDollar || 135));
 
-                {/* ── SECTION 2: DAY-BY-DAY / STEP-BY-STEP ITINERARY ── */}
-                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                    2. Step-by-Step Experience Itinerary &amp; Timeline
+                          return (
+                            <tr key={tier.id || idx} style={{ background: idx % 2 === 0 ? "#ffffff" : "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
+                              <td style={{ padding: "4px 7px", fontWeight: 700, color: "#2D1347" }}>{tierName}</td>
+                              <td style={{ padding: "4px 7px", textAlign: "center", color: "#6b21a8" }}>
+                                {bracket}
+                              </td>
+                              <td style={{ padding: "4px 7px", textAlign: "right", fontWeight: 800, color: "#2D1347" }}>
+                                NPR {nprPrice ? nprPrice.toLocaleString("en-IN") : "Contact for Quote"}
+                              </td>
+                              <td style={{ padding: "4px 7px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>
+                                {usdPrice ? `${usdPrice.toLocaleString()}` : "$ -"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                    {heliItineraryList.map((item, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          border: "1px solid #e9d5ff",
-                          borderRadius: "4px",
-                          padding: "6px 8px",
-                          background: "#faf5ff",
-                          display: "flex",
-                          gap: "8px",
-                          alignItems: "flex-start",
-                          pageBreakInside: "avoid",
-                          breakInside: "avoid",
-                        }}
-                      >
-                        <div
-                          style={{
-                            background: "#2D1347",
-                            color: "#ffffff",
-                            fontSize: "8px",
-                            fontWeight: 800,
-                            padding: "2px 6px",
-                            borderRadius: "3px",
-                            flexShrink: 0,
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {item.phase || `Phase ${i + 1}`}
+                )}
+
+                {/* â”€â”€ TRIP HIGHLIGHTS (Only if data exists) â”€â”€ */}
+                {combinedHighlights && combinedHighlights.length > 0 && (
+                  <div style={{ marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3px solid #E91E63", paddingLeft: "6px", marginBottom: "4px" }}>
+                      Key Highlights &amp; Features
+                    </div>
+                    <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", background: "#fdf4ff" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 10px" }}>
+                        {combinedHighlights.map((h: string, i: number) => (
+                          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8.5px", color: "#4a154b" }}>
+                            <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
+                            <span style={{ lineHeight: "1.3" }}>{h.replace(/^[\u2022\-\*]\s*/, "")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* â”€â”€ INCLUSIONS & EXCLUSIONS (Only if data exists) â”€â”€ */}
+                {((heliInclusions && heliInclusions.length > 0) ||
+                  (heliExclusions && heliExclusions.length > 0)) && (
+                  <div style={{ display: "grid", gridTemplateColumns: heliInclusions?.length && heliExclusions?.length ? "1fr 1fr" : "1fr", gap: "8px", marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    {heliInclusions && heliInclusions.length > 0 && (
+                      <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "5px", padding: "6px 8px", background: "#faf5ff" }}>
+                        <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
+                          What&apos;s Included
                         </div>
-                        <div>
-                          <div style={{ fontSize: "9.5px", fontWeight: 800, color: "#2D1347" }}>{item.title}</div>
-                          <div style={{ fontSize: "8.5px", color: "#581c87", marginTop: "1px", lineHeight: "1.35" }}>{item.desc}</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                          {heliInclusions.map((inc: string, i: number) => (
+                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8px", color: "#581c87" }}>
+                              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#E91E63" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              </span>
+                              <span style={{ lineHeight: "1.25" }}>{inc}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    )}
 
-                {/* ── SECTION 3: TRIP HIGHLIGHTS ── */}
-                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                    3. Key Highlights &amp; Features
-                  </div>
-                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
-                      {(selectedTour.tripHighlights || []).map((h: string, i: number) => (
-                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "9px", color: "#4a154b" }}>
-                          <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
-                          <span style={{ lineHeight: "1.35" }}>{h}</span>
+                    {heliExclusions && heliExclusions.length > 0 && (
+                      <div style={{ border: "1.5px solid #fecdd3", borderRadius: "5px", padding: "6px 8px", background: "#fff1f2" }}>
+                        <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "2px", marginBottom: "4px" }}>
+                          What&apos;s Excluded / Not Included
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── SECTION 4: INCLUSIONS & EXCLUSIONS (2 columns) ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  {/* What's Included */}
-                  <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                      4. What&apos;s Included
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                      {(selectedTour.whatsIncluded || []).map((inc: string, i: number) => (
-                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
-                          <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>✓</span>
-                          <span style={{ lineHeight: "1.3" }}>{inc}</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                          {heliExclusions.map((ex: string, i: number) => (
+                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8px", color: "#4c0519" }}>
+                              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#be185d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              </span>
+                              <span style={{ lineHeight: "1.25" }}>{ex}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
+                )}
 
-                  {/* What's Excluded */}
-                  <div style={{ border: "1.5px solid #fecdd3", borderRadius: "6px", padding: "8px 10px", background: "#fff1f2" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "3px", marginBottom: "5px" }}>
-                      5. What&apos;s Excluded / Not Included
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                      {(selectedTour.whatsExcluded || []).map((ex: string, i: number) => (
-                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4c0519" }}>
-                          <span style={{ fontWeight: 900, color: "#be185d", flexShrink: 0 }}>✗</span>
-                          <span style={{ lineHeight: "1.3" }}>{ex}</span>
+                {/* â”€â”€ RESTRICTIONS & WHAT TO BRING (Only if data exists) â”€â”€ */}
+                {((heliRestrictions && heliRestrictions.length > 0) ||
+                  (heliWhatToBring && heliWhatToBring.length > 0)) && (
+                  <div style={{ display: "grid", gridTemplateColumns: heliRestrictions?.length && heliWhatToBring?.length ? "1fr 1fr" : "1fr", gap: "8px", marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    {heliRestrictions && heliRestrictions.length > 0 && (
+                      <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", background: "#fdf4ff" }}>
+                        <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
+                          Restrictions &amp; Health Guidelines
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                          {heliRestrictions.map((r: string, i: number) => (
+                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8px", color: "#4a154b" }}>
+                              <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
+                              <span style={{ lineHeight: "1.25" }}>{r}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                {/* ── SECTION 5: SAFETY GUIDELINES, RESTRICTIONS & WHAT TO BRING (2 columns) ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  {/* Restrictions */}
-                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                      6. Safety Restrictions &amp; CAAN Flight Rules
+                    {heliWhatToBring && heliWhatToBring.length > 0 && (
+                      <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "5px", padding: "6px 8px", background: "#faf5ff" }}>
+                        <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
+                          Passenger Checklist &amp; What to Bring
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                          {heliWhatToBring.map((b: string, i: number) => (
+                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8px", color: "#581c87" }}>
+                              <span style={{ fontWeight: 900, color: "#9333ea", flexShrink: 0 }}>&bull;</span>
+                              <span style={{ lineHeight: "1.25" }}>{b}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* â”€â”€ POLICIES (Only if data exists) â”€â”€ */}
+                {selectedTour.policies && selectedTour.policies.length > 0 && (
+                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", marginBottom: "6px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
+                      Heli Service Policies &amp; Guidelines
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                      {(selectedTour.restrictionsAndHealth || []).map((r: string, i: number) => (
-                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#4a154b" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                      {selectedTour.policies.map((policy: string, idx: number) => (
+                        <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8px", color: "#4a154b" }}>
                           <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
-                          <span style={{ lineHeight: "1.3" }}>{r}</span>
+                          <span style={{ lineHeight: "1.3" }}>{policy}</span>
                         </div>
                       ))}
                     </div>
                   </div>
+                )}
 
-                  {/* What to Bring */}
-                  <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "6px", padding: "8px 10px", background: "#faf5ff" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                      7. Passenger Checklist &amp; What to Bring
+                {/* â”€â”€ FAQS (Only if data exists) â”€â”€ */}
+                {packageFaqs && packageFaqs.length > 0 && (
+                  <div style={{ marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3px solid #E91E63", paddingLeft: "6px", marginBottom: "4px" }}>
+                      Frequently Asked Questions
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                      {(selectedTour.whatToBring || []).map((b: string, i: number) => (
-                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "8.5px", color: "#581c87" }}>
-                          <span style={{ fontWeight: 900, color: "#9333ea", flexShrink: 0 }}>&bull;</span>
-                          <span style={{ lineHeight: "1.3" }}>{b}</span>
-                        </div>
-                      ))}
+                    <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", background: "#fdf4ff" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "3.5px" }}>
+                        {packageFaqs.map((faq, i) => (
+                          <div key={i} style={{ fontSize: "8px", color: "#4a154b", lineHeight: "1.3" }}>
+                            <div style={{ fontWeight: 800, color: "#2D1347" }}>Q: {faq.q}</div>
+                            <div style={{ color: "#581c87", marginTop: "1px" }}>A: {faq.a}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  </div>
+                )}
+
+                {/* â”€â”€ HELI FLIGHT & BOOKING REQUIREMENTS (Matching Details Page Sidebar) â”€â”€ */}
+                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", marginBottom: "6px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
+                    Heli Flight &amp; Booking Requirements
+                  </div>
+                  <div style={{ fontSize: "8px", color: "#4a154b", marginBottom: "4px" }}>
+                    <strong style={{ color: "#2D1347" }}>Information Required for Booking:</strong>
+                    <ul style={{ margin: "2px 0 0 0", paddingLeft: "12px", lineHeight: "1.35" }}>
+                      <li><strong>Passenger Names:</strong> Full legal names of all travelers joining the flight.</li>
+                      <li><strong>Passport, citizenship or NID:</strong> Required for flight manifest and airport security clearance.</li>
+                      <li><strong>Approximate body weight:</strong> Mandatory for helicopter weight balance &amp; high-altitude flight safety.</li>
+                      <li><strong>Preferred travel date:</strong> Desired flight date and reserve date if possible.</li>
+                      <li><strong>Contact &amp; Emergency details:</strong> WhatsApp, email, and emergency contact for weather and schedule updates.</li>
+                    </ul>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 10px", fontSize: "7.5px", color: "#581c87", lineHeight: "1.3" }}>
+                    <div><strong style={{ color: "#2D1347" }}>Daily Weight Declaration:</strong> Exact weight (kg) per CAAN high-altitude safety regulations.</div>
+                    <div><strong style={{ color: "#2D1347" }}>Luggage Allowance:</strong> Max 20 kg per passenger.</div>
+                    <div><strong style={{ color: "#2D1347" }}>High Altitude Safety:</strong> Supplemental oxygen cylinder &amp; first-aid kit on all flights.</div>
+                    <div><strong style={{ color: "#2D1347" }}>100% Weather Guarantee:</strong> 100% full refund or free priority reschedule if flight is grounded.</div>
                   </div>
                 </div>
 
-                {/* ── SECTION 6: FREQUENTLY ASKED QUESTIONS ── */}
-                <div style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderLeft: "3.5px solid #E91E63", paddingLeft: "7px", marginBottom: "6px" }}>
-                    8. Important FAQs &amp; Flight Information
-                  </div>
-                  <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "8px 10px", background: "#fdf4ff" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                      {packageFaqs.map((faq, i) => (
-                        <div key={i} style={{ fontSize: "8.5px", color: "#4a154b", lineHeight: "1.35" }}>
-                          <div style={{ fontWeight: 800, color: "#2D1347" }}>Q: {faq.q}</div>
-                          <div style={{ color: "#581c87", marginTop: "1px" }}>A: {faq.a}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── SECTION 7: BOOKING TERMS & CANCELLATION POLICIES ── */}
-                <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 10px", marginBottom: "10px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "3px", marginBottom: "5px" }}>
-                    9. Booking Policies, Weather &amp; Cancellation Terms
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", fontSize: "8px", color: "#4a154b", lineHeight: "1.4" }}>
-                    <div><strong style={{ color: "#2D1347" }}>Weather Guarantee:</strong> 100% full refund or complimentary reschedule if flight is grounded due to mountain weather/air traffic control.</div>
-                    <div><strong style={{ color: "#2D1347" }}>Weight &amp; Balance:</strong> Strictly max 5 passengers or total passenger weight per CAAN and aircraft flight manual specifications.</div>
-                    <div><strong style={{ color: "#2D1347" }}>Reservation &amp; Confirmation:</strong> 30% advance deposit secures flight slot and permits; balance payable prior to boarding.</div>
-                    <div><strong style={{ color: "#2D1347" }}>Permits &amp; Identification:</strong> Valid passport copy (or Nepali citizenship ID) required for domestic terminal clearance.</div>
-                  </div>
-                </div>
-
-                {/* ── CORPORATE FOOTER ── */}
-                <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "8px 14px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8.5px", color: "#ffffff" }}>
+                {/* â”€â”€ CORPORATE FOOTER â”€â”€ */}
+                <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "6px 12px", borderRadius: "5px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8px", color: "#ffffff", pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <div>
                     <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> &bull; Registered in Nepal (Lic: 2490)
                   </div>
                   <div style={{ color: "#fce7f3" }}>
-                    Heli Operations Desk: +977 9851403761 &bull; pradip.triphimalayatt@gmail.com
+                    Heli Operations Desk: +977 9851420882 &bull; dev.triphimalayatt@gmail.com
                   </div>
                   <div style={{ fontWeight: 700, color: "#f472b6" }}>
                     Official Computer-Generated Travel Dossier &bull; Page 1 of 1
@@ -2414,29 +2948,22 @@ export const PackageHeliService: React.FC<{
               </div>
             )}
 
-            {/* ── TOP HERO HEADER (From Image 2) ── */}
-            <div className="print:hidden relative rounded-3xl overflow-hidden shadow-xl min-h-[300px] sm:min-h-[360px] flex flex-col justify-end text-white">
-              <img
-                src={selectedTour.image}
-                alt={selectedTour.title}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#200B3B]/95 via-[#200B3B]/60 to-black/30" />
+            {/* â”€â”€ TOP HERO HEADER (Matching Insurance Detail Banner Design) â”€â”€ */}
+            <div
+              className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end"
+              style={{
+                backgroundImage: `url('${selectedTour.image}')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
 
-              {/* ── Share button (top-right, always visible) ── */}
-              <div ref={shareDropdownRef} className="absolute top-3 right-4 sm:top-8 sm:right-6 z-20 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => setIsShareOpen((prev) => !prev)}
-                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95"
-                  title="Share this tour"
-                >
-                  <Share2 size={16} />
-                </button>
-
-                {/* Share Dropdown */}
+              {/* Share button (top-right, with dropdown) */}
+              <div ref={shareDropdownRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-20">
                 {isShareOpen && (
-                  <div className="absolute top-12 right-0 sm:top-0 sm:right-12 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30 animate-in fade-in duration-150">
+                  <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
                     {/* Facebook */}
                     <button
                       type="button"
@@ -2450,11 +2977,11 @@ export const PackageHeliService: React.FC<{
                         );
                         setIsShareOpen(false);
                       }}
-                      title="Facebook"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      title="Share on Facebook"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
                       style={{ background: "#1877F2" }}
                     >
-                      <svg viewBox="0 0 24 24" fill="white" width="15" height="15">
+                      <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
                         <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
                       </svg>
                     </button>
@@ -2469,81 +2996,17 @@ export const PackageHeliService: React.FC<{
                         window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
                         setIsShareOpen(false);
                       }}
-                      title="Instagram"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      title="Share on Instagram"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
                       style={{
                         background:
                           "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
                       }}
                     >
-                      <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                      <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
                         <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2" />
                         <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white" />
                         <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
-                      </svg>
-                    </button>
-
-                    {/* TikTok */}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(window.location.href).catch(() => { });
-                        setIsShareCopied(true);
-                        setTimeout(() => setIsShareCopied(false), 2000);
-                        window.open("https://www.tiktok.com/@trip.himalaya", "_blank", "noopener,noreferrer");
-                        setIsShareOpen(false);
-                      }}
-                      title="TikTok"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                      style={{ background: "#000000" }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-                        <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-                      </svg>
-                    </button>
-
-                    {/* LinkedIn */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open(
-                          `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(
-                            window.location.href
-                          )}&title=${encodeURIComponent(selectedTour.title)}`,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                        setIsShareOpen(false);
-                      }}
-                      title="LinkedIn"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                      style={{ background: "#0A66C2" }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                        <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
-                        <circle cx="4" cy="4" r="2" fill="white" />
-                      </svg>
-                    </button>
-
-                    {/* Twitter / X */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open(
-                          `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-                            window.location.href
-                          )}&text=${encodeURIComponent(selectedTour.title)}`,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                        setIsShareOpen(false);
-                      }}
-                      title="Twitter / X"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                      style={{ background: "#000000" }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                       </svg>
                     </button>
 
@@ -2560,11 +3023,11 @@ export const PackageHeliService: React.FC<{
                         );
                         setIsShareOpen(false);
                       }}
-                      title="WhatsApp"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
+                      title="Share on WhatsApp"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
                       style={{ background: "#25D366" }}
                     >
-                      <MessageCircle size={15} color="white" />
+                      <MessageCircle size={14} color="white" />
                     </button>
 
                     {/* Copy Link */}
@@ -2577,8 +3040,9 @@ export const PackageHeliService: React.FC<{
                         setIsShareOpen(false);
                       }}
                       title={isShareCopied ? "Copied!" : "Copy Link"}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
-                        }`}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${
+                        isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
+                      }`}
                     >
                       {isShareCopied ? (
                         <Check size={13} color="white" />
@@ -2593,66 +3057,109 @@ export const PackageHeliService: React.FC<{
                     <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
                   </div>
                 )}
-              </div>
-
-              {/* ── Desktop-only: stacked action buttons top-right ── */}
-              <div className="hidden sm:flex flex-col absolute sm:top-32 sm:right-6 gap-2 w-48 z-20 print:hidden">
                 <button
                   type="button"
-                  onClick={() => handleWhatsAppInquiry(selectedTour)}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
+                  onClick={() => setIsShareOpen((prev) => !prev)}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
+                    isShareOpen
+                      ? "bg-white text-[#2D1347]"
+                      : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
+                  }`}
+                  title="Share this tour"
                 >
-                  <MessageCircle size={15} />
-                  <span>Ask on WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrintQuotation}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-[#200B3B]/60 hover:bg-[#200B3B]/80 backdrop-blur-md border border-white/25 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
-                >
-                  <Printer size={14} />
-                  <span>Print / Save PDF</span>
+                  <Share2 size={15} />
                 </button>
               </div>
 
-              {/* ── Title & description + mobile action buttons ── */}
-              <div className="relative z-10 p-6 sm:p-10">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                    {selectedTour.title}
-                  </h1>
-                  <span className="bg-[#E91E63] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-xs">
-                    EXPERIENCE
-                  </span>
+              {/* Main Content & Actions */}
+              <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight drop-shadow-sm">
+                          {selectedTour.title}
+                        </h2>
+                      </div>
+                      <div
+                        className="text-xs sm:text-sm font-medium text-white/80 mt-1 max-w-2xl leading-relaxed"
+                        dangerouslySetInnerHTML={{
+                          __html: formatDescription(selectedTour.description)
+                            .replace(/color:#[0-9a-fA-F]{3,8}/g, "color:rgba(255,255,255,0.88)")
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right: Stacked Action Buttons */}
+                  <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-12">
+                    <button
+                      type="button"
+                      onClick={() => handleWhatsAppInquiry(selectedTour)}
+                      className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
+                    >
+                      <MessageCircle size={13} />
+                      <span>Ask on WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePrintQuotation}
+                      className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 text-white/75 hover:text-white rounded-md text-[10px] font-medium transition-all cursor-pointer"
+                      title="Print or Save as PDF"
+                    >
+                      <Printer size={11} />
+                      <span>Print / Save PDF</span>
+                    </button>
+                  </div>
                 </div>
-                <div
-                  className="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl mb-4 sm:mb-0 max-w-none"
-                  dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }}
-                />
 
-                {/* Mobile-only: action buttons below description */}
-                <div className="flex sm:hidden items-center gap-3 mt-4 print:hidden">
-                  <button
-                    type="button"
-                    onClick={() => handleWhatsAppInquiry(selectedTour)}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
-                  >
-                    <MessageCircle size={14} />
-                    <span>Ask on WhatsApp</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePrintQuotation}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white text-xs font-semibold py-2.5 px-3 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
-                  >
-                    <Printer size={14} />
-                    <span>Print / Save PDF</span>
-                  </button>
+                {/* â”€â”€ Badges Pill Row (Matching Image) â”€â”€ */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
+                  {/* Badge 1: Tag & Category from API */}
+                  {selectedTour.tag && (
+                    <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#E91E63] text-white shadow-xs">
+                        {selectedTour.tag}
+                      </span>
+                      {selectedTour.apiCategory ? (
+                        <span className="text-xs font-semibold text-white/90">
+                          {selectedTour.apiCategory}
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {/* Badge 2: Starts at */}
+                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                    <span className="text-pink-200 text-xs font-normal">Starts at:</span>
+                    <span className="font-extrabold text-white">
+                      {displayPrice(
+                        selectedTour.packagePriceNPR,
+                        selectedCurrency,
+                        nprPerOneDollar,
+                        nprPerOneINR
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Badge 3: Duration / Calendar */}
+                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                    <Calendar size={14} className="text-blue-300" />
+                    <span>{selectedTour.duration}</span>
+                  </div>
+
+                  {/* Badge 4: Location */}
+                  {selectedTour.location && (
+                    <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
+                      <MapPin size={13} className="text-pink-300" />
+                      <span>{selectedTour.location}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* ── SUB-NAVIGATION STRIP (OVERVIEW | POLICIES | FAQS | TESTIMONIES + Starts From & Book Now) ── */}
+            {/* â”€â”€ SUB-NAVIGATION STRIP (OVERVIEW | POLICIES | FAQS | TESTIMONIES + Starts From & Book Now) â”€â”€ */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
               {/* Tabs */}
               <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto">
@@ -2697,7 +3204,7 @@ export const PackageHeliService: React.FC<{
               </div>
             </div>
 
-            {/* ── MAIN 2-COLUMN LAYOUT: CONTENT + HELI SERVICE PRICE MODEL ── */}
+            {/* â”€â”€ MAIN 2-COLUMN LAYOUT: CONTENT + HELI SERVICE PRICE MODEL â”€â”€ */}
             <div className="print:hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* LEFT COLUMN: TOUR DETAILS (8 cols) */}
               <div className="lg:col-span-8 space-y-6">
@@ -2726,96 +3233,161 @@ export const PackageHeliService: React.FC<{
                       </div>
                     </div>
 
-                    {/* Description + Trip Highlights — single card */}
-                    <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-                      <div
-                        className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }}
-                      />
-                      <div className="border-t border-gray-100 pt-4 space-y-3">
-                        <h3 className="text-base sm:text-lg font-black text-[#200B3B]">
-                          Trip Highlights
-                        </h3>
-                        <div className="grid grid-cols-1 gap-2">
-                          {selectedTour.tripHighlights.map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-start gap-2 text-[11px] font-medium text-gray-600 text-left"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1 flex-shrink-0" />
-                              <span>{item.replace(/^[\u2022\-\*]\s*/, "")}</span>
+                    {/* Description + Trip Highlights â€” single card (only if data exists) */}
+                    {(selectedTour.description || (combinedHighlights && combinedHighlights.length > 0)) && (
+                      <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+                        {selectedTour.description && (
+                          <div
+                            className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium max-w-none"
+                            dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }}
+                          />
+                        )}
+                        {combinedHighlights && combinedHighlights.length > 0 && (
+                          <div className={`${selectedTour.description ? "border-t border-gray-100 pt-4" : ""} space-y-3`}>
+                            <h3 className="text-base sm:text-lg font-black text-[#200B3B]">
+                              Trip Highlights
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-x-6 sm:gap-y-2.5">
+                              {combinedHighlights.map((item, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-start gap-2 text-[11px] font-medium text-gray-600 text-left"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1 flex-shrink-0" />
+                                  <span>{item.replace(/^[\u2022\-\*]\s*/, "")}</span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
+                    )}
+
+                    {/* Mobile Responsive Pricing Options (shown below highlights card on mobile screens) */}
+                    <div id="pricing-section-mobile" className="lg:hidden">
+                      <HeliServicePriceModel
+                        tour={selectedTour}
+                        pricingTiers={pricingTiers}
+                        pricingLoading={pricingLoading}
+                        onBookNow={handlePriceModelBookNow}
+                        onWhatsAppInquiry={(flightType, formattedTotal) => {
+                          const typeLabel =
+                            flightType === "charter"
+                              ? "Private Charter"
+                              : "Sharing Heli Service";
+
+                          const msg = encodeURIComponent(
+                            `Hello Trip Himalaya! Inquiring for "${selectedTour.title}". Selected: ${typeLabel}. Price: ${formattedTotal}. Please confirm next flight timing.`
+                          );
+
+                          window.open(
+                            `https://wa.me/9779851420882?text=${msg}`,
+                            "_blank",
+                            "noopener,noreferrer"
+                          );
+                        }}
+                      />
                     </div>
 
-                    {/* What's Included (Teal Green Card) & What's Excluded (Pink Card) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      {/* What's Included */}
-                      <div className="bg-[#009688] text-white p-6 rounded-3xl shadow-sm space-y-4">
-                        <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
-                          <CheckCircle2 size={18} />
-                          <span>What's Included</span>
-                        </h4>
-                        <ul className="space-y-2.5 text-xs font-medium">
-                          {selectedTour.whatsIncluded.map((inc, i) => (
-                            <li key={i} className="flex items-start gap-2 leading-relaxed">
-                              <Check size={15} className="flex-shrink-0 mt-0.5 text-teal-200" />
-                              <span>{inc}</span>
+                    {/* Flight Itinerary & Roadmap (only if data exists) */}
+                    {combinedItineraries && combinedItineraries.length > 0 && (
+                      <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100">
+                        <TripRoadmap
+                          steps={combinedItineraries}
+                          heading="Flight Itinerary & Route"
+                          subheading="STEP-BY-STEP FLIGHT SCHEDULE"
+                          endHeading="RETURN & TOUCHDOWN"
+                          endMessage="Return flight back to helipad with unforgettable Himalayan memories."
+                        />
+                      </div>
+                    )}
+
+                    {/* What's Included (Teal Green Card) & What's Excluded (Pink Card) â€” only if data exists */}
+                    {((heliInclusions && heliInclusions.length > 0) ||
+                      (heliExclusions && heliExclusions.length > 0)) && (
+                      <div
+                        className={`grid grid-cols-1 ${
+                          heliInclusions &&
+                          heliInclusions.length > 0 &&
+                          heliExclusions &&
+                          heliExclusions.length > 0
+                            ? "sm:grid-cols-2"
+                            : ""
+                        } gap-5`}
+                      >
+                        {/* What's Included */}
+                        {heliInclusions && heliInclusions.length > 0 && (
+                          <div className="bg-[#009688] text-white p-6 rounded-3xl shadow-sm space-y-4">
+                            <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
+                              <CheckCircle2 size={18} />
+                              <span>What's Included</span>
+                            </h4>
+                            <ul className="space-y-2.5 text-xs font-medium">
+                              {heliInclusions.map((inc, i) => (
+                                <li key={i} className="flex items-start gap-2 leading-relaxed">
+                                  <Check size={15} className="flex-shrink-0 mt-0.5 text-teal-200" />
+                                  <span>{inc}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* What's Excluded */}
+                        {heliExclusions && heliExclusions.length > 0 && (
+                          <div className="bg-[#E91E63] text-white p-6 rounded-3xl shadow-sm space-y-4">
+                            <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
+                              <X size={18} />
+                              <span>What's Excluded</span>
+                            </h4>
+                            <ul className="space-y-2.5 text-xs font-medium">
+                              {heliExclusions.map((exc, i) => (
+                                <li key={i} className="flex items-start gap-2 leading-relaxed">
+                                  <X size={15} className="flex-shrink-0 mt-0.5 text-pink-200" />
+                                  <span>{exc}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Restrictions & Health Card (Amber Warning) â€” only if data exists */}
+                    {heliRestrictions && heliRestrictions.length > 0 && (
+                      <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                        <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
+                          <AlertTriangle size={20} className="text-amber-500" />
+                          <span>Restrictions &amp; Health</span>
+                        </h3>
+                        <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
+                          {heliRestrictions.map((res, i) => (
+                            <li key={i} className="flex items-start gap-2.5 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                              <span>{res}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
+                    )}
 
-                      {/* What's Excluded */}
-                      <div className="bg-[#E91E63] text-white p-6 rounded-3xl shadow-sm space-y-4">
-                        <h4 className="flex items-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider">
-                          <X size={18} />
-                          <span>What's Excluded</span>
-                        </h4>
-                        <ul className="space-y-2.5 text-xs font-medium">
-                          {selectedTour.whatsExcluded.map((exc, i) => (
-                            <li key={i} className="flex items-start gap-2 leading-relaxed">
-                              <X size={15} className="flex-shrink-0 mt-0.5 text-pink-200" />
-                              <span>{exc}</span>
+                    {/* What to Bring Card (Pink Bag) â€” only if data exists */}
+                    {heliWhatToBring && heliWhatToBring.length > 0 && (
+                      <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                        <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
+                          <ShoppingBag size={20} className="text-[#E91E63]" />
+                          <span>What to Bring</span>
+                        </h3>
+                        <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
+                          {heliWhatToBring.map((wtb, i) => (
+                            <li key={i} className="flex items-start gap-2.5 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
+                              <span>{wtb}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
-                    </div>
-
-                    {/* Restrictions & Health Card (Amber Warning) */}
-                    <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
-                      <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
-                        <AlertTriangle size={20} className="text-amber-500" />
-                        <span>Restrictions &amp; Health</span>
-                      </h3>
-                      <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
-                        {selectedTour.restrictionsAndHealth.map((res, i) => (
-                          <li key={i} className="flex items-start gap-2.5 font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                            <span>{res}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* What to Bring Card (Pink Bag) */}
-                    <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
-                      <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-black text-[#200B3B]">
-                        <ShoppingBag size={20} className="text-[#E91E63]" />
-                        <span>What to Bring</span>
-                      </h3>
-                      <ul className="space-y-2.5 pt-1 text-xs text-gray-700 leading-relaxed">
-                        {selectedTour.whatToBring.map((wtb, i) => (
-                          <li key={i} className="flex items-start gap-2.5 font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#E91E63] mt-1.5 flex-shrink-0" />
-                            <span>{wtb}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -2839,22 +3411,20 @@ export const PackageHeliService: React.FC<{
 
                 {/* Tab 3: FAQS */}
                 {activeDetailTab === "FAQS" && (
-                  <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-                    <h3 className="text-xl font-black text-[#200B3B]">
-                      Frequently Asked Questions about {selectedTour.title}
-                    </h3>
-                    <div className="space-y-3">
-                      {packageFaqs.map((faq, idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2"
-                        >
-                          <h4 className="text-sm font-bold text-[#200B3B]">{faq.q}</h4>
-                          <p className="text-xs text-gray-600 leading-relaxed">{faq.a}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <DynamicFaqSection
+                    targetType="package"
+                    targetId={String(selectedTour.backendId || selectedTour.id)}
+                    defaultFaqs={packageFaqs.map((faq) => ({
+                      q: faq.q,
+                      a: faq.a,
+                      question: faq.question || faq.q,
+                      answer: faq.answer || faq.a,
+                      questionNp: faq.questionNp,
+                      answerNp: faq.answerNp,
+                    }))}
+                    title={`Frequently Asked Questions about ${selectedTour.title}`}
+                    subtitle="Common questions answered by our flight specialists"
+                  />
                 )}
 
                 {/* Tab 4: TESTIMONIES */}
@@ -2895,7 +3465,7 @@ export const PackageHeliService: React.FC<{
               {/* RIGHT COLUMN: STICKY PRICING MODEL SIDEBAR (Matching Visa Service Details Page) */}
               <div
                 id="pricing-section"
-                className="lg:col-span-4 lg:sticky lg:top-[150px] self-start space-y-6"
+                className="hidden lg:block lg:col-span-4 lg:sticky lg:top-[150px] self-start space-y-6"
               >
                 <HeliServicePriceModel
                   tour={selectedTour}
@@ -2913,7 +3483,7 @@ export const PackageHeliService: React.FC<{
                     );
 
                     window.open(
-                      `https://wa.me/9779851403761?text=${msg}`,
+                      `https://wa.me/9779851420882?text=${msg}`,
                       "_blank",
                       "noopener,noreferrer"
                     );
@@ -2924,24 +3494,24 @@ export const PackageHeliService: React.FC<{
           </div>
 
 
-        {/* ── OUR OTHER SERVICES ── */}
-        <div className="mt-10">
+        {/* â”€â”€ OUR OTHER SERVICES â”€â”€ */}
+        <div className="mt-10 print:hidden">
           <OtherServicesComponent service={services} />
         </div>
 
         </>
       ) : (
         /* ======================================================================= */
-        /* ── CARDS LISTING VIEW (Matching Image 1) ────────────────────────────── */
+        /* â”€â”€ CARDS LISTING VIEW (Matching Image 1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         /* ======================================================================= */
         <div className="w-full space-y-6">
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-            {/* ── LEFT: FILTER SIDEBAR ── */}
+            {/* â”€â”€ LEFT: FILTER SIDEBAR â”€â”€ */}
             <div className="lg:col-span-1">
-              {/* ══════════════════════════════════════════
-                  MOBILE — compact toggle bar (< lg) matching Packages
-              ══════════════════════════════════════════ */}
+              {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+                  MOBILE â€” compact toggle bar (< lg) matching Packages
+              â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
               <div className="lg:hidden">
                 {/* Toggle Button Row */}
                 <button
@@ -3038,7 +3608,7 @@ export const PackageHeliService: React.FC<{
                                 size={13}
                                 className={isSelected ? "text-yellow-400 fill-yellow-400" : "text-white/70 fill-white/70"}
                               />
-                              <span>{starCount}★</span>
+                              <span>{starCount}â˜…</span>
                             </button>
                           );
                         })}
@@ -3081,9 +3651,9 @@ export const PackageHeliService: React.FC<{
                 </div>
               </div>
 
-              {/* ══════════════════════════════════════════
-                  DESKTOP — full sidebar card (lg+) (UNTOUCHED)
-              ══════════════════════════════════════════ */}
+              {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+                  DESKTOP â€” full sidebar card (lg+) (UNTOUCHED)
+              â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
               <div className="hidden lg:block w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-gray-100">
@@ -3201,7 +3771,7 @@ export const PackageHeliService: React.FC<{
               </div>
             </div>
 
-            {/* ── RIGHT: HORIZONTAL HELI CARDS (Matching Image 1) ── */}
+            {/* â”€â”€ RIGHT: HORIZONTAL HELI CARDS (Matching Image 1) â”€â”€ */}
             <div className="lg:col-span-3 space-y-5">
               {filteredTours.length === 0 ? (
                 <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 space-y-3">
@@ -3239,18 +3809,27 @@ export const PackageHeliService: React.FC<{
                     <div
                       key={tour.id}
                       onClick={() => handleSelectTour(tour)}
-                      className="flex flex-col md:flex-row md:h-[230px] bg-white rounded-3xl shadow-sm hover:shadow-lg border border-gray-100/90 transition-all duration-300 overflow-hidden group cursor-pointer"
+                      className="flex flex-col md:flex-row md:min-h-[230px] bg-white rounded-3xl shadow-sm hover:shadow-lg border border-gray-100/90 transition-all duration-300 overflow-hidden group cursor-pointer"
                     >
                       {/* Left: Image with Badge */}
-                      <div className="relative w-full md:w-72 lg:w-80 h-52 md:h-full flex-shrink-0 overflow-hidden bg-gray-100">
+                      <div className="relative w-full h-56 sm:h-60 md:w-72 lg:w-80 md:h-auto self-stretch flex-shrink-0 overflow-hidden bg-gray-100 flex items-stretch">
                         <img
-                          src={tour.image}
+                          src={
+                            tour.image ||
+                            "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600"
+                          }
                           alt={tour.title}
-                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src =
+                              "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600";
+                          }}
+                          className="w-full h-full min-h-[220px] object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                        <span className="absolute top-3.5 left-3.5 bg-white/95 backdrop-blur-xs text-[#2D1347] text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                          {tour.tag}
-                        </span>
+                        {tour.tag ? (
+                          <span className="absolute top-3.5 left-3.5 bg-white/95 backdrop-blur-xs text-[#2D1347] text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm z-10">
+                            {tour.tag}
+                          </span>
+                        ) : null}
                       </div>
 
                       {/* Middle: Info */}
@@ -3344,7 +3923,19 @@ export const PackageHeliService: React.FC<{
                             </button>
                           </div>
 
-
+                          {/* WhatsApp Inquiry Button on Card */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWhatsAppInquiry(tour);
+                            }}
+                            className="w-full mt-2 py-1.5 px-3 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider bg-[#25D366] hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
+                            title="Instant WhatsApp Inquiry"
+                          >
+                            <MessageCircle size={13} />
+                            <span>WhatsApp</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -3357,7 +3948,7 @@ export const PackageHeliService: React.FC<{
       )}
 
       {/* ========================================================================= */}
-      {/* ── BOOKING MODAL & PRINT SLIP ─────────────────────────────────────────── */}
+      {/* â”€â”€ BOOKING MODAL & PRINT SLIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {/* ========================================================================= */}
       {isBookingModalOpen && bookingTour && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm print:p-0 print:bg-white print:static">
@@ -3450,7 +4041,7 @@ export const PackageHeliService: React.FC<{
             {/* Modal Content (Scrollable to fit any screen height) */}
             <div className="p-5 sm:p-7 overflow-y-auto flex-1 overscroll-contain">
               {currentStep === "form" ? (
-                /* ── STEP 1: SUBMISSION FORM ── */
+                /* â”€â”€ STEP 1: SUBMISSION FORM â”€â”€ */
                 <form onSubmit={handleFormSubmit} noValidate className="space-y-4 sm:space-y-5">
                   {/* Validation Error Banner */}
                   {Object.keys(formErrors).length > 0 &&
@@ -3461,7 +4052,15 @@ export const PackageHeliService: React.FC<{
                       </div>
                     )}
 
-                  {/* ── APPLICANT SELECTOR TABS (Shown prominently when paxCount > 1, sharing only) ── */}
+                  {/* Server / Backend Error Banner */}
+                  {paymentError && (
+                    <div className="p-3 rounded-2xl bg-red-50/90 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                      <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+                      <span>{paymentError}</span>
+                    </div>
+                  )}
+
+                  {/* â”€â”€ APPLICANT SELECTOR TABS (Shown prominently when paxCount > 1, sharing only) â”€â”€ */}
                   {bookingFlightOption !== "charter" && bookingSeatCount > 1 && (
                     <div className="bg-gradient-to-r from-purple-50/90 via-pink-50/40 to-purple-50/90 p-3 rounded-2xl border border-purple-200/80 shadow-2xs space-y-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap px-0.5">
@@ -3550,7 +4149,7 @@ export const PackageHeliService: React.FC<{
                     </div>
                   )}
 
-                  {/* ── ALL DETAILS FOR CURRENT ACTIVE APPLICANT (As marked in image) ── */}
+                  {/* â”€â”€ ALL DETAILS FOR CURRENT ACTIVE APPLICANT (As marked in image) â”€â”€ */}
                   {(() => {
                     const currentApp = bookingFormData.applicants?.[activeApplicantIndex] || {
                       fullName: "",
@@ -3572,7 +4171,7 @@ export const PackageHeliService: React.FC<{
 
                     return (
                       <div className="space-y-4">
-                        {/* ── CARD 1: PERSONAL DETAILS ── */}
+                        {/* â”€â”€ CARD 1: PERSONAL DETAILS â”€â”€ */}
                         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200/90 shadow-xs space-y-3.5">
                           {/* Section Header */}
                           <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-100">
@@ -3583,7 +4182,7 @@ export const PackageHeliService: React.FC<{
                               <h4 className="text-xs font-black uppercase tracking-wider">
                                 1. Personal Details{" "}
                                 {bookingFlightOption !== "charter" && bookingSeatCount > 1
-                                  ? `— Applicant ${activeApplicantIndex + 1}`
+                                  ? `â€” Applicant ${activeApplicantIndex + 1}`
                                   : ""}
                               </h4>
                             </div>
@@ -3603,11 +4202,12 @@ export const PackageHeliService: React.FC<{
                               <input
                                 type="text"
                                 value={currentApp.fullName}
+                                placeholder="Ram Bahadur Thapa"
                                 onChange={(e) =>
                                   handleApplicantChange(activeApplicantIndex, "fullName", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "fullName")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_fullName`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_fullName`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_fullName`]
                                   ? "border-red-400 bg-red-50/20 focus:border-red-500"
                                   : "border-gray-200 focus:border-[#E91E63]"
@@ -3629,11 +4229,12 @@ export const PackageHeliService: React.FC<{
                               <input
                                 type="text"
                                 value={currentApp.nationality}
+                                placeholder="Nepali"
                                 onChange={(e) =>
                                   handleApplicantChange(activeApplicantIndex, "nationality", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "nationality")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_nationality`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_nationality`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_nationality`]
                                   ? "border-red-400 bg-red-50/20 focus:border-red-500"
                                   : "border-gray-200 focus:border-[#E91E63]"
@@ -3657,11 +4258,12 @@ export const PackageHeliService: React.FC<{
                             <input
                               type="text"
                               value={currentApp.idNumber}
+                              placeholder="12-01-78-12345 or 0892451"
                               onChange={(e) =>
                                 handleApplicantChange(activeApplicantIndex, "idNumber", e.target.value)
                               }
                               onBlur={() => handleApplicantBlur(activeApplicantIndex, "idNumber")}
-                              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_idNumber`] &&
+                              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_idNumber`] &&
                                 touchedFields[`applicant_${activeApplicantIndex}_idNumber`]
                                 ? "border-red-400 bg-red-50/20 focus:border-red-500"
                                 : "border-gray-200 focus:border-[#E91E63]"
@@ -3697,11 +4299,12 @@ export const PackageHeliService: React.FC<{
                                   min={20}
                                   max={160}
                                   value={currentApp.bodyWeightKg}
+                                  placeholder="68"
                                   onChange={(e) =>
                                     handleApplicantChange(activeApplicantIndex, "bodyWeightKg", e.target.value)
                                   }
                                   onBlur={() => handleApplicantBlur(activeApplicantIndex, "bodyWeightKg")}
-                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_bodyWeightKg`] &&
+                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_bodyWeightKg`] &&
                                     touchedFields[`applicant_${activeApplicantIndex}_bodyWeightKg`]
                                     ? "border-red-500 bg-red-50/30"
                                     : "border-amber-300 focus:border-amber-500"
@@ -3725,11 +4328,12 @@ export const PackageHeliService: React.FC<{
                                   min={0}
                                   max={20}
                                   value={currentApp.luggageKg}
+                                  placeholder="5 (or 0 if none)"
                                   onChange={(e) =>
                                     handleApplicantChange(activeApplicantIndex, "luggageKg", e.target.value)
                                   }
                                   onBlur={() => handleApplicantBlur(activeApplicantIndex, "luggageKg")}
-                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_luggageKg`] &&
+                                  className={`w-full px-3 py-2 rounded-xl bg-white border text-xs font-bold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_luggageKg`] &&
                                     touchedFields[`applicant_${activeApplicantIndex}_luggageKg`]
                                     ? "border-red-500 bg-red-50/30"
                                     : "border-amber-300 focus:border-amber-500"
@@ -3747,7 +4351,7 @@ export const PackageHeliService: React.FC<{
                           </div>
                         </div>
 
-                        {/* ── CARD 2: FLIGHT LOGISTICS & CONTACT ── */}
+                        {/* â”€â”€ CARD 2: FLIGHT LOGISTICS & CONTACT â”€â”€ */}
                         <div className="p-4 sm:p-5 rounded-2xl bg-gray-50/80 border border-gray-200/80 space-y-4">
                           <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60 text-[#200B3B]">
                             <div className="w-6 h-6 rounded-lg bg-pink-100 text-[#E91E63] flex items-center justify-center flex-shrink-0">
@@ -3756,7 +4360,7 @@ export const PackageHeliService: React.FC<{
                             <h4 className="text-xs font-black uppercase tracking-wider">
                               2. Flight Logistics &amp; Contact{" "}
                               {bookingFlightOption !== "charter" && bookingSeatCount > 1
-                                ? `— Applicant ${activeApplicantIndex + 1}`
+                                ? `â€” Applicant ${activeApplicantIndex + 1}`
                                 : ""}
                             </h4>
                           </div>
@@ -3770,11 +4374,12 @@ export const PackageHeliService: React.FC<{
                               <input
                                 type="email"
                                 value={currentApp.email}
+                                placeholder="ram.thapa@example.com"
                                 onChange={(e) =>
                                   handleApplicantChange(activeApplicantIndex, "email", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "email")}
-                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_email`] &&
+                                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors ${formErrors[`applicant_${activeApplicantIndex}_email`] &&
                                   touchedFields[`applicant_${activeApplicantIndex}_email`]
                                   ? "border-red-400 bg-red-50/20 focus:border-red-500"
                                   : "border-gray-200 focus:border-[#E91E63]"
@@ -3817,11 +4422,12 @@ export const PackageHeliService: React.FC<{
                                 <input
                                   type="tel"
                                   value={currentApp.phone}
+                                  placeholder="98XXXXXXXX"
                                   onChange={(e) =>
                                     handleApplicantChange(activeApplicantIndex, "phone", e.target.value)
                                   }
                                   onBlur={() => handleApplicantBlur(activeApplicantIndex, "phone")}
-                                  className="flex-1 min-w-0 px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none bg-transparent"
+                                  className="flex-1 min-w-0 px-3.5 py-2.5 text-xs font-semibold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none bg-transparent"
                                 />
                               </div>
                               {formErrors[`applicant_${activeApplicantIndex}_phone`] &&
@@ -3870,17 +4476,18 @@ export const PackageHeliService: React.FC<{
                               <input
                                 type="text"
                                 value={currentApp.pickupHotel}
+                                placeholder="Hotel Annapurna, Lakeside Pokhara"
                                 onChange={(e) =>
                                   handleApplicantChange(activeApplicantIndex, "pickupHotel", e.target.value)
                                 }
                                 onBlur={() => handleApplicantBlur(activeApplicantIndex, "pickupHotel")}
-                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-[#E91E63] text-xs font-semibold text-gray-800 focus:outline-none transition-colors"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-[#E91E63] text-xs font-semibold text-gray-800 placeholder:text-gray-400 placeholder:text-xs placeholder:font-normal focus:outline-none transition-colors"
                               />
                             </div>
                           </div>
                         </div>
 
-                        {/* ── CARD 3: DOCUMENT ATTACHMENTS ── */}
+                        {/* â”€â”€ CARD 3: DOCUMENT ATTACHMENTS â”€â”€ */}
                         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200/90 shadow-xs space-y-3.5">
                           {/* Hidden file inputs */}
                           <input
@@ -3958,8 +4565,8 @@ export const PackageHeliService: React.FC<{
                                 file: currentApp.passportFile,
                                 clear: () => handleApplicantDocChange(activeApplicantIndex, "passportFile", null),
                                 hint: bookingFlightOption !== "charter" && bookingSeatCount > 1
-                                  ? `Clear color copy of Applicant ${activeApplicantIndex + 1}'s passport (valid ≥ 6 months)`
-                                  : `Clear color copy of your passport (valid ≥ 6 months)`,
+                                  ? `Clear color copy of Applicant ${activeApplicantIndex + 1}'s passport (valid â‰¥ 6 months)`
+                                  : `Clear color copy of your passport (valid â‰¥ 6 months)`,
                               },
                               {
                                 label: "Passport Size Photo",
@@ -4149,11 +4756,310 @@ export const PackageHeliService: React.FC<{
                       onClick={() => setCurrentStep("form")}
                       className="text-xs text-slate-500 hover:text-slate-800 font-medium underline transition-colors cursor-pointer"
                     >
-                      ← Edit Booking Details
+                      &larr; Edit Booking Details
                     </button>
                   </div>
                 </div>
-              ) : null}            </div>
+              ) : currentStep === "submitted" ? (
+                /* =======================================================================
+                   STEP 3: REGISTRATION & SUBMISSION CONFIRMATION (Matching Visa Service)
+                   ======================================================================= */
+                <div className="space-y-3.5 text-center animate-in fade-in zoom-in-95 duration-200">
+                  {/* Top Greeting & Status */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <div
+                      className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white mb-0.5 shadow-md ring-4 ${
+                        paymentStatus === "paid"
+                          ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/20 ring-emerald-50"
+                          : "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-amber-500/20 ring-amber-50"
+                      }`}
+                    >
+                      <CheckCircle2 size={26} className="stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <span
+                        className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          paymentStatus === "paid"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : "bg-amber-100 text-amber-800 border border-amber-200"
+                        }`}
+                      >
+                        {paymentStatus === "paid"
+                          ? "Payment Received • Reservation Confirmed"
+                          : "Reservation Confirmed • Payment Pending"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <h4 className="text-base sm:text-lg font-black text-[#1A0B2E] tracking-tight">
+                        Thank you, {bookingFormData.applicants?.[0]?.fullName || "Valued Passenger"}!
+                      </h4>
+                      <BadgeCheck size={18} className="text-emerald-600 flex-shrink-0" />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Your helicopter service reservation for{" "}
+                      <strong className="text-slate-800 font-semibold">
+                        {bookingTour?.title || selectedTour?.title}
+                      </strong>{" "}
+                      has been confirmed for{" "}
+                      {bookingFlightOption === "charter"
+                        ? "Private Charter"
+                        : `${bookingSeatCount} passenger${bookingSeatCount > 1 ? "s" : ""}`}.
+                    </p>
+                  </div>
+
+                  {/* Officer Contact Reassurance Card */}
+                  <div className="bg-gradient-to-r from-purple-50/70 via-white to-purple-50/50 border border-purple-100 rounded-xl px-3.5 py-2.5 text-left shadow-2xs">
+                    <div className="flex items-center justify-between gap-1.5 flex-wrap mb-0.5">
+                      <span className="text-xs font-black text-[#1A0B2E]">
+                        Our Flight Operations Officer will contact you soon
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      A flight coordinator will reach out on{" "}
+                      <strong className="text-slate-800">WhatsApp &amp; Phone</strong> (
+                      {bookingFormData.applicants?.[0]?.phone
+                        ? `${bookingFormData.applicants[0].phoneCode || "+977"} ${bookingFormData.applicants[0].phone}`
+                        : "your registered phone"}
+                      ) to verify passenger manifests, VIP helipad entry, and confirm CAAN weather permits.
+                    </p>
+                  </div>
+
+                  {/* Official Digital E-Receipt Voucher Card */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
+                    {/* Submission Reference ID Header Strip */}
+                    <div className="bg-[#FAF8FD] px-3.5 py-2.5 border-b border-purple-100/70 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block leading-none">
+                          OFFICIAL SUBMISSION NUMBER
+                        </span>
+                        <span className="font-mono font-black text-sm sm:text-base text-[#1A0B2E] tracking-wider mt-0.5 block">
+                          {submissionId || "THTT-HELI-CONFIRMED"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (submissionId) {
+                            navigator.clipboard.writeText(submissionId);
+                            setCopiedId(true);
+                            setTimeout(() => setCopiedId(false), 2000);
+                          }
+                        }}
+                        className="flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100/70 hover:bg-purple-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                      >
+                        {copiedId ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{copiedId ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+
+                    {/* Key Details Grid */}
+                    <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-white">
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          {bookingFlightOption !== "charter" && bookingSeatCount > 1 ? "Lead Passenger" : "Passenger"}
+                        </span>
+                        <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
+                          {bookingFormData.applicants?.[0]?.fullName || "—"}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Total Passengers
+                        </span>
+                        <span className="font-bold text-[#1A0B2E] truncate block text-xs mt-0.5">
+                          {bookingFlightOption === "charter" ? "Private (Exclusive)" : `${bookingSeatCount} Persons`}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Flight Option
+                        </span>
+                        <span className="font-bold text-[#E91E63] truncate block text-xs mt-0.5">
+                          {bookingFlightOption === "charter" ? "Private Charter" : "Sharing Helicopter"}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Total Estimated Fare
+                        </span>
+                        <span className="font-black text-[#1A0B2E] text-xs mt-0.5 block">
+                          {displayPrice(
+                            bookingTotalPriceNPR,
+                            selectedCurrency,
+                            nprPerOneDollar,
+                            nprPerOneINR
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Flight Date
+                        </span>
+                        <span className="font-medium text-slate-700 text-xs truncate block mt-0.5">
+                          {bookingFormData.applicants?.[0]?.preferredDate || "Flexible"}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Submitted At
+                        </span>
+                        <span className="font-medium text-slate-700 text-[10.5px] truncate block mt-0.5">
+                          {submittedAt || new Date().toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Payment Status
+                        </span>
+                        <span
+                          className={`font-black text-xs mt-0.5 block ${
+                            paymentStatus === "paid" ? "text-emerald-700" : "text-amber-600"
+                          }`}
+                        >
+                          {paymentStatus.toUpperCase()} (
+                          {selectedPaymentMethod === "esewa"
+                            ? paymentStatus === "paid"
+                              ? "eSewa"
+                              : "eSewa Pending"
+                            : "Pay Later"}
+                          )
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Payment Verification
+                        </span>
+                        <span
+                          className={`font-black text-xs mt-0.5 block ${
+                            paymentStatus === "paid" ? "text-emerald-700" : "text-blue-600"
+                          }`}
+                        >
+                          {paymentStatus === "paid" ? "VERIFIED" : "PENDING"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Multiple passengers list breakdown if sharing and seatCount > 1 */}
+                    {bookingFlightOption !== "charter" && bookingSeatCount > 1 && (
+                      <div className="p-3 bg-slate-50/80 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">
+                            All Registered Passengers ({bookingSeatCount})
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                            Manifest Details Registered
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-52 overflow-y-auto">
+                          {bookingFormData.applicants?.slice(0, bookingSeatCount).map((app, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-white p-2.5 rounded-xl border border-slate-200/80 text-xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-[#200B3B] text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="font-black text-[#1A0B2E] text-xs">
+                                    {app.fullName || `Passenger ${idx + 1}`}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                  {app.nationality || "—"}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px] text-slate-600 bg-slate-50/70 p-1.5 rounded-lg border border-slate-100">
+                                <div>
+                                  <span className="text-slate-400 block text-[8.5px] uppercase font-bold">ID / NID</span>
+                                  <span className="font-mono font-bold text-slate-800">{app.idNumber || "—"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Body Wt.</span>
+                                  <span className="font-semibold text-slate-700">{app.bodyWeightKg ? `${app.bodyWeightKg} kg` : "—"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Luggage</span>
+                                  <span className="font-semibold text-slate-700">{app.luggageKg ? `${app.luggageKg} kg` : "0 kg"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[8.5px] uppercase font-bold">Contact</span>
+                                  <span className="truncate block font-semibold text-slate-700">
+                                    {app.phone ? `${app.phoneCode || "+977"} ${app.phone}` : app.email || "—"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const lead = bookingFormData.applicants?.[0];
+                        const phoneDisplay = lead?.phone ? `${lead.phoneCode || "+977"} ${lead.phone}` : "—";
+                        const flightLabel = bookingFlightOption === "charter" ? "Private Charter" : "Sharing Helicopter";
+                        const paxCount = bookingFlightOption === "charter" ? 1 : bookingSeatCount;
+
+                        const msg = encodeURIComponent(
+                          `*Helicopter Service Reservation Confirmation*\n\n` +
+                          `📌 *Submission Reference:* ${submissionId}\n` +
+                          `🚁 *Tour:* ${bookingTour?.title || selectedTour?.title}\n` +
+                          `✈️ *Flight Option:* ${flightLabel}\n` +
+                          `👥 *Passengers:* ${paxCount}\n` +
+                          `📅 *Flight Date:* ${lead?.preferredDate || "Flexible"}\n` +
+                          `🏨 *Pickup Hotel:* ${lead?.pickupHotel || "Kathmandu/Pokhara"}\n` +
+                          `💳 *Payment:* ${selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later"} (${paymentStatus.toUpperCase()})\n` +
+                          `📞 *Lead Contact:* ${phoneDisplay}`
+                        );
+
+                        window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
+                      }}
+                      className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer"
+                    >
+                      <MessageCircle size={15} />
+                      <span>Chat on WhatsApp</span>
+                    </button>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handlePrintBookingSlip}
+                        className="flex-1 py-2.5 px-3.5 bg-white hover:bg-purple-50/70 border border-purple-200 text-[#1A0B2E] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer hover:border-purple-300"
+                      >
+                        <Printer size={13} className="text-purple-700" />
+                        <span>Print Slip</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsBookingModalOpen(false);
+                          setCurrentStep("form");
+                          setPaymentError("");
+                          setIsSubmitted(false);
+                        }}
+                        className="flex-1 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       )}
@@ -4162,3 +5068,4 @@ export const PackageHeliService: React.FC<{
 };
 
 export default PackageHeliService;
+

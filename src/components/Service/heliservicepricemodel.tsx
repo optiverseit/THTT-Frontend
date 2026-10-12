@@ -85,7 +85,7 @@ interface HeliServicePriceModelProps {
   ) => void;
 }
 
-const WHATSAPP_PHONE = "9779851403761";
+const WHATSAPP_PHONE = "9779851420882";
 
 export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
   tour,
@@ -534,19 +534,23 @@ export const HeliServicePriceModel: React.FC<HeliServicePriceModelProps> = ({
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3 shadow-xs">
-          <div className="w-10 h-10 rounded-xl bg-pink-50 text-[#E91E63] flex items-center justify-center flex-shrink-0">
+        <a
+          href="tel:+9779851420882"
+          className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3 shadow-xs hover:border-pink-200 hover:shadow-sm transition-all group cursor-pointer"
+          title="Call 24/7 Hotline (+977 9851420882)"
+        >
+          <div className="w-10 h-10 rounded-xl bg-pink-50 text-[#E91E63] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <Headphones size={20} />
           </div>
           <div className="text-left">
             <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">
               SUPPORT GUIDE
             </span>
-            <span className="text-xs font-black text-[#200B3B]">
+            <span className="text-xs font-black text-[#200B3B] group-hover:text-[#E91E63] transition-colors">
               24/7 Hotline Assistance
             </span>
           </div>
-        </div>
+        </a>
       </div>
     </div>
   );

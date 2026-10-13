@@ -94,7 +94,7 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
 
   const defaultFallbacks = [
     "https://images.unsplash.com/photo-1464822759023-fed622ff2c3bfb?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=800",
   ];
@@ -220,21 +220,21 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
 
   /* ── Comprehensive data fallback lists for complete PDF / Print dossier ── */
 
-const printingTable = Array.isArray(pkg.pricingTable) ? pkg.pricingTable : [];
+  const printingTable = Array.isArray(pkg.pricingTable) ? pkg.pricingTable : [];
 
-const itineraryList = Array.isArray(pkg.allItenary) ? pkg.allItenary : [];
+  const itineraryList = Array.isArray(pkg.allItenary) ? pkg.allItenary : [];
 
-const highlightsList = Array.isArray(pkg.highlights) ? pkg.highlights : [];
+  const highlightsList = Array.isArray(pkg.highlights) ? pkg.highlights : [];
 
-const includesList = Array.isArray(pkg.allIncludes) ? pkg.allIncludes : [];
+  const includesList = Array.isArray(pkg.allIncludes) ? pkg.allIncludes : [];
 
-const excludesList = Array.isArray(pkg.allExcludes) ? pkg.allExcludes : [];
+  const excludesList = Array.isArray(pkg.allExcludes) ? pkg.allExcludes : [];
 
-const restrictionsList = Array.isArray(pkg.restrictions) ? pkg.restrictions : [];
+  const restrictionsList = Array.isArray(pkg.restrictions) ? pkg.restrictions : [];
 
-const whatToBringList = Array.isArray(pkg.whatToBring) ? pkg.whatToBring : [];
+  const whatToBringList = Array.isArray(pkg.whatToBring) ? pkg.whatToBring : [];
 
-const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
+  const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
 
   return (
 
@@ -1326,11 +1326,9 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
 
                   onClick={() => navigate(item.path)}
 
-                  className={`py-3 text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap cursor-pointer relative flex-shrink-0 ${
+                  className={`py-3 text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap cursor-pointer relative flex-shrink-0 ${active ? "text-[#E91E63]" : "text-gray-400 hover:text-[#200B3B]"
 
-                    active ? "text-[#E91E63]" : "text-gray-400 hover:text-[#200B3B]"
-
-                  }`}
+                    }`}
 
                 >
 

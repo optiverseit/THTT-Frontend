@@ -18,7 +18,6 @@
  *  - Print Slip (voucher/receipt) with print trigger
  * -----------------------------------------------------------------
  */
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import {
@@ -79,6 +78,8 @@ import {
   getPackageWhatToBring,
   getPackageHighlights,
   getPackageItineraries,
+  getPublicPackageTestimonials,
+  getPublicPackagePolicies,
   createBooking,
   initiatePayment,
 } from "../../api/BackendApi";
@@ -89,11 +90,9 @@ import { PaymentMethod } from "../reusable/PaymentMethod";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import TripRoadmap, { type RoadmapStep } from "../reusable/TripRoadmap";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
-
 // =============================================================================
 // Comprehensive Helicopter Tours Data
 // =============================================================================
-
 export interface PackageFaqApi {
   id?: number | string;
   package_id?: number | string;
@@ -108,51 +107,40 @@ export interface PackageFaqApi {
   answerNp?: string;
   aNp?: string;
 }
-
 export interface HeliPackageItem extends HeliTourData {
   id: string;
   backendId: number;
   created_at?: string;
-
   title: string;
   slug: string;
   location: string;
   duration: string;
   maxAltitude: string;
-
   // Actual package price from packages.price
   packagePriceNPR: number;
-
   // Prices from pricing tiers
   charterPriceNPR: number;
   sharingPriceNPR: number;
-
   charterDesc: string;
   sharingDesc: string;
-
   category: "ebc" | "abc" | "langtang" | "pilgrimage" | "rescue";
-
   tag: string;
   apiCategory?: string;
   image: string;
   gallery: string[];
   description: string;
-
   rating: number;
   reviewsCount: number;
-
   tripHighlights: string[];
   whatsIncluded: string[];
   whatsExcluded: string[];
   restrictionsAndHealth: string[];
   whatToBring: string[];
   policies: string[];
-
   faqs: Array<{
     q: string;
     a: string;
   }>;
-
   testimonies: Array<{
     name: string;
     country: string;
@@ -160,15 +148,11 @@ export interface HeliPackageItem extends HeliTourData {
     comment: string;
     date: string;
   }>;
-
-
   package_helis?: any[];
   package_vehicles?: any[];
-
   min_people?: number | null;
   max_people?: number | null;
 }
-
 export interface PricingTierApi {
   id: number;
   package_id: number;
@@ -177,7 +161,6 @@ export interface PricingTierApi {
   price_npr: string;
   price_usd: string;
 }
-
 const getCategoryFromPackage = (pkg: any): HeliPackageItem["category"] => {
   const text = `${pkg?.title ?? ""} ${pkg?.location ?? ""}`.toLowerCase();
   if (text.includes("annapurna")) return "abc";
@@ -186,49 +169,36 @@ const getCategoryFromPackage = (pkg: any): HeliPackageItem["category"] => {
   if (text.includes("rescue") || text.includes("evacuation")) return "rescue";
   return "ebc";
 };
-
 const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
-
   // Actual package price from packages.price
   const basePrice = Number(pkg?.price ?? 0);
-
   const heliCapacity =
     pkg?.package_helis?.[0]?.heli?.capacity;
-
   const rawRating = Number(pkg.rating ?? 0);
   const computedRating = Number.isFinite(rawRating) && rawRating > 0
     ? rawRating
     : ((Number(pkg.id) + (pkg.title?.length || 0)) % 2 === 0 ? 4 : 5);
-
   return {
     id: String(pkg.id),
     backendId: Number(pkg.id),
     created_at: pkg.created_at,
-
     title: pkg.title ?? "Helicopter Package",
     slug: pkg.slug ?? String(pkg.id),
-
     tag: pkg.tag ? String(pkg.tag).trim() : "",
     apiCategory: pkg.adventure_category ? String(pkg.adventure_category).trim() : (pkg.category ? String(pkg.category).trim() : ""),
-
     location: pkg.location ?? "Nepal",
     duration: pkg.duration ?? "",
     maxAltitude: "",
-
     rating: computedRating,
     reviewsCount: Number(pkg.reviews_count ?? pkg.reviewsCount ?? 0),
-
     // Actual package price
     packagePriceNPR: basePrice,
-
     // Keep existing booking UI working without calling pricing-tier API.
     // Both fallback to the actual package price.
     charterPriceNPR: basePrice,
     sharingPriceNPR: basePrice,
-
     charterDesc: pkg.charter_description ?? pkg.charterDesc ?? "",
     sharingDesc: pkg.sharing_description ?? pkg.sharingDesc ?? "",
-
     image:
       pkg.image ||
       pkg.cover_image ||
@@ -242,11 +212,8 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
       Array.isArray(pkg.gallery) && pkg.gallery.length > 0
         ? pkg.gallery.map((g: any) => (typeof g === "string" ? g : g?.url || g?.image)).filter(Boolean)
         : (pkg.image ? [pkg.image] : ["https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600"]),
-
     description: pkg.description ?? "",
-
     category: getCategoryFromPackage(pkg),
-
     tripHighlights: Array.isArray(pkg.highlights)
       ? pkg.highlights
           .map((item: any) =>
@@ -264,54 +231,40 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
           )
           .filter(Boolean)
       : [],
-
     whatsIncluded: Array.isArray(pkg.inclusions)
       ? pkg.inclusions.map((item: any) => item?.item ?? item?.title ?? item?.description ?? "").filter(Boolean)
       : [],
-
     whatsExcluded: Array.isArray(pkg.exclusions)
       ? pkg.exclusions.map((item: any) => item?.item ?? item?.title ?? item?.description ?? "").filter(Boolean)
       : [],
-
     restrictionsAndHealth: Array.isArray(pkg.restrictions_and_health)
       ? pkg.restrictions_and_health.map((item: any) => typeof item === "string" ? item : item?.item ?? item?.description ?? "").filter(Boolean)
       : [],
-
     whatToBring: Array.isArray(pkg.what_to_bring)
       ? pkg.what_to_bring.map((item: any) => typeof item === "string" ? item : item?.item ?? item?.description ?? "").filter(Boolean)
       : [],
-
     policies: Array.isArray(pkg.policies)
       ? pkg.policies.map((item: any) => typeof item === "string" ? item : item?.item ?? item?.description ?? "").filter(Boolean)
       : [],
-
     faqs: [],
-
     testimonies: Array.isArray(pkg.testimonies)
       ? pkg.testimonies
       : [],
-
-
     package_helis:
       pkg.package_helis ?? [],
-
     package_vehicles:
       pkg.package_vehicles ?? [],
-
     min_people:
       pkg.min_people ?? 1,
-
     max_people:
       pkg.max_people ?? heliCapacity ?? null,
   };
 };
-
 // =============================================================================
 // =============================================================================
 // Caching for Instant Loading (Stale-While-Revalidate)
 // =============================================================================
 const HELI_CACHE_KEY = "cached_heli_packages_v1";
-
 const getCachedHeliPackages = (): HeliPackageItem[] => {
   try {
     const raw = sessionStorage.getItem(HELI_CACHE_KEY);
@@ -320,15 +273,12 @@ const getCachedHeliPackages = (): HeliPackageItem[] => {
     return [];
   }
 };
-
 const setCachedHeliPackages = (packages: HeliPackageItem[]) => {
   try {
     sessionStorage.setItem(HELI_CACHE_KEY, JSON.stringify(packages));
   } catch {}
 };
-
 let _memoryHeliPackages: HeliPackageItem[] = [];
-
 export interface HeliPackageFaq {
   id?: number | string;
   q: string;
@@ -338,7 +288,6 @@ export interface HeliPackageFaq {
   questionNp?: string;
   answerNp?: string;
 }
-
 interface HeliDetailsCacheEntry {
   inclusions: string[];
   exclusions: string[];
@@ -349,13 +298,10 @@ interface HeliDetailsCacheEntry {
   faqs: HeliPackageFaq[];
   pricingTiers: PricingTierApi[];
 }
-
 const _heliDetailsCache = new Map<number, HeliDetailsCacheEntry>();
-
 // =============================================================================
 // Main PackageHeliService Component
 // =============================================================================
-
 export const PackageHeliService: React.FC<{
   filter?: { location: string; name: string } | null;
   onClearFilter?: () => void;
@@ -366,16 +312,13 @@ export const PackageHeliService: React.FC<{
     nprPerOneDollar,
     nprPerOneINR,
   } = useGlobalCurrency();
-
   const navigate = useNavigate();
   const { tourId } = useParams<{ tourId?: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const routeTourId = tourId || searchParams.get("tour");
-
   const [pricingTiers, setPricingTiers] = useState<PricingTierApi[]>([]);
   const [pricingLoading, setPricingLoading] = useState(false);
-
   // Initialize with cached packages immediately for 0ms render
   const [heliPackages, setHeliPackages] = useState<HeliPackageItem[]>(() => {
     if (_memoryHeliPackages.length > 0) return _memoryHeliPackages;
@@ -404,13 +347,10 @@ export const PackageHeliService: React.FC<{
   const [bookingPricingTierId, setBookingPricingTierId] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
   const [bookingId, setBookingId] = useState<number | null>(null);
-
   const [submissionId, setSubmissionId] = useState<string>("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
   const [copiedId, setCopiedId] = useState<boolean>(false);
-
   // â”€â”€ Separately-fetched sub-resources (not included in category listing) â”€â”€
   const [heliInclusions, setHeliInclusions] = useState<string[]>([]);
   const [heliExclusions, setHeliExclusions] = useState<string[]>([]);
@@ -418,47 +358,39 @@ export const PackageHeliService: React.FC<{
   const [heliWhatToBring, setHeliWhatToBring] = useState<string[]>([]);
   const [heliHighlights, setHeliHighlights] = useState<string[]>([]);
   const [heliItineraries, setHeliItineraries] = useState<RoadmapStep[]>([]);
-
+  const [heliPolicies, setHeliPolicies] = useState<string[]>([]);
+  const [heliTestimonials, setHeliTestimonials] = useState<HeliPackageItem["testimonies"]>([]);
   const hasFetchedHeliPackagesRef = useRef<boolean>(false);
-
   useEffect(() => {
     if (hasFetchedHeliPackagesRef.current) return;
     hasFetchedHeliPackagesRef.current = true;
     let cancelled = false;
-
     const fetchHeliPackages = async () => {
       try {
         setPackagesLoading(true);
         setPackagesError("");
-
         const response = await getPackagesByCategory("Heli Services");
         const rawPackages = Array.isArray(response.data?.data?.data)
           ? response.data.data.data
           : Array.isArray(response.data?.data)
             ? response.data.data
             : [];
-
         const mappedPackages = rawPackages.map((pkg: any) =>
           mapApiPackageToHeliPackage(pkg)
         );
-
         // Sort packages so the latest inserted card appears first (newest to oldest):
         const sortedPackages = [...mappedPackages].sort((a: any, b: any) => {
           const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-
           if (timeA && timeB && timeA !== timeB) {
             return timeB - timeA;
           }
-
           const idA = Number(a.backendId ?? a.id) || 0;
           const idB = Number(b.backendId ?? b.id) || 0;
           return idB - idA;
         });
-
         _memoryHeliPackages = sortedPackages;
         setCachedHeliPackages(sortedPackages);
-
         if (!cancelled) setHeliPackages(sortedPackages);
       } catch (error) {
         console.error("Failed to load Heli Services packages:", error);
@@ -470,17 +402,14 @@ export const PackageHeliService: React.FC<{
         if (!cancelled) setPackagesLoading(false);
       }
     };
-
     fetchHeliPackages();
     return () => {
       cancelled = true;
     };
   }, []);
-
   // Read URL search params for heli route/flightType filtering
   const urlRoute = searchParams.get("route") || "";
   const urlFlightType = searchParams.get("flightType") || "";
-
   // Determine active tour from URL or location state (instant 0ms resolution)
   const selectedTour = useMemo(() => {
     if (!routeTourId) return null;
@@ -501,14 +430,11 @@ export const PackageHeliService: React.FC<{
       ) || null
     );
   }, [routeTourId, location.state, heliPackages]);
-
   // Determine numeric target package ID (either direct numeric param or backendId from selected tour)
   const targetPackageId = routeTourId && /^\d+$/.test(routeTourId)
     ? Number(routeTourId)
     : selectedTour?.backendId ?? null;
-
   const lastFetchedTourIdRef = useRef<number | null>(null);
-
   // =========================
   // FETCH SUB-RESOURCES & TOUR DETAILS
   // Fetches inclusions, exclusions, restrictions, what-to-bring, highlights,
@@ -524,19 +450,20 @@ export const PackageHeliService: React.FC<{
       setHeliWhatToBring([]);
       setHeliHighlights([]);
       setHeliItineraries([]);
+      setHeliPolicies([]);
+      setHeliTestimonials([]);
       setPackageFaqs([]);
       setPricingTiers([]);
       return;
     }
-
     // Prevent duplicate fetch for the exact same tour ID
     if (lastFetchedTourIdRef.current === targetPackageId) {
       return;
     }
-
     lastFetchedTourIdRef.current = targetPackageId;
+    setHeliPolicies([]);
+    setHeliTestimonials([]);
     let cancelled = false;
-
     // 1. Immediately apply cached sub-resources if available for instant 0ms render
     const cached = _heliDetailsCache.get(targetPackageId);
     if (cached) {
@@ -552,7 +479,6 @@ export const PackageHeliService: React.FC<{
     } else {
       setPricingLoading(true);
     }
-
     const currentEntry: HeliDetailsCacheEntry = cached
       ? { ...cached }
       : {
@@ -565,7 +491,6 @@ export const PackageHeliService: React.FC<{
           faqs: [],
           pricingTiers: [],
         };
-
     const extractItems = (raw: any, preferredField?: string): string[] => {
       const list = Array.isArray(raw?.data?.data)
         ? raw.data.data
@@ -592,7 +517,6 @@ export const PackageHeliService: React.FC<{
         })
         .filter(Boolean);
     };
-
     // Progressive streamed fetching: each section updates state immediately upon response
     getPackageInclusions(targetPackageId)
       .then((res) => {
@@ -603,7 +527,6 @@ export const PackageHeliService: React.FC<{
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackageExclusions(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -613,7 +536,6 @@ export const PackageHeliService: React.FC<{
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackageRestrictions(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -623,7 +545,6 @@ export const PackageHeliService: React.FC<{
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackageWhatToBring(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -633,7 +554,6 @@ export const PackageHeliService: React.FC<{
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackageHighlights(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -645,7 +565,6 @@ export const PackageHeliService: React.FC<{
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackageItineraries(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -657,7 +576,6 @@ export const PackageHeliService: React.FC<{
           : Array.isArray(raw)
           ? raw
           : [];
-
         const mapped = rawList
           .filter((item: any) => {
             if (!item) return false;
@@ -680,13 +598,11 @@ export const PackageHeliService: React.FC<{
               ? item.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
               : [],
           }));
-
         setHeliItineraries(mapped);
         currentEntry.itineraries = mapped;
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackageFaqs(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -704,13 +620,11 @@ export const PackageHeliService: React.FC<{
             answerNp: faq.answer_np ?? faq.answerNp ?? faq.aNp ?? "",
           }))
           .filter((faq) => (faq.q || faq.question) && (faq.a || faq.answer));
-
         setPackageFaqs(mappedFaqs);
         currentEntry.faqs = mappedFaqs;
         _heliDetailsCache.set(targetPackageId, currentEntry);
       })
       .catch(() => {});
-
     getPackagePricingTiers(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -729,7 +643,45 @@ export const PackageHeliService: React.FC<{
       cancelled = true;
     };
   }, [targetPackageId]);
-
+  useEffect(() => {
+    if (!targetPackageId) {
+      setHeliPolicies([]);
+      setHeliTestimonials([]);
+      return;
+    }
+    let cancelled = false;
+    setHeliPolicies([]);
+    setHeliTestimonials([]);
+    const extractPublicRecords = (res: any): any[] => {
+      const value = res?.data?.data;
+      return Array.isArray(value?.data) ? value.data : Array.isArray(value) ? value : [];
+    };
+    getPublicPackagePolicies(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const mapped = extractPublicRecords(res).map((item: any) => {
+          if (typeof item === "string") return item;
+          const parts = [item?.title, item?.description, ...(Array.isArray(item?.guidelines) ? item.guidelines.map((g: any) => typeof g === "string" ? g : g?.description || g?.item || "") : item?.guidelines ? [item.guidelines] : [])];
+          return parts.filter(Boolean).join(" - ");
+        }).filter(Boolean);
+        setHeliPolicies(mapped);
+      })
+      .catch((error) => console.error("Failed to load heli policies:", error));
+    getPublicPackageTestimonials(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const mapped = extractPublicRecords(res).map((item: any) => ({
+          name: item.traveler_name || item.name || "Guest",
+          country: item.country || "",
+          rating: Math.max(0, Math.min(5, Math.round(Number(item.rating) || 0))),
+          comment: item.review || item.comment || "",
+          date: (item.review_date || item.date) ? new Date(item.review_date || item.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
+        }));
+        setHeliTestimonials(mapped);
+      })
+      .catch((error) => console.error("Failed to load heli testimonials:", error));
+    return () => { cancelled = true; };
+  }, [targetPackageId]);
   const startsFromDisplayPrice = selectedTour
     ? displayPrice(
       selectedTour.packagePriceNPR,
@@ -738,13 +690,11 @@ export const PackageHeliService: React.FC<{
       nprPerOneINR
     )
     : "";
-
   const combinedHighlights = useMemo(() => {
     if (heliHighlights && heliHighlights.length > 0) return heliHighlights;
     if (selectedTour?.tripHighlights && selectedTour.tripHighlights.length > 0) return selectedTour.tripHighlights;
     return [];
   }, [heliHighlights, selectedTour?.tripHighlights]);
-
   const combinedItineraries: RoadmapStep[] = useMemo(() => {
     if (heliItineraries && heliItineraries.length > 0) return heliItineraries;
     const fallback =
@@ -781,14 +731,12 @@ export const PackageHeliService: React.FC<{
   const [activeDetailTab, setActiveDetailTab] = useState<
     "OVERVIEW" | "POLICIES" | "FAQS" | "TESTIMONIES"
   >("OVERVIEW");
-
   // Filter States for Cards Listing
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [priceRange, setPriceRange] = useState<number>(500000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
-
   // Booking Modal State
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
   const [bookingTour, setBookingTour] = useState<HeliPackageItem | null>(null);
@@ -796,8 +744,6 @@ export const PackageHeliService: React.FC<{
   const [bookingSeatCount, setBookingSeatCount] = useState<number>(1);
   const [activeApplicantIndex, setActiveApplicantIndex] = useState<number>(0);
   const [bookingTotalPriceNPR, setBookingTotalPriceNPR] = useState<number>(0);
-
-
   // Booking Applicant Interface
   interface HeliApplicant {
     fullName: string;
@@ -816,7 +762,6 @@ export const PackageHeliService: React.FC<{
     hotelFile?: File | null;
     insuranceFile?: File | null;
   }
-
   // Booking Form Fields
   const [bookingFormData, setBookingFormData] = useState({
     fullName: "",
@@ -852,14 +797,12 @@ export const PackageHeliService: React.FC<{
       },
     ] as HeliApplicant[],
   });
-
   // Booking Form Errors State
   interface HeliFormErrors {
     [key: string]: string | undefined;
   }
   const [formErrors, setFormErrors] = useState<HeliFormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
-
   const validateHeliField = (name: string, value: any): string | undefined => {
     switch (name) {
       case "fullName":
@@ -926,7 +869,6 @@ export const PackageHeliService: React.FC<{
         return undefined;
     }
   };
-
   const validateApplicantField = (
     field: keyof HeliApplicant,
     value: any,
@@ -995,7 +937,6 @@ export const PackageHeliService: React.FC<{
         return undefined;
     }
   };
-
   const handleApplicantDocChange = (
     index: number,
     docType: "passportFile" | "photoFile" | "flightFile" | "hotelFile" | "insuranceFile",
@@ -1030,7 +971,6 @@ export const PackageHeliService: React.FC<{
       return { ...prev, applicants: updated };
     });
   };
-
   const handleApplicantChange = (
     index: number,
     field: keyof HeliApplicant,
@@ -1058,7 +998,6 @@ export const PackageHeliService: React.FC<{
         });
       }
       updated[index] = { ...updated[index], [field]: value };
-
       const syncExtra: Partial<typeof prev> = {};
       if (index === 0) {
         if (field === "fullName") syncExtra.fullName = value;
@@ -1074,14 +1013,12 @@ export const PackageHeliService: React.FC<{
       }
       return { ...prev, ...syncExtra, applicants: updated };
     });
-
     const errorKey = `applicant_${index}_${field}`;
     if (touchedFields[errorKey]) {
       const err = validateApplicantField(field, value, index);
       setFormErrors((prev) => ({ ...prev, [errorKey]: err }));
     }
   };
-
   const handleApplicantBlur = (index: number, field: keyof HeliApplicant) => {
     const errorKey = `applicant_${index}_${field}`;
     setTouchedFields((prev) => ({ ...prev, [errorKey]: true }));
@@ -1089,7 +1026,6 @@ export const PackageHeliService: React.FC<{
     const err = validateApplicantField(field, val, index);
     setFormErrors((prev) => ({ ...prev, [errorKey]: err }));
   };
-
   const handleUpdateSeatCount = (newCount: number) => {
     if (!bookingTour) return;
     const clamped = Math.min(5, Math.max(1, newCount));
@@ -1126,7 +1062,6 @@ export const PackageHeliService: React.FC<{
       return { ...prev, applicants: nextApplicants };
     });
   };
-
   const handleFieldChange = (field: string, value: any) => {
     setBookingFormData((prev) => ({ ...prev, [field]: value }));
     if (touchedFields[field]) {
@@ -1134,13 +1069,11 @@ export const PackageHeliService: React.FC<{
       setFormErrors((prev) => ({ ...prev, [field]: err }));
     }
   };
-
   const handleFieldBlur = (field: string) => {
     setTouchedFields((prev) => ({ ...prev, [field]: true }));
     const err = validateHeliField(field, (bookingFormData as any)[field]);
     setFormErrors((prev) => ({ ...prev, [field]: err }));
   };
-
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   // Share popup state
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
@@ -1154,20 +1087,15 @@ export const PackageHeliService: React.FC<{
   const [currentStep, setCurrentStep] = useState<
     "form" | "payment" | "submitted"
   >("form");
-
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     "esewa" | "pay_later"
   >("esewa");
-
   const [paymentStatus, setPaymentStatus] = useState<
     "unpaid" | "paid"
   >("unpaid");
-
   const [isProcessingPayment, setIsProcessingPayment] =
     useState<boolean>(false);
-
   const [paymentError, setPaymentError] = useState<string>("");
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -1180,7 +1108,6 @@ export const PackageHeliService: React.FC<{
     if (isShareOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isShareOpen]);
-
   const handleCopyTourLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -1190,28 +1117,23 @@ export const PackageHeliService: React.FC<{
       // fallback
     }
   };
-
   // Sync scroll to top on navigation
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const handleSelectTour = (tour: HeliPackageItem) => {
     navigate(`/service/heli-services/${tour.id}`, { state: { tour } });
     setActiveDetailTab("OVERVIEW");
     scrollToTop();
   };
-
   const handleBackToListing = () => {
     navigate("/service/heli-services");
     scrollToTop();
   };
-
   // Restore booking modal state after login
   const hasRestoredPostLoginRef = useRef<boolean>(false);
   useEffect(() => {
     if (!isSessionValid() || hasRestoredPostLoginRef.current) return;
-
     const savedState = (location.state as any) || (() => {
       try {
         const raw = sessionStorage.getItem("post_login_state");
@@ -1220,7 +1142,6 @@ export const PackageHeliService: React.FC<{
         return null;
       }
     })();
-
     if (savedState?.openBooking) {
       const targetTour =
         selectedTour ||
@@ -1232,7 +1153,6 @@ export const PackageHeliService: React.FC<{
                 t.slug?.toLowerCase() === String(savedState.packageId).toLowerCase()
             )
           : null);
-
       if (targetTour) {
         hasRestoredPostLoginRef.current = true;
         if (savedState.bookingType === "priceModel" || savedState.pricingTierId) {
@@ -1252,7 +1172,6 @@ export const PackageHeliService: React.FC<{
         } else {
           handleOpenBooking(targetTour, savedState.flightType || "charter", true);
         }
-
         try {
           sessionStorage.removeItem("post_login_state");
           sessionStorage.removeItem("post_login_redirect");
@@ -1260,7 +1179,6 @@ export const PackageHeliService: React.FC<{
       }
     }
   }, [selectedTour, heliPackages, location.state]);
-
   // Open booking modal with authentication verification
   const handleOpenBooking = (
     tour: HeliPackageItem,
@@ -1290,7 +1208,6 @@ export const PackageHeliService: React.FC<{
       });
       return;
     }
-
     const storedUser = (() => {
       try {
         const u = localStorage.getItem("user");
@@ -1299,12 +1216,10 @@ export const PackageHeliService: React.FC<{
         return null;
       }
     })();
-
     const initialName = storedUser?.name || storedUser?.fullName || "";
     const initialEmail = storedUser?.email || "";
     const initialPhone = storedUser?.phone || "";
     const initialNationality = storedUser?.nationality || "";
-
     const seatCount = 1;
     setBookingTour(tour);
     setBookingFlightOption(option);
@@ -1352,7 +1267,6 @@ export const PackageHeliService: React.FC<{
     setIsProcessingPayment(false);
     setIsBookingModalOpen(true);
   };
-
   // Handler for PriceModel book now trigger with authentication verification
   const handlePriceModelBookNow = (
     details: {
@@ -1365,7 +1279,6 @@ export const PackageHeliService: React.FC<{
     skipAuthCheck: boolean = false
   ) => {
     if (!selectedTour) return;
-
     if (!skipAuthCheck && !isSessionValid()) {
       clearAuthSession();
       const returnState = {
@@ -1390,7 +1303,6 @@ export const PackageHeliService: React.FC<{
       });
       return;
     }
-
     const storedUser = (() => {
       try {
         const u = localStorage.getItem("user");
@@ -1399,12 +1311,10 @@ export const PackageHeliService: React.FC<{
         return null;
       }
     })();
-
     const initialName = storedUser?.name || storedUser?.fullName || "";
     const initialEmail = storedUser?.email || "";
     const initialPhone = storedUser?.phone || "";
     const initialNationality = storedUser?.nationality || "";
-
     const seatCount = details.flightType === "charter" ? 1 : Math.max(1, details.seatCount || 1);
     setBookingTour(selectedTour);
     setBookingFlightOption(details.flightType);
@@ -1453,15 +1363,12 @@ export const PackageHeliService: React.FC<{
     setIsProcessingPayment(false);
     setIsBookingModalOpen(true);
   };
-
   // Form submission handler
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const paxCount = bookingFlightOption === "charter" ? 1 : Math.max(1, bookingSeatCount || 1);
     const errors: Record<string, string | undefined> = {};
     const allTouched: Record<string, boolean> = { ...touchedFields };
-
     for (let i = 0; i < paxCount; i++) {
       const applicant = bookingFormData.applicants?.[i] || {
         fullName: "",
@@ -1480,7 +1387,6 @@ export const PackageHeliService: React.FC<{
         hotelFile: null,
         insuranceFile: null,
       };
-
       const applicantFields: (keyof HeliApplicant)[] = [
         "fullName",
         "nationality",
@@ -1491,7 +1397,6 @@ export const PackageHeliService: React.FC<{
         "phone",
         "preferredDate",
       ];
-
       applicantFields.forEach((f) => {
         const errKey = `applicant_${i}_${f}`;
         allTouched[errKey] = true;
@@ -1499,15 +1404,12 @@ export const PackageHeliService: React.FC<{
         if (err) errors[errKey] = err;
       });
     }
-
     allTouched["termsAgreed"] = true;
     const termsErr = validateHeliField("termsAgreed", bookingFormData.termsAgreed);
     if (termsErr) errors["termsAgreed"] = termsErr;
-
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       setTouchedFields(allTouched);
-
       for (let i = 0; i < paxCount; i++) {
         const hasErr = Object.keys(errors).some((k) => k.startsWith(`applicant_${i}_`));
         if (hasErr) {
@@ -1517,12 +1419,10 @@ export const PackageHeliService: React.FC<{
       }
       return;
     }
-
     setFormErrors({});
     if (isSubmitting) return;
     setIsSubmitting(true);
     setPaymentError("");
-
     try {
       const primaryApplicant = bookingFormData.applicants?.[0];
       const primaryEmail = primaryApplicant?.email || bookingFormData.email || "";
@@ -1531,7 +1431,6 @@ export const PackageHeliService: React.FC<{
       const primaryPhoneWhatsapp = `${primaryCode} ${primaryPhone}`.trim();
       const primaryDate = primaryApplicant?.preferredDate || bookingFormData.preferredDate || "";
       const primaryHotel = primaryApplicant?.pickupHotel || bookingFormData.pickupHotel || "";
-
       const data = new FormData();
       data.append("booking_type", "HELI");
       data.append("package_id", String(bookingTour?.backendId));
@@ -1539,11 +1438,9 @@ export const PackageHeliService: React.FC<{
       data.append("start_date", primaryDate);
       data.append("frontend_total_amount", String(bookingTotalPriceNPR));
       data.append("payment_method", selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later");
-
       if (bookingPricingTierId) {
         data.append("pricing_tier_id", String(bookingPricingTierId));
       }
-
       // Top-level applicant details
       data.append("applicant[full_name]", primaryApplicant?.fullName || bookingFormData.fullName || "");
       data.append("applicant[email]", primaryEmail);
@@ -1552,7 +1449,6 @@ export const PackageHeliService: React.FC<{
       if (primaryHotel) {
         data.append("applicant[pickup_hotel]", primaryHotel);
       }
-
       // Dedicated HELI travellers manifest
       bookingFormData.applicants?.forEach((applicant, index) => {
         const appEmail = applicant?.email || primaryEmail;
@@ -1561,50 +1457,39 @@ export const PackageHeliService: React.FC<{
         const appWhatsapp = `${appCode} ${appPhone}`.trim();
         const appDate = applicant?.preferredDate || primaryDate;
         const appHotel = applicant?.pickupHotel || primaryHotel;
-
         data.append(`travellers[${index}][name]`, applicant?.fullName || "");
         data.append(`travellers[${index}][email]`, appEmail);
         data.append(`travellers[${index}][whatsapp_phone]`, appWhatsapp);
         data.append(`travellers[${index}][preferred_flight_date]`, appDate);
         data.append(`travellers[${index}][nationality]`, applicant?.nationality || "");
         data.append(`travellers[${index}][identity_number]`, applicant?.idNumber || "");
-
         if (appHotel) {
           data.append(`travellers[${index}][pickup_hotel]`, appHotel);
         }
-
         if (applicant?.bodyWeightKg) {
           data.append(`travellers[${index}][weight]`, String(applicant.bodyWeightKg));
         }
-
         if (applicant?.luggageKg) {
           data.append(`travellers[${index}][luggage]`, String(applicant.luggageKg));
         }
-
         if (applicant?.passportFile) {
           data.append(`travellers[${index}][passport_nid_image]`, applicant.passportFile);
         }
-
         if (applicant?.photoFile) {
           data.append(`travellers[${index}][pp_size_photo]`, applicant.photoFile);
         }
-
         if (applicant?.flightFile) {
           data.append(`travellers[${index}][confirmed_flight_ticket_image]`, applicant.flightFile);
         }
-
         if (applicant?.insuranceFile) {
           data.append(`travellers[${index}][travel_insurance_image]`, applicant.insuranceFile);
         }
       });
-
       const response = await createBooking(data);
       const booking = response?.data?.data || response?.data;
-
       if (!booking?.id) {
         throw new Error("Booking ID was not returned by the backend.");
       }
-
       setBookingId(Number(booking.id));
       setSubmissionId(booking.booking_reference || "");
       setSubmittedAt(
@@ -1619,7 +1504,6 @@ export const PackageHeliService: React.FC<{
       setCurrentStep("payment");
     } catch (error: any) {
       console.error("Booking failed:", error?.response?.data || error);
-
       const validationErrors = error?.response?.data?.errors;
       let errorMsg = error?.response?.data?.message || error?.message || "Failed to create booking. Please try again.";
       if (validationErrors && typeof validationErrors === "object") {
@@ -1628,13 +1512,11 @@ export const PackageHeliService: React.FC<{
           errorMsg = String(firstErr);
         }
       }
-
       setPaymentError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
-
   // Print quotation dossier from Details View (Isolated iframe guarantees single-page print without empty 2nd page)
   const handlePrintQuotation = () => {
     const dossierEl = document.getElementById("heli-print-dossier");
@@ -1642,7 +1524,6 @@ export const PackageHeliService: React.FC<{
       window.print();
       return;
     }
-
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
     iframe.style.right = "0";
@@ -1651,7 +1532,6 @@ export const PackageHeliService: React.FC<{
     iframe.style.height = "0";
     iframe.style.border = "0";
     document.body.appendChild(iframe);
-
     const doc = iframe.contentWindow?.document;
     if (doc) {
       doc.open();
@@ -1707,32 +1587,26 @@ export const PackageHeliService: React.FC<{
       window.print();
     }
   };
-
   const handleEsewaPayment = async () => {
     if (!bookingId) {
       setPaymentError("Booking ID is missing. Please create the booking again.");
       return;
     }
-
     try {
       setPaymentError("");
       setIsProcessingPayment(true);
       setSelectedPaymentMethod("esewa");
-
       const response = await initiatePayment({
         booking_id: bookingId,
         provider: "ESEWA",
       });
       const paymentData = response?.data?.data;
-
       if (!paymentData?.payment_url) {
         throw new Error("eSewa payment URL was not returned.");
       }
-
       const form = document.createElement("form");
       form.method = "POST";
       form.action = paymentData.payment_url;
-
       const fields = {
         amount: paymentData.amount,
         tax_amount: paymentData.tax_amount,
@@ -1746,7 +1620,6 @@ export const PackageHeliService: React.FC<{
         signed_field_names: paymentData.signed_field_names,
         signature: paymentData.signature,
       };
-
       Object.entries(fields).forEach(([key, value]) => {
         const input = document.createElement("input");
         input.type = "hidden";
@@ -1754,12 +1627,10 @@ export const PackageHeliService: React.FC<{
         input.value = String(value ?? "");
         form.appendChild(input);
       });
-
       document.body.appendChild(form);
       form.submit();
     } catch (error: any) {
       console.error("eSewa payment initiation failed:", error?.response?.data || error);
-
       setPaymentError(
         error?.response?.data?.message ||
         error?.message ||
@@ -1768,13 +1639,11 @@ export const PackageHeliService: React.FC<{
       setIsProcessingPayment(false);
     }
   };
-
   const handlePayLater = async () => {
     try {
       setIsProcessingPayment(true);
       setSelectedPaymentMethod("pay_later");
       setPaymentError("");
-
       if (bookingId) {
         try {
           await initiatePayment({
@@ -1785,7 +1654,6 @@ export const PackageHeliService: React.FC<{
           console.warn("Pay Later payment initiation note:", err);
         }
       }
-
       setPaymentStatus("unpaid");
       setCurrentStep("submitted");
     } catch (error: any) {
@@ -1795,7 +1663,6 @@ export const PackageHeliService: React.FC<{
       setIsProcessingPayment(false);
     }
   };
-
   // Print booking receipt / slip from Modal (Matches Tour Package PDF/Print Slip exactly)
   const handlePrintBookingSlip = () => {
     const formattedTotal = displayPrice(
@@ -1804,12 +1671,9 @@ export const PackageHeliService: React.FC<{
       nprPerOneDollar,
       nprPerOneINR
     );
-
     const flightTypeLabel =
       bookingFlightOption === "charter" ? "Private Charter" : "Sharing Heli Service";
-
     const paxCount = Math.max(1, bookingSeatCount || 1);
-
     const applicantRows = Array.from({ length: paxCount }, (_, idx) => {
       const app = bookingFormData.applicants?.[idx] || {
         fullName: bookingFormData.fullName,
@@ -1833,7 +1697,6 @@ export const PackageHeliService: React.FC<{
         </tr>
       `;
     }).join("");
-
     const printContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -1856,7 +1719,6 @@ export const PackageHeliService: React.FC<{
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-
           /* â”€â”€ PAGE WRAPPER â”€â”€ */
           .page {
             width: 210mm;
@@ -1868,7 +1730,6 @@ export const PackageHeliService: React.FC<{
             position: relative;
             background: #fff;
           }
-
           /* â”€â”€ WATERMARK â”€â”€ */
           .watermark-wrapper {
             position: fixed;
@@ -1895,7 +1756,6 @@ export const PackageHeliService: React.FC<{
             text-align: center;
             mix-blend-mode: multiply;
           }
-
           /* â”€â”€ LETTERHEAD â”€â”€ */
           .letterhead {
             display: flex;
@@ -1966,7 +1826,6 @@ export const PackageHeliService: React.FC<{
             color: #64748b;
             font-weight: 600;
           }
-
           /* â”€â”€ DOC TITLE BAND â”€â”€ */
           .title-band {
             background: #0f172a;
@@ -2009,7 +1868,6 @@ export const PackageHeliService: React.FC<{
             color: #fff;
             letter-spacing: 0.5px;
           }
-
           /* â”€â”€ REFERENCE BOX â”€â”€ */
           .ref-box {
             display: flex;
@@ -2074,7 +1932,6 @@ export const PackageHeliService: React.FC<{
             margin-top: 2px;
             font-weight: 600;
           }
-
           /* â”€â”€ SECTION HEADING â”€â”€ */
           .section-heading {
             display: flex;
@@ -2096,7 +1953,6 @@ export const PackageHeliService: React.FC<{
             letter-spacing: 0.8px;
             white-space: nowrap;
           }
-
           /* â”€â”€ DETAIL TABLE â”€â”€ */
           .detail-table {
             width: 100%;
@@ -2138,7 +1994,6 @@ export const PackageHeliService: React.FC<{
             background: #fff5f7 !important;
             border-color: #f472b6 !important;
           }
-
           /* â”€â”€ NOTICE BOX â”€â”€ */
           .notice-box {
             border: 1px solid #cbd5e1;
@@ -2153,7 +2008,6 @@ export const PackageHeliService: React.FC<{
             print-color-adjust: exact !important;
           }
           .notice-box strong { color: #0f172a; }
-
           /* â”€â”€ CHECKLIST â”€â”€ */
           .checklist-box {
             border: 1px solid #cbd5e1;
@@ -2195,7 +2049,6 @@ export const PackageHeliService: React.FC<{
             flex-shrink: 0;
             margin-top: 1px;
           }
-
           /* â”€â”€ INFO CARD GRID â”€â”€ */
           .info-card-grid {
             display: grid;
@@ -2261,7 +2114,6 @@ export const PackageHeliService: React.FC<{
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-
           /* â”€â”€ FARE HIGHLIGHT BOX â”€â”€ */
           .fare-box {
             border: 1.5px solid #f9a8d4;
@@ -2298,7 +2150,6 @@ export const PackageHeliService: React.FC<{
             max-width: 180px;
             line-height: 1.4;
           }
-
           /* â”€â”€ FOOTER â”€â”€ */
           .doc-footer {
             margin-top: auto;
@@ -2315,7 +2166,6 @@ export const PackageHeliService: React.FC<{
       <body>
         <div class="page">
           <div class="watermark-wrapper"><div class="watermark">Trip Himalaya Tours and Travels</div></div>
-
           <!-- LETTERHEAD -->
           <div class="letterhead">
             <div class="lh-left">
@@ -2331,7 +2181,6 @@ export const PackageHeliService: React.FC<{
               <div class="slip-date">Issued: ${submittedAt}</div>
             </div>
           </div>
-
           <!-- DOC TITLE BAND -->
           <div class="title-band">
             <div>
@@ -2343,7 +2192,6 @@ export const PackageHeliService: React.FC<{
               <div class="doc-id-val">${submissionId}</div>
             </div>
           </div>
-
           <!-- SUBMISSION REFERENCE -->
           <div class="ref-box">
             <div class="ref-accent"></div>
@@ -2358,7 +2206,6 @@ export const PackageHeliService: React.FC<{
               </div>
             </div>
           </div>
-
           <!-- APPLICANT DETAILS -->
           <div class="section-heading">
             <div class="sh-text">Lead Passenger &amp; Contact Details</div>
@@ -2398,7 +2245,6 @@ export const PackageHeliService: React.FC<{
               <div class="ic-value">${bookingFormData.pickupHotel || "Kathmandu Valley / Airport"}</div>
             </div>
           </div>
-
           <!-- HELI SERVICE DETAILS -->
           <div class="section-heading">
             <div class="sh-text">Heli Flight Service &amp; Fare Details</div>
@@ -2433,7 +2279,6 @@ export const PackageHeliService: React.FC<{
             </div>
             <div class="fare-note">All-inclusive<br>CAAN passenger fee, airport charges &amp; aviation taxes</div>
           </div>
-
           <!-- CAAN PASSENGER MANIFEST & WEIGHT DETAILS -->
           <div class="section-heading">
             <div class="sh-text">CAAN Flight &amp; Passenger Manifest</div>
@@ -2454,12 +2299,10 @@ export const PackageHeliService: React.FC<{
               ${applicantRows}
             </tbody>
           </table>
-
           <!-- OFFICER NOTICE -->
           <div class="notice-box">
             <strong>Next Step:</strong> Our dedicated <strong>Heli Flight Operations Officer</strong> will contact you within <strong>15-30 minutes</strong> via WhatsApp or phone call to verify passenger manifests, coordinate Tribhuvan International Airport (TIA) domestic VIP helipad terminal entry, and confirm CAAN flight slot clearance.
           </div>
-
           <!-- CHECKLIST -->
           <div class="checklist-box">
             <div class="checklist-title">Heli Flight Preparation Checklist</div>
@@ -2470,7 +2313,6 @@ export const PackageHeliService: React.FC<{
               <div class="checklist-item"><span class="ci-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span> Accurate payload declaration (Luggage limited to max 20 kg per passenger)</div>
             </div>
           </div>
-
           <!-- FOOTER -->
           <div class="doc-footer">
             <div class="footer-left">
@@ -2486,7 +2328,6 @@ export const PackageHeliService: React.FC<{
       </body>
       </html>
     `;
-
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
     iframe.style.right = "0";
@@ -2495,7 +2336,6 @@ export const PackageHeliService: React.FC<{
     iframe.style.height = "0";
     iframe.style.border = "0";
     document.body.appendChild(iframe);
-
     const doc = iframe.contentWindow?.document;
     if (doc) {
       doc.open();
@@ -2514,7 +2354,6 @@ export const PackageHeliService: React.FC<{
       window.print();
     }
   };
-
   // Instant WhatsApp Inquiry
   const handleWhatsAppInquiry = (tour: HeliPackageItem) => {
     const basePrice = displayPrice(
@@ -2528,14 +2367,12 @@ export const PackageHeliService: React.FC<{
     );
     window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
   };
-
   // â”€â”€â”€ FAST FILTER: applies top-bar Location + Name search + sidebar filters â”€â”€â”€
   const LISTING_PACKAGES = heliPackages;
   const filteredTours = useMemo(() => {
     const locQuery = (filter?.location || "").toLowerCase().trim();
     const nameQuery = (filter?.name || "").toLowerCase().trim();
     const internalQuery = searchQuery.toLowerCase().trim();
-
     return LISTING_PACKAGES.filter((tour) => {
       // Top-bar location filter (OR: location or description contains keyword)
       const matchesLocation =
@@ -2543,14 +2380,12 @@ export const PackageHeliService: React.FC<{
         tour.location.toLowerCase().includes(locQuery) ||
         tour.title.toLowerCase().includes(locQuery) ||
         tour.tag.toLowerCase().includes(locQuery);
-
       // Top-bar name/title filter
       const matchesName =
         !nameQuery ||
         tour.title.toLowerCase().includes(nameQuery) ||
         tour.description.toLowerCase().includes(nameQuery) ||
         tour.tag.toLowerCase().includes(nameQuery);
-
       // Internal sidebar search query
       const matchesSearch =
         !internalQuery ||
@@ -2558,15 +2393,12 @@ export const PackageHeliService: React.FC<{
         tour.location.toLowerCase().includes(internalQuery) ||
         tour.description.toLowerCase().includes(internalQuery) ||
         tour.tripHighlights.some((h) => h.toLowerCase().includes(internalQuery));
-
       // Price
       const matchesPrice = tour.packagePriceNPR <= priceRange;
-
       // Rating
       const matchesRating =
         selectedRating === 0 ||
         Math.round(tour.rating || 5) === selectedRating;
-
       // Keywords
       const matchesKeywords =
         selectedKeywords.length === 0 ||
@@ -2579,7 +2411,6 @@ export const PackageHeliService: React.FC<{
             tour.category.toLowerCase().includes(kwLower)
           );
         });
-
       return (
         matchesLocation &&
         matchesName &&
@@ -2590,7 +2421,6 @@ export const PackageHeliService: React.FC<{
       );
     });
   }, [LISTING_PACKAGES, filter, searchQuery, priceRange, selectedRating, selectedKeywords]);
-
   const availableKeywords = [
     "EVEREST",
     "ANNAPURNA",
@@ -2601,7 +2431,6 @@ export const PackageHeliService: React.FC<{
     "SHARING",
     "LUXURY",
   ];
-
   if (packagesLoading && !selectedTour) {
     return (
       <div className="py-20 text-center">
@@ -2612,7 +2441,6 @@ export const PackageHeliService: React.FC<{
       </div>
     );
   }
-
   if (packagesError && !selectedTour) {
     return (
       <div className="w-full py-16 text-center text-sm font-bold text-red-500">
@@ -2620,7 +2448,6 @@ export const PackageHeliService: React.FC<{
       </div>
     );
   }
-
   if (routeTourId && !packagesLoading && !selectedTour) {
     return (
       <div className="w-full py-16 text-center text-sm font-bold text-gray-500">
@@ -2628,7 +2455,6 @@ export const PackageHeliService: React.FC<{
       </div>
     );
   }
-
   return (
     <div className="w-full">
       {/* ========================================================================= */}
@@ -2691,7 +2517,6 @@ export const PackageHeliService: React.FC<{
                     Trip Himalaya Tours and Travels
                   </div>
                 </div>
-
                 {/* â”€â”€ 1. CORPORATE LETTERHEAD â”€â”€ */}
                 <div style={{ background: "linear-gradient(135deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", borderRadius: "8px 8px 0 0", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
@@ -2748,7 +2573,6 @@ export const PackageHeliService: React.FC<{
                 </div>
                 {/* Project brand accent strip */}
                 <div style={{ height: "3px", background: "linear-gradient(90deg, #E91E63 0%, #db2777 30%, #9333ea 70%, #2D1347 100%)", marginBottom: "6px" }} />
-
                 {/* â”€â”€ PACKAGE SUMMARY & OVERVIEW CARD â”€â”€ */}
                 <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "6px", padding: "7px 11px", marginBottom: "6px", background: "#fdf4ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
@@ -2772,7 +2596,6 @@ export const PackageHeliService: React.FC<{
                     <span dangerouslySetInnerHTML={{ __html: formatDescription(selectedTour.description) }} />
                   </div>
                 </div>
-
                 {/* â”€â”€ PRICING SCHEDULE (Only if pricing tiers exist from API) â”€â”€ */}
                 {pricingTiers && pricingTiers.length > 0 && (
                   <div style={{ marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
@@ -2794,7 +2617,6 @@ export const PackageHeliService: React.FC<{
                           const bracket = tier.age_group || (tier.min_pax ? (tier.min_pax === tier.max_pax ? `${tier.min_pax} Pax` : `${tier.min_pax} - ${tier.max_pax} Pax`) : "Per Person / All Pax");
                           const nprPrice = Number(tier.price_npr ?? tier.price ?? 0);
                           const usdPrice = tier.price_usd ? Number(tier.price_usd) : (nprPrice > 0 ? nprPrice / (nprPerOneDollar || 151.09) : 0);
-
                           return (
                             <tr key={tier.id || idx} style={{ background: idx % 2 === 0 ? "#ffffff" : "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
                               <td style={{ padding: "4px 7px", fontWeight: 700, color: "#2D1347" }}>{tierName}</td>
@@ -2814,7 +2636,6 @@ export const PackageHeliService: React.FC<{
                     </table>
                   </div>
                 )}
-
                 {/* â”€â”€ TRIP HIGHLIGHTS (Only if data exists) â”€â”€ */}
                 {combinedHighlights && combinedHighlights.length > 0 && (
                   <div style={{ marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
@@ -2833,7 +2654,6 @@ export const PackageHeliService: React.FC<{
                     </div>
                   </div>
                 )}
-
                 {/* â”€â”€ INCLUSIONS & EXCLUSIONS (Only if data exists) â”€â”€ */}
                 {((heliInclusions && heliInclusions.length > 0) ||
                   (heliExclusions && heliExclusions.length > 0)) && (
@@ -2855,7 +2675,6 @@ export const PackageHeliService: React.FC<{
                         </div>
                       </div>
                     )}
-
                     {heliExclusions && heliExclusions.length > 0 && (
                       <div style={{ border: "1.5px solid #fecdd3", borderRadius: "5px", padding: "6px 8px", background: "#fff1f2" }}>
                         <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#881337", borderBottom: "1.5px solid #fda4af", paddingBottom: "2px", marginBottom: "4px" }}>
@@ -2875,7 +2694,6 @@ export const PackageHeliService: React.FC<{
                     )}
                   </div>
                 )}
-
                 {/* â”€â”€ RESTRICTIONS & WHAT TO BRING (Only if data exists) â”€â”€ */}
                 {((heliRestrictions && heliRestrictions.length > 0) ||
                   (heliWhatToBring && heliWhatToBring.length > 0)) && (
@@ -2895,7 +2713,6 @@ export const PackageHeliService: React.FC<{
                         </div>
                       </div>
                     )}
-
                     {heliWhatToBring && heliWhatToBring.length > 0 && (
                       <div style={{ border: "1.5px solid #d8b4fe", borderRadius: "5px", padding: "6px 8px", background: "#faf5ff" }}>
                         <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
@@ -2913,15 +2730,14 @@ export const PackageHeliService: React.FC<{
                     )}
                   </div>
                 )}
-
                 {/* â”€â”€ POLICIES (Only if data exists) â”€â”€ */}
-                {selectedTour.policies && selectedTour.policies.length > 0 && (
+                {heliPolicies && heliPolicies.length > 0 && (
                   <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", marginBottom: "6px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
                     <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
                       Heli Service Policies &amp; Guidelines
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
-                      {selectedTour.policies.map((policy: string, idx: number) => (
+                      {heliPolicies.map((policy: string, idx: number) => (
                         <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "4px", fontSize: "8px", color: "#4a154b" }}>
                           <span style={{ fontWeight: 900, color: "#E91E63", flexShrink: 0 }}>&bull;</span>
                           <span style={{ lineHeight: "1.3" }}>{policy}</span>
@@ -2930,7 +2746,6 @@ export const PackageHeliService: React.FC<{
                     </div>
                   </div>
                 )}
-
                 {/* â”€â”€ FAQS (Only if data exists) â”€â”€ */}
                 {packageFaqs && packageFaqs.length > 0 && (
                   <div style={{ marginBottom: "6px", pageBreakInside: "avoid", breakInside: "avoid" }}>
@@ -2949,7 +2764,6 @@ export const PackageHeliService: React.FC<{
                     </div>
                   </div>
                 )}
-
                 {/* â”€â”€ HELI FLIGHT & BOOKING REQUIREMENTS (Matching Details Page Sidebar) â”€â”€ */}
                 <div style={{ border: "1.5px solid #e9d5ff", borderRadius: "5px", padding: "6px 8px", marginBottom: "6px", background: "#faf5ff", pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <div style={{ fontSize: "9.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em", color: "#2D1347", borderBottom: "1.5px solid #e9d5ff", paddingBottom: "2px", marginBottom: "4px" }}>
@@ -2972,7 +2786,6 @@ export const PackageHeliService: React.FC<{
                     <div><strong style={{ color: "#2D1347" }}>100% Weather Guarantee:</strong> 100% full refund or free priority reschedule if flight is grounded.</div>
                   </div>
                 </div>
-
                 {/* â”€â”€ CORPORATE FOOTER â”€â”€ */}
                 <div style={{ background: "linear-gradient(90deg, #2D1347, #3B145C)", padding: "6px 12px", borderRadius: "5px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8px", color: "#ffffff", pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <div>
@@ -2987,7 +2800,6 @@ export const PackageHeliService: React.FC<{
                 </div>
               </div>
             )}
-
             {/* â”€â”€ TOP HERO HEADER (Matching Insurance Detail Banner Design) â”€â”€ */}
             <div
               className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end"
@@ -2999,7 +2811,6 @@ export const PackageHeliService: React.FC<{
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
-
               {/* Share button (top-right, with dropdown) */}
               <div ref={shareDropdownRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-20">
                 {isShareOpen && (
@@ -3025,7 +2836,6 @@ export const PackageHeliService: React.FC<{
                         <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
                       </svg>
                     </button>
-
                     {/* Instagram */}
                     <button
                       type="button"
@@ -3049,7 +2859,6 @@ export const PackageHeliService: React.FC<{
                         <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
                       </svg>
                     </button>
-
                     {/* WhatsApp */}
                     <button
                       type="button"
@@ -3069,7 +2878,6 @@ export const PackageHeliService: React.FC<{
                     >
                       <MessageCircle size={14} color="white" />
                     </button>
-
                     {/* Copy Link */}
                     <button
                       type="button"
@@ -3093,7 +2901,6 @@ export const PackageHeliService: React.FC<{
                         </svg>
                       )}
                     </button>
-
                     <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
                   </div>
                 )}
@@ -3110,7 +2917,6 @@ export const PackageHeliService: React.FC<{
                   <Share2 size={15} />
                 </button>
               </div>
-
               {/* Main Content & Actions */}
               <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -3130,7 +2936,6 @@ export const PackageHeliService: React.FC<{
                       />
                     </div>
                   </div>
-
                   {/* Right: Stacked Action Buttons */}
                   <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-40 flex-shrink-0 mt-2 md:mt-12">
                     <button
@@ -3152,7 +2957,6 @@ export const PackageHeliService: React.FC<{
                     </button>
                   </div>
                 </div>
-
                 {/* â”€â”€ Badges Pill Row (Matching Image) â”€â”€ */}
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
                   {/* Badge 1: Tag & Category from API */}
@@ -3168,7 +2972,6 @@ export const PackageHeliService: React.FC<{
                       ) : null}
                     </div>
                   )}
-
                   {/* Badge 2: Starts at */}
                   <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
                     <span className="text-pink-200 text-xs font-normal">Starts at:</span>
@@ -3181,13 +2984,11 @@ export const PackageHeliService: React.FC<{
                       )}
                     </span>
                   </div>
-
                   {/* Badge 3: Duration / Calendar */}
                   <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
                     <Calendar size={14} className="text-blue-300" />
                     <span>{selectedTour.duration}</span>
                   </div>
-
                   {/* Badge 4: Location */}
                   {selectedTour.location && (
                     <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
@@ -3198,7 +2999,6 @@ export const PackageHeliService: React.FC<{
                 </div>
               </div>
             </div>
-
             {/* â”€â”€ SUB-NAVIGATION STRIP (OVERVIEW | POLICIES | FAQS | TESTIMONIES + Starts From & Book Now) â”€â”€ */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
               {/* Tabs */}
@@ -3217,7 +3017,6 @@ export const PackageHeliService: React.FC<{
                   </button>
                 ))}
               </div>
-
               {/* Starts From & Book Now Button */}
               <div className="flex items-center justify-end gap-3.5">
                 <div className="text-right">
@@ -3233,7 +3032,6 @@ export const PackageHeliService: React.FC<{
                     )}
                   </span>
                 </div>
-
                 <button
                   type="button"
                   onClick={() => handleOpenBooking(selectedTour, "charter")}
@@ -3243,7 +3041,6 @@ export const PackageHeliService: React.FC<{
                 </button>
               </div>
             </div>
-
             {/* â”€â”€ MAIN 2-COLUMN LAYOUT: CONTENT + HELI SERVICE PRICE MODEL â”€â”€ */}
             <div className="print:hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* LEFT COLUMN: TOUR DETAILS (8 cols) */}
@@ -3272,7 +3069,6 @@ export const PackageHeliService: React.FC<{
                         )}
                       </div>
                     </div>
-
                     {/* Description + Trip Highlights â€” single card (only if data exists) */}
                     {(selectedTour.description || (combinedHighlights && combinedHighlights.length > 0)) && (
                       <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-4">
@@ -3302,7 +3098,6 @@ export const PackageHeliService: React.FC<{
                         )}
                       </div>
                     )}
-
                     {/* Mobile Responsive Pricing Options (shown below highlights card on mobile screens) */}
                     <div id="pricing-section-mobile" className="lg:hidden">
                       <HeliServicePriceModel
@@ -3315,11 +3110,9 @@ export const PackageHeliService: React.FC<{
                             flightType === "charter"
                               ? "Private Charter"
                               : "Sharing Heli Service";
-
                           const msg = encodeURIComponent(
                             `Hello Trip Himalaya! Inquiring for "${selectedTour.title}". Selected: ${typeLabel}. Price: ${formattedTotal}. Please confirm next flight timing.`
                           );
-
                           window.open(
                             `https://wa.me/9779851420882?text=${msg}`,
                             "_blank",
@@ -3328,7 +3121,6 @@ export const PackageHeliService: React.FC<{
                         }}
                       />
                     </div>
-
                     {/* Flight Itinerary & Roadmap (only if data exists) */}
                     {combinedItineraries && combinedItineraries.length > 0 && (
                       <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100">
@@ -3341,7 +3133,6 @@ export const PackageHeliService: React.FC<{
                         />
                       </div>
                     )}
-
                     {/* What's Included (Teal Green Card) & What's Excluded (Pink Card) â€” only if data exists */}
                     {((heliInclusions && heliInclusions.length > 0) ||
                       (heliExclusions && heliExclusions.length > 0)) && (
@@ -3372,7 +3163,6 @@ export const PackageHeliService: React.FC<{
                             </ul>
                           </div>
                         )}
-
                         {/* What's Excluded */}
                         {heliExclusions && heliExclusions.length > 0 && (
                           <div className="bg-[#E91E63] text-white p-6 rounded-3xl shadow-sm space-y-4">
@@ -3392,7 +3182,6 @@ export const PackageHeliService: React.FC<{
                         )}
                       </div>
                     )}
-
                     {/* Restrictions & Health Card (Amber Warning) â€” only if data exists */}
                     {heliRestrictions && heliRestrictions.length > 0 && (
                       <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
@@ -3410,7 +3199,6 @@ export const PackageHeliService: React.FC<{
                         </ul>
                       </div>
                     )}
-
                     {/* What to Bring Card (Pink Bag) â€” only if data exists */}
                     {heliWhatToBring && heliWhatToBring.length > 0 && (
                       <div className="bg-white p-6 sm:p-7 rounded-3xl shadow-sm border border-gray-100 space-y-3">
@@ -3430,7 +3218,6 @@ export const PackageHeliService: React.FC<{
                     )}
                   </div>
                 )}
-
                 {/* Tab 2: POLICIES */}
                 {activeDetailTab === "POLICIES" && (
                   <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
@@ -3438,7 +3225,7 @@ export const PackageHeliService: React.FC<{
                       Heli Service Policies &amp; Aviation Guidelines
                     </h3>
                     <div className="space-y-4">
-                      {selectedTour.policies.map((policy, idx) => (
+                      {heliPolicies.map((policy, idx) => (
                         <div key={idx} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
                           <p className="text-xs text-gray-700 font-medium leading-relaxed">
                             {policy}
@@ -3448,7 +3235,6 @@ export const PackageHeliService: React.FC<{
                     </div>
                   </div>
                 )}
-
                 {/* Tab 3: FAQS */}
                 {activeDetailTab === "FAQS" && (
                   <DynamicFaqSection
@@ -3466,7 +3252,6 @@ export const PackageHeliService: React.FC<{
                     subtitle="Common questions answered by our flight specialists"
                   />
                 )}
-
                 {/* Tab 4: TESTIMONIES */}
                 {activeDetailTab === "TESTIMONIES" && (
                   <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
@@ -3474,7 +3259,7 @@ export const PackageHeliService: React.FC<{
                       Guest Experiences &amp; Reviews
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {selectedTour.testimonies.map((test, idx) => (
+                      {heliTestimonials.map((test, idx) => (
                         <div
                           key={idx}
                           className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-3"
@@ -3501,7 +3286,6 @@ export const PackageHeliService: React.FC<{
                   </div>
                 )}
               </div>
-
               {/* RIGHT COLUMN: STICKY PRICING MODEL SIDEBAR (Matching Visa Service Details Page) */}
               <div
                 id="pricing-section"
@@ -3517,11 +3301,9 @@ export const PackageHeliService: React.FC<{
                       flightType === "charter"
                         ? "Private Charter"
                         : "Sharing Heli Service";
-
                     const msg = encodeURIComponent(
                       `Hello Trip Himalaya! Inquiring for "${selectedTour.title}". Selected: ${typeLabel}. Price: ${formattedTotal}. Please confirm next flight timing.`
                     );
-
                     window.open(
                       `https://wa.me/9779851420882?text=${msg}`,
                       "_blank",
@@ -3532,20 +3314,16 @@ export const PackageHeliService: React.FC<{
               </div>
             </div>
           </div>
-
-
         {/* â”€â”€ OUR OTHER SERVICES â”€â”€ */}
         <div className="mt-10 print:hidden">
           <OtherServicesComponent service={services} />
         </div>
-
         </>
       ) : (
         /* ======================================================================= */
         /* â”€â”€ CARDS LISTING VIEW (Matching Image 1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         /* ======================================================================= */
         <div className="w-full space-y-6">
-
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             {/* â”€â”€ LEFT: FILTER SIDEBAR â”€â”€ */}
             <div className="lg:col-span-1">
@@ -3593,7 +3371,6 @@ export const PackageHeliService: React.FC<{
                     />
                   </div>
                 </button>
-
                 {/* Collapsible Panel */}
                 <div
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
@@ -3624,7 +3401,6 @@ export const PackageHeliService: React.FC<{
                         </span>
                       </div>
                     </div>
-
                     {/* 2. Star Ratings (5-column grid matching Packages FilterSideBar) */}
                     <div className="py-4 border-b border-gray-100">
                       <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block mb-3">
@@ -3654,7 +3430,6 @@ export const PackageHeliService: React.FC<{
                         })}
                       </div>
                     </div>
-
                     {/* 3. Keywords Tags */}
                     <div className="pt-4">
                       <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
@@ -3690,7 +3465,6 @@ export const PackageHeliService: React.FC<{
                   </div>
                 </div>
               </div>
-
               {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
                   DESKTOP â€” full sidebar card (lg+) (UNTOUCHED)
               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
@@ -3715,7 +3489,6 @@ export const PackageHeliService: React.FC<{
                     CLEAR ALL
                   </button>
                 </div>
-
                 {/* 1. Price Range Slider */}
                 <div className="space-y-3 pb-5 border-b border-gray-100">
                   <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
@@ -3739,7 +3512,6 @@ export const PackageHeliService: React.FC<{
                     </span>
                   </div>
                 </div>
-
                 {/* 2. Star Ratings */}
                 <div className="space-y-3 pb-5 border-b border-gray-100">
                   <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
@@ -3777,7 +3549,6 @@ export const PackageHeliService: React.FC<{
                     ))}
                   </div>
                 </div>
-
                 {/* 3. Keywords Tags */}
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block">
@@ -3810,7 +3581,6 @@ export const PackageHeliService: React.FC<{
                 </div>
               </div>
             </div>
-
             {/* â”€â”€ RIGHT: HORIZONTAL HELI CARDS (Matching Image 1) â”€â”€ */}
             <div className="lg:col-span-3 space-y-5">
               {filteredTours.length === 0 ? (
@@ -3844,7 +3614,6 @@ export const PackageHeliService: React.FC<{
                     nprPerOneDollar,
                     nprPerOneINR
                   );
-
                   return (
                     <div
                       key={tour.id}
@@ -3871,7 +3640,6 @@ export const PackageHeliService: React.FC<{
                           </span>
                         ) : null}
                       </div>
-
                       {/* Middle: Info */}
                       <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between min-w-0">
                         <div>
@@ -3894,12 +3662,10 @@ export const PackageHeliService: React.FC<{
                               {Number(tour.rating || 5) >= 5 ? "HIGHLY RATED" : "POPULAR"}
                             </span>
                           </div>
-
                           {/* Title */}
                           <h3 className="text-base sm:text-lg font-black text-[#200B3B] group-hover:text-[#E91E63] transition-colors leading-snug line-clamp-1">
                             {tour.title}
                           </h3>
-
                           {/* Description */}
                           <div
                             className="text-xs text-gray-500 font-medium overflow-hidden mt-1 leading-relaxed max-w-none"
@@ -3907,7 +3673,6 @@ export const PackageHeliService: React.FC<{
                             dangerouslySetInnerHTML={{ __html: formatDescription(tour.description) }}
                           />
                         </div>
-
                         {/* Location & Duration */}
                         <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-gray-100 text-[11px] font-bold text-gray-500">
                           <span className="flex items-center gap-1.5">
@@ -3920,23 +3685,19 @@ export const PackageHeliService: React.FC<{
                           </span>
                         </div>
                       </div>
-
                       {/* Right: Pricing & Actions */}
                       <div className="w-full md:w-56 lg:w-60 p-5 sm:p-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-gray-100 flex-shrink-0 text-left bg-white">
                         <div>
                           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                             STARTING FROM
                           </span>
-
                           <p className="text-2xl sm:text-3xl font-black text-[#E91E63] my-0.5 tracking-tight">
                             {formattedStartingPrice}
                           </p>
-
                           <span className="text-[9px] text-gray-400 font-medium block">
                             per person
                           </span>
                         </div>
-
                         <div className="w-full">
                           {/* Buttons */}
                           <div className="flex items-center gap-2 w-full justify-start">
@@ -3950,7 +3711,6 @@ export const PackageHeliService: React.FC<{
                             >
                               VIEW DETAILS
                             </button>
-
                             <button
                               type="button"
                               onClick={(e) => {
@@ -3972,7 +3732,6 @@ export const PackageHeliService: React.FC<{
           </div>
         </div>
       )}
-
       {/* ========================================================================= */}
       {/* â”€â”€ BOOKING MODAL & PRINT SLIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {/* ========================================================================= */}
@@ -3995,7 +3754,6 @@ export const PackageHeliService: React.FC<{
                     </h3>
                   </div>
                 </div>
-
                 <button
                   type="button"
                   onClick={() => setIsBookingModalOpen(false)}
@@ -4021,7 +3779,6 @@ export const PackageHeliService: React.FC<{
                       </p>
                     </div>
                   </div>
-
                   <button
                     type="button"
                     onClick={() => setIsBookingModalOpen(false)}
@@ -4031,7 +3788,6 @@ export const PackageHeliService: React.FC<{
                     <X size={18} />
                   </button>
                 </div>
-
                 {/* Header Summary Strip: Flight Option & Total Estimate */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/15">
                   <div>
@@ -4046,7 +3802,6 @@ export const PackageHeliService: React.FC<{
                       </span>
                     </div>
                   </div>
-
                   <div className="text-left sm:text-right">
                     <span className="text-[9px] font-black uppercase text-pink-200/90 block tracking-wider">
                       TOTAL ESTIMATE
@@ -4063,7 +3818,6 @@ export const PackageHeliService: React.FC<{
                 </div>
               </div>
             )}
-
             {/* Modal Content (Scrollable to fit any screen height) */}
             <div className="p-5 sm:p-7 overflow-y-auto flex-1 overscroll-contain">
               {currentStep === "form" ? (
@@ -4077,7 +3831,6 @@ export const PackageHeliService: React.FC<{
                         <span>Please correct the highlighted fields before submitting.</span>
                       </div>
                     )}
-
                   {/* Server / Backend Error Banner */}
                   {paymentError && (
                     <div className="p-3 rounded-2xl bg-red-50/90 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2 animate-in fade-in">
@@ -4085,7 +3838,6 @@ export const PackageHeliService: React.FC<{
                       <span>{paymentError}</span>
                     </div>
                   )}
-
                   {/* â”€â”€ APPLICANT SELECTOR TABS (Shown prominently when paxCount > 1, sharing only) â”€â”€ */}
                   {bookingFlightOption !== "charter" && bookingSeatCount > 1 && (
                     <div className="bg-gradient-to-r from-purple-50/90 via-pink-50/40 to-purple-50/90 p-3 rounded-2xl border border-purple-200/80 shadow-2xs space-y-2">
@@ -4102,7 +3854,6 @@ export const PackageHeliService: React.FC<{
                           Editing: Applicant {activeApplicantIndex + 1} of {bookingSeatCount}
                         </span>
                       </div>
-
                       {/* Scrollable Tabs for Applicants */}
                       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
                         {Array.from({ length: bookingSeatCount }, (_, idx) => {
@@ -4133,7 +3884,6 @@ export const PackageHeliService: React.FC<{
                           const hasError = Object.keys(formErrors).some(
                             (k) => k.startsWith(`applicant_${idx}_`) && Boolean(formErrors[k]) && touchedFields[k]
                           );
-
                           return (
                             <button
                               key={idx}
@@ -4174,7 +3924,6 @@ export const PackageHeliService: React.FC<{
                       </div>
                     </div>
                   )}
-
                   {/* â”€â”€ ALL DETAILS FOR CURRENT ACTIVE APPLICANT (As marked in image) â”€â”€ */}
                   {(() => {
                     const currentApp = bookingFormData.applicants?.[activeApplicantIndex] || {
@@ -4194,7 +3943,6 @@ export const PackageHeliService: React.FC<{
                       hotelFile: null,
                       insuranceFile: null,
                     };
-
                     return (
                       <div className="space-y-4">
                         {/* â”€â”€ CARD 1: PERSONAL DETAILS â”€â”€ */}
@@ -4218,7 +3966,6 @@ export const PackageHeliService: React.FC<{
                               </span>
                             )}
                           </div>
-
                           {/* Inputs Row 1: Full Name & Nationality */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                             <div>
@@ -4247,7 +3994,6 @@ export const PackageHeliService: React.FC<{
                                   </span>
                                 )}
                             </div>
-
                             <div>
                               <label className="text-[10px] font-black uppercase text-[#200B3B] block mb-1">
                                 NATIONALITY *
@@ -4275,7 +4021,6 @@ export const PackageHeliService: React.FC<{
                                 )}
                             </div>
                           </div>
-
                           {/* Row 2: Passport / NID */}
                           <div>
                             <label className="text-[10px] font-black uppercase text-[#200B3B] block mb-1">
@@ -4303,7 +4048,6 @@ export const PackageHeliService: React.FC<{
                                 </span>
                               )}
                           </div>
-
                           {/* Row 3: CAAN Weight & Luggage Box */}
                           <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-2">
                             <div className="flex items-center justify-between">
@@ -4314,7 +4058,6 @@ export const PackageHeliService: React.FC<{
                                 MAX 20 KG LUGGAGE
                               </span>
                             </div>
-
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                               <div>
                                 <label className="text-[9.5px] font-bold uppercase text-amber-900 block mb-1">
@@ -4344,7 +4087,6 @@ export const PackageHeliService: React.FC<{
                                     </span>
                                   )}
                               </div>
-
                               <div>
                                 <label className="text-[9.5px] font-bold uppercase text-amber-900 block mb-1">
                                   LUGGAGE (MAX 20 KG PER PERSON)
@@ -4376,7 +4118,6 @@ export const PackageHeliService: React.FC<{
                             </div>
                           </div>
                         </div>
-
                         {/* â”€â”€ CARD 2: FLIGHT LOGISTICS & CONTACT â”€â”€ */}
                         <div className="p-4 sm:p-5 rounded-2xl bg-gray-50/80 border border-gray-200/80 space-y-4">
                           <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60 text-[#200B3B]">
@@ -4390,7 +4131,6 @@ export const PackageHeliService: React.FC<{
                                 : ""}
                             </h4>
                           </div>
-
                           {/* WhatsApp & Email */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -4419,7 +4159,6 @@ export const PackageHeliService: React.FC<{
                                   </span>
                                 )}
                             </div>
-
                             <div>
                               <label className="text-[10px] font-black uppercase text-[#200B3B] block mb-1">
                                 WHATSAPP PHONE NUMBER *
@@ -4465,7 +4204,6 @@ export const PackageHeliService: React.FC<{
                                 )}
                             </div>
                           </div>
-
                           {/* Flight Date & Pickup Hotel */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -4494,7 +4232,6 @@ export const PackageHeliService: React.FC<{
                                   </span>
                                 )}
                             </div>
-
                             <div>
                               <label className="text-[10px] font-black uppercase text-[#200B3B] block mb-1">
                                 PICKUP HOTEL IN KATHMANDU / POKHARA
@@ -4512,7 +4249,6 @@ export const PackageHeliService: React.FC<{
                             </div>
                           </div>
                         </div>
-
                         {/* â”€â”€ CARD 3: DOCUMENT ATTACHMENTS â”€â”€ */}
                         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200/90 shadow-xs space-y-3.5">
                           {/* Hidden file inputs */}
@@ -4552,7 +4288,6 @@ export const PackageHeliService: React.FC<{
                             }}
                             className="hidden"
                           />
-
                           <input
                             ref={insuranceRef}
                             type="file"
@@ -4565,7 +4300,6 @@ export const PackageHeliService: React.FC<{
                             }}
                             className="hidden"
                           />
-
                           {/* Section Header */}
                           <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-100">
                             <div className="flex items-center gap-2 text-[#200B3B]">
@@ -4577,11 +4311,9 @@ export const PackageHeliService: React.FC<{
                               </h4>
                             </div>
                           </div>
-
                           <p className="text-[11px] text-gray-500 -mt-1 font-medium">
                             Attach files{bookingFlightOption !== "charter" && bookingSeatCount > 1 ? ` for Applicant ${activeApplicantIndex + 1}` : ""} or send later via WhatsApp. Accepted: PDF, JPG, PNG (max 10 MB each).
                           </p>
-
                           <div className="space-y-2.5">
                             {[
                               {
@@ -4612,7 +4344,6 @@ export const PackageHeliService: React.FC<{
                                 clear: () => handleApplicantDocChange(activeApplicantIndex, "flightFile", null),
                                 hint: "PDF or screenshot of round-trip reservation",
                               },
-
                               {
                                 label: "Travel Insurance",
                                 required: false,
@@ -4666,7 +4397,6 @@ export const PackageHeliService: React.FC<{
                                     )}
                                   </div>
                                 </div>
-
                                 {/* Right: attach / remove */}
                                 {field.file ? (
                                   <button
@@ -4691,12 +4421,9 @@ export const PackageHeliService: React.FC<{
                             ))}
                           </div>
                         </div>
-
-
                       </div>
                     );
                   })()}
-
                   {/* Terms & Conditions */}
                   <div>
                     <label className="flex items-start gap-2 text-[10.5px] text-gray-600 cursor-pointer">
@@ -4717,7 +4444,6 @@ export const PackageHeliService: React.FC<{
                       </span>
                     )}
                   </div>
-
                   {/* Submit Button */}
                   <button
                     type="submit"
@@ -4769,13 +4495,11 @@ export const PackageHeliService: React.FC<{
                     onPayWithEsewa={handleEsewaPayment}
                     onPayLater={handlePayLater}
                   />
-
                   {paymentError && (
                     <p className="text-xs text-red-600 font-semibold text-center">
                       {paymentError}
                     </p>
                   )}
-
                   <div className="pt-1 text-center">
                     <button
                       type="button"
@@ -4832,7 +4556,6 @@ export const PackageHeliService: React.FC<{
                         : `${bookingSeatCount} passenger${bookingSeatCount > 1 ? "s" : ""}`}.
                     </p>
                   </div>
-
                   {/* Officer Contact Reassurance Card */}
                   <div className="bg-gradient-to-r from-purple-50/70 via-white to-purple-50/50 border border-purple-100 rounded-xl px-3.5 py-2.5 text-left shadow-2xs">
                     <div className="flex items-center justify-between gap-1.5 flex-wrap mb-0.5">
@@ -4849,7 +4572,6 @@ export const PackageHeliService: React.FC<{
                       ) to verify passenger manifests, VIP helipad entry, and confirm CAAN weather permits.
                     </p>
                   </div>
-
                   {/* Official Digital E-Receipt Voucher Card */}
                   <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs text-left">
                     {/* Submission Reference ID Header Strip */}
@@ -4877,7 +4599,6 @@ export const PackageHeliService: React.FC<{
                         <span>{copiedId ? "Copied" : "Copy"}</span>
                       </button>
                     </div>
-
                     {/* Key Details Grid */}
                     <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-white">
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
@@ -4888,7 +4609,6 @@ export const PackageHeliService: React.FC<{
                           {bookingFormData.applicants?.[0]?.fullName || "—"}
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Total Passengers
@@ -4897,7 +4617,6 @@ export const PackageHeliService: React.FC<{
                           {bookingFlightOption === "charter" ? "Private (Exclusive)" : `${bookingSeatCount} Persons`}
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Flight Option
@@ -4906,7 +4625,6 @@ export const PackageHeliService: React.FC<{
                           {bookingFlightOption === "charter" ? "Private Charter" : "Sharing Helicopter"}
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Total Estimated Fare
@@ -4920,7 +4638,6 @@ export const PackageHeliService: React.FC<{
                           )}
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Flight Date
@@ -4929,7 +4646,6 @@ export const PackageHeliService: React.FC<{
                           {bookingFormData.applicants?.[0]?.preferredDate || "Flexible"}
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Submitted At
@@ -4938,7 +4654,6 @@ export const PackageHeliService: React.FC<{
                           {submittedAt || new Date().toLocaleDateString()}
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Payment Status
@@ -4957,7 +4672,6 @@ export const PackageHeliService: React.FC<{
                           )
                         </span>
                       </div>
-
                       <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
                           Payment Verification
@@ -4971,7 +4685,6 @@ export const PackageHeliService: React.FC<{
                         </span>
                       </div>
                     </div>
-
                     {/* Multiple passengers list breakdown if sharing and seatCount > 1 */}
                     {bookingFlightOption !== "charter" && bookingSeatCount > 1 && (
                       <div className="p-3 bg-slate-50/80 border-t border-slate-100">
@@ -5028,7 +4741,6 @@ export const PackageHeliService: React.FC<{
                       </div>
                     )}
                   </div>
-
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
                     <button
@@ -5038,7 +4750,6 @@ export const PackageHeliService: React.FC<{
                         const phoneDisplay = lead?.phone ? `${lead.phoneCode || "+977"} ${lead.phone}` : "—";
                         const flightLabel = bookingFlightOption === "charter" ? "Private Charter" : "Sharing Helicopter";
                         const paxCount = bookingFlightOption === "charter" ? 1 : bookingSeatCount;
-
                         const msg = encodeURIComponent(
                           `*Helicopter Service Reservation Confirmation*\n\n` +
                           `📌 *Submission Reference:* ${submissionId}\n` +
@@ -5050,7 +4761,6 @@ export const PackageHeliService: React.FC<{
                           `💳 *Payment:* ${selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later"} (${paymentStatus.toUpperCase()})\n` +
                           `📞 *Lead Contact:* ${phoneDisplay}`
                         );
-
                         window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
                       }}
                       className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer"
@@ -5058,7 +4768,6 @@ export const PackageHeliService: React.FC<{
                       <MessageCircle size={15} />
                       <span>Chat on WhatsApp</span>
                     </button>
-
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -5068,7 +4777,6 @@ export const PackageHeliService: React.FC<{
                         <Printer size={13} className="text-purple-700" />
                         <span>Print Slip</span>
                       </button>
-
                       <button
                         type="button"
                         onClick={() => {
@@ -5092,6 +4800,4 @@ export const PackageHeliService: React.FC<{
     </div>
   );
 };
-
 export default PackageHeliService;
-

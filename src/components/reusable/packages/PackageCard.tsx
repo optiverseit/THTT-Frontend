@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
@@ -21,11 +22,10 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
 
-  // Dynamic currency price calculation
-  const baseUSDPrice = Number(pkg.price?.replace(/[^0-9]/g, "") || 0);
-  const baseNPRPrice = baseUSDPrice * nprPerOneDollar;
+  // Backend package price is in NPR
+  const baseNPRPrice = Number(String(pkg.price || "0").replace(/[^0-9.]/g, ""));
   const formattedPrice =
-    baseUSDPrice > 0
+    baseNPRPrice > 0
       ? displayPrice(baseNPRPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)
       : pkg.price || "On Request";
 
@@ -62,6 +62,14 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
     return "Special Tour";
   };
 
+  const isFeatured = (pkg as any).is_featured === true || pkg.isFeatured === true;
+
+  const highlights = Array.isArray(pkg.highlights)
+    ? pkg.highlights
+        .map((item: any) => typeof item === "string" ? item : item?.highlight || item?.item || "")
+        .filter(Boolean)
+    : [];
+
   return (
     <>
       <div
@@ -89,7 +97,7 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
                 {getCategoryBadge()}
               </span>
 
-              {pkg.isFeatured && (
+              {isFeatured && (
                 <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-md">
                   Featured
                 </span>
@@ -128,9 +136,9 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
             )}
 
             {/* Highlights List */}
-            {pkg.highlights && pkg.highlights.length > 0 && (
+            {highlights.length > 0 && (
               <div className="space-y-1.5 mb-4">
-                {pkg.highlights.slice(0, 3).map((hl, i) => (
+                {highlights.slice(0, 3).map((hl: string, i: number) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-gray-600 font-medium">
                     <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
                     <span className="line-clamp-1 leading-tight">{hl}</span>

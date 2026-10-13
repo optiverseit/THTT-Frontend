@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { SERVICE_CONFIGS, ServiceType } from "./DashboardBookingTypes";
 import DashboardHeaderBanner from "./DashboardHeaderBanner";
 import {
+  getMyBookings,
   getMyPackageBookings,
   getMyVehicleBookings,
   getMyHeliBookings,
@@ -17,7 +18,6 @@ import {
   getMyWorkPermitApplicationById,
   getMyHotelBookingById,
 } from "../../api/BackendApi";
-
 interface DashboardBookingStatusProps {
   mode?: "cards-first" | "table-only";
   userData?: {
@@ -27,7 +27,6 @@ interface DashboardBookingStatusProps {
     avatar?: string;
   };
 }
-
 interface ApiBooking {
   id: string;
   backendId: number;
@@ -45,7 +44,6 @@ interface ApiBooking {
   bookingStatus: string;
   raw: any;
 }
-
 const getDataArray = (response: any): any[] => {
   const body = response?.data;
   if (Array.isArray(body)) return body;
@@ -53,44 +51,36 @@ const getDataArray = (response: any): any[] => {
   if (Array.isArray(body?.data?.data)) return body.data.data;
   return [];
 };
-
 const getSingleData = (response: any): any => {
   const body = response?.data;
   if (body?.data && !Array.isArray(body.data)) return body.data;
   if (body && !Array.isArray(body)) return body;
   return null;
 };
-
 const formatDate = (date?: string | null) => {
   if (!date) return "-";
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return date;
   return parsed.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 };
-
 const formatMoney = (value: any) => {
   if (value === null || value === undefined || value === "") return "NPR 0";
   const amount = Number(value);
   return `NPR ${Number.isFinite(amount) ? amount.toLocaleString() : "0"}`;
 };
-
 const readableText = (value?: string | null) => {
   if (!value) return "-";
   return String(value).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
-
 const getPaymentStatus = (item: any) =>
   String(item?.payment_status ?? item?.paymentStatus ?? item?.payments?.[0]?.status ?? "PENDING").toUpperCase();
-
 const getBookingStatus = (item: any) =>
   String(item?.status ?? item?.application_status ?? item?.booking_status ?? "PENDING").toUpperCase();
-
 const fullUserName = (user: any) => {
   if (!user) return "";
   if (user.name) return user.name;
   return [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ");
 };
-
 const getAuthenticatedApplicant = (item: any, authenticatedEmail?: string) => {
   const applicants = Array.isArray(item?.applicants) ? item.applicants : [];
   if (!applicants.length) return null;
@@ -102,7 +92,6 @@ const getAuthenticatedApplicant = (item: any, authenticatedEmail?: string) => {
   }
   return applicants[0];
 };
-
 const normalizePackageBooking = (item: any, serviceType: ServiceType, userData?: DashboardBookingStatusProps["userData"]): ApiBooking => {
   const vehicle = item?.transports?.find((transport: any) => transport?.vehicle)?.vehicle;
   const heli = item?.transports?.find((transport: any) => transport?.heli)?.heli;
@@ -134,7 +123,6 @@ const normalizePackageBooking = (item: any, serviceType: ServiceType, userData?:
     raw: item,
   };
 };
-
 const normalizeVisa = (item: any, userData?: DashboardBookingStatusProps["userData"]): ApiBooking => {
   const applicant = getAuthenticatedApplicant(item, userData?.email);
   return {
@@ -155,7 +143,6 @@ const normalizeVisa = (item: any, userData?: DashboardBookingStatusProps["userDa
     raw: item,
   };
 };
-
 const normalizeInsurance = (item: any, userData?: DashboardBookingStatusProps["userData"]): ApiBooking => {
   const applicant = getAuthenticatedApplicant(item, userData?.email);
   return {
@@ -176,7 +163,6 @@ const normalizeInsurance = (item: any, userData?: DashboardBookingStatusProps["u
     raw: item,
   };
 };
-
 const normalizeWorkPermit = (item: any, userData?: DashboardBookingStatusProps["userData"]): ApiBooking => ({
   id: String(item.id),
   backendId: Number(item.id),
@@ -194,7 +180,6 @@ const normalizeWorkPermit = (item: any, userData?: DashboardBookingStatusProps["
   bookingStatus: getBookingStatus(item),
   raw: item,
 });
-
 const normalizeHotel = (item: any, userData?: DashboardBookingStatusProps["userData"]): ApiBooking => ({
   id: String(item.id),
   backendId: Number(item.id),
@@ -212,7 +197,6 @@ const normalizeHotel = (item: any, userData?: DashboardBookingStatusProps["userD
   bookingStatus: getBookingStatus(item),
   raw: item,
 });
-
 const normalizeDetail = (item: any, service: ServiceType, userData?: DashboardBookingStatusProps["userData"]): ApiBooking => {
   switch (service) {
     case "visa-service": return normalizeVisa(item, userData);
@@ -222,21 +206,18 @@ const normalizeDetail = (item: any, service: ServiceType, userData?: DashboardBo
     default: return normalizePackageBooking(item, service, userData);
   }
 };
-
 const statusClass = (status: string) => {
   const value = status.toUpperCase();
   if (["PAID", "CONFIRMED", "APPROVED", "COMPLETED", "VERIFIED"].includes(value)) return "bg-emerald-50 text-emerald-600 border-emerald-200";
   if (["FAILED", "REJECTED", "CANCELLED"].includes(value)) return "bg-red-50 text-red-600 border-red-200";
   return "bg-amber-50 text-amber-600 border-amber-200";
 };
-
 const DetailField = ({ label, value, icon }: { label: string; value: React.ReactNode; icon?: React.ReactNode }) => (
   <div className="bg-[#F8F9FC] rounded-2xl p-4 border border-slate-100">
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">{label}</p>
     <div className="flex items-center gap-2 text-sm font-bold text-slate-800">{icon}{value ?? "-"}</div>
   </div>
 );
-
 const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = "cards-first", userData }) => {
   const navigate = useNavigate();
   const { serviceId: urlServiceId, bookingId: urlBookingId } = useParams<{ serviceId?: string; bookingId?: string }>();
@@ -249,10 +230,9 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
   const [searchName, setSearchName] = useState("");
   const [searchItem, setSearchItem] = useState("");
   const [searchSubNo, setSearchSubNo] = useState("");
-  const view = urlBookingId ? "detail" : urlServiceId ? "list" : isTableOnly ? "cards" : "cards";
-
+  const view = urlBookingId ? "detail" : urlServiceId || isTableOnly ? "list" : "cards";
   useEffect(() => {
-    if (!urlServiceId || urlBookingId || urlServiceId === "air-ticket") {
+    if (urlBookingId || (!urlServiceId && !isTableOnly) || urlServiceId === "air-ticket") {
       setBookings([]);
       return;
     }
@@ -264,6 +244,27 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
       try {
         let response: any;
         let normalized: ApiBooking[] = [];
+        if (!urlServiceId && isTableOnly) {
+          const records: any[] = [];
+          let page = 1;
+          let lastPage = 1;
+          do {
+            const result = await getMyBookings(page);
+            records.push(...getDataArray(result));
+            const paging = result?.data?.data;
+            lastPage = Number(paging?.last_page || 1);
+            page++;
+          } while (page <= lastPage);
+          normalized = records.map((item: any) => {
+            const kind = String(item.booking_type || item.type || item.service_type || item.service || "").toUpperCase();
+            const category = String(item.package?.category?.name || item.package?.category || "").toLowerCase();
+            const transports = Array.isArray(item.transports) ? item.transports : [];
+            const hasVehicle = transports.some((transport: any) => transport?.vehicle || transport?.vehicle_id);
+            const hasHeli = transports.some((transport: any) => transport?.heli || transport?.heli_id);
+            const service: ServiceType = kind.includes("VEHICLE") || hasVehicle ? "vehicle-rental" : kind.includes("HELI") || hasHeli || category.includes("heli") ? "heli-service" : "package-booking";
+            return normalizePackageBooking(item, service, userData);
+          });
+        } else {
         switch (urlServiceId) {
           case "package-booking":
             response = await getMyPackageBookings();
@@ -296,6 +297,12 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
           default:
             normalized = [];
         }
+        }
+        normalized.sort((a, b) => {
+          const dateA = Date.parse(a.raw?.created_at || a.raw?.submitted_at || "") || 0;
+          const dateB = Date.parse(b.raw?.created_at || b.raw?.submitted_at || "") || 0;
+          return dateB - dateA || b.backendId - a.backendId;
+        });
         if (active) setBookings(normalized);
       } catch (err: any) {
         if (active) {
@@ -308,8 +315,7 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
     };
     load();
     return () => { active = false; };
-  }, [urlServiceId, urlBookingId, userData]);
-
+  }, [urlServiceId, urlBookingId, userData, isTableOnly]);
   useEffect(() => {
     if (!urlServiceId || !urlBookingId || urlServiceId === "air-ticket") {
       setDetailBooking(null);
@@ -358,9 +364,7 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
     loadDetail();
     return () => { active = false; };
   }, [urlServiceId, urlBookingId, userData]);
-
   const cfg = SERVICE_CONFIGS.find((item) => item.id === selectedService);
-
   const itemSearchPlaceholder = useMemo(() => {
     switch (selectedService) {
       case "package-booking": return "Package name or destination...";
@@ -374,7 +378,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
       default: return "Package or service...";
     }
   }, [selectedService]);
-
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
       const name = searchName.trim().toLowerCase();
@@ -386,22 +389,18 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
       return true;
     });
   }, [bookings, searchName, searchSubNo, searchItem]);
-
   const clearSearch = () => {
     setSearchName("");
     setSearchSubNo("");
     setSearchItem("");
   };
-
   const handleCardClick = (service: ServiceType) => {
     clearSearch();
     navigate(`/dashboard/booking/${service}`);
   };
-
   const handleViewDetails = (booking: ApiBooking) => {
     navigate(`/dashboard/booking/${booking.serviceType}/${booking.backendId}`);
   };
-
   if (view === "detail") {
     const raw = detailBooking?.raw;
     const IconComponent = cfg?.IconComponent;
@@ -468,7 +467,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   {detailBooking.itemSub && <div className="sm:col-span-2"><DetailField label="Package / Service Details" value={detailBooking.itemSub} /></div>}
                 </div>
               </div>
-
               {selectedService === "package-booking" && raw && (
                 <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
                   <h2 className="text-sm font-black text-slate-500 uppercase tracking-wider pb-4 border-b border-slate-100">Package Details</h2>
@@ -484,7 +482,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   </div>
                 </div>
               )}
-
               {selectedService === "vehicle-rental" && raw && (
                 <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
                   <h2 className="text-sm font-black text-slate-500 uppercase tracking-wider pb-4 border-b border-slate-100">Vehicle Details</h2>
@@ -504,7 +501,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   </div>
                 </div>
               )}
-
               {selectedService === "heli-service" && raw && (
                 <>
                   <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -547,7 +543,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   )}
                 </>
               )}
-
               {selectedService === "visa-service" && raw && (
                 <>
                   <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -600,7 +595,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   )}
                 </>
               )}
-
               {selectedService === "work-permit" && raw && (
                 <>
                   <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -648,7 +642,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   )}
                 </>
               )}
-
               {selectedService === "travel-insurance" && raw && (
                 <>
                   <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -680,7 +673,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                   )}
                 </>
               )}
-
               {selectedService === "hotel-booking" && raw && (
                 <>
                   <div className="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -710,7 +702,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
       </section>
     );
   }
-
   if (view === "list") {
     const IconComponent = cfg?.IconComponent;
     return (
@@ -720,6 +711,7 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => navigate("/dashboard")} className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-purple-200 hover:text-[#FF2A75] transition-colors"><ArrowLeft size={18} /> All Services</button>
               <span className="text-purple-400/40">│</span>
+              {!urlServiceId && <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center"><FileText size={20} /></div><div><h1 className="text-lg sm:text-2xl font-black text-white">All Bookings</h1><p className="text-xs text-purple-200/80 font-medium">{loading ? "Loading bookings..." : `${filteredBookings.length} booking${filteredBookings.length !== 1 ? "s" : ""} found · Latest first`}</p></div></div>}
               {cfg && IconComponent && (
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl ${cfg.bgColor} ${cfg.color} flex items-center justify-center`}><IconComponent size={20} /></div>
@@ -760,7 +752,7 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
           ) : selectedService === "air-ticket" ? (
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-sm"><h3 className="font-black text-slate-900">Air Ticket</h3><p className="text-xs text-slate-400 mt-2">Air ticket booking API will be connected later.</p></div>
           ) : filteredBookings.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-sm"><h3 className="font-black text-slate-900">No bookings found</h3><p className="text-xs text-slate-400 mt-2">No booking records were found for this service.</p></div>
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-sm"><h3 className="font-black text-slate-900">No bookings found</h3><p className="text-xs text-slate-400 mt-2">No booking records were found.</p></div>
           ) : (
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -784,7 +776,7 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                       <tr key={`${booking.serviceType}-${booking.id}`} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                         <td className="px-3 py-3.5 font-black text-slate-400 text-center">{index + 1}</td>
                         <td className="px-3 py-3 text-center"><span className="font-mono px-2.5 py-1 rounded-lg text-[10px] border border-slate-200 bg-slate-100 text-slate-900">{booking.submissionNumber}</span></td>
-                        <td className="px-3 py-3 font-bold text-slate-700">{cfg?.label}</td>
+                        <td className="px-3 py-3 font-bold text-slate-700">{SERVICE_CONFIGS.find((service) => service.id === booking.serviceType)?.label || booking.serviceType}</td>
                         <td className="px-3 py-3 font-bold text-slate-800">{booking.name}</td>
                         <td className="px-3 py-3 text-slate-600 font-medium whitespace-nowrap">{booking.travelDate}</td>
                         <td className="px-3 py-3 text-slate-500 font-mono whitespace-nowrap">{booking.contact}</td>
@@ -803,7 +795,6 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
       </section>
     );
   }
-
   return (
     <section id="dashboard-booking" className="space-y-0">
       <DashboardHeaderBanner name={userData?.name || "Traveler"} email={userData?.email || ""} phone={userData?.phone || ""} avatarUrl={userData?.avatar} />
@@ -824,5 +815,4 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
     </section>
   );
 };
-
 export default DashboardBookingStatus;

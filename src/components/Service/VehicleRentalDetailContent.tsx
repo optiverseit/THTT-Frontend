@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+﻿import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Package } from "../../assets/data/types";
@@ -921,7 +921,7 @@ const VehicleRentalDetailContent: React.FC = () => {
     );
 
     window.open(
-      `https://wa.me/9779851420882?text=${msg}`,
+      `https://wa.me/9779851403761?text=${msg}`,
       "_blank",
       "noopener,noreferrer"
     );

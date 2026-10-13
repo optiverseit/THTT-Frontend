@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer, Mail, Phone, Globe } from "lucide-react";
 import type { Package } from "../../../assets/data/types";
-import { useGlobalCurrency } from "../../../context/CurrencyContext";
+import { useGlobalCurrency, displayPrice } from "../../../context/CurrencyContext";
 import ShareModal from "../../reusable/ShareModal";
 import Logo from "../../../assets/images/Logo.png";
 import { formatDescription } from "../../../utils/formatDescription";
+import {
+  getPublicPackageGallery,
+  getPackagePublicGallery,
+} from "../../../api/BackendApi";
 interface PackageProp {
   pkg: any;
 }
@@ -33,35 +37,103 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     }, 2000);
   };
   const basePackagePriceNPR = Number(pkg.price || 0);
-  const startsFromDisplayPrice = `NPR ${basePackagePriceNPR.toLocaleString(
-    "en-IN",
-    {
-      maximumFractionDigits: 0,
-    }
-  )}`;
+  const startsFromDisplayPrice = displayPrice(
+    basePackagePriceNPR,
+    selectedCurrency,
+    nprPerOneDollar,
+    nprPerOneINR
+  );
   const navigate = useNavigate();
   const location = useLocation();
-  const mainImage = pkg.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600";
-  const rawGallery = Array.isArray(pkg.gallery)
-    ? pkg.gallery.map((g: any) => typeof g === "string" ? g : (g?.image_url || g?.image || g?.url || "")).filter(Boolean)
+
+  // Primary package image from API
+  const mainImage = pkg.image || pkg.image_url || pkg.thumbnail || "";
+
+  // Raw gallery images strictly from API
+  const rawGallery: string[] = Array.isArray(pkg.gallery)
+    ? pkg.gallery
+        .map((g: any) =>
+          typeof g === "string"
+            ? g.trim()
+            : (g?.image_url || g?.image || g?.url || g?.image_path || "").trim()
+        )
+        .filter(Boolean)
     : [];
-  const defaultFallbacks = [
-    "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=800",
-  ];
-  const galleryImages = [mainImage, ...rawGallery, ...defaultFallbacks.filter((img) => img !== mainImage && !rawGallery.includes(img))];
+
+  const [directGallery, setDirectGallery] = useState<string[]>([]);
+
+  // Direct fetch fallback if gallery hasn't populated yet from parent
+  useEffect(() => {
+    if (rawGallery.length === 0 && pkg?.id) {
+      const fetchGallery = async () => {
+        try {
+          const res = await getPublicPackageGallery(pkg.id);
+          const d = res.data?.data;
+          const items = Array.isArray(d?.data)
+            ? d.data
+            : Array.isArray(d)
+            ? d
+            : Array.isArray(res.data)
+            ? res.data
+            : [];
+          const urls = items
+            .map((g: any) =>
+              typeof g === "string"
+                ? g.trim()
+                : (g?.image_url || g?.image || g?.url || g?.image_path || "").trim()
+            )
+            .filter(Boolean);
+          if (urls.length > 0) {
+            setDirectGallery(urls);
+            return;
+          }
+        } catch (_) {}
+
+        try {
+          const resFallback = await getPackagePublicGallery(pkg.id);
+          const d = resFallback.data?.data;
+          const items = Array.isArray(d?.data)
+            ? d.data
+            : Array.isArray(d)
+            ? d
+            : Array.isArray(resFallback.data)
+            ? resFallback.data
+            : [];
+          const urls = items
+            .map((g: any) =>
+              typeof g === "string"
+                ? g.trim()
+                : (g?.image_url || g?.image || g?.url || g?.image_path || "").trim()
+            )
+            .filter(Boolean);
+          if (urls.length > 0) {
+            setDirectGallery(urls);
+          }
+        } catch (_) {}
+      };
+
+      fetchGallery();
+    }
+  }, [rawGallery.length, pkg?.id]);
+
+  // Gallery strictly containing available API images — no mock fallbacks
+  const galleryImages: string[] = rawGallery.length > 0 ? rawGallery : directGallery;
+
+  // Hero header background image (main image or first gallery image)
+  const heroImage = mainImage || (galleryImages.length > 0 ? galleryImages[0] : "");
+
+  // Lightbox covers gallery images, or hero image if no gallery
+  const lightboxImages: string[] =
+    galleryImages.length > 0 ? galleryImages : (heroImage ? [heroImage] : []);
+
   const imageErrorFallback = (event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.currentTarget;
-    const fallback = defaultFallbacks.find((url) => url !== img.src);
-    if (img.dataset.fallbackAttempted !== "true" && fallback) {
-      img.dataset.fallbackAttempted = "true";
-      img.src = fallback;
-    } else {
-      img.onerror = null;
-      img.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500"><defs><linearGradient id="g" x2="0" y2="1"><stop stop-color="#9cc9d9"/><stop offset="1" stop-color="#ddebdc"/></linearGradient></defs><rect width="800" height="500" fill="url(#g)"/><path d="M0 400L210 180 350 330 510 120 800 420V500H0Z" fill="#648f87"/><path d="M0 470L280 280 450 420 620 250 800 430V500H0Z" fill="#426f73"/></svg>');
-    }
+    img.onerror = null;
+    img.src =
+      "data:image/svg+xml," +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500"><defs><linearGradient id="g" x2="0" y2="1"><stop stop-color="#2D1347"/><stop offset="1" stop-color="#4a154b"/></linearGradient></defs><rect width="800" height="500" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="20" font-family="sans-serif">Image Unavailable</text></svg>'
+      );
   };
   const outletItems = [
     { name: "OVERVIEW", path: `/details/${pkg.id}` },
@@ -83,10 +155,10 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     setLightboxOpen(true);
   };
   const nextImage = () =>
-    setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
+    setCurrentImageIndex((prev) => (prev + 1) % (lightboxImages.length || 1));
   const prevImage = () =>
     setCurrentImageIndex(
-      (prev) => (prev - 1 + galleryImages.length) % galleryImages.length
+      (prev) => (prev - 1 + (lightboxImages.length || 1)) % (lightboxImages.length || 1)
     );
   const isTour = pkg.type === "tour";
   const isActivity = pkg.type === "activity" || pkg.type === "combo";
@@ -449,9 +521,10 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
       <div
         className="print:hidden relative overflow-hidden shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end"
         style={{
-          backgroundImage: `url('${mainImage}')`,
+          backgroundImage: heroImage ? `url('${heroImage}')` : undefined,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          backgroundColor: "#1a0836",
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent" />
@@ -481,7 +554,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
                 </div>
                 <span className="text-white font-extrabold text-xs">{pkg.rating || 4.9}</span>
                 <span className="text-white/60 text-[10px] font-semibold">
-                  ({Array.isArray(pkg.testimonies) && pkg.testimonies.length > 0 ? pkg.testimonies.length : (Array.isArray(pkg.testimonials) && pkg.testimonials.length > 0 ? pkg.testimonials.length : 1)} reviews)
+                  ({Array.isArray(pkg.testimonies) && pkg.testimonies.length > 0 ? pkg.testimonies.length : (Array.isArray(pkg.testimonials) && pkg.testimonials.length > 0 ? pkg.testimonials.length : 0)} reviews)
                 </span>
               </div>
             </div>
@@ -619,52 +692,159 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
           </button>
         </div>
       </div>
-      {/* THUMBNAIL GRID — compact 4-col single row on mobile, wide layout on desktop */}
-      <div className="print:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
-        {/* Mobile: 4-col single row with small thumbnails containing much less vertical space */}
-        <div className="grid grid-cols-4 sm:hidden gap-1.5">
-          {galleryImages.slice(1, 5).map((img: string, idx: number) => (
+      {/* THUMBNAIL GRID — dynamic layout based strictly on available API gallery images */}
+      {galleryImages.length > 0 && (
+        <div className="print:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
+          {/* ── 1 IMAGE AVAILABLE: Single Full-Width Card ── */}
+          {galleryImages.length === 1 && (
             <div
-              key={idx}
-              onClick={() => openLightbox(idx + 1)}
-              className="relative aspect-4/3 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 shadow-xs border border-gray-100"
+              onClick={() => openLightbox(0)}
+              className="w-full h-44 sm:h-56 md:h-64 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
             >
               <img
-                src={img}
-                alt={`${pkg.title} ${idx + 2}`}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                onError={imageErrorFallback}
+                src={galleryImages[0]}
+                alt={`${pkg.title} 1`}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-              {idx === 3 && galleryImages.length > 5 && (
-                <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex items-center justify-center text-white text-[11px] font-black tracking-tight">
-                  +{galleryImages.length - 4}
-                </div>
-              )}
             </div>
-          ))}
+          )}
+
+          {/* ── 2 IMAGES AVAILABLE: 2-Column Equal Grid ── */}
+          {galleryImages.length === 2 && (
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full">
+              {galleryImages.slice(0, 2).map((img, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => openLightbox(idx)}
+                  className="h-36 sm:h-44 md:h-52 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
+                >
+                  <img
+                    onError={imageErrorFallback}
+                    src={img}
+                    alt={`${pkg.title} ${idx + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── 3 IMAGES AVAILABLE: 3-Column Equal Grid ── */}
+          {galleryImages.length === 3 && (
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full">
+              {galleryImages.slice(0, 3).map((img, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => openLightbox(idx)}
+                  className="h-32 sm:h-40 md:h-48 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
+                >
+                  <img
+                    onError={imageErrorFallback}
+                    src={img}
+                    alt={`${pkg.title} ${idx + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── 4 OR MORE IMAGES AVAILABLE: 4-Item Mosaic Grid ── */}
+          {galleryImages.length >= 4 && (
+            <>
+              {/* Mobile: 4-col single row */}
+              <div className="grid grid-cols-4 sm:hidden gap-1.5">
+                {galleryImages.slice(0, 4).map((img: string, idx: number) => (
+                  <div
+                    key={idx}
+                    onClick={() => openLightbox(idx)}
+                    className="relative aspect-4/3 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 shadow-xs border border-gray-100"
+                  >
+                    <img
+                      onError={imageErrorFallback}
+                      src={img}
+                      alt={`${pkg.title} ${idx + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                    {idx === 3 && galleryImages.length > 4 && (
+                      <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex items-center justify-center text-white text-[11px] font-black tracking-tight">
+                        +{galleryImages.length - 4}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Tablet/Desktop: 12-col mosaic layout */}
+              <div className="hidden sm:grid grid-cols-12 gap-3 w-full">
+                <div
+                  onClick={() => openLightbox(0)}
+                  className="col-span-3 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
+                >
+                  <img
+                    onError={imageErrorFallback}
+                    src={galleryImages[0]}
+                    alt={`${pkg.title} 1`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                </div>
+
+                <div
+                  onClick={() => openLightbox(1)}
+                  className="col-span-6 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
+                >
+                  <img
+                    onError={imageErrorFallback}
+                    src={galleryImages[1]}
+                    alt={`${pkg.title} 2`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                </div>
+
+                <div className="col-span-3 flex flex-col gap-2 h-36 md:h-40">
+                  <div
+                    onClick={() => openLightbox(2)}
+                    className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
+                  >
+                    <img
+                      onError={imageErrorFallback}
+                      src={galleryImages[2]}
+                      alt={`${pkg.title} 3`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                  </div>
+
+                  <div
+                    onClick={() => openLightbox(3)}
+                    className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100"
+                  >
+                    <img
+                      onError={imageErrorFallback}
+                      src={galleryImages[3]}
+                      alt={`${pkg.title} 4`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                    {galleryImages.length > 4 && (
+                      <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex items-center justify-center text-white text-xs font-black tracking-tight">
+                        +{galleryImages.length - 4}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        {/* Tablet/Desktop: original wide layout */}
-        <div className="hidden sm:grid grid-cols-12 gap-3 w-full">
-          {galleryImages[1] && <div onClick={() => openLightbox(1)} className="col-span-3 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
-            <img onError={imageErrorFallback} src={galleryImages[1]} alt={`${pkg.title} 2`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-          </div>}
-          {galleryImages[2] && <div onClick={() => openLightbox(2)} className="col-span-6 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
-            <img onError={imageErrorFallback} src={galleryImages[2]} alt={`${pkg.title} 3`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-          </div>}
-          {(galleryImages[3] || galleryImages[4]) && <div className="col-span-3 flex flex-col gap-2 h-36 md:h-40">
-            {galleryImages[3] && <div onClick={() => openLightbox(3)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
-              <img onError={imageErrorFallback} src={galleryImages[3]} alt={`${pkg.title} 4`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-            </div>}
-            {galleryImages[4] && <div onClick={() => openLightbox(4)} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
-              <img onError={imageErrorFallback} src={galleryImages[4]} alt={`${pkg.title} 5`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-            </div>}
-          </div>}
-        </div>
-      </div>
+      )}
       {/* SUB-NAVIGATION & PRICING BAR */}
       <div className="print:hidden w-full bg-white border-y border-gray-100 shadow-sm relative z-10 mt-3 sm:mt-6">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -716,8 +896,8 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
             <ChevronLeft size={24} />
           </button>
           <div className="max-w-5xl max-h-[85vh] flex flex-col items-center">
-            <img onError={imageErrorFallback} src={galleryImages[currentImageIndex]} alt="Gallery Preview" className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl" />
-            <span className="text-white/80 text-xs font-bold mt-4">Photo {currentImageIndex + 1} of {galleryImages.length}</span>
+            <img onError={imageErrorFallback} src={lightboxImages[currentImageIndex] || heroImage} alt="Gallery Preview" className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl" />
+            <span className="text-white/80 text-xs font-bold mt-4">Photo {currentImageIndex + 1} of {lightboxImages.length}</span>
           </div>
           <button onClick={nextImage} className="absolute right-4 sm:right-8 text-white p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md cursor-pointer">
             <ChevronRight size={24} />
@@ -731,7 +911,7 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         data={{
           title: `${pkg.title} | Trip Himalaya Tours & Travel`,
           text: `Explore ${pkg.title} (${pkg.location || "Nepal"}) - book your adventure with Trip Himalaya!`,
-          image: pkg.image || galleryImages[0],
+          image: heroImage || lightboxImages[0] || Logo,
           url: shareUrl,
         }}
       />

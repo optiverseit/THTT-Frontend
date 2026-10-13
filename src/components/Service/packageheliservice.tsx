@@ -2793,7 +2793,7 @@ export const PackageHeliService: React.FC<{
                           const tierName = tier.service || tier.name || `Tier ${idx + 1}`;
                           const bracket = tier.age_group || (tier.min_pax ? (tier.min_pax === tier.max_pax ? `${tier.min_pax} Pax` : `${tier.min_pax} - ${tier.max_pax} Pax`) : "Per Person / All Pax");
                           const nprPrice = Number(tier.price_npr ?? tier.price ?? 0);
-                          const usdPrice = tier.price_usd ? Number(tier.price_usd) : Math.round(nprPrice / (nprPerOneDollar || 135));
+                          const usdPrice = tier.price_usd ? Number(tier.price_usd) : (nprPrice > 0 ? nprPrice / (nprPerOneDollar || 151.09) : 0);
 
                           return (
                             <tr key={tier.id || idx} style={{ background: idx % 2 === 0 ? "#ffffff" : "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
@@ -2805,7 +2805,7 @@ export const PackageHeliService: React.FC<{
                                 NPR {nprPrice ? nprPrice.toLocaleString("en-IN") : "Contact for Quote"}
                               </td>
                               <td style={{ padding: "4px 7px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>
-                                {usdPrice ? `${usdPrice.toLocaleString()}` : "$ -"}
+                                {usdPrice ? formatUSD(usdPrice) : "$ -"}
                               </td>
                             </tr>
                           );
@@ -3962,20 +3962,6 @@ export const PackageHeliService: React.FC<{
                               BOOK NOW
                             </button>
                           </div>
-
-                          {/* WhatsApp Inquiry Button on Card */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWhatsAppInquiry(tour);
-                            }}
-                            className="w-full mt-2 py-1.5 px-3 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider bg-[#25D366] hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
-                            title="Instant WhatsApp Inquiry"
-                          >
-                            <MessageCircle size={13} />
-                            <span>WhatsApp</span>
-                          </button>
                         </div>
                       </div>
                     </div>

@@ -98,11 +98,11 @@ const AboutPermit = ({
         </header>
 
         {documentRequirements.length > 0 ? (
-          <ul className="list-disc marker:text-pink-500 list-inside space-y-2 mt-2">
+          <ul className="list-disc marker:text-pink-500 list-outside pl-5 space-y-2 mt-2">
             {documentRequirements.map((document) => (
               <li
                 key={document.id}
-                className="text-gray-600 font-semibold text-sm sm:text-base"
+                className="text-gray-600 font-semibold text-sm sm:text-base leading-snug"
               >
                 {document.title}
                 {!document.is_required && (
@@ -131,11 +131,11 @@ const AboutPermit = ({
           </h2>
         </header>
 
-        <ul className="list-disc marker:text-green-500 list-inside space-y-2 mt-2">
+        <ul className="list-disc marker:text-green-500 list-outside pl-5 space-y-2 mt-2">
           {included.map((item, index) => (
             <li
               key={index}
-              className="text-gray-600 font-semibold text-sm sm:text-base"
+              className="text-gray-600 font-semibold text-sm sm:text-base leading-snug"
             >
               {item}
             </li>
@@ -154,11 +154,11 @@ const AboutPermit = ({
             Policy
           </h1>
 
-          <ul className="list-disc marker:text-gray-400 list-inside mt-2">
+          <ul className="list-disc marker:text-gray-400 list-outside pl-5 mt-3 space-y-2">
             {policies.map((item, index) => (
               <li
                 key={index}
-                className="text-gray-400 font-semibold text-xs sm:text-sm mb-1"
+                className="text-gray-300 font-medium text-xs sm:text-sm leading-relaxed"
               >
                 {item}
               </li>
@@ -175,11 +175,11 @@ const AboutPermit = ({
             Terms &amp; Conditions
           </h1>
 
-          <ul className="list-disc marker:text-gray-400 list-inside mt-2">
+          <ul className="list-disc marker:text-pink-400 list-outside pl-5 mt-3 space-y-2">
             {terms.map((item, index) => (
               <li
                 key={index}
-                className="text-gray-600 font-semibold text-xs sm:text-sm mb-1.5 leading-relaxed"
+                className="text-gray-600 font-medium text-xs sm:text-sm leading-relaxed"
               >
                 {item}
               </li>

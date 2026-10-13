@@ -461,7 +461,7 @@ const TopBar: React.FC<TopBarProps> = () => {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Instagram"
-                className="hover:text-[#FF4FA3] transition-colors"
+                className="hover:text-[#E1306C] transition-colors"
               >
                 <Instagram size={12.5} />
               </a>

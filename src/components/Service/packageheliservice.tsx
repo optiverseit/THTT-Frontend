@@ -79,7 +79,6 @@ import {
   getPackageWhatToBring,
   getPackageHighlights,
   getPackageItineraries,
-  getPackageById,
   createBooking,
   initiatePayment,
 } from "../../api/BackendApi";
@@ -308,6 +307,52 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
 };
 
 // =============================================================================
+// =============================================================================
+// Caching for Instant Loading (Stale-While-Revalidate)
+// =============================================================================
+const HELI_CACHE_KEY = "cached_heli_packages_v1";
+
+const getCachedHeliPackages = (): HeliPackageItem[] => {
+  try {
+    const raw = sessionStorage.getItem(HELI_CACHE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const setCachedHeliPackages = (packages: HeliPackageItem[]) => {
+  try {
+    sessionStorage.setItem(HELI_CACHE_KEY, JSON.stringify(packages));
+  } catch {}
+};
+
+let _memoryHeliPackages: HeliPackageItem[] = [];
+
+export interface HeliPackageFaq {
+  id?: number | string;
+  q: string;
+  a: string;
+  question?: string;
+  answer?: string;
+  questionNp?: string;
+  answerNp?: string;
+}
+
+interface HeliDetailsCacheEntry {
+  inclusions: string[];
+  exclusions: string[];
+  restrictions: string[];
+  whatToBring: string[];
+  highlights: string[];
+  itineraries: RoadmapStep[];
+  faqs: HeliPackageFaq[];
+  pricingTiers: PricingTierApi[];
+}
+
+const _heliDetailsCache = new Map<number, HeliDetailsCacheEntry>();
+
+// =============================================================================
 // Main PackageHeliService Component
 // =============================================================================
 
@@ -331,7 +376,16 @@ export const PackageHeliService: React.FC<{
   const [pricingTiers, setPricingTiers] = useState<PricingTierApi[]>([]);
   const [pricingLoading, setPricingLoading] = useState(false);
 
-  const [heliPackages, setHeliPackages] = useState<HeliPackageItem[]>([]);
+  // Initialize with cached packages immediately for 0ms render
+  const [heliPackages, setHeliPackages] = useState<HeliPackageItem[]>(() => {
+    if (_memoryHeliPackages.length > 0) return _memoryHeliPackages;
+    const cached = getCachedHeliPackages();
+    if (cached.length > 0) {
+      _memoryHeliPackages = cached;
+      return cached;
+    }
+    return [];
+  });
   const [packageFaqs, setPackageFaqs] = useState<
     Array<{
       id?: number | string;
@@ -343,7 +397,9 @@ export const PackageHeliService: React.FC<{
       answerNp?: string;
     }>
   >([]);
-  const [packagesLoading, setPackagesLoading] = useState<boolean>(true);
+  const [packagesLoading, setPackagesLoading] = useState<boolean>(() => {
+    return _memoryHeliPackages.length === 0 && getCachedHeliPackages().length === 0;
+  });
   const [packagesError, setPackagesError] = useState<string>("");
   const [bookingPricingTierId, setBookingPricingTierId] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
@@ -363,7 +419,11 @@ export const PackageHeliService: React.FC<{
   const [heliHighlights, setHeliHighlights] = useState<string[]>([]);
   const [heliItineraries, setHeliItineraries] = useState<RoadmapStep[]>([]);
 
+  const hasFetchedHeliPackagesRef = useRef<boolean>(false);
+
   useEffect(() => {
+    if (hasFetchedHeliPackagesRef.current) return;
+    hasFetchedHeliPackagesRef.current = true;
     let cancelled = false;
 
     const fetchHeliPackages = async () => {
@@ -396,10 +456,13 @@ export const PackageHeliService: React.FC<{
           return idB - idA;
         });
 
+        _memoryHeliPackages = sortedPackages;
+        setCachedHeliPackages(sortedPackages);
+
         if (!cancelled) setHeliPackages(sortedPackages);
       } catch (error) {
         console.error("Failed to load Heli Services packages:", error);
-        if (!cancelled) {
+        if (!cancelled && _memoryHeliPackages.length === 0) {
           setHeliPackages([]);
           setPackagesError("Unable to load helicopter packages.");
         }
@@ -418,148 +481,184 @@ export const PackageHeliService: React.FC<{
   const urlRoute = searchParams.get("route") || "";
   const urlFlightType = searchParams.get("flightType") || "";
 
-  // Determine active tour from URL (dedicated Details Page route: /service/heli-services/:tourId)
-  const selectedTour = routeTourId
-    ? heliPackages.find(
-      (t) =>
-        String(t.id).toLowerCase() === routeTourId.toLowerCase() ||
-        t.slug?.toLowerCase() === routeTourId.toLowerCase()
-    ) || null
-    : null;
+  // Determine active tour from URL or location state (instant 0ms resolution)
+  const selectedTour = useMemo(() => {
+    if (!routeTourId) return null;
+    const fromState = (location.state as any)?.tour;
+    if (
+      fromState &&
+      (String(fromState.id).toLowerCase() === routeTourId.toLowerCase() ||
+        String(fromState.backendId) === routeTourId ||
+        fromState.slug?.toLowerCase() === routeTourId.toLowerCase())
+    ) {
+      return fromState as HeliPackageItem;
+    }
+    return (
+      heliPackages.find(
+        (t) =>
+          String(t.id).toLowerCase() === routeTourId.toLowerCase() ||
+          t.slug?.toLowerCase() === routeTourId.toLowerCase()
+      ) || null
+    );
+  }, [routeTourId, location.state, heliPackages]);
+
+  // Determine numeric target package ID (either direct numeric param or backendId from selected tour)
+  const targetPackageId = routeTourId && /^\d+$/.test(routeTourId)
+    ? Number(routeTourId)
+    : selectedTour?.backendId ?? null;
+
+  const lastFetchedTourIdRef = useRef<number | null>(null);
 
   // =========================
-  // FETCH SUB-RESOURCES (inclusions, exclusions, restrictions, what-to-bring)
-  // PERFORMANCE: When routeTourId is numeric we can derive backendId immediately
-  // and fire all 4 requests IN PARALLEL with the category listing — no waterfall.
+  // FETCH SUB-RESOURCES & TOUR DETAILS
+  // Fetches inclusions, exclusions, restrictions, what-to-bring, highlights,
+  // itineraries, faqs, and pricing-tiers in parallel, exactly ONCE per tour ID.
+  // getPackageById is removed as package details are provided by category listing.
   // =========================
   useEffect(() => {
-    let cancelled = false;
-
-    // Derive numeric backendId from URL param directly (no need to wait for category listing)
-    const numericId = routeTourId && /^\d+$/.test(routeTourId)
-      ? Number(routeTourId)
-      : selectedTour?.backendId ?? null;
-
-    if (!numericId) {
+    if (!targetPackageId) {
+      lastFetchedTourIdRef.current = null;
       setHeliInclusions([]);
       setHeliExclusions([]);
       setHeliRestrictions([]);
       setHeliWhatToBring([]);
       setHeliHighlights([]);
       setHeliItineraries([]);
+      setPackageFaqs([]);
+      setPricingTiers([]);
       return;
     }
 
-    const fetchSubResources = async () => {
-      const [incRes, excRes, resRes, wtbRes, hlRes, itinRes, pkgRes] = await Promise.allSettled([
-        getPackageInclusions(numericId),
-        getPackageExclusions(numericId),
-        getPackageRestrictions(numericId),
-        getPackageWhatToBring(numericId),
-        getPackageHighlights(numericId),
-        getPackageItineraries(numericId),
-        getPackageById(numericId),
-      ]);
+    // Prevent duplicate fetch for the exact same tour ID
+    if (lastFetchedTourIdRef.current === targetPackageId) {
+      return;
+    }
 
-      const extractItems = (
-        res: PromiseSettledResult<any>,
-        preferredField?: string
-      ): string[] => {
-        if (res.status !== "fulfilled") return [];
-        const raw = res.value?.data;
-        const list = Array.isArray(raw?.data?.data)
+    lastFetchedTourIdRef.current = targetPackageId;
+    let cancelled = false;
+
+    // 1. Immediately apply cached sub-resources if available for instant 0ms render
+    const cached = _heliDetailsCache.get(targetPackageId);
+    if (cached) {
+      setHeliInclusions(cached.inclusions);
+      setHeliExclusions(cached.exclusions);
+      setHeliRestrictions(cached.restrictions);
+      setHeliWhatToBring(cached.whatToBring);
+      setHeliHighlights(cached.highlights);
+      setHeliItineraries(cached.itineraries);
+      setPackageFaqs(cached.faqs);
+      setPricingTiers(cached.pricingTiers);
+      setPricingLoading(false);
+    } else {
+      setPricingLoading(true);
+    }
+
+    const currentEntry: HeliDetailsCacheEntry = cached
+      ? { ...cached }
+      : {
+          inclusions: [],
+          exclusions: [],
+          restrictions: [],
+          whatToBring: [],
+          highlights: [],
+          itineraries: [],
+          faqs: [],
+          pricingTiers: [],
+        };
+
+    const extractItems = (raw: any, preferredField?: string): string[] => {
+      const list = Array.isArray(raw?.data?.data)
+        ? raw.data.data
+        : Array.isArray(raw?.data)
+        ? raw.data
+        : Array.isArray(raw)
+        ? raw
+        : [];
+      return list
+        .map((item: any) => {
+          if (typeof item === "string") return item.trim();
+          if (!item || typeof item !== "object") return "";
+          if (preferredField && item[preferredField]) return String(item[preferredField]).trim();
+          return String(
+            item.highlight ??
+            item.item ??
+            item.title ??
+            item.name ??
+            item.restriction ??
+            item.description ??
+            item.point ??
+            ""
+          ).trim();
+        })
+        .filter(Boolean);
+    };
+
+    // Progressive streamed fetching: each section updates state immediately upon response
+    getPackageInclusions(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const items = extractItems(res?.data, "item");
+        setHeliInclusions(items);
+        currentEntry.inclusions = items;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
+
+    getPackageExclusions(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const items = extractItems(res?.data, "item");
+        setHeliExclusions(items);
+        currentEntry.exclusions = items;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
+
+    getPackageRestrictions(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const items = extractItems(res?.data, "restriction");
+        setHeliRestrictions(items);
+        currentEntry.restrictions = items;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
+
+    getPackageWhatToBring(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const items = extractItems(res?.data, "item");
+        setHeliWhatToBring(items);
+        currentEntry.whatToBring = items;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
+
+    getPackageHighlights(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        let fetched = extractItems(res?.data, "highlight");
+        if (fetched.length === 0) fetched = extractItems(res?.data, "title");
+        if (fetched.length === 0) fetched = extractItems(res?.data);
+        setHeliHighlights(fetched);
+        currentEntry.highlights = fetched;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
+
+    getPackageItineraries(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const raw = res?.data;
+        const rawList = Array.isArray(raw?.data?.data)
           ? raw.data.data
           : Array.isArray(raw?.data)
           ? raw.data
           : Array.isArray(raw)
           ? raw
           : [];
-        return list
-          .map((item: any) => {
-            if (typeof item === "string") return item.trim();
-            if (!item || typeof item !== "object") return "";
-            if (preferredField && item[preferredField]) return String(item[preferredField]).trim();
-            return String(
-              item.highlight ??
-              item.item ??
-              item.title ??
-              item.name ??
-              item.restriction ??
-              item.description ??
-              item.point ??
-              ""
-            ).trim();
-          })
-          .filter(Boolean);
-      };
 
-      if (!cancelled) {
-        setHeliInclusions(extractItems(incRes, "item"));
-        setHeliExclusions(extractItems(excRes, "item"));
-        // restrictions API returns { restriction: "..." } not { item: "..." }
-        setHeliRestrictions(extractItems(resRes, "restriction"));
-        setHeliWhatToBring(extractItems(wtbRes, "item"));
-
-        // Extract highlights from dedicated highlights endpoint:
-        let fetchedHighlights = extractItems(hlRes, "highlight");
-        if (fetchedHighlights.length === 0) {
-          fetchedHighlights = extractItems(hlRes, "title");
-        }
-        if (fetchedHighlights.length === 0) {
-          fetchedHighlights = extractItems(hlRes);
-        }
-
-        // Fallback: If dedicated endpoint returned empty, check package detail response
-        if (fetchedHighlights.length === 0 && pkgRes.status === "fulfilled") {
-          const pkgData = pkgRes.value?.data?.data ?? pkgRes.value?.data;
-          const pkgHl =
-            pkgData?.highlights ??
-            pkgData?.highlight_details ??
-            pkgData?.highlightDetails;
-          if (Array.isArray(pkgHl)) {
-            fetchedHighlights = pkgHl
-              .map((item: any) => {
-                if (typeof item === "string") return item.trim();
-                return String(
-                  item?.highlight ??
-                  item?.title ??
-                  item?.item ??
-                  item?.description ??
-                  ""
-                ).trim();
-              })
-              .filter(Boolean);
-          }
-        }
-
-        setHeliHighlights(fetchedHighlights);
-
-        // Extract itineraries from dedicated itineraries endpoint:
-        let rawItineraries: any[] = [];
-        if (itinRes.status === "fulfilled") {
-          const raw = itinRes.value?.data;
-          rawItineraries = Array.isArray(raw?.data?.data)
-            ? raw.data.data
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : Array.isArray(raw)
-            ? raw
-            : [];
-        }
-
-        // Fallback: If dedicated itineraries endpoint returned empty, check package detail response
-        if (rawItineraries.length === 0 && pkgRes.status === "fulfilled") {
-          const pkgData = pkgRes.value?.data?.data ?? pkgRes.value?.data;
-          const fallbackItin =
-            pkgData?.itineraries ??
-            pkgData?.itinerary ??
-            pkgData?.allItenary;
-          if (Array.isArray(fallbackItin)) {
-            rawItineraries = fallbackItin;
-          }
-        }
-
-        const mappedItineraries: RoadmapStep[] = rawItineraries
+        const mapped = rawList
           .filter((item: any) => {
             if (!item) return false;
             const title = String(item.title || item.heading || item.name || "").trim();
@@ -582,31 +681,18 @@ export const PackageHeliService: React.FC<{
               : [],
           }));
 
-        setHeliItineraries(mappedItineraries);
-      }
-    };
+        setHeliItineraries(mapped);
+        currentEntry.itineraries = mapped;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
 
-    fetchSubResources();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeTourId, selectedTour?.backendId]);
-
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!selectedTour?.backendId) {
-      setPackageFaqs([]);
-      return;
-    }
-
-    const fetchFaqs = async () => {
-      try {
-        const response = await getPackageFaqs(selectedTour.backendId);
-        const rawFaqs: PackageFaqApi[] = Array.isArray(response.data?.data)
-          ? response.data.data
+    getPackageFaqs(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const rawFaqs: PackageFaqApi[] = Array.isArray(res?.data?.data)
+          ? res.data.data
           : [];
-
         const mappedFaqs = rawFaqs
           .map((faq) => ({
             id: faq.id,
@@ -619,69 +705,30 @@ export const PackageHeliService: React.FC<{
           }))
           .filter((faq) => (faq.q || faq.question) && (faq.a || faq.answer));
 
-        if (!cancelled) setPackageFaqs(mappedFaqs);
-      } catch (error) {
-        console.error(`Failed to load FAQs for package ${selectedTour.backendId}:`, error);
-        if (!cancelled) setPackageFaqs([]);
-      }
-    };
+        setPackageFaqs(mappedFaqs);
+        currentEntry.faqs = mappedFaqs;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {});
 
-    fetchFaqs();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedTour?.backendId]);
-
-  // =========================
-  // FETCH PRICING TIERS
-  // =========================
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!selectedTour?.backendId) {
-      setPricingTiers([]);
-      return;
-    }
-
-    const fetchPricingTiers = async () => {
-      try {
-        setPricingLoading(true);
-
-        const response = await getPackagePricingTiers(
-          selectedTour.backendId
-        );
-
-        const tiers: PricingTierApi[] = Array.isArray(
-          response.data?.data
-        )
-          ? response.data.data
+    getPackagePricingTiers(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const tiers: PricingTierApi[] = Array.isArray(res?.data?.data)
+          ? res.data.data
           : [];
-
-        if (!cancelled) {
-          setPricingTiers(tiers);
-        }
-      } catch (error) {
-        console.error(
-          `Failed to load pricing tiers for package ${selectedTour.backendId}:`,
-          error
-        );
-
-        if (!cancelled) {
-          setPricingTiers([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setPricingLoading(false);
-        }
-      }
-    };
-
-    fetchPricingTiers();
-
+        setPricingTiers(tiers);
+        currentEntry.pricingTiers = tiers;
+        _heliDetailsCache.set(targetPackageId, currentEntry);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPricingLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [selectedTour?.backendId]);
+  }, [targetPackageId]);
 
   const startsFromDisplayPrice = selectedTour
     ? displayPrice(
@@ -1150,7 +1197,7 @@ export const PackageHeliService: React.FC<{
   };
 
   const handleSelectTour = (tour: HeliPackageItem) => {
-    navigate(`/service/heli-services/${tour.id}`);
+    navigate(`/service/heli-services/${tour.id}`, { state: { tour } });
     setActiveDetailTab("OVERVIEW");
     scrollToTop();
   };
@@ -2555,16 +2602,18 @@ export const PackageHeliService: React.FC<{
     "LUXURY",
   ];
 
-  if (packagesLoading) {
+  if (packagesLoading && !selectedTour) {
     return (
       <div className="py-20 text-center">
         <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-[#2D1347] font-bold text-base">Loading helicopter packages...</p>
+        <p className="text-[#2D1347] font-bold text-base">
+          {routeTourId ? "Loading helicopter details..." : "Loading helicopter packages..."}
+        </p>
       </div>
     );
   }
 
-  if (packagesError) {
+  if (packagesError && !selectedTour) {
     return (
       <div className="w-full py-16 text-center text-sm font-bold text-red-500">
         {packagesError}
@@ -2572,16 +2621,7 @@ export const PackageHeliService: React.FC<{
     );
   }
 
-  if (routeTourId && packagesLoading) {
-    return (
-      <div className="py-20 text-center">
-        <div className="w-12 h-12 border-4 border-[#2D1347] border-t-[#FF4FA3] rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-[#2D1347] font-bold text-base">Loading helicopter details...</p>
-      </div>
-    );
-  }
-
-  if (routeTourId && !selectedTour) {
+  if (routeTourId && !packagesLoading && !selectedTour) {
     return (
       <div className="w-full py-16 text-center text-sm font-bold text-gray-500">
         Helicopter package not found.
@@ -2753,7 +2793,7 @@ export const PackageHeliService: React.FC<{
                           const tierName = tier.service || tier.name || `Tier ${idx + 1}`;
                           const bracket = tier.age_group || (tier.min_pax ? (tier.min_pax === tier.max_pax ? `${tier.min_pax} Pax` : `${tier.min_pax} - ${tier.max_pax} Pax`) : "Per Person / All Pax");
                           const nprPrice = Number(tier.price_npr ?? tier.price ?? 0);
-                          const usdPrice = tier.price_usd ? Number(tier.price_usd) : Math.round(nprPrice / (nprPerOneDollar || 135));
+                          const usdPrice = tier.price_usd ? Number(tier.price_usd) : (nprPrice > 0 ? nprPrice / (nprPerOneDollar || 151.09) : 0);
 
                           return (
                             <tr key={tier.id || idx} style={{ background: idx % 2 === 0 ? "#ffffff" : "#faf5ff", borderBottom: "1px solid #f3e8ff" }}>
@@ -2765,7 +2805,7 @@ export const PackageHeliService: React.FC<{
                                 NPR {nprPrice ? nprPrice.toLocaleString("en-IN") : "Contact for Quote"}
                               </td>
                               <td style={{ padding: "4px 7px", textAlign: "right", fontWeight: 700, color: "#E91E63" }}>
-                                {usdPrice ? `${usdPrice.toLocaleString()}` : "$ -"}
+                                {usdPrice ? formatUSD(usdPrice) : "$ -"}
                               </td>
                             </tr>
                           );
@@ -3922,20 +3962,6 @@ export const PackageHeliService: React.FC<{
                               BOOK NOW
                             </button>
                           </div>
-
-                          {/* WhatsApp Inquiry Button on Card */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWhatsAppInquiry(tour);
-                            }}
-                            className="w-full mt-2 py-1.5 px-3 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider bg-[#25D366] hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
-                            title="Instant WhatsApp Inquiry"
-                          >
-                            <MessageCircle size={13} />
-                            <span>WhatsApp</span>
-                          </button>
                         </div>
                       </div>
                     </div>

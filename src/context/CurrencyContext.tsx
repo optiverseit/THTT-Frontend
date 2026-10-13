@@ -282,11 +282,17 @@ export function formatNPR(amountInNPR: number): string {
 }
 
 /**
- * Formats a numeric USD amount as a display string.
- * @example formatUSD(85) -> "$85"
+ * Formats a numeric USD amount as a display string with at least two decimal places.
+ * @example formatUSD(85) -> "$85.00"
+ * @example formatUSD(297.835) -> "$297.84"
  */
 export function formatUSD(amountInUSD: number): string {
-  return `$${Math.round(amountInUSD).toLocaleString()}`;
+  const numeric = Number(amountInUSD);
+  if (!Number.isFinite(numeric)) return "$0.00";
+  return `$${numeric.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 /**

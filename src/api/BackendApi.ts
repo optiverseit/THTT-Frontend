@@ -341,6 +341,10 @@ export const getCountryById = (id: string | number) => {
   return axiosInstance.get(`/countries/${id}`);
 };
 
+export const getPublicWorkPermitHighlights = (countryId: string | number) => {
+  return axiosInstance.get(`/work-permit-highlights/country/${countryId}`);
+};
+
 export const getPermitFeeTiers = (
   countryId: string | number,
   permitType: string

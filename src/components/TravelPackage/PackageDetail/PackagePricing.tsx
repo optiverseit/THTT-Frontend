@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PackagePricing.tsx
  * -----------------------------------------------------------------
  * Displays the pricing options card for a travel package detail page.
@@ -204,8 +204,8 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
     selectedCurrency === "nepali"
       ? priceInNPR
       : selectedCurrency === "inr"
-        ? Math.round(priceInNPR / nprPerOneINR)
-        : Math.round(priceInNPR / nprPerOneDollar);
+        ? priceInNPR / nprPerOneINR
+        : priceInNPR / nprPerOneDollar;
 
   /** Final estimated total = unit price * guest count */
   const estimatedTotalPrice: number =

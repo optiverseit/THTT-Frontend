@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+﻿import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Star, ChevronLeft, ChevronRight, Calendar, Bed, Flame, Award, TrendingUp, Tag, Clock } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * packageheliservice.tsx
  * -----------------------------------------------------------------
  * Helicopter Services Package Component.
@@ -80,6 +80,8 @@ import {
   getPackageItineraries,
   getPublicPackageTestimonials,
   getPublicPackagePolicies,
+  getPublicPackageGallery,
+  getPackagePublicGallery,
   createBooking,
   initiatePayment,
 } from "../../api/BackendApi";
@@ -210,8 +212,14 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
       "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600",
     gallery:
       Array.isArray(pkg.gallery) && pkg.gallery.length > 0
-        ? pkg.gallery.map((g: any) => (typeof g === "string" ? g : g?.url || g?.image)).filter(Boolean)
-        : (pkg.image ? [pkg.image] : ["https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1600"]),
+        ? pkg.gallery
+            .map((g: any) =>
+              typeof g === "string"
+                ? g.trim()
+                : (g?.image_url || g?.image || g?.url || g?.image_path || "").trim()
+            )
+            .filter(Boolean)
+        : [],
     description: pkg.description ?? "",
     category: getCategoryFromPackage(pkg),
     tripHighlights: Array.isArray(pkg.highlights)
@@ -360,6 +368,9 @@ export const PackageHeliService: React.FC<{
   const [heliItineraries, setHeliItineraries] = useState<RoadmapStep[]>([]);
   const [heliPolicies, setHeliPolicies] = useState<string[]>([]);
   const [heliTestimonials, setHeliTestimonials] = useState<HeliPackageItem["testimonies"]>([]);
+  const [heliGallery, setHeliGallery] = useState<string[]>([]);
+  const [heliLightboxOpen, setHeliLightboxOpen] = useState<boolean>(false);
+  const [heliLightboxIndex, setHeliLightboxIndex] = useState<number>(0);
   const hasFetchedHeliPackagesRef = useRef<boolean>(false);
   useEffect(() => {
     if (hasFetchedHeliPackagesRef.current) return;
@@ -647,15 +658,50 @@ export const PackageHeliService: React.FC<{
     if (!targetPackageId) {
       setHeliPolicies([]);
       setHeliTestimonials([]);
+      setHeliGallery([]);
       return;
     }
     let cancelled = false;
     setHeliPolicies([]);
     setHeliTestimonials([]);
+    setHeliGallery([]);
     const extractPublicRecords = (res: any): any[] => {
       const value = res?.data?.data;
       return Array.isArray(value?.data) ? value.data : Array.isArray(value) ? value : [];
     };
+    const extractUrls = (items: any[]): string[] =>
+      items
+        .map((g: any) =>
+          typeof g === "string"
+            ? g.trim()
+            : (g?.image_url || g?.image || g?.url || g?.image_path || "").trim()
+        )
+        .filter(Boolean);
+    // Fetch gallery
+    getPublicPackageGallery(targetPackageId)
+      .then((res) => {
+        if (cancelled) return;
+        const urls = extractUrls(extractPublicRecords(res));
+        if (urls.length > 0) {
+          setHeliGallery(urls);
+          return;
+        }
+        // Try secondary endpoint
+        return getPackagePublicGallery(targetPackageId).then((res2) => {
+          if (cancelled) return;
+          const urls2 = extractUrls(extractPublicRecords(res2));
+          if (urls2.length > 0) setHeliGallery(urls2);
+        });
+      })
+      .catch(() => {
+        getPackagePublicGallery(targetPackageId)
+          .then((res2) => {
+            if (cancelled) return;
+            const urls2 = extractUrls(extractPublicRecords(res2));
+            if (urls2.length > 0) setHeliGallery(urls2);
+          })
+          .catch(() => {});
+      });
     getPublicPackagePolicies(targetPackageId)
       .then((res) => {
         if (cancelled) return;
@@ -3000,7 +3046,82 @@ export const PackageHeliService: React.FC<{
               </div>
             </div>
             {/* â”€â”€ SUB-NAVIGATION STRIP (OVERVIEW | POLICIES | FAQS | TESTIMONIES + Starts From & Book Now) â”€â”€ */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+                        {/* Gallery thumbnail grid — strictly API images, no fallbacks */}
+            {heliGallery.length > 0 && (
+              <div className="print:hidden w-full py-2 sm:py-3">
+                {heliGallery.length === 1 && (
+                  <div onClick={() => { setHeliLightboxIndex(0); setHeliLightboxOpen(true); }} className="w-full h-44 sm:h-56 md:h-64 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                    <img src={heliGallery[0]} alt={`${selectedTour.title} gallery 1`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                  </div>
+                )}
+                {heliGallery.length === 2 && (
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full">
+                    {heliGallery.map((img, idx) => (
+                      <div key={idx} onClick={() => { setHeliLightboxIndex(idx); setHeliLightboxOpen(true); }} className="h-36 sm:h-44 md:h-52 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                        <img src={img} alt={`${selectedTour.title} gallery ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {heliGallery.length === 3 && (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full">
+                    {heliGallery.map((img, idx) => (
+                      <div key={idx} onClick={() => { setHeliLightboxIndex(idx); setHeliLightboxOpen(true); }} className="h-32 sm:h-40 md:h-48 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                        <img src={img} alt={`${selectedTour.title} gallery ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {heliGallery.length >= 4 && (
+                  <>
+                    <div className="grid grid-cols-4 sm:hidden gap-1.5">
+                      {heliGallery.slice(0, 4).map((img, idx) => (
+                        <div key={idx} onClick={() => { setHeliLightboxIndex(idx); setHeliLightboxOpen(true); }} className="relative aspect-4/3 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 shadow-xs border border-gray-100">
+                          <img src={img} alt={`${selectedTour.title} gallery ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                          {idx === 3 && heliGallery.length > 4 && (<div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex items-center justify-center text-white text-[11px] font-black tracking-tight">+{heliGallery.length - 4}</div>)}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="hidden sm:grid grid-cols-12 gap-3 w-full">
+                      <div onClick={() => { setHeliLightboxIndex(0); setHeliLightboxOpen(true); }} className="col-span-3 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                        <img src={heliGallery[0]} alt={`${selectedTour.title} gallery 1`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                      </div>
+                      <div onClick={() => { setHeliLightboxIndex(1); setHeliLightboxOpen(true); }} className="col-span-6 h-36 md:h-40 rounded-2xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                        <img src={heliGallery[1]} alt={`${selectedTour.title} gallery 2`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                      </div>
+                      <div className="col-span-3 flex flex-col gap-2 h-36 md:h-40">
+                        <div onClick={() => { setHeliLightboxIndex(2); setHeliLightboxOpen(true); }} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                          <img src={heliGallery[2]} alt={`${selectedTour.title} gallery 3`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                        </div>
+                        <div onClick={() => { setHeliLightboxIndex(3); setHeliLightboxOpen(true); }} className="flex-1 rounded-xl overflow-hidden cursor-pointer group bg-gray-100 relative shadow-sm border border-gray-100">
+                          <img src={heliGallery[3]} alt={`${selectedTour.title} gallery 4`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                          {heliGallery.length > 4 && (<div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex items-center justify-center text-white text-xs font-black tracking-tight">+{heliGallery.length - 4}</div>)}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            {heliLightboxOpen && heliGallery.length > 0 && (
+              <div className="print:hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
+                <button onClick={() => setHeliLightboxOpen(false)} className="absolute top-6 right-6 text-white/80 hover:text-white p-2.5 rounded-full bg-white/10 backdrop-blur-md cursor-pointer"><X size={24} /></button>
+                <button onClick={() => setHeliLightboxIndex((prev) => (prev - 1 + heliGallery.length) % heliGallery.length)} className="absolute left-4 sm:left-8 text-white p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md cursor-pointer"><ChevronDown size={24} className="rotate-90" /></button>
+                <div className="max-w-5xl max-h-[85vh] flex flex-col items-center">
+                  <img src={heliGallery[heliLightboxIndex]} alt="Gallery Preview" className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                  <span className="text-white/80 text-xs font-bold mt-4">Photo {heliLightboxIndex + 1} of {heliGallery.length}</span>
+                </div>
+                <button onClick={() => setHeliLightboxIndex((prev) => (prev + 1) % heliGallery.length)} className="absolute right-4 sm:right-8 text-white p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md cursor-pointer"><ChevronDown size={24} className="-rotate-90" /></button>
+              </div>
+            )}            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
               {/* Tabs */}
               <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto">
                 {(["OVERVIEW", "POLICIES", "FAQS", "TESTIMONIES"] as const).map((tab) => (
@@ -3218,8 +3339,8 @@ export const PackageHeliService: React.FC<{
                     )}
                   </div>
                 )}
-                {/* Tab 2: POLICIES */}
-                {activeDetailTab === "POLICIES" && (
+                {/* Tab 2: POLICIES — only shown if API data exists */}
+                {activeDetailTab === "POLICIES" && heliPolicies.length > 0 && (
                   <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
                     <h3 className="text-xl font-black text-[#200B3B]">
                       Heli Service Policies &amp; Aviation Guidelines
@@ -3252,8 +3373,8 @@ export const PackageHeliService: React.FC<{
                     subtitle="Common questions answered by our flight specialists"
                   />
                 )}
-                {/* Tab 4: TESTIMONIES */}
-                {activeDetailTab === "TESTIMONIES" && (
+                {/* Tab 4: TESTIMONIES — only shown if API data exists */}
+                {activeDetailTab === "TESTIMONIES" && heliTestimonials.length > 0 && (
                   <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
                     <h3 className="text-xl font-black text-[#200B3B]">
                       Guest Experiences &amp; Reviews

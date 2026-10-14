@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, Printer, Mail, Phone, Globe } from "lucide-react";
 import type { Package } from "../../assets/data/types";

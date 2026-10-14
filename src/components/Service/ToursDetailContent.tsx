@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";

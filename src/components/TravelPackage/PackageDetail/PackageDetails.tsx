@@ -531,6 +531,10 @@ const PackageDetails: React.FC = () => {
   const enrichedPkg = {
     ...normalizedPkg,
     gallery,
+    policies: Array.isArray(pkg.policies) ? pkg.policies : [],
+    allPolicies: Array.isArray(pkg.policies) ? pkg.policies : [],
+    allTestimonies,
+    testimonials: allTestimonies,
     pricingTable,
     allItenary,
     allIncludes,
@@ -561,6 +565,10 @@ const PackageDetails: React.FC = () => {
           context={{
             pkg:
               enrichedPkg,
+            policies:
+              enrichedPkg.policies,
+            allPolicies:
+              enrichedPkg.policies,
             allItenary,
             allIncludes,
             allExcludes,
@@ -568,6 +576,8 @@ const PackageDetails: React.FC = () => {
             whatToBring,
             allfaqs,
             allTestimonies,
+            testimonials:
+              allTestimonies,
             pricingTable,
             // =================================================
             // IMPORTANT:

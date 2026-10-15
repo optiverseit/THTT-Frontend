@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Package } from "../../assets/data/types";
@@ -40,6 +40,9 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircle,
+  Car,
+  RotateCcw,
+  X,
 } from "lucide-react";
 
 
@@ -106,6 +109,37 @@ interface BackendVehicle {
   bags_per_person?: number | string;
   luggage_weight_max?: string;
   no_of_days?: number | string;
+  routes?: VehicleRoute[];
+}
+
+export interface VehicleRoute {
+  from: string;
+  to: string;
+}
+
+// ============================================================
+// CONFIGURABLE AVAILABLE ROUTES ARRAY
+// (You can add as many { from: "...", to: "..." } routes to this array as needed)
+// ============================================================
+export const AVAILABLE_VEHICLE_ROUTES: VehicleRoute[] = [
+  { from: "Kathmandu", to: "Pokhara" },
+  { from: "Kathmandu", to: "Hetuda" },
+];
+
+export interface VehicleFilterCriteria {
+  tripType?: "One Way" | "Round Trip" | "Private" | string;
+  fromLocation?: string;
+  toLocation?: string;
+  departureDate?: string;
+  returnDate?: string;
+  passengers?: string | number;
+  vehicleType?: string;
+  passengerType?: string;
+}
+
+export interface VehicleRentalDetailContentProps {
+  filter?: VehicleFilterCriteria | null;
+  onClearFilter?: () => void;
 }
 
 
@@ -126,6 +160,7 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
     description: "Premium high-roof AC HiAce with plush recliner seats, ample legroom, and expert mountain chauffeur for comfortable highway group travel.",
     from_location: "Kathmandu",
     destination: "Pokhara",
+    routes: [{ from: "Kathmandu", to: "Pokhara" }],
     available_from: "2026-10-01",
     available_to: "2026-10-20",
     trip_type: "Round Trip",
@@ -152,7 +187,11 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
     rating: 5,
     description: "Rugged high-ground clearance 4x4 SUV built specifically for off-road trails, Mustang, Manang, and challenging Himalayan terrains.",
     from_location: "Kathmandu",
-    destination: "Muktinath / Jomsom",
+    destination: "Pokhara",
+    routes: [
+      { from: "Kathmandu", to: "Pokhara" },
+      { from: "Kathmandu", to: "Muktinath / Jomsom" },
+    ],
     available_from: "2026-10-05",
     available_to: "2026-10-25",
     trip_type: "Private",
@@ -179,7 +218,11 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
     rating: 4,
     description: "Eco-friendly zero-emission pure electric SUV with silent ride, panoramic sunroof, and ultra-smooth modern suspension for valley tours.",
     from_location: "Kathmandu",
-    destination: "Nagarkot Sunrise",
+    destination: "Pokhara",
+    routes: [
+      { from: "Kathmandu", to: "Pokhara" },
+      { from: "Kathmandu", to: "Nagarkot Sunrise" },
+    ],
     available_from: "2026-10-02",
     available_to: "2026-10-30",
     trip_type: "One Way",
@@ -206,7 +249,11 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
     rating: 5,
     description: "Spacious 22-seat air-conditioned tourist mini-bus equipped with microphone PA system, luggage racks, and heavy-duty suspension.",
     from_location: "Kathmandu",
-    destination: "Chitwan National Park",
+    destination: "Pokhara",
+    routes: [
+      { from: "Kathmandu", to: "Pokhara" },
+      { from: "Kathmandu", to: "Chitwan National Park" },
+    ],
     available_from: "2026-10-01",
     available_to: "2026-10-28",
     trip_type: "Round Trip",
@@ -219,6 +266,35 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
     images: [
       "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80",
+    ],
+  },
+  {
+    id: "mock-5",
+    name: "Suzuki Dzire / Toyota Corolla Sedan",
+    title: "Suzuki Dzire / Toyota Corolla Sedan",
+    type: "sedan",
+    vehicle_type: "Sedan",
+    fuel_type: "Petrol",
+    price: 5500,
+    rating: 5,
+    description: "Modern private AC Sedan car perfect for couples, solo travelers, and small families on highway and city transfers.",
+    from_location: "Kathmandu",
+    destination: "Pokhara",
+    routes: [
+      { from: "Kathmandu", to: "Pokhara" },
+    ],
+    available_from: "2026-10-01",
+    available_to: "2026-10-31",
+    trip_type: "One Way",
+    total_seats: 4,
+    available_seats: 4,
+    bags_per_person: "1 Bag / Person",
+    luggage_weight_max: "20 kg Max",
+    no_of_days: "1 Day",
+    image: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80",
     ],
   },
 ];
@@ -508,8 +584,17 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   const availableTo =
     normalizeDateStr(v.available_to || (v as any).availableTo) || "2026-10-20";
 
-  // 5. One way or Round Trip, Private (any one at a time) — defaults to "One Way" until API provides trip_type
-  const tripType = v.trip_type || "One Way";
+  // 5. One way or Round Trip, Private (any one at a time)
+  const rawTripType = String(v.trip_type || (v as any).tripType || (v as any).trip_mode || "One Way").trim();
+  let tripType = "One Way";
+  const cleanTrip = rawTripType.toLowerCase().replace(/[-_\s]/g, "");
+  if (cleanTrip.includes("round")) {
+    tripType = "Round Trip";
+  } else if (cleanTrip.includes("private")) {
+    tripType = "Private";
+  } else {
+    tripType = "One Way";
+  }
 
   // 6. Total Number of Seats & Available Seats
   const capacityNum = Number(v.capacity) || (vehicleType === "HiAce" ? 14 : vehicleType === "Coaster" ? 22 : 7);
@@ -551,6 +636,27 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
     images = [v.image];
   }
 
+  // Routes array for searching (handles Array or JSON string)
+  let routes: VehicleRoute[] = [];
+  if (Array.isArray(v.routes) && v.routes.length > 0) {
+    routes = v.routes;
+  } else if (typeof (v as any).routes === "string") {
+    try {
+      const parsed = JSON.parse((v as any).routes);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        routes = parsed;
+      }
+    } catch (_) {}
+  }
+  if (routes.length === 0) {
+    routes = [
+      {
+        from: fromLocation,
+        to: destination,
+      },
+    ];
+  }
+
   return {
     ...v,
     name,
@@ -558,6 +664,7 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
     fuelType,
     fromLocation,
     destination,
+    routes,
     availableFrom,
     availableTo,
     tripType,
@@ -576,7 +683,10 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
 // VEHICLE RENTAL DETAIL CONTENT COMPONENT
 // ============================================================
 
-const VehicleRentalDetailContent: React.FC = () => {
+const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
+  filter,
+  onClearFilter,
+}) => {
   const navigate = useNavigate();
 
   const {
@@ -594,6 +704,7 @@ const VehicleRentalDetailContent: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number>(500000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [selectedTripType, setSelectedTripType] = useState<string>("");
 
   // Booking Modal
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -705,7 +816,7 @@ const VehicleRentalDetailContent: React.FC = () => {
   // Reset page when tab or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, priceRange, selectedRating, selectedKeywords]);
+  }, [activeTab, priceRange, selectedRating, selectedKeywords, selectedTripType, filter]);
 
   // ==========================================================
   // FORMAT USD TO CURRENCY
@@ -761,6 +872,137 @@ const VehicleRentalDetailContent: React.FC = () => {
   // ==========================================================
 
   const filteredVehicles = enrichedVehicles.filter((v) => {
+    // 0. Hero Search Bar Filter (individually or combined multiple selection)
+    if (filter) {
+      // (a) Trip Type filter (One Way, Round Trip, Private) — strictly applied!
+      if (filter.tripType) {
+        const selTrip = String(filter.tripType).toLowerCase().replace(/[-_\s]/g, "");
+        const vTrip = String(v.tripType || (v as any).trip_type || "").toLowerCase().replace(/[-_\s]/g, "");
+
+        if (selTrip.includes("round")) {
+          // Strictly match only Round Trip vehicles
+          const isRound = vTrip.includes("round");
+          if (!isRound) return false;
+        } else if (selTrip.includes("private")) {
+          // Strictly match only Private vehicles
+          const isPrivate = vTrip.includes("private");
+          if (!isPrivate) return false;
+        } else if (selTrip.includes("one")) {
+          // Strictly match only One Way vehicles
+          const isOneWay = vTrip.includes("one");
+          if (!isOneWay) return false;
+        }
+      }
+
+      // (b) Route matching: From Location & To Location (Array of routes matching)
+      const searchFrom = filter.fromLocation?.trim().toLowerCase();
+      const searchTo = filter.toLocation?.trim().toLowerCase();
+
+      if (searchFrom || searchTo) {
+        // Vehicle's routes array with fallback to global AVAILABLE_VEHICLE_ROUTES
+        const vehicleRoutes: VehicleRoute[] =
+          v.routes && v.routes.length > 0
+            ? v.routes
+            : (v.fromLocation && v.destination
+                ? [{ from: v.fromLocation, to: v.destination }]
+                : AVAILABLE_VEHICLE_ROUTES);
+
+        const matchesRoute = vehicleRoutes.some((r) => {
+          const matchesFrom = !searchFrom || r.from.toLowerCase().includes(searchFrom);
+          const matchesTo = !searchTo || r.to.toLowerCase().includes(searchTo);
+          return matchesFrom && matchesTo;
+        });
+
+        if (!matchesRoute) return false;
+      }
+
+      // (c) Vehicle Type filter (sedan, suv, hiace, bus, or dynamic)
+      if (filter.vehicleType) {
+        const vt = filter.vehicleType.toLowerCase().trim();
+        const typeStr = (v.type || "").toLowerCase();
+        const modelStr = (v.vehicleType || v.vehicle_type || "").toLowerCase();
+        const categoryStr = (v.category || (v as any).categoryLabel || "").toLowerCase();
+        const nameStr = (v.name || v.title || "").toLowerCase();
+
+        let matchesType = false;
+        if (vt === "sedan") {
+          matchesType =
+            typeStr.includes("sedan") ||
+            modelStr.includes("sedan") ||
+            categoryStr.includes("sedan") ||
+            nameStr.includes("sedan") ||
+            nameStr.includes("dzire") ||
+            nameStr.includes("corolla");
+        } else if (vt === "suv") {
+          matchesType =
+            typeStr.includes("suv") ||
+            typeStr.includes("4wd") ||
+            typeStr.includes("4x4") ||
+            modelStr.includes("suv") ||
+            modelStr.includes("4wd") ||
+            categoryStr.includes("suv") ||
+            nameStr.includes("suv") ||
+            nameStr.includes("scorpio") ||
+            nameStr.includes("prado") ||
+            nameStr.includes("s-presso") ||
+            nameStr.includes("creta");
+        } else if (vt === "hiace") {
+          matchesType =
+            typeStr.includes("van") ||
+            typeStr.includes("hiace") ||
+            modelStr.includes("hiace") ||
+            categoryStr.includes("van") ||
+            nameStr.includes("hiace") ||
+            nameStr.includes("van");
+        } else if (vt === "bus") {
+          matchesType =
+            typeStr.includes("bus") ||
+            typeStr.includes("coaster") ||
+            modelStr.includes("coaster") ||
+            categoryStr.includes("bus") ||
+            nameStr.includes("bus") ||
+            nameStr.includes("coaster");
+        } else {
+          // Dynamic matching for any custom vehicle type added dynamically to backend
+          matchesType =
+            typeStr.includes(vt) ||
+            modelStr.includes(vt) ||
+            categoryStr.includes(vt) ||
+            nameStr.includes(vt);
+        }
+
+        if (!matchesType) return false;
+      }
+
+      // (d) Number of Passengers filter (checks vehicle capacity / total seats)
+      if (filter.passengers) {
+        const reqSeats = Number(filter.passengers);
+        if (!isNaN(reqSeats) && reqSeats > 0) {
+          const seatCap = Number(v.totalSeats || v.capacity || 0);
+          if (seatCap < reqSeats) {
+            return false;
+          }
+        }
+      }
+
+      // (e) Departure Date filter
+      if (filter.departureDate) {
+        if (v.availableFrom && filter.departureDate < v.availableFrom) {
+          return false;
+        }
+        if (v.availableTo && filter.departureDate > v.availableTo) {
+          return false;
+        }
+      }
+
+      // (f) Return Date filter (for Round Trip and Private)
+      if (filter.returnDate) {
+        if (v.availableTo && filter.returnDate > v.availableTo) {
+          return false;
+        }
+      }
+    }
+
     // 1. Tab filter
     if (activeTab !== "all") {
       const typeStr = (v.type || v.category || v.vehicleType || "").toLowerCase();
@@ -834,6 +1076,36 @@ const VehicleRentalDetailContent: React.FC = () => {
             location.includes(kw)
           );
         });
+
+    // 5. Sidebar Trip Type filter
+    if (selectedTripType) {
+      const tripStr = (v.tripType || "").toLowerCase();
+      const nameStr2 = (v.name || v.title || "").toLowerCase();
+      const descStr2 = (v.description || "").toLowerCase();
+      if (selectedTripType === "one-way") {
+        const matches =
+          tripStr.includes("one") ||
+          tripStr.includes("oneway") ||
+          tripStr.includes("one-way") ||
+          nameStr2.includes("one way") ||
+          descStr2.includes("one way");
+        if (!matches) return false;
+      } else if (selectedTripType === "round-trip") {
+        const matches =
+          tripStr.includes("round") ||
+          tripStr.includes("roundtrip") ||
+          tripStr.includes("round-trip") ||
+          nameStr2.includes("round") ||
+          descStr2.includes("round trip");
+        if (!matches) return false;
+      } else if (selectedTripType === "private") {
+        const matches =
+          tripStr.includes("private") ||
+          nameStr2.includes("private") ||
+          descStr2.includes("private");
+        if (!matches) return false;
+      }
+    }
 
     return matchesPrice && matchesRating && matchesKeywords;
   });
@@ -1037,15 +1309,32 @@ const VehicleRentalDetailContent: React.FC = () => {
             selectedKeywords={selectedKeywords}
             setSelectedKeywords={setSelectedKeywords}
             customKeywords={vehicleKeywords}
+            selectedTripType={selectedTripType}
+            setSelectedTripType={setSelectedTripType}
           />
         </div>
 
         {/* Right: Vehicle Cards List */}
         <div className="lg:col-span-3">
+
+
           {filteredVehicles.length === 0 ? (
             <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-xs">
-              <p className="font-bold text-gray-600 text-base">No vehicles found.</p>
-              <p className="text-gray-400 text-xs mt-1">Try resetting or broadening your filter criteria.</p>
+              <div className="w-16 h-16 bg-pink-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Car size={32} />
+              </div>
+              <p className="font-bold text-gray-700 text-base">No vehicles found matching your search.</p>
+              <p className="text-gray-400 text-xs mt-1 mb-5">Try broadening your route, vehicle type, or passenger count.</p>
+              {onClearFilter && (
+                <button
+                  type="button"
+                  onClick={onClearFilter}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95"
+                >
+                  <RotateCcw size={14} />
+                  Reset Search Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-6">

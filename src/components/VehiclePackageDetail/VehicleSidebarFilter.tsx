@@ -1,4 +1,4 @@
-import { Filter, Star, Tag, Award } from "lucide-react";
+import { Filter, Star, Tag, Award, Navigation } from "lucide-react";
 import React from "react";
 import {
   useGlobalCurrency,
@@ -18,6 +18,8 @@ interface VehicleSidebarFilterProps {
   minPrice?: number;
   maxPrice?: number;
   step?: number;
+  selectedTripType?: string;
+  setSelectedTripType?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
@@ -33,6 +35,8 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
   minPrice = 0,
   maxPrice = 500000,
   step = 5000,
+  selectedTripType = "",
+  setSelectedTripType,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const ratings = [5, 4, 3, 2, 1];
@@ -61,11 +65,18 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
           "PETROL",
         ];
 
+  const tripOptions = [
+    { label: "One Way", value: "one-way" },
+    { label: "Round Trip", value: "round-trip" },
+    { label: "Private", value: "private" },
+  ];
+
   const clearAllFilters = () => {
     setSelectedRating(0);
     setSelectedKeywords([]);
     setPriceRange(sliderMax);
     if (setSelectedBadges) setSelectedBadges([]);
+    if (setSelectedTripType) setSelectedTripType("");
   };
 
   return (
@@ -183,7 +194,40 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
         </div>
       </div>
 
-      {/* 4. HIGHLIGHTS / BADGE FILTER */}
+      {/* 4. TRIP TYPE */}
+      {setSelectedTripType && (
+        <div className="pt-5 border-t border-gray-100 mt-1">
+          <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
+            <Navigation size={12} className="text-[#E91E63]" />
+            <span>TRIP</span>
+          </label>
+          <div className="flex flex-col gap-1.5">
+            {tripOptions.map(({ label, value }) => {
+              const isSelected = selectedTripType === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() =>
+                    setSelectedTripType(isSelected ? "" : value)
+                  }
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-full transition-all text-xs font-bold cursor-pointer border ${
+                    isSelected
+                      ? "bg-[#E91E63] text-white border-[#E91E63] shadow-sm"
+                      : "bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100"
+                  }`}
+                >
+                  <span>{label}</span>
+                  {isSelected && (
+                    <span className="w-2 h-2 rounded-full bg-white opacity-80 inline-block" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5. HIGHLIGHTS / BADGE FILTER */}
       {setSelectedBadges && (
         <div className="pt-5 border-t border-gray-100 mt-6">
           <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
 import {
@@ -41,7 +41,11 @@ import ActivitiesDetailContent, { ActivityFilterCriteria } from "../components/S
 import TrekkingDetailContent, { TrekFilterCriteria } from "../components/Service/TrekkingDetailContent";
 import HotelBookingDetailContent, { HotelFilterCriteria } from "../components/Service/HotelBookingDetailContent";
 import TravelInsuranceDetailContent, { InsuranceFilterCriteria } from "../components/Service/TravelInsuranceDetailContent";
-import VehicleRentalDetailContent from "../components/Service/VehicleRentalDetailContent";
+import VehicleRentalDetailContent, {
+  VehicleFilterCriteria,
+  AVAILABLE_VEHICLE_ROUTES,
+} from "../components/Service/VehicleRentalDetailContent";
+import { getAllVehicles } from "../api/BackendApi";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
 import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
 
@@ -238,6 +242,157 @@ const ServiceDetail: React.FC = () => {
     });
     scrollToSection("section-services", "SERVICES");
   };
+
+  // Today's local date string (YYYY-MM-DD) so past dates cannot be selected
+  const todayDateStr = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  // Vehicle Rental Trip Type State
+  const [vehicleTripType, setVehicleTripType] = useState<"One Way" | "Round Trip" | "Private">("One Way");
+
+  // Vehicle Route Search State (One Way / Round Trip expanded fields)
+  const [vehicleFrom, setVehicleFrom] = useState("");
+  const [vehicleTo, setVehicleTo] = useState("");
+  const [vehicleDepartureDate, setVehicleDepartureDate] = useState("");
+  const [vehicleReturnDate, setVehicleReturnDate] = useState("");
+  const [vehiclePassengers, setVehiclePassengers] = useState("1");
+  const [vehicleType, setVehicleType] = useState("");
+  const [vehiclePassengerType, setVehiclePassengerType] = useState("");
+  const [appliedVehicleFilter, setAppliedVehicleFilter] = useState<VehicleFilterCriteria | null>(null);
+
+  // Dynamic fleet locations and custom vehicle types from database
+  const [dynamicFromLocations, setDynamicFromLocations] = useState<string[]>([]);
+  const [dynamicToLocations, setDynamicToLocations] = useState<string[]>([]);
+  const [dynamicVehicleTypes, setDynamicVehicleTypes] = useState<string[]>([]);
+
+  // Case-insensitive deduplication & Title-Case normalization
+  const dedupeLocationsCaseInsensitive = (items: string[]): string[] => {
+    const map = new Map<string, string>();
+    items.forEach((item) => {
+      if (!item || typeof item !== "string") return;
+      const clean = item.trim();
+      if (!clean) return;
+      const key = clean.toLowerCase();
+      if (!map.has(key)) {
+        // Format to clean Title Case (e.g. "kathmandu" -> "Kathmandu")
+        const formatted = clean
+          .split(/\s+/)
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(" ");
+        map.set(key, formatted);
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  useEffect(() => {
+    if (!isVehicleRental) return;
+    const fetchDynamicVehicleData = async () => {
+      try {
+        const response = await getAllVehicles();
+        const vehicleData = response.data?.data?.data ?? response.data?.data ?? response.data ?? [];
+        if (Array.isArray(vehicleData) && vehicleData.length > 0) {
+          const rawFromList: string[] = [];
+          const rawToList: string[] = [];
+          const typeSet = new Set<string>();
+
+          vehicleData.forEach((v: any) => {
+            const f = v.from_location || v.fromLocation || v.location;
+            if (f && typeof f === "string") rawFromList.push(f);
+
+            const t = v.destination || v.to_location || v.toLocation;
+            if (t && typeof t === "string") rawToList.push(t);
+
+            let routesArr = v.routes;
+            if (typeof routesArr === "string") {
+              try { routesArr = JSON.parse(routesArr); } catch (_) {}
+            }
+            if (Array.isArray(routesArr)) {
+              routesArr.forEach((r: any) => {
+                if (r?.from) rawFromList.push(String(r.from));
+                if (r?.to) rawToList.push(String(r.to));
+              });
+            }
+
+            const vt = v.vehicle_type || v.vehicleType || v.type || v.category;
+            if (vt && typeof vt === "string") {
+              typeSet.add(vt.trim());
+            }
+          });
+
+          setDynamicFromLocations(dedupeLocationsCaseInsensitive(rawFromList));
+          setDynamicToLocations(dedupeLocationsCaseInsensitive(rawToList));
+
+          const standardKeywords = ["sedan", "suv", "hiace", "bus", "coaster", "van", "4wd"];
+          const customOnly = Array.from(typeSet).filter(
+            (typeName) => !standardKeywords.some((k) => typeName.toLowerCase().includes(k))
+          );
+          setDynamicVehicleTypes(customOnly);
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic vehicle search options:", err);
+      }
+    };
+
+    fetchDynamicVehicleData();
+  }, [isVehicleRental]);
+
+  // Floating Autocomplete dropdown states for FROM and TO
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const fromDropdownRef = useRef<HTMLDivElement>(null);
+  const toDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromDropdownRef.current && !fromDropdownRef.current.contains(event.target as Node)) {
+        setShowFromDropdown(false);
+      }
+      if (toDropdownRef.current && !toDropdownRef.current.contains(event.target as Node)) {
+        setShowToDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // ONLY show unique locations that are actually available in the vehicle fleet
+  const allKnownFromLocations = dedupeLocationsCaseInsensitive(dynamicFromLocations);
+  const allKnownToLocations = dedupeLocationsCaseInsensitive(dynamicToLocations);
+
+  const matchingFromLocations = vehicleFrom.trim()
+    ? allKnownFromLocations.filter((loc) =>
+        loc.toLowerCase().includes(vehicleFrom.trim().toLowerCase())
+      )
+    : [];
+
+  const matchingToLocations = vehicleTo.trim()
+    ? allKnownToLocations.filter((loc) =>
+        loc.toLowerCase().includes(vehicleTo.trim().toLowerCase())
+      )
+    : [];
+
+  const handleVehicleSearch = () => {
+    setAppliedVehicleFilter({
+      tripType: vehicleTripType,
+      fromLocation: vehicleFrom.trim(),
+      toLocation: vehicleTo.trim(),
+      departureDate: vehicleDepartureDate,
+      returnDate: vehicleTripType === "One Way" ? "" : vehicleReturnDate,
+      passengers: vehicleTripType === "Private" ? "" : vehiclePassengers,
+      vehicleType: vehicleType,
+      passengerType: vehiclePassengerType,
+    });
+    scrollToSection("section-services", "SERVICES");
+  };
+
   const getBannerHeading = () => {
     if (isAirTicket) return "DOMESTIC & INTERNATIONAL AIR TICKETING";
     if (isTours) return "UNESCO HERITAGE & SCENIC HOLIDAYS";
@@ -536,14 +691,16 @@ const ServiceDetail: React.FC = () => {
                 </label>
                 <input
                   type="date"
+                  min={todayDateStr}
                   value={hotelSearchCheckIn}
                   onFocus={() => setShowHotelCheckOut(true)}
                   onClick={() => setShowHotelCheckOut(true)}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setHotelSearchCheckIn(val);
+                    const finalVal = val && val < todayDateStr ? todayDateStr : val;
+                    setHotelSearchCheckIn(finalVal);
                     setShowHotelCheckOut(true);
-                    if (hotelSearchCheckOut && val && hotelSearchCheckOut < val) {
+                    if (hotelSearchCheckOut && finalVal && hotelSearchCheckOut < finalVal) {
                       setHotelSearchCheckOut("");
                     }
                   }}
@@ -563,7 +720,7 @@ const ServiceDetail: React.FC = () => {
                 </label>
                 <input
                   type="date"
-                  min={hotelSearchCheckIn || undefined}
+                  min={hotelSearchCheckIn && hotelSearchCheckIn >= todayDateStr ? hotelSearchCheckIn : todayDateStr}
                   value={hotelSearchCheckOut}
                   onChange={(e) => setHotelSearchCheckOut(e.target.value)}
                   className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:p-0"
@@ -708,44 +865,284 @@ const ServiceDetail: React.FC = () => {
 
     if (isVehicleRental) {
       return (
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Car size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                VEHICLE CLASS
-              </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="">All Vehicles</option>
-                <option value="sedan">Private Sedan Car (4 Seat)</option>
-                <option value="suv">4x4 Scorpio / Prado SUV (7 Seat)</option>
-                <option value="hiace">Toyota HiAce Van (14 Seat)</option>
-                <option value="coaster">Tourist Coaster Bus (22 Seat)</option>
-              </select>
-            </div>
+        <div className="w-full flex flex-col items-start">
+
+          {/* ── Floating tab bar attached flush to left edge ── */}
+          <div className="relative inline-flex items-center p-1 bg-white rounded-tl-2xl sm:rounded-tl-3xl rounded-tr-xl sm:rounded-tr-2xl border-t border-l border-gray-100 gap-1 z-10 -mb-px">
+            {(["One Way", "Round Trip", "Private"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  setVehicleTripType(type);
+                  setAppliedVehicleFilter({
+                    tripType: type,
+                    fromLocation: vehicleFrom.trim(),
+                    toLocation: vehicleTo.trim(),
+                    departureDate: vehicleDepartureDate,
+                    returnDate: type === "One Way" ? "" : vehicleReturnDate,
+                    passengers: type === "Private" ? "" : vehiclePassengers,
+                    vehicleType: vehicleType,
+                    passengerType: vehiclePassengerType,
+                  });
+                }}
+                className={`px-3.5 sm:px-4 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  vehicleTripType === type
+                    ? "bg-[#E91E63] text-white"
+                    : "text-gray-700 hover:text-gray-900 hover:bg-gray-100/70"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+
+            {/* Smooth concave curve on the right corner */}
+            <svg
+              className="absolute -right-3.5 bottom-0 w-3.5 h-3.5 pointer-events-none"
+              viewBox="0 0 14 14"
+              fill="none"
+            >
+              <path d="M0 0 C0 7.732 6.268 14 14 14 L0 14 Z" fill="white" />
+              <path d="M0 0 C0 7.732 6.268 14 14 14" stroke="#f3f4f6" strokeWidth="1" fill="none" />
+            </svg>
           </div>
 
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Clock size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                RENTAL TYPE
-              </label>
-              <select className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer">
-                <option value="airport">Airport Pickup / Drop</option>
-                <option value="day">Full Day City Sightseeing</option>
-                <option value="outstation">Outstation (Pokhara, Chitwan)</option>
-                <option value="multiday">Multi-Day Custom Tour</option>
-              </select>
+          {/* ── Search card ── */}
+          <div className="w-full bg-white rounded-b-2xl sm:rounded-b-3xl rounded-tr-2xl sm:rounded-tr-3xl rounded-tl-none shadow-xl border border-gray-100 relative">
+
+            {/* ROW 1: From / To / Departure Date / Return Date */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+              {/* FROM */}
+              <div ref={fromDropdownRef} className="relative flex items-center gap-2.5 flex-1 px-4 py-3">
+                <MapPin size={16} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full">
+                  <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">FROM</label>
+                  <input
+                    type="text"
+                    value={vehicleFrom}
+                    onChange={(e) => {
+                      setVehicleFrom(e.target.value);
+                      setShowFromDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (vehicleFrom.trim().length > 0) setShowFromDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setShowFromDropdown(false);
+                        handleVehicleSearch();
+                      } else if (e.key === "Escape") {
+                        setShowFromDropdown(false);
+                      }
+                    }}
+                    placeholder="Select departure location"
+                    className="text-xs sm:text-[13px] font-semibold text-gray-800 bg-transparent focus:outline-none py-0.5 placeholder:text-xs placeholder:text-gray-400 placeholder:font-normal w-full"
+                  />
+                </div>
+
+                {/* Autocomplete Dropdown for FROM */}
+                {showFromDropdown && matchingFromLocations.length > 0 && (
+                  <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[210px] bg-white rounded-xl shadow-2xl border border-pink-100 z-50 py-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
+                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
+                      Matching Locations
+                    </div>
+                    {matchingFromLocations.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => {
+                          setVehicleFrom(loc);
+                          setShowFromDropdown(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <MapPin size={13} className="text-pink-500 flex-shrink-0" />
+                        <span>{loc}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* TO */}
+              <div ref={toDropdownRef} className="relative flex items-center gap-2.5 flex-1 px-4 py-3">
+                <MapPin size={16} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full">
+                  <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">TO</label>
+                  <input
+                    type="text"
+                    value={vehicleTo}
+                    onChange={(e) => {
+                      setVehicleTo(e.target.value);
+                      setShowToDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (vehicleTo.trim().length > 0) setShowToDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setShowToDropdown(false);
+                        handleVehicleSearch();
+                      } else if (e.key === "Escape") {
+                        setShowToDropdown(false);
+                      }
+                    }}
+                    placeholder="Select destination"
+                    className="text-xs sm:text-[13px] font-semibold text-gray-800 bg-transparent focus:outline-none py-0.5 placeholder:text-xs placeholder:text-gray-400 placeholder:font-normal w-full"
+                  />
+                </div>
+
+                {/* Autocomplete Dropdown for TO */}
+                {showToDropdown && matchingToLocations.length > 0 && (
+                  <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[210px] bg-white rounded-xl shadow-2xl border border-pink-100 z-50 py-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
+                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
+                      Matching Destinations
+                    </div>
+                    {matchingToLocations.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => {
+                          setVehicleTo(loc);
+                          setShowToDropdown(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <MapPin size={13} className="text-pink-500 flex-shrink-0" />
+                        <span>{loc}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* DEPARTURE DATE */}
+              <div className="flex items-center gap-2.5 flex-1 px-4 py-3">
+                <Calendar size={16} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full">
+                  <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">DEPARTURE DATE</label>
+                  <input
+                    type="date"
+                    min={todayDateStr}
+                    value={vehicleDepartureDate}
+                    onChange={(e) => {
+                      const selected = e.target.value;
+                      if (selected && selected < todayDateStr) {
+                        setVehicleDepartureDate(todayDateStr);
+                      } else {
+                        setVehicleDepartureDate(selected);
+                      }
+                      if (vehicleReturnDate && selected && vehicleReturnDate < selected) {
+                        setVehicleReturnDate(selected);
+                      }
+                    }}
+                    className="text-xs font-medium text-gray-700 bg-transparent focus:outline-none py-0.5 cursor-pointer w-full placeholder:text-xs [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
+                  />
+                </div>
+              </div>
+
+              {/* RETURN DATE — shown for Round Trip and Private */}
+              {vehicleTripType !== "One Way" && (
+                <div className="flex items-center gap-2.5 flex-1 px-4 py-3">
+                  <Calendar size={16} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full">
+                    <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">RETURN DATE</label>
+                    <input
+                      type="date"
+                      min={vehicleDepartureDate && vehicleDepartureDate >= todayDateStr ? vehicleDepartureDate : todayDateStr}
+                      value={vehicleReturnDate}
+                      onChange={(e) => {
+                        const selected = e.target.value;
+                        const minAllowed = vehicleDepartureDate && vehicleDepartureDate >= todayDateStr ? vehicleDepartureDate : todayDateStr;
+                        if (selected && selected < minAllowed) {
+                          setVehicleReturnDate(minAllowed);
+                        } else {
+                          setVehicleReturnDate(selected);
+                        }
+                      }}
+                      className="text-xs font-medium text-gray-700 bg-transparent focus:outline-none py-0.5 cursor-pointer w-full placeholder:text-xs [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-gray-100" />
+
+            {/* ROW 2: Passengers / Vehicle Type / Passenger Type / Search */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+              {/* NO. OF PASSENGERS — only for One Way and Round Trip */}
+              {vehicleTripType !== "Private" && (
+                <div className="flex items-center gap-2.5 flex-1 px-4 py-3">
+                  <Users size={16} className="text-pink-500 flex-shrink-0" />
+                  <div className="flex flex-col w-full">
+                    <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">NO. OF PASSENGERS</label>
+                    <select
+                      value={vehiclePassengers}
+                      onChange={(e) => setVehiclePassengers(e.target.value)}
+                      className="text-xs font-medium text-gray-700 bg-transparent focus:outline-none py-0.5 cursor-pointer"
+                    >
+                      <option value="">Any Passengers</option>
+                      {[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22].map(n => (
+                        <option key={n} value={n}>{n} Passenger{n > 1 ? "s" : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* VEHICLE TYPE */}
+              <div className="flex items-center gap-2.5 flex-1 px-4 py-3">
+                <Car size={16} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full">
+                  <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">VEHICLE TYPE</label>
+                  <select
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    className="text-xs font-medium text-gray-700 bg-transparent focus:outline-none py-0.5 cursor-pointer"
+                  >
+                    <option value="">Any Vehicle</option>
+                    <option value="sedan">Sedan / Car (4 Seat)</option>
+                    <option value="suv">4WD SUV / Scorpio (7 Seat)</option>
+                    <option value="hiace">Toyota HiAce (14 Seat)</option>
+                    <option value="bus">Tourist Coaster Bus (22 Seat)</option>
+                    {dynamicVehicleTypes.map((t) => (
+                      <option key={t} value={t.toLowerCase()}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* PASSENGER TYPE (optional) */}
+              <div className="flex items-center gap-2.5 flex-1 px-4 py-3">
+                <Shield size={16} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full">
+                  <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">PASSENGER TYPE <span className="normal-case font-normal text-gray-400">(Optional)</span></label>
+                  <select
+                    value={vehiclePassengerType}
+                    onChange={(e) => setVehiclePassengerType(e.target.value)}
+                    className="text-xs font-medium text-gray-700 bg-transparent focus:outline-none py-0.5 cursor-pointer"
+                  >
+                    <option value="">Any</option>
+                    <option value="nepali">Nepali</option>
+                    <option value="foreign">Foreign</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* SEARCH ROUTE BUTTON */}
+              <div className="px-4 py-3 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={handleVehicleSearch}
+                  className="w-full sm:w-auto rounded-xl bg-pink-600 hover:bg-pink-700 active:scale-95 py-3 px-7 text-white font-bold text-xs tracking-wider transition-all whitespace-nowrap cursor-pointer shadow-sm hover:shadow-md"
+                >
+                  SEARCH ROUTE
+                </button>
+              </div>
             </div>
           </div>
-
-          <button
-            onClick={() => scrollToSection("section-services", "SERVICES")}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
-          >
-            SEARCH
-          </button>
         </div>
       );
     }
@@ -1213,7 +1610,19 @@ const ServiceDetail: React.FC = () => {
                 }}
               />
             ) : isVehicleRental ? (
-              <VehicleRentalDetailContent />
+              <VehicleRentalDetailContent
+                filter={appliedVehicleFilter}
+                onClearFilter={() => {
+                  setAppliedVehicleFilter(null);
+                  setVehicleFrom("");
+                  setVehicleTo("");
+                  setVehicleDepartureDate("");
+                  setVehicleReturnDate("");
+                  setVehiclePassengers("");
+                  setVehicleType("");
+                  setVehiclePassengerType("");
+                }}
+              />
             ) : isHeliServices ? (
               <HeliServicesDetailContent
                 filter={appliedHeliFilter}

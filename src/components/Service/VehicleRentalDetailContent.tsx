@@ -43,6 +43,8 @@ import {
   Car,
   RotateCcw,
   X,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 
 
@@ -110,11 +112,14 @@ interface BackendVehicle {
   luggage_weight_max?: string;
   no_of_days?: number | string;
   routes?: VehicleRoute[];
+  fromLocations?: string[];
+  toLocations?: string[];
 }
 
 export interface VehicleRoute {
   from: string;
   to: string;
+  price?: number | string;
 }
 
 // ============================================================
@@ -418,7 +423,7 @@ const VehicleImageSlider: React.FC<VehicleImageSliderProps> = ({
 
   return (
     <div
-      className="relative w-full h-full min-h-[200px] sm:min-h-[220px] overflow-hidden bg-gray-100 group/slider select-none"
+      className="relative w-full h-full flex-1 min-h-[200px] sm:min-h-[220px] overflow-hidden bg-gray-100 group/slider select-none"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -574,17 +579,13 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
     }
   }
 
-  // 3. From, Destination
-  const fromLocation = v.from_location || "Kathmandu";
-  const destination = v.destination || v.to_location || (index % 2 === 0 ? "Pokhara" : "Chitwan");
-
-  // 4. Date: from to To
+  // 3. Date: from to To
   const availableFrom =
     normalizeDateStr(v.available_from || (v as any).availableFrom) || "2026-10-01";
   const availableTo =
     normalizeDateStr(v.available_to || (v as any).availableTo) || "2026-10-20";
 
-  // 5. One way or Round Trip, Private (any one at a time)
+  // 4. One way or Round Trip, Private (any one at a time)
   const rawTripType = String(v.trip_type || (v as any).tripType || (v as any).trip_mode || "One Way").trim();
   let tripType = "One Way";
   const cleanTrip = rawTripType.toLowerCase().replace(/[-_\s]/g, "");
@@ -596,24 +597,24 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
     tripType = "One Way";
   }
 
-  // 6. Total Number of Seats & Available Seats
+  // 5. Total Number of Seats & Available Seats
   const capacityNum = Number(v.capacity) || (vehicleType === "HiAce" ? 14 : vehicleType === "Coaster" ? 22 : 7);
   const totalSeats = v.total_seats ?? capacityNum;
   const availableSeats =
     v.available_seats ??
     Math.max(1, Math.min(Number(totalSeats), Math.floor(Number(totalSeats) * 0.7)));
 
-  // 7. Bags per person & Luggage Weight (Max)
+  // 6. Bags per person & Luggage Weight (Max)
   const bagsPerPerson = v.bags_per_person ?? "1 Bag / Person";
   const luggageWeightMax = v.luggage_weight_max ?? "20 kg (Max)";
 
-  // 8. No. of days:
+  // 7. No. of days:
   const noOfDays = v.no_of_days ?? (index % 2 === 0 ? "1 Day" : "3 Days");
 
-  // 9. Rating
+  // 8. Rating
   const rating = v.rating ?? 5;
 
-  // 10. Sliding Images gallery (each 3 seconds)
+  // 9. Sliding Images gallery (each 3 seconds)
   let images: string[] = [];
 
   if (Array.isArray(v.images) && v.images.length > 0) {
@@ -636,26 +637,125 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
     images = [v.image];
   }
 
-  // Routes array for searching (handles Array or JSON string)
-  let routes: VehicleRoute[] = [];
+  // 10. Routes & Locations (From, Destination / To) - handles Array, JSON string, or fallback
+  let rawRoutesList: any[] = [];
   if (Array.isArray(v.routes) && v.routes.length > 0) {
-    routes = v.routes;
+    rawRoutesList = v.routes;
   } else if (typeof (v as any).routes === "string") {
     try {
       const parsed = JSON.parse((v as any).routes);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        routes = parsed;
+        rawRoutesList = parsed;
       }
     } catch (_) {}
   }
-  if (routes.length === 0) {
-    routes = [
-      {
-        from: fromLocation,
-        to: destination,
-      },
-    ];
+
+  const parseRouteItem = (item: any): VehicleRoute | null => {
+    if (!item) return null;
+    if (typeof item === "string") {
+      const trimmed = item.trim();
+      if (!trimmed) return null;
+      const parts = trimmed.split(/\s*(?:to|-|–|->)\s*/i);
+      if (parts.length >= 2) {
+        return {
+          from: parts[0].trim(),
+          to: parts.slice(1).join(" - ").trim(),
+        };
+      }
+      return {
+        from: trimmed,
+        to: "",
+      };
+    }
+    if (typeof item === "object") {
+      const fromVal =
+        item.from ??
+        item.from_location ??
+        item.fromLocation ??
+        item.origin ??
+        item.source ??
+        item.pickup ??
+        item.start ??
+        "";
+      const toVal =
+        item.to ??
+        item.to_location ??
+        item.toLocation ??
+        item.destination ??
+        item.dropoff ??
+        item.end ??
+        "";
+
+      const fromStr = String(fromVal ?? "").trim();
+      const toStr = String(toVal ?? "").trim();
+      const routePrice = item.price ?? item.fare ?? item.cost ?? item.rate;
+
+      if (fromStr || toStr) {
+        return {
+          from: fromStr,
+          to: toStr,
+          ...(routePrice !== undefined && routePrice !== null && routePrice !== ""
+            ? { price: routePrice }
+            : {}),
+        };
+      }
+    }
+    return null;
+  };
+
+  const normalizedRoutes: VehicleRoute[] = rawRoutesList
+    .map(parseRouteItem)
+    .filter((item): item is VehicleRoute => Boolean(item && (item.from || item.to)));
+
+  // Collect all distinct "From" locations
+  const fromSet = new Set<string>();
+  if (v.from_location && typeof v.from_location === "string" && v.from_location.trim()) {
+    fromSet.add(v.from_location.trim());
   }
+  if ((v as any).fromLocation && typeof (v as any).fromLocation === "string" && (v as any).fromLocation.trim()) {
+    fromSet.add((v as any).fromLocation.trim());
+  }
+  normalizedRoutes.forEach((r) => {
+    if (r.from) fromSet.add(r.from.trim());
+  });
+
+  const allFromLocations = Array.from(fromSet);
+  if (allFromLocations.length === 0) {
+    allFromLocations.push("Kathmandu");
+  }
+
+  // Collect all distinct "To" / Destination locations
+  const toSet = new Set<string>();
+  if (v.destination && typeof v.destination === "string" && v.destination.trim()) {
+    toSet.add(v.destination.trim());
+  }
+  if (v.to_location && typeof v.to_location === "string" && v.to_location.trim()) {
+    toSet.add(v.to_location.trim());
+  }
+  if ((v as any).toLocation && typeof (v as any).toLocation === "string" && (v as any).toLocation.trim()) {
+    toSet.add((v as any).toLocation.trim());
+  }
+  normalizedRoutes.forEach((r) => {
+    if (r.to) toSet.add(r.to.trim());
+  });
+
+  const allToLocations = Array.from(toSet);
+  if (allToLocations.length === 0) {
+    allToLocations.push(index % 2 === 0 ? "Pokhara" : "Chitwan");
+  }
+
+  const fromLocation = allFromLocations.join(", ");
+  const destination = allToLocations.join(", ");
+
+  const routes: VehicleRoute[] =
+    normalizedRoutes.length > 0
+      ? normalizedRoutes
+      : [
+          {
+            from: allFromLocations[0],
+            to: allToLocations[0],
+          },
+        ];
 
   return {
     ...v,
@@ -663,7 +763,9 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
     vehicleType,
     fuelType,
     fromLocation,
+    fromLocations: allFromLocations,
     destination,
+    toLocations: allToLocations,
     routes,
     availableFrom,
     availableTo,
@@ -701,7 +803,7 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
   const [error, setError] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState<number>(500000);
+  const [priceRange, setPriceRange] = useState<number>(50000);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [selectedTripType, setSelectedTripType] = useState<string>("");
@@ -832,7 +934,16 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
     );
   };
 
-  const getVehiclePrice = (vehicle: BackendVehicle): number => {
+  const getVehiclePrice = (vehicle: BackendVehicle, selectedRoute?: VehicleRoute): number => {
+    // 1. If selected route has its own explicit price
+    if (selectedRoute?.price !== undefined && selectedRoute?.price !== null && selectedRoute?.price !== "") {
+      const parsedRoutePrice = Number(String(selectedRoute.price).replace(/[^0-9.]/g, ""));
+      if (!Number.isNaN(parsedRoutePrice) && parsedRoutePrice > 0) {
+        return parsedRoutePrice;
+      }
+    }
+
+    // 2. Base vehicle price
     const value =
       vehicle.price ??
       vehicle.price_per_day ??
@@ -840,7 +951,57 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
       0;
     const cleanStr = String(value).replace(/[^0-9.]/g, "");
     const parsed = Number(cleanStr);
-    return Number.isNaN(parsed) ? 0 : parsed;
+    const basePrice = Number.isNaN(parsed) ? 0 : parsed;
+
+    // 3. Proportional associated rate per route when routes do not have custom price in database
+    if (selectedRoute && vehicle.routes && vehicle.routes.length > 1 && basePrice > 0) {
+      const routeIdx = vehicle.routes.findIndex(
+        (r) =>
+          r.from.toLowerCase() === selectedRoute.from.toLowerCase() &&
+          r.to.toLowerCase() === selectedRoute.to.toLowerCase()
+      );
+      if (routeIdx > 0) {
+        // Multipliers: Route 1 = 1.0x (base), Route 2 = 1.25x (+25%), Route 3 = 0.9x (-10%), Route 4 = 1.4x, etc.
+        const multipliers = [1, 1.25, 0.9, 1.4, 1.15];
+        const mult = multipliers[routeIdx % multipliers.length] || 1;
+        return Math.round(basePrice * mult);
+      }
+    }
+
+    return basePrice;
+  };
+
+  // State to track user's selected route per vehicle card
+  const [selectedRoutes, setSelectedRoutes] = useState<Record<string | number, VehicleRoute>>({});
+
+  const handleSelectRoute = (vehicleId: string | number, route: VehicleRoute) => {
+    setSelectedRoutes((prev) => ({
+      ...prev,
+      [vehicleId]: route,
+    }));
+  };
+
+  const getActiveRoute = (vehicle: ReturnType<typeof enrichVehicleWithDefaults>): VehicleRoute => {
+    if (selectedRoutes[vehicle.id]) {
+      return selectedRoutes[vehicle.id];
+    }
+    // Auto-select route matching user's filter search if present
+    if (filter?.fromLocation || filter?.toLocation) {
+      const sFrom = filter.fromLocation?.trim().toLowerCase();
+      const sTo = filter.toLocation?.trim().toLowerCase();
+      const matched = vehicle.routes?.find((r) => {
+        const matchF = !sFrom || r.from.toLowerCase().includes(sFrom);
+        const matchT = !sTo || r.to.toLowerCase().includes(sTo);
+        return matchF && matchT;
+      });
+      if (matched) return matched;
+    }
+    return (
+      vehicle.routes?.[0] || {
+        from: vehicle.fromLocation || "Kathmandu",
+        to: vehicle.destination || "Pokhara",
+      }
+    );
   };
 
   const vehicleKeywords = [
@@ -901,15 +1062,32 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
       if (searchFrom || searchTo) {
         // Vehicle's routes array with fallback to global AVAILABLE_VEHICLE_ROUTES
         const vehicleRoutes: VehicleRoute[] =
-          v.routes && v.routes.length > 0
+          Array.isArray(v.routes) && v.routes.length > 0
             ? v.routes
             : (v.fromLocation && v.destination
-                ? [{ from: v.fromLocation, to: v.destination }]
+                ? [{ from: String(v.fromLocation), to: String(v.destination) }]
                 : AVAILABLE_VEHICLE_ROUTES);
 
         const matchesRoute = vehicleRoutes.some((r) => {
-          const matchesFrom = !searchFrom || r.from.toLowerCase().includes(searchFrom);
-          const matchesTo = !searchTo || r.to.toLowerCase().includes(searchTo);
+          if (!r) return false;
+          const rFrom = String(
+            r.from ??
+            (r as any).from_location ??
+            (r as any).fromLocation ??
+            (r as any).origin ??
+            ""
+          ).trim().toLowerCase();
+
+          const rTo = String(
+            r.to ??
+            (r as any).to_location ??
+            (r as any).toLocation ??
+            (r as any).destination ??
+            ""
+          ).trim().toLowerCase();
+
+          const matchesFrom = !searchFrom || (rFrom.length > 0 && rFrom.includes(searchFrom));
+          const matchesTo = !searchTo || (rTo.length > 0 && rTo.includes(searchTo));
           return matchesFrom && matchesTo;
         });
 
@@ -1066,7 +1244,7 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
           const type = (v.type || v.vehicleType || "").toLowerCase();
           const desc = (v.description || "").toLowerCase();
           const fuel = (v.fuelType || "").toLowerCase();
-          const location = (v.fromLocation || "" + v.destination || "").toLowerCase();
+          const location = `${v.fromLocation || ""} ${v.destination || ""}`.toLowerCase();
 
           return (
             name.includes(kw) ||
@@ -1147,14 +1325,21 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
       return;
     }
 
-    const priceNum = getVehiclePrice(vehicle);
+    const activeRoute = getActiveRoute(vehicle);
+    const activePrice = getVehiclePrice(vehicle, activeRoute);
+
+    // Raw unadjusted base vehicle price (before route multipliers)
+    const rawVehicleBase =
+      Number(
+        String(vehicle.price ?? vehicle.price_per_day ?? vehicle.pricePerDay ?? 0).replace(/[^0-9.]/g, "")
+      ) || 0;
 
     setSelectedBookingItem({
       id: String(vehicle.id),
       title: vehicle.name,
-      location: `Route: ${vehicle.fromLocation} to ${vehicle.destination}`,
+      location: `Route: ${activeRoute.from} to ${activeRoute.to}`,
       duration: `Rental (${vehicle.noOfDays})`,
-      price: String(priceNum),
+      price: String(activePrice),
       image: vehicle.images[0] || vehicle.image,
       type: "vehicle-rental",
       category: "Vehicle Rental",
@@ -1162,13 +1347,15 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
         tripType: vehicle.tripType,
         totalSeats: Number(vehicle.totalSeats) || 10,
         availableSeats: Number(vehicle.availableSeats) || 7,
-        fromLocation: vehicle.fromLocation,
-        destination: vehicle.destination,
+        fromLocation: activeRoute.from,
+        destination: activeRoute.to,
+        selectedRoute: `${activeRoute.from} to ${activeRoute.to}`,
+        routes: vehicle.routes,
         vehicleType: vehicle.vehicleType,
         fuelType: vehicle.fuelType,
         availableFrom: vehicle.availableFrom,
         availableTo: vehicle.availableTo,
-        basePrice: priceNum,
+        basePrice: rawVehicleBase > 0 ? rawVehicleBase : activePrice,
       },
     });
 
@@ -1180,7 +1367,8 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
   // ==========================================================
 
   const handleWhatsAppInquiry = (vehicle: ReturnType<typeof enrichVehicleWithDefaults>) => {
-    const priceNum = getVehiclePrice(vehicle);
+    const activeRoute = getActiveRoute(vehicle);
+    const priceNum = getVehiclePrice(vehicle, activeRoute);
     const priceFormatted = displayPrice(
       priceNum,
       selectedCurrency,
@@ -1189,7 +1377,7 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
     );
 
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am inquiring about vehicle rental for "${vehicle.name}" (${vehicle.vehicleType} - ${vehicle.fuelType}). Route: ${vehicle.fromLocation} to ${vehicle.destination}. Rate: ${priceFormatted}/day. Please share availability.`
+      `Hello Trip Himalaya! I am inquiring about vehicle rental for "${vehicle.name}" (${vehicle.vehicleType} - ${vehicle.fuelType}). Selected Route: ${activeRoute.from} to ${activeRoute.to}. Rate: ${priceFormatted}/day. Please share availability.`
     );
 
     window.open(
@@ -1302,8 +1490,8 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
             priceRange={priceRange}
             setPriceRange={setPriceRange}
             minPrice={0}
-            maxPrice={500000}
-            step={5000}
+            maxPrice={50000}
+            step={500}
             selectedRating={selectedRating}
             setSelectedRating={setSelectedRating}
             selectedKeywords={selectedKeywords}
@@ -1339,11 +1527,12 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
           ) : (
             <div className="flex flex-col gap-6">
               {currentVehicles.map((vehicle) => {
-                const baseNPRPrice = getVehiclePrice(vehicle);
+                const activeRoute = getActiveRoute(vehicle);
+                const activePrice = getVehiclePrice(vehicle, activeRoute);
                 const formattedStartingPrice =
-                  baseNPRPrice > 0
+                  activePrice > 0
                     ? displayPrice(
-                      baseNPRPrice,
+                      activePrice,
                       selectedCurrency,
                       nprPerOneDollar,
                       nprPerOneINR
@@ -1355,8 +1544,8 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
                     key={vehicle.id}
                     className="flex flex-col lg:flex-row bg-white rounded-3xl shadow-sm hover:shadow-lg border border-gray-100 transition-all duration-300 overflow-hidden group"
                   >
-                    {/* LEFT: SLIDING IMAGE BOX (5s interval, rectangular layout) */}
-                    <div className="relative w-full lg:w-60 xl:w-72 h-52 sm:h-60 lg:h-auto min-h-[200px] lg:min-h-[220px] flex-shrink-0 overflow-hidden bg-gray-100">
+                    {/* LEFT: SLIDING IMAGE BOX */}
+                    <div className="relative w-full lg:w-60 xl:w-72 h-56 sm:h-64 lg:h-auto min-h-[220px] self-stretch flex-shrink-0 overflow-hidden bg-gray-100 flex flex-col">
                       <VehicleImageSlider
                         images={vehicle.images}
                         alt={vehicle.name}
@@ -1365,205 +1554,239 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
                       />
                     </div>
 
-                    {/* MIDDLE: VEHICLE DETAILS & SPECIFICATIONS */}
-                    <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col justify-between">
-                      <div>
-                        {/* Top row: Star Rating & Vehicle Type Badge */}
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <div className="flex items-center">
-                              {Array.from({ length: 5 }).map((_, i) => {
-                                const roundedRating = Math.round(Number(vehicle.rating ?? 5));
-                                return (
-                                  <Star
-                                    key={i}
-                                    size={13}
-                                    className={
-                                      i < roundedRating
-                                        ? "text-yellow-400 fill-yellow-400"
-                                        : "text-gray-200 fill-gray-200"
-                                    }
-                                  />
-                                );
-                              })}
+                    {/* RIGHT CONTAINER: Holds Top (Details + Pricing) & Bottom (Full-width Routes) */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      {/* TOP SECTION: Details on Left + Pricing on Right */}
+                      <div className="flex flex-col lg:flex-row flex-1 min-w-0">
+                        {/* VEHICLE DETAILS & SPECIFICATIONS */}
+                        <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col justify-between">
+                          <div>
+                            {/* Top row: Star Rating & Vehicle Type Badge */}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <div className="flex items-center">
+                                  {Array.from({ length: 5 }).map((_, i) => {
+                                    const roundedRating = Math.round(Number(vehicle.rating ?? 5));
+                                    return (
+                                      <Star
+                                        key={i}
+                                        size={13}
+                                        className={
+                                          i < roundedRating
+                                            ? "text-yellow-400 fill-yellow-400"
+                                            : "text-gray-200 fill-gray-200"
+                                        }
+                                      />
+                                    );
+                                  })}
+                                </div>
+                                <span className="text-[11px] font-black text-gray-700">
+                                  {Number(vehicle.rating || 5).toFixed(1)}
+                                </span>
+                              </div>
+
+                              {/* Vehicle type like HiAce, 4wd SUVs */}
+                              <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100 flex-shrink-0 whitespace-nowrap">
+                                {vehicle.vehicleType}
+                              </span>
                             </div>
-                            <span className="text-[11px] font-black text-gray-700">
-                              {Number(vehicle.rating || 5).toFixed(1)}
+
+                            {/* Vehicle Name */}
+                            <div className="mb-1">
+                              <h2 className="text-lg sm:text-xl font-extrabold text-[#200B3B] leading-snug truncate" title={vehicle.name}>
+                                {vehicle.name}
+                              </h2>
+                            </div>
+
+                            {/* Vehicle Details / Information */}
+                            <div
+                              className="mb-2.5 overflow-hidden"
+                              style={{ maxHeight: "3.5rem" }}
+                              dangerouslySetInnerHTML={{
+                                __html: formatDescription(vehicle.description) ||
+                                  `<p style="color:#6B7280;font-size:0.8em;line-height:1.6;">${vehicle.vehicleType} with professional chauffeur service for reliable Nepal mountain highway and valley travel.</p>`
+                              }}
+                            />
+
+                            {/* Structured Specifications Grid: 4 Balanced Items */}
+                            <div className="my-2">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+                                {/* 1. Days */}
+                                <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
+                                  <div className="flex items-center gap-1 text-[#8B2CFF] mb-0.5 min-w-0">
+                                    <Clock size={11} className="flex-shrink-0" />
+                                    <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate">
+                                      Days
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-gray-800 text-[11px] leading-tight truncate">
+                                    {vehicle.noOfDays}
+                                  </span>
+                                </div>
+
+                                {/* 2. Seats: Total & Available */}
+                                <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
+                                  <div className="flex items-center gap-1 text-[#8B2CFF] mb-0.5 min-w-0">
+                                    <Users size={11} className="flex-shrink-0" />
+                                    <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate">
+                                      Seats
+                                    </span>
+                                  </div>
+                                  {vehicle.tripType?.toLowerCase() === "private" ? (
+                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                      <span className="font-extrabold text-[#200B3B] text-[11px] leading-tight whitespace-nowrap truncate">
+                                        {vehicle.totalSeats} Total
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-1.5 min-w-0">
+                                      <span className="font-extrabold text-[#200B3B] text-[11px] leading-tight whitespace-nowrap">
+                                        {vehicle.availableSeats} Available
+                                      </span>
+                                      <span className="text-[8.5px] font-extrabold text-purple-700 bg-purple-100/90 px-1.5 rounded leading-tight whitespace-nowrap">
+                                        {vehicle.totalSeats} Total
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* 3. Bags per person */}
+                                <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
+                                  <div className="flex items-center gap-1 text-blue-600 mb-0.5 min-w-0">
+                                    <Luggage size={11} className="flex-shrink-0" />
+                                    <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate" title="Bags per person">
+                                      Bags per person
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-gray-800 text-[11px] leading-tight truncate" title={String(vehicle.bagsPerPerson)}>
+                                    {vehicle.bagsPerPerson}
+                                  </span>
+                                </div>
+
+                                {/* 4. Max Luggage */}
+                                <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
+                                  <div className="flex items-center gap-1 text-blue-600 mb-0.5 min-w-0">
+                                    <ShieldCheck size={11} className="flex-shrink-0" />
+                                    <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate" title="Max Luggage">
+                                      Max Luggage
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-gray-800 text-[11px] leading-tight truncate">
+                                    {vehicle.luggageWeightMax}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Available Dates Badge */}
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50/90 border border-pink-100 text-[#2D1347]">
+                                <Calendar size={12} className="text-[#E91E63] flex-shrink-0" />
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight flex-shrink-0">Available Dates:</span>
+                                <span className="font-extrabold text-[#E91E63] text-[11px] whitespace-nowrap truncate">
+                                  {normalizeDateStr(vehicle.availableFrom)} to {normalizeDateStr(vehicle.availableTo)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIGHT: PRICING & BOOK NOW BUTTON */}
+                        <div className="w-full lg:w-44 xl:w-48 p-3.5 sm:p-4 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-gray-100 flex-shrink-0 text-center bg-white">
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            STARTING FROM
+                          </span>
+
+                          <p className="text-2xl sm:text-3xl font-black text-[#E91E63] my-1">
+                            {formattedStartingPrice}
+                          </p>
+
+                          <span className="text-[9px] text-gray-400 font-medium mb-4">
+                            {vehicle.tripType?.toLowerCase() === "private" ? "per vehicle" : "per person"}
+                          </span>
+
+                          {/* BOOK NOW Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleBookVehicle(vehicle)}
+                            className="w-full py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-wider bg-[#200B3B] hover:bg-[#2D1347] text-white shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                          >
+                            BOOK NOW
+                          </button>
+
+                          {/* WhatsApp Button (below BOOK NOW) */}
+                          <button
+                            type="button"
+                            onClick={() => handleWhatsAppInquiry(vehicle)}
+                            className="w-full mt-2 py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-wider bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.558 4.133 1.532 5.869L.054 23.447a.5.5 0 0 0 .614.614l5.578-1.478A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.823 9.823 0 0 1-5.012-1.375l-.36-.214-3.31.877.877-3.31-.214-.36A9.823 9.823 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z" /></svg>
+                            WhatsApp
+                          </button>
+
+                          {/* Short Note: Admin seat assignment verification below Book Now & Instant Inquiry (hidden if trip is Private) */}
+                          {vehicle.tripType?.toLowerCase() !== "private" && (
+                            <div className="mt-2.5 p-1.5 px-2 rounded-xl bg-purple-50/80 border border-purple-100 text-[8px] text-[#3B145C] leading-snug text-left flex items-start gap-1">
+                              <Info size={9.5} className="text-[#8B2CFF] flex-shrink-0 mt-0.5" />
+                              <span>
+                                Admin will assign seats after verification or contact for seat number verification after successful booking.
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* BOTTOM SECTION: CHOOSE ROUTES — Full width across Details & Pricing, 3 in 1 row */}
+                      {vehicle.routes && vehicle.routes.length > 0 && (
+                        <div className="px-4 sm:px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider text-[#200B3B] flex items-center gap-1">
+                              <MapPin size={11} className="text-[#E91E63]" />
+                              Choose Routes:
+                            </span>
+                            <span className="text-[9.5px] text-gray-400 font-medium">
+                              (Click to update price &amp; book)
                             </span>
                           </div>
 
-                          {/* Vehicle type like HiAce, 4wd SUVs */}
-                          <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100 flex-shrink-0 whitespace-nowrap">
-                            {vehicle.vehicleType}
-                          </span>
-                        </div>
+                          <div className={`grid gap-2 ${
+                            vehicle.routes.length === 1
+                              ? "grid-cols-1"
+                              : vehicle.routes.length === 2
+                              ? "grid-cols-1 sm:grid-cols-2"
+                              : "grid-cols-1 sm:grid-cols-3"
+                          }`}>
+                            {vehicle.routes.map((rt, idx) => {
+                              const isSelected =
+                                activeRoute.from.toLowerCase() === rt.from.toLowerCase() &&
+                                activeRoute.to.toLowerCase() === rt.to.toLowerCase();
 
-                        {/* Vehicle Name */}
-                        <div className="mb-1">
-                          <h2 className="text-lg sm:text-xl font-extrabold text-[#200B3B] leading-snug truncate" title={vehicle.name}>
-                            {vehicle.name}
-                          </h2>
-                        </div>
-
-                        {/* Vehicle Details / Information */}
-                        <div
-                          className="mb-2.5 overflow-hidden"
-                          style={{ maxHeight: "3.5rem" }}
-                          dangerouslySetInnerHTML={{
-                            __html: formatDescription(vehicle.description) ||
-                              `<p style="color:#6B7280;font-size:0.8em;line-height:1.6;">${vehicle.vehicleType} with professional chauffeur service for reliable Nepal mountain highway and valley travel.</p>`
-                          }}
-                        />
-
-                        {/* Structured Specifications Grid: 6 Balanced Items in 3 Columns */}
-                        <div className="my-2">
-                          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                            {/* 1. From */}
-                            <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
-                              <div className="flex items-center gap-1 text-[#E91E63] mb-0.5 min-w-0">
-                                <MapPin size={11} className="flex-shrink-0" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate">
-                                  From
-                                </span>
-                              </div>
-                              <span className="font-extrabold text-[#200B3B] text-[11px] leading-tight capitalize truncate" title={vehicle.fromLocation}>
-                                {vehicle.fromLocation}
-                              </span>
-                            </div>
-
-                            {/* 2. Destination */}
-                            <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
-                              <div className="flex items-center gap-1 text-[#E91E63] mb-0.5 min-w-0">
-                                <MapPin size={11} className="flex-shrink-0" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate">
-                                  Destination
-                                </span>
-                              </div>
-                              <span className="font-extrabold text-[#200B3B] text-[11px] leading-tight capitalize truncate" title={vehicle.destination}>
-                                {vehicle.destination}
-                              </span>
-                            </div>
-
-                            {/* 3. Days (updated from No. of Days) */}
-                            <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
-                              <div className="flex items-center gap-1 text-[#8B2CFF] mb-0.5 min-w-0">
-                                <Clock size={11} className="flex-shrink-0" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate">
-                                  Days
-                                </span>
-                              </div>
-                              <span className="font-bold text-gray-800 text-[11px] leading-tight truncate">
-                                {vehicle.noOfDays}
-                              </span>
-                            </div>
-
-                            {/* 4. Seats: Total & Available */}
-                            <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
-                              <div className="flex items-center gap-1 text-[#8B2CFF] mb-0.5 min-w-0">
-                                <Users size={11} className="flex-shrink-0" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate">
-                                  Seats
-                                </span>
-                              </div>
-                              {vehicle.tripType?.toLowerCase() === "private" ? (
-                                <div className="flex flex-col gap-0.5 min-w-0">
-                                  <span className="font-extrabold text-[#200B3B] text-[11px] leading-tight whitespace-nowrap truncate">
-                                    {vehicle.totalSeats} Total
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectRoute(vehicle.id, rt);
+                                  }}
+                                  className={`w-full inline-flex items-center justify-center gap-1.5 text-[10.5px] sm:text-[11px] font-bold px-3 py-2 rounded-xl border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? "bg-[#200B3B] text-white border-[#200B3B] ring-2 ring-[#E91E63]/40 shadow-sm"
+                                      : "bg-white text-[#200B3B] border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-2xs"
+                                  }`}
+                                  title={`Select route: ${rt.from} → ${rt.to}`}
+                                >
+                                  <MapPin size={11} className={`flex-shrink-0 ${isSelected ? "text-[#FF4FA3]" : "text-[#E91E63]"}`} />
+                                  <span className="whitespace-nowrap truncate">
+                                    {rt.from} <span className={`font-black ${isSelected ? "text-[#FF4FA3]" : "text-[#E91E63]"}`}>➔</span> {rt.to}
                                   </span>
-                                </div>
-                              ) : (
-                                <div className="flex flex-col items-center gap-1.5 min-w-0">
-                                  <span className="font-extrabold text-[#200B3B] text-[11px] leading-tight whitespace-nowrap">
-                                    {vehicle.availableSeats} Available
-                                  </span>
-                                  <span className="text-[8.5px] font-extrabold text-purple-700 bg-purple-100/90 px-1.5 rounded leading-tight whitespace-nowrap">
-                                    {vehicle.totalSeats} Total
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 5. Bags per person */}
-                            <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
-                              <div className="flex items-center gap-1 text-blue-600 mb-0.5 min-w-0">
-                                <Luggage size={11} className="flex-shrink-0" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate" title="Bags per person">
-                                  Bags per person
-                                </span>
-                              </div>
-                              <span className="font-bold text-gray-800 text-[11px] leading-tight truncate" title={String(vehicle.bagsPerPerson)}>
-                                {vehicle.bagsPerPerson}
-                              </span>
-                            </div>
-
-                            {/* 6. Max Luggage */}
-                            <div className="p-2 rounded-xl bg-gray-50/90 border border-gray-100 flex flex-col justify-between min-w-0 overflow-hidden">
-                              <div className="flex items-center gap-1 text-blue-600 mb-0.5 min-w-0">
-                                <ShieldCheck size={11} className="flex-shrink-0" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-gray-400 truncate" title="Max Luggage">
-                                  Max Luggage
-                                </span>
-                              </div>
-                              <span className="font-bold text-gray-800 text-[11px] leading-tight truncate">
-                                {vehicle.luggageWeightMax}
-                              </span>
-                            </div>
+                                  {isSelected && (
+                                    <span className="flex-shrink-0 font-black text-[#FF4FA3] ml-0.5">✓</span>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
-                        </div>
-
-                        {/* Available Dates Individual Card (positioned below the specification grid) */}
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50/90 border border-pink-100 text-[#2D1347] max-w-full">
-                          <Calendar size={12} className="text-[#E91E63] flex-shrink-0" />
-                          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight flex-shrink-0">Available Dates:</span>
-                          <span className="font-extrabold text-[#E91E63] text-[11px] whitespace-nowrap truncate">
-                            {normalizeDateStr(vehicle.availableFrom)} to {normalizeDateStr(vehicle.availableTo)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* RIGHT: PRICING & BOOK NOW BUTTON (VIEW DETAILS REMOVED) */}
-                    <div className="w-full lg:w-44 xl:w-48 p-3.5 sm:p-4 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-gray-100 flex-shrink-0 text-center bg-white">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        STARTING FROM
-                      </span>
-
-                      <p className="text-2xl sm:text-3xl font-black text-[#E91E63] my-1">
-                        {formattedStartingPrice}
-                      </p>
-
-                      <span className="text-[9px] text-gray-400 font-medium mb-4">
-                        {vehicle.tripType?.toLowerCase() === "private" ? "per vehicle" : "per person"}
-                      </span>
-
-                      {/* BOOK NOW Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleBookVehicle(vehicle)}
-                        className="w-full py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-wider bg-[#200B3B] hover:bg-[#2D1347] text-white shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                      >
-                        BOOK NOW
-                      </button>
-
-                      {/* WhatsApp Button (below BOOK NOW) */}
-                      <a
-                        href="https://wa.me/9779851403761"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full mt-2 py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-wider bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.558 4.133 1.532 5.869L.054 23.447a.5.5 0 0 0 .614.614l5.578-1.478A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.823 9.823 0 0 1-5.012-1.375l-.36-.214-3.31.877.877-3.31-.214-.36A9.823 9.823 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z" /></svg>
-                        WhatsApp
-                      </a>
-
-
-                      {/* Short Note: Admin seat assignment verification below Book Now & Instant Inquiry (hidden if trip is Private) */}
-                      {vehicle.tripType?.toLowerCase() !== "private" && (
-                        <div className="mt-2.5 p-1.5 px-2 rounded-xl bg-purple-50/80 border border-purple-100 text-[8px] text-[#3B145C] leading-snug text-left flex items-start gap-1">
-                          <Info size={9.5} className="text-[#8B2CFF] flex-shrink-0 mt-0.5" />
-                          <span>
-                            Admin will assign seats after verification or contact for seat number verification after successful booking.
-                          </span>
                         </div>
                       )}
                     </div>

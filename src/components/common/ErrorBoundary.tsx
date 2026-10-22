@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, RefreshCw, Home, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -10,7 +10,6 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
-  showDetails: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -18,7 +17,6 @@ export class ErrorBoundary extends Component<Props, State> {
     hasError: false,
     error: null,
     errorInfo: null,
-    showDetails: false,
   };
 
   public static getDerivedStateFromError(error: Error): Partial<State> {
@@ -26,7 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught application error caught by ErrorBoundary:", error, errorInfo);
+    // Developers can inspect complete technical details in Developer Tools (Console)
+    console.error("Uncaught application error caught by ErrorBoundary:", error);
+    if (errorInfo?.componentStack) {
+      console.error("Component Stack Trace:", errorInfo.componentStack);
+    }
     this.setState({ errorInfo });
   }
 
@@ -35,7 +37,6 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
-      showDetails: false,
     });
   };
 
@@ -70,7 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={this.handleReload}
@@ -97,31 +98,6 @@ export class ErrorBoundary extends Component<Props, State> {
                 <span>Try Again</span>
               </button>
             </div>
-
-            {/* Error Details (Collapsible in dev/debug) */}
-            {this.state.error && (
-              <div className="mt-6 pt-6 border-t border-gray-100 text-left">
-                <button
-                  type="button"
-                  onClick={() => this.setState((prev) => ({ showDetails: !prev.showDetails }))}
-                  className="flex items-center justify-between w-full text-xs font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <span>Technical Error Details</span>
-                  {this.state.showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-
-                {this.state.showDetails && (
-                  <div className="mt-3 p-4 bg-slate-900 text-rose-300 rounded-2xl text-[11px] font-mono leading-relaxed overflow-x-auto max-h-48 border border-slate-800">
-                    <p className="font-bold text-white mb-1">{this.state.error.name}: {this.state.error.message}</p>
-                    {this.state.errorInfo?.componentStack && (
-                      <pre className="text-gray-400 whitespace-pre-wrap text-[10px]">
-                        {this.state.errorInfo.componentStack}
-                      </pre>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       );

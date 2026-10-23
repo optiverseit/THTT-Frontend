@@ -1,4 +1,4 @@
-﻿/**
+/**
  * packageheliservice.tsx
  * -----------------------------------------------------------------
  * Helicopter Services Package Component.
@@ -95,6 +95,44 @@ import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 // =============================================================================
 // Comprehensive Helicopter Tours Data
 // =============================================================================
+// Gradient palette indexed by first char code for consistent colour per guest name
+const AVATAR_PALETTES: [string, string][] = [
+  ["#E91E63", "#200B3B"],
+  ["#7C3AED", "#4C1D95"],
+  ["#0EA5E9", "#075985"],
+  ["#10B981", "#065F46"],
+  ["#F59E0B", "#92400E"],
+  ["#EF4444", "#7F1D1D"],
+  ["#EC4899", "#831843"],
+  ["#14B8A6", "#134E4A"],
+];
+
+const HeliGuestAvatar: React.FC<{ name: string; avatar?: string }> = ({ name, avatar }) => {
+  const [imgError, setImgError] = useState(false);
+  const initial = (name || "G").trim().charAt(0).toUpperCase();
+  const [from, to] = AVATAR_PALETTES[(initial.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
+
+  if (avatar && !imgError) {
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        onError={() => setImgError(true)}
+        className="w-11 h-11 rounded-full object-cover border-2 border-pink-100 shadow-xs flex-shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-pink-100 shadow-xs"
+      style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+    >
+      <span className="text-white font-black text-sm leading-none select-none">{initial}</span>
+    </div>
+  );
+};
+
 export interface PackageFaqApi {
   id?: number | string;
   package_id?: number | string;
@@ -149,6 +187,7 @@ export interface HeliPackageItem extends HeliTourData {
     rating: number;
     comment: string;
     date: string;
+    image?: string;
   }>;
   package_helis?: any[];
   package_vehicles?: any[];
@@ -256,7 +295,14 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
       : [],
     faqs: [],
     testimonies: Array.isArray(pkg.testimonies)
-      ? pkg.testimonies
+      ? pkg.testimonies.map((t: any) => ({
+          name: t.name || t.traveler_name || t.userName || "Guest",
+          country: t.country || t.location || "",
+          rating: Math.max(0, Math.min(5, Math.round(Number(t.rating) || 5))),
+          comment: t.comment || t.review || "",
+          date: t.date || (t.review_date ? new Date(t.review_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""),
+          image: t.image || t.profile_image || t.guest_image || t.userAvatar || t.avatar || t.photo || "",
+        }))
       : [],
     package_helis:
       pkg.package_helis ?? [],
@@ -722,6 +768,7 @@ export const PackageHeliService: React.FC<{
           rating: Math.max(0, Math.min(5, Math.round(Number(item.rating) || 0))),
           comment: item.review || item.comment || "",
           date: (item.review_date || item.date) ? new Date(item.review_date || item.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
+          image: item.profile_image || item.guest_image || item.userAvatar || item.avatar || item.image || item.photo || "",
         }));
         setHeliTestimonials(mapped);
       })
@@ -3373,37 +3420,73 @@ export const PackageHeliService: React.FC<{
                     subtitle="Common questions answered by our flight specialists"
                   />
                 )}
-                {/* Tab 4: TESTIMONIES — only shown if API data exists */}
-                {activeDetailTab === "TESTIMONIES" && heliTestimonials.length > 0 && (
+                {/* Tab 4: TESTIMONIES */}
+                {activeDetailTab === "TESTIMONIES" && (
                   <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-                    <h3 className="text-xl font-black text-[#200B3B]">
-                      Guest Experiences &amp; Reviews
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {heliTestimonials.map((test, idx) => (
-                        <div
-                          key={idx}
-                          className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-3"
-                        >
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: test.rating }).map((_, r) => (
-                              <Star
-                                key={r}
-                                size={14}
-                                className="text-yellow-400 fill-yellow-400"
-                              />
-                            ))}
-                          </div>
-                          <p className="text-xs text-gray-700 italic font-medium leading-relaxed">
-                            "{test.comment}"
-                          </p>
-                          <div className="pt-2 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500 font-bold">
-                            <span className="text-[#200B3B]">{test.name} ({test.country})</span>
-                            <span>{test.date}</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-black text-[#200B3B]">
+                        Guest Experiences &amp; Reviews
+                      </h3>
+                      <span className="text-xs font-bold text-gray-500">
+                        {heliTestimonials.length > 0 ? `${heliTestimonials.length} reviews` : ""}
+                      </span>
                     </div>
+
+                    {heliTestimonials.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {heliTestimonials.map((test, idx) => (
+                          <div
+                            key={idx}
+                            className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: test.rating || 5 }).map((_, r) => (
+                                  <Star
+                                    key={r}
+                                    size={14}
+                                    className="text-yellow-400 fill-yellow-400"
+                                  />
+                                ))}
+                              </div>
+                              {test.date && (
+                                <span className="text-[11px] font-semibold text-gray-400">
+                                  {test.date}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs sm:text-sm text-gray-700 italic font-medium leading-relaxed">
+                              "{test.comment}"
+                            </p>
+
+                            <div className="pt-3 border-t border-gray-200/70 flex items-center gap-3">
+                              <HeliGuestAvatar name={test.name} avatar={test.image} />
+                              <div className="min-w-0">
+                                <h4 className="font-extrabold text-xs sm:text-sm text-[#200B3B] truncate">
+                                  {test.name}
+                                </h4>
+                                {test.country && (
+                                  <p className="text-[11px] text-gray-400 font-medium truncate">
+                                    {test.country}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-12 h-12 rounded-full bg-pink-50 text-[#E91E63] mx-auto flex items-center justify-center mb-3">
+                          <Star size={20} />
+                        </div>
+                        <h4 className="text-base font-black text-[#200B3B] mb-1">No Reviews Yet</h4>
+                        <p className="text-xs text-gray-500">
+                          Be the first to share your helicopter flight experience!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

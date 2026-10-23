@@ -21,6 +21,7 @@ export interface PaymentMethodProps {
 export const PaymentMethod: React.FC<PaymentMethodProps> = ({
   bookingReference,
   packageTitle,
+  category,
   guestsCount,
   totalPriceFormatted,
   travelDate,
@@ -61,7 +62,7 @@ export const PaymentMethod: React.FC<PaymentMethodProps> = ({
               {packageTitle}
             </h4>
             <p className="text-xs text-slate-500 mt-0.5">
-              {guestsCount} {guestsCount > 1 ? "Travelers" : "Traveler"}
+              {guestsCount} {category === "Hotel Booking" ? (guestsCount > 1 ? "Rooms" : "Room") : (guestsCount > 1 ? "Travelers" : "Traveler")}
               {travelDate ? ` · ${travelDate}` : ""}
             </p>
             <p className="text-[11px] font-mono text-slate-400 mt-1">

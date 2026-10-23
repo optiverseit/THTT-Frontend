@@ -12,6 +12,79 @@ interface HotelPricingProps {
 
 const WHATSAPP_BUSINESS_NUMBER = "9779851403761";
 
+// ─── Bed icon helpers ─────────────────────────────────────────────────────────
+
+const parseBedInfo = (raw: string): { count: number; isHall: boolean } => {
+  if (!raw) return { count: 1, isHall: false };
+  const lower = raw.toLowerCase().trim();
+  if (lower.includes("hall") || lower.includes("studio") || lower.includes("living") || lower.includes("lounge")) {
+    return { count: 0, isHall: true };
+  }
+  const numMatch = lower.match(/(\d+)/);
+  if (numMatch) {
+    const n = Math.min(parseInt(numMatch[1], 10), 4);
+    return { count: Math.max(n, 1), isHall: false };
+  }
+  const wordMap: Record<string, number> = {
+    single: 1, one: 1,
+    double: 2, twin: 2, two: 2,
+    triple: 3, three: 3,
+    quad: 4, four: 4, family: 4,
+  };
+  for (const [word, count] of Object.entries(wordMap)) {
+    if (lower.includes(word)) return { count, isHall: false };
+  }
+  return { count: 1, isHall: false };
+};
+
+const SingleBedSVG: React.FC<{ color: string }> = ({ color }) => (
+  <svg width="17" height="13" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="1.5" y="9" width="17" height="4" rx="1" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="1.2" />
+    <rect x="1.5" y="4.5" width="3" height="5" rx="0.8" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="1.1" />
+    <rect x="5" y="5.5" width="13" height="3.5" rx="1" fill={color} fillOpacity="0.35" stroke={color} strokeWidth="0.9" />
+    <rect x="2.5" y="13" width="1.5" height="2" rx="0.5" fill={color} />
+    <rect x="16" y="13" width="1.5" height="2" rx="0.5" fill={color} />
+  </svg>
+);
+
+const HallSVG: React.FC<{ color: string }> = ({ color }) => (
+  <svg width="22" height="16" viewBox="0 0 26 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="3" y="8" width="20" height="7" rx="2" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="1.2" />
+    <rect x="3" y="6" width="3" height="9" rx="1.2" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="1.1" />
+    <rect x="20" y="6" width="3" height="9" rx="1.2" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="1.1" />
+    <rect x="6" y="5" width="14" height="4" rx="1.2" fill={color} fillOpacity="0.35" stroke={color} strokeWidth="0.9" />
+    <line x1="13" y1="9" x2="13" y2="15" stroke={color} strokeWidth="0.8" strokeDasharray="2 2" />
+    <rect x="4.5" y="14.5" width="1.5" height="2.5" rx="0.5" fill={color} />
+    <rect x="20" y="14.5" width="1.5" height="2.5" rx="0.5" fill={color} />
+  </svg>
+);
+
+const BedTypeCell: React.FC<{ rawValue: string; accentColor: string; isSelected: boolean }> = ({ rawValue, accentColor, isSelected }) => {
+  if (!rawValue) return <span className="text-[10px] text-gray-300">—</span>;
+  const { count, isHall } = parseBedInfo(rawValue);
+  return (
+    <div className="flex flex-col gap-0.5 items-center">
+      <span className="flex items-center gap-0.5" title={rawValue}>
+        {isHall
+          ? <HallSVG color={accentColor} />
+          : Array.from({ length: count }).map((_, i) => <SingleBedSVG key={i} color={accentColor} />)
+        }
+      </span>
+      <span className={`text-[8.5px] leading-tight text-center ${isSelected ? "text-[#E91E63]" : "text-gray-400"}`} title={rawValue}>
+        {rawValue}
+      </span>
+    </div>
+  );
+};
+
+const formatPricingUnit = (unit?: string): string => {
+  if (!unit) return "";
+  return unit
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
   const {
     selectedCurrency,
@@ -57,11 +130,13 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
     }
   }, [location.state]);
 
-  const pricingRows: { serviceName: string; targetAgeGroup: string; priceInNPR: number }[] =
+  const pricingRows: { serviceName: string; targetAgeGroup: string; pricingUnit: string; bedType: string; priceInNPR: number }[] =
     Array.isArray(pkg.pricingTable)
       ? pkg.pricingTable.map((dataRow: any) => ({
         serviceName: dataRow.service,
         targetAgeGroup: dataRow.ageGroup,
+        pricingUnit: dataRow.pricingUnit || "",
+        bedType: dataRow.bedType || "",
         priceInNPR: Number(dataRow.priceNepali),
       }))
       : [];
@@ -144,14 +219,16 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/2">Option / Tier</th>
-                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">Age Group</th>
+                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider w-1/3">Option / Tier</th>
+                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-center">Bed Type</th>
+                  <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider">Stays</th>
                   <th className="pb-2 text-[9px] font-black text-gray-400 uppercase tracking-wider text-right">Price</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pricingRows.map((row, idx) => {
                   const isSelected = selectedTierIndex === idx;
+                  const accentColor = isSelected ? "#E91E63" : "#200B3B";
                   return (
                     <tr key={idx} onClick={() => setSelectedTierIndex(idx)} className="cursor-pointer hover:bg-gray-50/60 transition-colors">
                       <td className="py-2.5 pr-2">
@@ -162,7 +239,14 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
                           <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>{row.serviceName}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 text-[10px] text-gray-500">{row.targetAgeGroup}</td>
+                      <td className="py-2.5 text-center">
+                        <BedTypeCell rawValue={row.bedType} accentColor={accentColor} isSelected={isSelected} />
+                      </td>
+                      <td className="py-2.5 pr-1">
+                        <span className={`text-[10px] font-semibold leading-tight ${isSelected ? "text-[#E91E63]" : "text-gray-500"}`}>
+                          {row.pricingUnit ? formatPricingUnit(row.pricingUnit) : row.targetAgeGroup}
+                        </span>
+                      </td>
                       <td className={`py-2.5 text-xs font-black text-right whitespace-nowrap ${isSelected ? "text-[#E91E63]" : "text-[#200B3B]"}`}>{getRowDisplayPrice(row)}</td>
                     </tr>
                   );
@@ -175,8 +259,8 @@ const HotelPricing: React.FC<HotelPricingProps> = ({ pkg }) => {
               <div className="flex items-center gap-1.5">
                 <Users size={13} className="text-[#E91E63]" />
                 <div>
-                  <span className="block text-[11px] font-bold text-[#200B3B]">Number of Guests</span>
-                  <span className="text-[9px] text-gray-400">Select traveler count</span>
+                  <span className="block text-[11px] font-bold text-[#200B3B]">Number of Rooms</span>
+                  <span className="text-[9px] text-gray-400">Select room count</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">

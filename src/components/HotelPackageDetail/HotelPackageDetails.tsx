@@ -166,6 +166,8 @@ const HotelPackageDetails: React.FC = () => {
         rating: Number(item.rating || 0),
         message: item.review,
         comment: item.review,
+        // Guest photo — try all possible API field names
+        userAvatar: item.guest_image || item.image_url || item.image || item.avatar || item.photo || "",
       }));
 
     const location = [hotel.address, hotel.city, hotel.country].filter(Boolean).join(", ");
@@ -311,6 +313,9 @@ const HotelPackageDetails: React.FC = () => {
           description="Connect with our travel specialists for the best hotel deals, room upgrades, and custom arrangements."
           btn1="Call Us Now"
           btn2="Request Custom Quote"
+          telPhone="+9779851403761"
+          whatsappPhone="9779851403761"
+          whatsappMessage="Hello Trip Himalaya (Hotel Booking Team)! I would like to inquire about hotel rooms and availability. Please share details."
         />
       </div>
     </div>

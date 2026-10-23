@@ -24,6 +24,17 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => (
   </div>
 );
 
+const AVATAR_PALETTES: [string, string][] = [
+  ["#E91E63", "#200B3B"],
+  ["#7C3AED", "#4C1D95"],
+  ["#0EA5E9", "#075985"],
+  ["#10B981", "#065F46"],
+  ["#F59E0B", "#92400E"],
+  ["#EF4444", "#7F1D1D"],
+  ["#EC4899", "#831843"],
+  ["#14B8A6", "#134E4A"],
+];
+
 const TestimonialCard: React.FC<{
   testimonial: {
     id: string | number;
@@ -33,49 +44,66 @@ const TestimonialCard: React.FC<{
     comment: string;
     location?: string;
   };
-}> = ({ testimonial }) => (
-  <div
-    className="bg-white rounded-2xl p-6 flex flex-col transition-shadow duration-300 hover:shadow-lg"
-    style={{ border: "1px solid #f0f0f0" }}
-  >
-    {/* Stars */}
-    <StarRating rating={testimonial.rating} />
+}> = ({ testimonial }) => {
+  const [imgError, setImgError] = useState(false);
+  const initial = (testimonial.userName || "G").trim().charAt(0).toUpperCase();
+  const [from, to] = AVATAR_PALETTES[(initial.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
 
-    {/* Comment */}
-    <p className="text-gray-600 text-sm leading-relaxed mt-4 mb-6 flex-1">
-      "{testimonial.comment}"
-    </p>
+  return (
+    <div
+      className="bg-white rounded-2xl p-6 flex flex-col transition-shadow duration-300 hover:shadow-lg"
+      style={{ border: "1px solid #f0f0f0" }}
+    >
+      {/* Stars */}
+      <StarRating rating={testimonial.rating} />
 
-    {/* Bottom row */}
-    <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <img
-          src={testimonial.userAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"}
-          alt={testimonial.userName}
-          className="w-10 h-10 rounded-full object-cover"
-          style={{ border: "2px solid #fce4ec" }}
-        />
-        <div>
-          <p className="text-sm font-semibold text-gray-800">
-            {testimonial.userName}
-          </p>
-          {testimonial.location && (
-            <p className="text-[11px] text-gray-400 uppercase tracking-wide">
-              {testimonial.location}
-            </p>
+      {/* Comment */}
+      <p className="text-gray-600 text-sm leading-relaxed mt-4 mb-6 flex-1">
+        "{testimonial.comment}"
+      </p>
+
+      {/* Bottom row */}
+      <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {testimonial.userAvatar && !imgError ? (
+            <img
+              src={testimonial.userAvatar}
+              alt={testimonial.userName}
+              onError={() => setImgError(true)}
+              className="w-10 h-10 rounded-full object-cover border-2 border-pink-100 shadow-xs flex-shrink-0"
+            />
+          ) : (
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-pink-100 shadow-xs"
+              style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+            >
+              <span className="text-white font-black text-sm leading-none select-none">
+                {initial}
+              </span>
+            </div>
           )}
+          <div>
+            <p className="text-sm font-semibold text-gray-800">
+              {testimonial.userName}
+            </p>
+            {testimonial.location && (
+              <p className="text-[11px] text-gray-400 uppercase tracking-wide">
+                {testimonial.location}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
 
-      <span
-        className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
-        style={{ background: "#fce4ec", color: "#E91E63" }}
-      >
-        ✓ Verified
-      </span>
+        <span
+          className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: "#fce4ec", color: "#E91E63" }}
+        >
+          ✓ Verified
+        </span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Testimonials: React.FC<testimonialsProps> = ({
   testimonials,

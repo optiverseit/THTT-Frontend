@@ -1682,11 +1682,13 @@ const ServiceDetail: React.FC = () => {
             ? "Request Custom Quote"
             : "WhatsApp Inquiry"
         }
-        telPhone="+9779851420882"
-        whatsappPhone="9779851420882"
+        telPhone={isHotelBooking ? "+9779851403761" : "+9779851420882"}
+        whatsappPhone={isHotelBooking ? "9779851403761" : "9779851420882"}
         whatsappMessage={
           service.id === "heli-services" || isHeliTourDetailPage
             ? "Hello Trip Himalaya (Heli Operations Desk)! I would like to inquire about helicopter services and flight packages."
+            : isHotelBooking
+            ? "Hello Trip Himalaya (Hotel Booking Team)! I would like to inquire about hotel rooms and availability. Please share details."
             : undefined
         }
       />

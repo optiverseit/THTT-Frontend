@@ -15,6 +15,9 @@ import {
 import PreFooter from "../components/reusable/PreFooter";
 import SharePopover from "../components/reusable/SharePopover";
 import Logo from "../assets/images/Logo.png";
+import logoBase64 from "../assets/images/THTTLogo_b64.txt?raw";
+
+const THTT_LOGO_PRINT_SRC = `data:image/png;base64,${logoBase64.trim()}`;
 import { getDocumentById } from "../api/BackendApi";
 
 interface DocumentationItem {
@@ -92,7 +95,9 @@ export default function DocumentationDetailPage() {
     const originalTitle = window.document.title;
     const docName = document?.title || "Document";
     window.document.title = `${docName} - Trip Himalaya Official Clearance`;
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 60);
     window.addEventListener(
       "afterprint",
       () => {
@@ -155,6 +160,22 @@ export default function DocumentationDetailPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50 font-sans">
+      {/* Eager hidden preloading of print assets */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          top: -9999,
+          left: -9999,
+          width: "1px",
+          height: "1px",
+          opacity: 0.01,
+          pointerEvents: "none",
+        }}
+      >
+        <img src={THTT_LOGO_PRINT_SRC} alt="" loading="eager" decoding="sync" />
+        <img src={Logo} alt="" loading="eager" />
+      </div>
 
       {/* ══════════════════════════════════════════════════════════
           PRINT-ONLY DOCUMENT DOSSIER (hidden on screen)
@@ -291,13 +312,28 @@ export default function DocumentationDetailPage() {
             <div style={{
               background: "#ffffff",
               borderRadius: "8px",
-              padding: "3px 5px",
+              padding: "4px 6px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}>
-              <img src={Logo} alt="Trip Himalaya" style={{ height: "68px", width: "auto", objectFit: "contain", display: "block" }} />
+              <img
+                src={THTT_LOGO_PRINT_SRC}
+                alt="Trip Himalaya"
+                loading="eager"
+                decoding="sync"
+                style={{
+                  height: "66px",
+                  width: "auto",
+                  maxHeight: "66px",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = Logo;
+                }}
+              />
             </div>
             <div>
               <div style={{ fontSize: "14.8px", fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.01em", margin: 0 }}>
@@ -448,13 +484,10 @@ export default function DocumentationDetailPage() {
           }}
         >
           <div>
-            <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong> &bull; Registered in Nepal (Lic: 2490)
+            <strong style={{ color: "#ffffff" }}>Trip Himalaya Tours &amp; Travel Pvt. Ltd.</strong>
           </div>
           <div style={{ color: "#fce7f3" }}>
             Documentation Team: +977-9851420882 &bull; triphimalayatt@gmail.com
-          </div>
-          <div style={{ fontWeight: 800, color: "#f472b6" }}>
-            Official Computer-Generated Document &bull; Page 1 of 1
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { ReactCountryFlag } from "react-country-flag";
 import { Clock, Shield, TrendingUp, Users, Share2, Printer, MessageCircle, Check, Link2 } from "lucide-react";
 import { shareToPlatform, triggerNativeShare, openSharePopup, copyToClipboard } from "../../../utils/shareUtils";
+import SharePopover from "../../reusable/SharePopover";
 interface CountryProps {
   id: number;
   country_code: string;
@@ -116,14 +117,16 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
     },
   ];
   return (
-    <div className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end w-full">
-      <img
-        src={highlights?.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600"}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/90 via-[#1a0836]/60 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40" />
+    <div className="print:hidden relative rounded-3xl shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end w-full z-20">
+      <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+        <img
+          src={highlights?.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600"}
+          alt=""
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/90 via-[#1a0836]/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40" />
+      </div>
       <div className="relative z-10 pt-10 px-4 pb-4 sm:pt-14 sm:px-6 sm:pb-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
@@ -176,40 +179,33 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
           </span>
         </div>
       </div>
-      <div ref={shareRef} className="print:hidden absolute top-4 right-4 sm:top-5 sm:right-5 z-20">
-        {isShareOpen && (
-          <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max z-30">
-            {shareButtons.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => {
-                  item.action();
-                  setIsShareOpen(false);
-                }}
-                title={`Share on ${item.name}`}
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
-                style={{ background: item.bg }}
-              >
-                {item.svg}
-              </button>
-            ))}
-            <button
-              onClick={handleCopyLink}
-              title={isCopied ? "Copied!" : "Copy Link"}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${isCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"}`}
-            >
-              {isCopied ? <Check size={13} color="white" /> : <Link2 size={13} color="white" />}
-            </button>
-            <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
-          </div>
-        )}
-        <button
-          onClick={() => setIsShareOpen((prev) => !prev)}
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${isShareOpen ? "bg-white text-[#2D1347]" : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"}`}
-          title="Share this page"
-        >
-          <Share2 size={15} />
-        </button>
+      <div ref={shareRef} className="print:hidden absolute top-4 right-4 sm:top-5 sm:right-5 z-30">
+        <div className="relative">
+          <button
+            onClick={() => setIsShareOpen((prev) => !prev)}
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
+              isShareOpen
+                ? "bg-white text-gray-900 shadow-xl"
+                : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
+            }`}
+            title="Share this page"
+            aria-label="Share this page"
+          >
+            <Share2 size={16} />
+          </button>
+
+          {isShareOpen && (
+            <SharePopover
+              onClose={() => setIsShareOpen(false)}
+              title={`${country.country_name} – Work Permit`}
+              subtitle={highlights?.subtitle || "Authorized Labor Counseling & Government Shram Approval Support"}
+              image={highlights?.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600"}
+              url={window.location.href}
+              onDownloadPdf={handlePrint}
+              align="right"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

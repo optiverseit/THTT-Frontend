@@ -8,6 +8,7 @@ import { InsuranceApplicationModal, InsuranceRequirementField } from "./Insuranc
 import { getInsurancePlanById, getInsuranceDynamicFieldsByPlan, getInsurancePricingTiersByPlan } from "../../api/BackendApi";
 import { shareToPlatform, copyToClipboard, getCurrentUrl, getCrawlerSafeUrl } from "../../utils/shareUtils";
 import Logo from "../../assets/images/Logo.png";
+import SharePopover from "../reusable/SharePopover";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
 import { formatDescription } from "../../utils/formatDescription";
@@ -814,12 +815,14 @@ export const InsurancePlanDetailView: React.FC = () => {
           </div>
         </div>
       </div>
-      <div
-        className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end"
-        style={{ backgroundImage: `url('${heroBg}')`, backgroundSize: "cover", backgroundPosition: "center" }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
+      <div className="print:hidden relative rounded-3xl shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end z-20">
+        <div
+          className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none"
+          style={{ backgroundImage: `url('${heroBg}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
+        </div>
         <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
@@ -871,37 +874,33 @@ export const InsurancePlanDetailView: React.FC = () => {
             </div>
           </div>
         </div>
-        <div ref={shareRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-20">
-          {isShareOpen && (
-            <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
-              {shareButtons.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => { item.action(); setIsShareOpen(false); }}
-                  title={`Share on ${item.name}`}
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
-                  style={{ background: item.bg }}
-                >
-                  {item.svg}
-                </button>
-              ))}
-              <button
-                onClick={handleCopyLink}
-                title={isCopied ? "Copied!" : "Copy Link"}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${isCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"}`}
-              >
-                {isCopied ? <Check size={13} color="white" /> : <Link2 size={13} color="white" />}
-              </button>
-              <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
-            </div>
-          )}
-          <button
-            onClick={() => setIsShareOpen((prev) => !prev)}
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${isShareOpen ? "bg-white text-[#2D1347]" : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"}`}
-            title="Share this page"
-          >
-            <Share2 size={15} />
-          </button>
+        <div ref={shareRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-30">
+          <div className="relative">
+            <button
+              onClick={() => setIsShareOpen((prev) => !prev)}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
+                isShareOpen
+                  ? "bg-white text-gray-900 shadow-xl"
+                  : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
+              }`}
+              title="Share this insurance plan"
+              aria-label="Share this insurance plan"
+            >
+              <Share2 size={16} />
+            </button>
+
+            {isShareOpen && (
+              <SharePopover
+                onClose={() => setIsShareOpen(false)}
+                title={plan.name}
+                subtitle={plan.subtitle || "Comprehensive Himalayan Travel Insurance & Emergency Evacuation"}
+                image={heroBg || undefined}
+                url={window.location.href}
+                onDownloadPdf={handlePrint}
+                align="right"
+              />
+            )}
+          </div>
         </div>
       </div>
       <div className="print:hidden grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

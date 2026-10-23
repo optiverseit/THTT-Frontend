@@ -1,38 +1,31 @@
 import React, { useState, useEffect } from "react";
+import { X, Check, Link2 } from "lucide-react";
 import {
-  X,
-  Copy,
-  Check,
-  Share2,
-  Mail,
-  ExternalLink,
-  Sparkles,
-} from "lucide-react";
-import {
-  shareToPlatform,
-  canNativeShare,
-  triggerNativeShare,
-  copyToClipboard,
   getCrawlerSafeUrl,
   getCurrentUrl,
+  copyToClipboard,
+  openSharePopup,
   ShareData,
 } from "../../utils/shareUtils";
+import Logo from "../../assets/images/Logo.png";
 
-interface ShareModalProps {
+export interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: ShareData;
+  onDownloadPdf?: () => void;
 }
 
-export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, data }) => {
-  const [copied, setCopied] = useState(false);
-  const [hasNative, setHasNative] = useState(false);
+export const ShareModal: React.FC<ShareModalProps> = ({
+  isOpen,
+  onClose,
+  data,
+  onDownloadPdf,
+}) => {
+  const [copied, setCopied] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    setHasNative(canNativeShare());
-  }, []);
-
-  // Handle ESC key to close
+  // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,253 +37,291 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, data })
 
   if (!isOpen) return null;
 
-  const currentDisplayUrl = data.url || getCurrentUrl();
-  const safeCrawlerUrl = getCrawlerSafeUrl(data.url);
-  const isLocalDev =
-    typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1");
+  const activeUrl = data.url || getCurrentUrl();
+  const crawlerUrl = getCrawlerSafeUrl(activeUrl);
+  const title = data.title || "Trip Himalaya Tours & Travel";
+  const subtitle = data.text || "Explore the best travel packages with Trip Himalaya.";
+  const image = data.image || Logo;
 
-  const handleCopy = async () => {
-    const success = await copyToClipboard(currentDisplayUrl);
-    if (success) {
+  const displayUrl =
+    activeUrl.startsWith("http://localhost") || activeUrl.startsWith("http://127.0.0.1")
+      ? getCrawlerSafeUrl(activeUrl)
+      : activeUrl;
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleCopyLink = async () => {
+    const ok = await copyToClipboard(activeUrl);
+    if (ok) {
       setCopied(true);
+      showToast("Link copied to clipboard!");
       setTimeout(() => setCopied(false), 2400);
     }
   };
 
-  const handleNativeShare = async () => {
-    const success = await triggerNativeShare(data);
-    if (success) {
-      onClose();
+  const handleMessenger = () => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = `fb-messenger://share/?link=${encodeURIComponent(crawlerUrl)}`;
+      setTimeout(() => {
+        openSharePopup(
+          `https://www.facebook.com/dialog/send?link=${encodeURIComponent(crawlerUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(crawlerUrl)}`,
+          "Share to Messenger"
+        );
+      }, 700);
+    } else {
+      openSharePopup(
+        `https://www.facebook.com/dialog/send?link=${encodeURIComponent(crawlerUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(crawlerUrl)}`,
+        "Share to Messenger"
+      );
     }
   };
 
-  const socialPlatforms = [
-    {
-      id: "whatsapp" as const,
-      name: "WhatsApp",
-      subtitle: "Chat & status",
-      bg: "bg-[#25D366] hover:bg-[#20bd5a]",
-      textColor: "text-white",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.062-2.12-.533-1.656-.69-2.73-2.39-2.812-2.502-.083-.112-.667-.887-.667-1.691 0-.804.42-1.2.57-1.356.144-.15.314-.187.42-.187.106 0 .21.002.3.007.097.006.226-.037.354.27.132.315.45 1.097.49 1.176.04.08.067.172.013.28-.053.107-.08.173-.16.266-.08.093-.167.208-.239.28-.08.08-.163.167-.07.327.093.16.413.682.887 1.103.61.542 1.125.71 1.285.79.16.08.253.067.347-.04.093-.107.4-.467.507-.627.107-.16.213-.133.36-.08.147.053.933.44 1.093.52.16.08.267.12.307.187.04.066.04.385-.104.79z" />
-        </svg>
-      ),
-    },
-    {
-      id: "facebook" as const,
-      name: "Facebook",
-      subtitle: "Feed & stories",
-      bg: "bg-[#1877F2] hover:bg-[#166fe5]",
-      textColor: "text-white",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-        </svg>
-      ),
-    },
-    {
-      id: "tiktok" as const,
-      name: "TikTok",
-      subtitle: "Share video",
-      bg: "bg-black hover:bg-neutral-800",
-      textColor: "text-white",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-        </svg>
-      ),
-    },
-    {
-      id: "twitter" as const,
-      name: "X (Twitter)",
-      subtitle: "Tweet post",
-      bg: "bg-black hover:bg-neutral-800",
-      textColor: "text-white",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-      ),
-    },
-    {
-      id: "linkedin" as const,
-      name: "LinkedIn",
-      subtitle: "Professional network",
-      bg: "bg-[#0A66C2] hover:bg-[#095196]",
-      textColor: "text-white",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76c.94 0 1.7-.76 1.7-1.7s-.76-1.7-1.7-1.7-1.7.76-1.7 1.7.76 1.7 1.7 1.7m1.4 9.74v-8.37H5.06v8.37h2.8z" />
-        </svg>
-      ),
-    },
-    {
-      id: "telegram" as const,
-      name: "Telegram",
-      subtitle: "Direct message",
-      bg: "bg-[#229ED9] hover:bg-[#1f8ec4]",
-      textColor: "text-white",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-        </svg>
-      ),
-    },
-    {
-      id: "email" as const,
-      name: "Email",
-      subtitle: "Send via inbox",
-      bg: "bg-slate-700 hover:bg-slate-800",
-      textColor: "text-white",
-      icon: <Mail className="w-5 h-5" />,
-    },
-  ];
+  const handleFacebookPost = () => {
+    openSharePopup(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(crawlerUrl)}`,
+      "Share on Facebook"
+    );
+  };
+
+  const handleWhatsApp = () => {
+    const text = `${title}\n${activeUrl}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    openSharePopup(waUrl, "Share via WhatsApp");
+  };
+
+  const handleViber = async () => {
+    await copyToClipboard(activeUrl);
+    const msg = `${title} ${activeUrl}`;
+    window.location.href = `viber://forward?text=${encodeURIComponent(msg)}`;
+    showToast("Opening Viber (link copied to clipboard)");
+  };
+
+  const handleInstagram = async () => {
+    await copyToClipboard(activeUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2400);
+
+    if (typeof navigator !== "undefined" && navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title,
+          text: `Explore ${title} with Trip Himalaya Tours & Travel!`,
+          url: activeUrl,
+        });
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+
+    showToast("Link copied! Open Instagram to share in Story or DM.");
+    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownloadPdf = () => {
+    onClose();
+    if (onDownloadPdf) {
+      onDownloadPdf();
+    } else {
+      window.print();
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-[370px] bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 sm:p-6 animate-in zoom-in-95 duration-200 select-none text-left"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-pink-50 text-[#E91E63] flex items-center justify-center">
-              <Share2 size={18} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 leading-tight">
-                Share with Friends & Family
-              </h3>
-              <p className="text-xs text-gray-500">
-                Trip Himalaya Tours & Travel
-              </p>
+        {/* Drag handle pill */}
+        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto -mt-1 mb-2.5" />
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
+
+        {/* Header */}
+        <div>
+          <h3 className="text-xl font-bold text-gray-900 leading-tight">Share</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Share this with your friends and family</p>
+        </div>
+
+        {/* Preview Card */}
+        <div className="mt-3.5 p-2.5 rounded-2xl bg-[#F4F5F7] border border-gray-200/60 flex items-center gap-3">
+          <img
+            src={image}
+            alt={title}
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover flex-shrink-0 bg-white shadow-xs border border-white"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = Logo;
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            <h4 className="text-xs sm:text-[13px] font-bold text-gray-900 truncate leading-snug">
+              {title}
+            </h4>
+            <p className="text-[11px] text-gray-500 truncate mt-0.5 leading-snug">
+              {subtitle}
+            </p>
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mt-1">
+              <Link2 size={12} className="rotate-[-45deg] text-gray-400 flex-shrink-0" />
+              <span className="truncate select-all text-gray-500 font-mono text-[10.5px]">
+                {displayUrl}
+              </span>
             </div>
           </div>
+        </div>
+
+        {/* Social Platforms 4-Column Grid */}
+        <div className="grid grid-cols-4 gap-y-3.5 gap-x-2 mt-4 text-center">
+          {/* 1. Copy Link */}
           <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Close share dialog"
+            type="button"
+            onClick={handleCopyLink}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
           >
-            <X size={16} />
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm ${
+                copied ? "bg-emerald-600" : "bg-[#5B6777]"
+              }`}
+            >
+              {copied ? (
+                <Check size={20} className="text-white" />
+              ) : (
+                <Link2 size={20} className="text-white rotate-[-45deg]" />
+              )}
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight">
+              {copied ? "Copied!" : "Copy Link"}
+            </span>
+          </button>
+
+          {/* 2. Messenger */}
+          <button
+            type="button"
+            onClick={handleMessenger}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm bg-[#0084FF]">
+              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                <path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.91 1.453 5.518 3.734 7.207V22l3.359-1.844c.915.253 1.888.39 2.907.39 5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.002 12.43-2.56-2.73-4.996 2.73 5.494-5.832 2.624 2.73 4.933-2.73-5.495 5.832z" />
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight">
+              Messenger
+            </span>
+          </button>
+
+          {/* 3. Facebook Post */}
+          <button
+            type="button"
+            onClick={handleFacebookPost}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm bg-[#1877F2]">
+              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight whitespace-pre-line">
+              Facebook{"\n"}Post
+            </span>
+          </button>
+
+          {/* 4. WhatsApp */}
+          <button
+            type="button"
+            onClick={handleWhatsApp}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm bg-[#25D366]">
+              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                <path d="M11.999 2C6.479 2 2 6.479 2 12c0 1.789.47 3.467 1.29 4.93L2 22l5.232-1.267A9.966 9.966 0 0012 22c5.521 0 10-4.479 10-10S17.521 2 12 2z" />
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight">
+              WhatsApp
+            </span>
+          </button>
+
+          {/* 5. Viber */}
+          <button
+            type="button"
+            onClick={handleViber}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm bg-[#7360F2]">
+              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                <path d="M19.467 15.65c-.477-.384-2.28-1.294-2.73-1.428-.45-.133-.777.067-.999.366-.222.3-.855 1.077-1.044 1.298-.189.222-.378.244-.711.089-.333-.156-1.408-.52-2.682-1.656-.991-.884-1.66-1.977-1.854-2.31-.194-.333-.021-.513.146-.679.15-.15.333-.389.5-.583.167-.194.222-.333.333-.555.111-.222.056-.416-.028-.583-.083-.167-.75-1.808-1.028-2.476-.271-.65-.547-.56-.75-.572-.194-.01-.417-.013-.639-.013-.222 0-.583.083-.889.417-.306.333-1.167 1.141-1.167 2.781 0 1.641 1.194 3.226 1.361 3.449.167.222 2.35 3.589 5.7 5.034.797.345 1.419.551 1.905.705.801.255 1.53.219 2.106.133.642-.096 1.977-.808 2.255-1.589.278-.781.278-1.45.194-1.589-.083-.139-.306-.222-.64-.389zM15.5 3.5c3.86 0 7 3.14 7 7 0 .55-.45 1-1 1s-1-.45-1-1c0-2.76-2.24-5-5-5-.55 0-1-.45-1-1s.45-1 1-1zm-.5 3.5c2.21 0 4 1.79 4 4 0 .55-.45 1-1 1s-1-.45-1-1c0-1.1-.9-2-2-2-.55 0-1-.45-1-1s.45-1 1-1z" />
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight">
+              Viber
+            </span>
+          </button>
+
+          {/* 6. Instagram */}
+          <button
+            type="button"
+            onClick={handleInstagram}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm"
+              style={{
+                background: "linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)",
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight">
+              Instagram
+            </span>
+          </button>
+
+          {/* 7. Download as PDF */}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="flex flex-col items-center group cursor-pointer focus:outline-none"
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-108 group-active:scale-95 shadow-sm bg-[#E53935]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5 text-white">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="white" />
+                <polyline points="14 2 14 8 20 8" stroke="white" />
+                <text x="7" y="16.5" fill="white" fontSize="4.5" fontWeight="900" fontFamily="sans-serif">
+                  PDF
+                </text>
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium text-gray-800 mt-1.5 text-center leading-tight whitespace-pre-line">
+              Download{"\n"}as PDF
+            </span>
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-          {/* Card Preview */}
-          {(data.image || data.title) && (
-            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-100/80">
-              {data.image && (
-                <img
-                  src={data.image}
-                  alt={data.title}
-                  className="w-16 h-16 rounded-xl object-cover shadow-sm flex-shrink-0"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#E91E63] uppercase tracking-wider mb-0.5">
-                  <Sparkles size={11} /> Featured Experience
-                </div>
-                <h4 className="text-sm font-bold text-gray-900 truncate">
-                  {data.title}
-                </h4>
-                {data.text && (
-                  <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">
-                    {data.text}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Social Platforms Grid */}
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-3">
-              Direct Social Share
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {socialPlatforms.map((platform) => (
-                <button
-                  key={platform.id}
-                  onClick={() => shareToPlatform(platform.id, data)}
-                  className="flex items-center gap-2.5 p-2.5 rounded-2xl border border-gray-100 hover:border-gray-200 bg-white hover:bg-gray-50/80 shadow-xs hover:shadow-md transition-all group text-left cursor-pointer"
-                >
-                  <div
-                    className={`w-9 h-9 rounded-xl ${platform.bg} ${platform.textColor} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 shadow-xs`}
-                  >
-                    {platform.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-gray-800 block truncate leading-tight">
-                      {platform.name}
-                    </span>
-                    <span className="text-[10px] text-gray-400 block truncate">
-                      {platform.subtitle}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+        {/* Floating toast notification */}
+        {toastMessage && (
+          <div className="mt-3 p-2 bg-gray-900 text-white text-[11px] font-medium text-center rounded-xl shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-150">
+            {toastMessage}
           </div>
-
-          {/* Native Web Share Button (if supported on mobile/mac/edge) */}
-          {hasNative && (
-            <button
-              onClick={handleNativeShare}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#200B3B] to-[#3B156B] hover:from-[#2D1347] hover:to-[#4a1c85] text-white font-semibold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer"
-            >
-              <ExternalLink size={15} />
-              Open Device Share Menu (Instagram, Messages, AirDrop)
-            </button>
-          )}
-
-          {/* Copy Link Field */}
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block mb-2">
-              Or Copy Shareable Link
-            </label>
-            <div className="flex items-center gap-2 p-1.5 pl-3 rounded-2xl bg-gray-50 border border-gray-200 focus-within:border-[#E91E63] focus-within:ring-2 focus-within:ring-[#E91E63]/10 transition-all">
-              <span className="text-xs text-gray-600 truncate flex-1 font-mono select-all">
-                {currentDisplayUrl}
-              </span>
-              <button
-                onClick={handleCopy}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer flex-shrink-0 ${
-                  copied
-                    ? "bg-emerald-600 text-white"
-                    : "bg-[#200B3B] hover:bg-[#34125f] text-white"
-                }`}
-              >
-                {copied ? (
-                  <>
-                    <Check size={13} />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={13} />
-                    <span>Copy Link</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Helpful dev hint for localhost / crawler notice */}
-          {isLocalDev && (
-            <div className="text-[11px] text-amber-800 bg-amber-50/80 border border-amber-200/70 rounded-xl p-2.5 leading-relaxed">
-              <span className="font-bold">Development mode notice:</span> Social
-              crawlers (Facebook & LinkedIn) cannot crawl <code className="bg-amber-100 px-1 rounded font-mono">localhost</code>.
-              When opening Facebook or LinkedIn, the live domain URL (
-              <span className="font-mono">{safeCrawlerUrl}</span>) is used so
-              Facebook previews display correctly without crawler rejection.
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

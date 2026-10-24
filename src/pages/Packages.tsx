@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 
 import {
   Search,
@@ -82,6 +82,58 @@ const Packages: React.FC = () => {
 
   const [selectedKeywords, setSelectedKeywords] =
     useState<string[]>([]);
+
+  // =========================================================
+  // SEARCH AUTOCOMPLETE STATES
+  // =========================================================
+
+  const [suggestions, setSuggestions] = useState<{ text: string; type: "title" | "location" }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const searchInputContainerRef = useRef<HTMLDivElement>(null);
+
+  // Pool of titles and locations from packages
+  const suggestionPool = useMemo(() => {
+    const list: { text: string; type: "title" | "location" }[] = [];
+    const seen = new Set<string>();
+
+    packages.forEach((pkg: any) => {
+      const t = pkg.title?.trim();
+      if (t && !seen.has(t.toLowerCase())) {
+        seen.add(t.toLowerCase());
+        list.push({ text: t, type: "title" });
+      }
+      const loc = pkg.location?.trim();
+      if (loc && !seen.has(loc.toLowerCase())) {
+        seen.add(loc.toLowerCase());
+        list.push({ text: loc, type: "location" });
+      }
+      if (loc && loc.includes(",")) {
+        loc
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 2)
+          .forEach((part: string) => {
+            if (!seen.has(part.toLowerCase())) {
+              seen.add(part.toLowerCase());
+              list.push({ text: part, type: "location" });
+            }
+          });
+      }
+    });
+
+    return list;
+  }, [packages]);
+
+  // Click outside listener to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchInputContainerRef.current && !searchInputContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
 
   // =========================================================
@@ -555,6 +607,7 @@ const Packages: React.FC = () => {
 
   // Called when user clicks "SEARCH" or presses Enter in the search input
   const handleSearch = () => {
+    setShowSuggestions(false);
     setAppliedSearchQuery(searchQuery);
     setAppliedCategory(selectedCategory);
     filterPackagesWith(searchQuery, selectedCategory);
@@ -606,17 +659,18 @@ const Packages: React.FC = () => {
                 HERO
             ================================================= */}
 
-      <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
+      <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
 
+        {/* Background (clipped) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <img
+            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000"
+            alt="Canyon & Mountain Adventures"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
 
-        <img
-          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000"
-          alt="Canyon & Mountain Adventures"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-
-
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+        </div>
 
 
         <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
@@ -654,24 +708,97 @@ const Packages: React.FC = () => {
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 
 
-              {/* LEFT: SELECT CATEGORY */}
+              {/* LEFT: SEARCH BY TITLE / LOCATION */}
+              <div
+                ref={searchInputContainerRef}
+                className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100"
+              >
+                <Search
+                  size={18}
+                  className="text-pink-500 flex-shrink-0"
+                />
 
+                <div className="flex flex-col w-full text-left">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    SEARCH BY TITLE OR LOCATION
+                  </label>
+
+                  <input
+                    type="text"
+                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+                    placeholder="Package name or location..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearchQuery(val);
+                      if (val.trim().length > 0) {
+                        const q = val.trim().toLowerCase();
+                        const matched = suggestionPool
+                          .filter((item) => item.text.toLowerCase().includes(q))
+                          .slice(0, 20);
+                        setSuggestions(matched);
+                        setShowSuggestions(matched.length > 0);
+                      } else {
+                        setSuggestions([]);
+                        setShowSuggestions(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setShowSuggestions(false);
+                        handleSearch();
+                      } else if (e.key === "Escape") {
+                        setShowSuggestions(false);
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Autocomplete Dropdown (shows 8 items then scrollable) */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[30] max-h-[320px] overflow-y-auto">
+                    {suggestions.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSearchQuery(item.text);
+                          setShowSuggestions(false);
+                          setAppliedSearchQuery(item.text);
+                          setAppliedCategory(selectedCategory);
+                          filterPackagesWith(item.text, selectedCategory);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center justify-between gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {item.type === "location" ? (
+                            <MapPin size={13} className="text-pink-500 flex-shrink-0" />
+                          ) : (
+                            <Search size={13} className="text-pink-500 flex-shrink-0" />
+                          )}
+                          <span className="font-medium truncate">{item.text}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider flex-shrink-0">
+                          {item.type}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT: SELECT CATEGORY */}
               <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-
-
                 <MapPin
                   size={18}
                   className="text-pink-500 flex-shrink-0"
                 />
 
-
                 <div className="flex flex-col w-full text-left">
-
-
                   <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                     SELECT CATEGORY
                   </label>
-
 
                   <select
                     className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
@@ -683,56 +810,15 @@ const Packages: React.FC = () => {
                     <option value="adventure">Adventure Activity</option>
                     <option value="trekking">Trekking Packages</option>
                   </select>
-
-
                 </div>
-
               </div>
-
-
-              {/* RIGHT: SEARCH BY TITLE / LOCATION */}
-
-              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-
-
-                <Search
-                  size={18}
-                  className="text-pink-500 flex-shrink-0"
-                />
-
-
-                <div className="flex flex-col w-full text-left">
-
-
-                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                    SEARCH BY TITLE / LOCATION
-                  </label>
-
-
-                  <input
-                    type="text"
-                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
-                    placeholder="Package name or location..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  />
-
-
-                </div>
-
-              </div>
-
 
               {/* SEARCH BUTTON */}
-
               <button
                 onClick={handleSearch}
                 className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
               >
-
                 SEARCH
-
               </button>
 
             </div>

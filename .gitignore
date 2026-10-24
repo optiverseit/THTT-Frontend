@@ -1,5 +1,5 @@
 node_modules
-dist
+# dist  ← uncomment this if you don't want to commit build files
 dist-ssr
 *.local
 

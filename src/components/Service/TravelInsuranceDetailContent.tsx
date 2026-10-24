@@ -7,8 +7,9 @@ import { getInsurancePlans, getInsurancePricingTiersByPlan } from "../../api/Bac
 import { formatDescription } from "../../utils/formatDescription";
 
 export interface InsuranceFilterCriteria {
+  name?: string;
   insuranceType: string;
-  days: string;
+  days?: string;
 }
 
 export interface TravelInsuranceDetailContentProps {
@@ -185,6 +186,14 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
   const filteredPlans = insurancePlans.filter((plan) => {
     if (filter) {
+      if (filter.name && filter.name.trim() !== "") {
+        const term = filter.name.trim().toLowerCase();
+        const planName = (plan.name || "").toLowerCase();
+        const words = term.split(/[\s,&]+/).filter(Boolean);
+        const matchesName = planName.includes(term) || (words.length > 0 && words.every((w) => planName.includes(w)));
+        if (!matchesName) return false;
+      }
+
       if (!matchesInsuranceType(plan, filter.insuranceType)) return false;
 
       if (isValidDaysSearch) {
@@ -207,7 +216,8 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
   const isExternalFilterActive = Boolean(
     filter &&
-      ((filter.insuranceType && filter.insuranceType !== "all") ||
+      ((filter.name && filter.name.trim() !== "") ||
+        (filter.insuranceType && filter.insuranceType !== "all") ||
         (filter.days && filter.days.trim() !== ""))
   );
 

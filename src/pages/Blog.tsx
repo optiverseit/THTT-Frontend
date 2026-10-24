@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Search,
@@ -338,6 +338,22 @@ const Blog: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Keyword autocomplete state
+  const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([]);
+  const [showKeywordDropdown, setShowKeywordDropdown] = useState(false);
+  const keywordDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (keywordDropdownRef.current && !keywordDropdownRef.current.contains(e.target as Node)) {
+        setShowKeywordDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     // TODO: Replace mockData with API call here.
     // Example:
@@ -359,15 +375,34 @@ const Blog: React.FC = () => {
     setMode(newMode);
     setSelectedCategory("All");
     setSearchQuery("");
+    setKeywordSuggestions([]);
+    setShowKeywordDropdown(false);
     setSearchParams(newMode === "video" ? { mode: "video" } : {});
   };
 
   const handleSearchClick = () => {
+    setShowKeywordDropdown(false);
     const el = document.getElementById("blog-content-section");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  // Build keyword pool from post/video titles
+  const keywordPool = useMemo(() => {
+    const seen = new Set<string>();
+    const pool: string[] = [];
+    const addTitle = (title: string) => {
+      const clean = title.trim();
+      if (clean.length >= 3 && !seen.has(clean.toLowerCase())) {
+        seen.add(clean.toLowerCase());
+        pool.push(clean);
+      }
+    };
+    blogPosts.forEach((p) => addTitle(p.title));
+    videoPosts.forEach((v) => addTitle(v.title));
+    return pool;
+  }, []);
 
   const readCategories = [
     "All",
@@ -463,15 +498,18 @@ const Blog: React.FC = () => {
     <div className="bg-[#F8F8FB] min-h-screen font-sans">
 
       {/* ── BLOG HERO (Activities-style, mode-aware) ── */}
-      <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-        <img
-          src={mode === "read"
-            ? "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=2000"
-            : "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"}
-          alt={mode === "read" ? "Himalayan Sunset & Base Camp" : "Himalayan Mountain Vista"}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+      <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+        {/* Background (clipped separately so the dropdown can escape) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <img
+            src={mode === "read"
+              ? "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=2000"
+              : "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"}
+            alt={mode === "read" ? "Himalayan Sunset & Base Camp" : "Himalayan Mountain Vista"}
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+        </div>
         <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
           <div className="flex flex-col items-center mt-2 sm:mt-1.5">
             <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -483,10 +521,69 @@ const Blog: React.FC = () => {
             <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
           </div>
 
-          {/* Search Bar: Category on Left, Search Keyword on Right */}
+          {/* Search Bar: Search Keyword on Left, Category on Right */}
           <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {/* Left: Category Dropdown */}
+              {/* Left: Search Keyword Input */}
+              <div ref={keywordDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+                <Search size={18} className="text-pink-500 flex-shrink-0" />
+                <div className="flex flex-col w-full text-left">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">SEARCH BY KEYWORD</label>
+                  <input
+                    type="text"
+                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+                    placeholder={mode === "read" ? "Search articles, guides, topics..." : "Search vlogs, destinations..."}
+                    value={searchQuery}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearchQuery(val);
+                      if (val.trim().length > 0) {
+                        const q = val.trim().toLowerCase();
+                        const matched = keywordPool
+                          .filter((s) => s.toLowerCase().includes(q))
+                          .slice(0, 20);
+                        setKeywordSuggestions(matched);
+                        setShowKeywordDropdown(matched.length > 0);
+                      } else {
+                        setKeywordSuggestions([]);
+                        setShowKeywordDropdown(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setShowKeywordDropdown(false);
+                        handleSearchClick();
+                      } else if (e.key === "Escape") {
+                        setShowKeywordDropdown(false);
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Autocomplete Dropdown */}
+                {showKeywordDropdown && keywordSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[20] max-h-[320px] overflow-y-auto">
+                    {keywordSuggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSearchQuery(suggestion);
+                          setShowKeywordDropdown(false);
+                          setTimeout(() => handleSearchClick(), 50);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                      >
+                        <Search size={13} className="text-pink-400 flex-shrink-0" />
+                        <span className="font-medium">{suggestion}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Category Dropdown */}
               <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
                 {mode === "read" ? <BookOpenText size={18} className="text-pink-500 flex-shrink-0" /> : <Clapperboard size={18} className="text-pink-500 flex-shrink-0" />}
                 <div className="flex flex-col w-full text-left">
@@ -505,22 +602,6 @@ const Blog: React.FC = () => {
                         </option>
                       ))}
                   </select>
-                </div>
-              </div>
-
-              {/* Right: Search Keyword Input */}
-              <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-                <Search size={18} className="text-pink-500 flex-shrink-0" />
-                <div className="flex flex-col w-full text-left">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">SEARCH KEYWORD</label>
-                  <input
-                    type="text"
-                    className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal"
-                    placeholder={mode === "read" ? "Search articles, guides, topics..." : "Search vlogs, destinations..."}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearchClick()}
-                  />
                 </div>
               </div>
 

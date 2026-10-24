@@ -165,19 +165,19 @@ const WorkPermit = () => {
   return (
     <>
       <div className="w-full flex flex-col items-center">
-        <div className="w-full relative shadow-md bg-white">
+        <div className="w-full relative z-30 shadow-md bg-white">
 
           {/* ── WORK PERMIT HERO ── */}
 
-          <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-
-            <img
-              src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
-              alt="Work Permit"
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+          <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <img
+                src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
+                alt="Work Permit"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            </div>
 
             <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
 
@@ -197,7 +197,7 @@ const WorkPermit = () => {
 
               {/* ── SEARCH BAR ── */}
 
-              <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+              <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">
 
                 <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 
@@ -249,7 +249,7 @@ const WorkPermit = () => {
                     </button>
 
                     {isCountryDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[240px] overflow-y-auto py-1 divide-y divide-gray-50">
+                      <div className="absolute left-0 right-0 top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-[999] max-h-64 overflow-y-auto py-1 divide-y divide-gray-50">
                         <button
                           type="button"
                           onClick={() => {

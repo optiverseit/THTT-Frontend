@@ -58,6 +58,8 @@ export interface ActivityFilterCriteria {
   activityType?: string;  // "all" | "Air" | "Water" | "Land" | "combo"
   location?: string;      // free-text location query (e.g., Pokhara, Kushma)
   activityName?: string;  // free-text adventure activity package query (e.g., Paragliding, Bungee)
+  query?: string;         // free-text search across both name and location
+  difficulty?: string;    // adventure level (Easy, Moderate, Hard, Extreme)
 }
 
 export interface ActivitiesDetailContentProps {
@@ -407,12 +409,50 @@ export const ActivitiesDetailContent: React.FC<ActivitiesDetailContentProps> = (
     return words.every((word) => searchIn.includes(word));
   };
 
+  // Matches query across both name and location relevant fields
+  const matchesNameOrLocationKeyword = (pkg: any, query?: string) => {
+    if (!query || query.trim() === "") return true;
+
+    const words = query
+      .trim()
+      .toLowerCase()
+      .split(/[\s,&]+/)
+      .filter(Boolean);
+
+    if (words.length === 0) return true;
+
+    const searchIn = [
+      pkg.title || "",
+      pkg.name || "",
+      pkg.location || "",
+      pkg.city || "",
+      pkg.destination || "",
+      pkg.address || "",
+      pkg.adventure_category || "",
+      pkg.adventureCategory || "",
+      pkg.intensity || "",
+      pkg.activity_type || "",
+      pkg.description || "",
+      ...(Array.isArray(pkg.highlights)
+        ? pkg.highlights.map((h: any) =>
+            typeof h === "string" ? h : h?.highlight || ""
+          )
+        : []),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return words.every((word) => searchIn.includes(word));
+  };
+
+  const hasQueryFilter = Boolean(filter?.query && filter.query.trim() !== "");
   const hasLocationFilter = Boolean(filter?.location && filter.location.trim() !== "");
   const hasActivityNameFilter = Boolean(filter?.activityName && filter.activityName.trim() !== "");
   const hasActivityTypeFilter = Boolean(filter?.activityType && filter.activityType !== "all");
+  const hasDifficultyFilter = Boolean(filter?.difficulty && filter.difficulty !== "all" && filter.difficulty.trim() !== "");
 
   const isExternalFilterActive = Boolean(
-    filter && (hasLocationFilter || hasActivityNameFilter || hasActivityTypeFilter)
+    filter && (hasQueryFilter || hasLocationFilter || hasActivityNameFilter || hasActivityTypeFilter || hasDifficultyFilter)
   );
 
   const handleClearAllFilters = () => {
@@ -534,20 +574,25 @@ export const ActivitiesDetailContent: React.FC<ActivitiesDetailContentProps> = (
       // -----------------------------------------------------
       // 5. EXTERNAL SEARCH (from floating searchbar)
       // Supports searching:
-      // - Individually by location
-      // - Individually by adventure activity
-      // - Simultaneously by both location AND adventure activity
+      // - By Name and Location (query)
+      // - By Adventure Level (difficulty)
+      // - Backwards-compatible by separate location / activityName
       // -----------------------------------------------------
 
-      const matchesExternalLocation = matchesLocationKeyword(pkg, filter?.location);
-      const matchesExternalActivityName = matchesActivityNameKeyword(pkg, filter?.activityName);
+      const matchesExternalSearch = hasQueryFilter
+        ? matchesNameOrLocationKeyword(pkg, filter?.query)
+        : (matchesLocationKeyword(pkg, filter?.location) && matchesActivityNameKeyword(pkg, filter?.activityName));
+
+      const matchesDifficulty = hasDifficultyFilter
+        ? (pkg.difficulty?.trim().toLowerCase() === filter?.difficulty?.trim().toLowerCase())
+        : true;
 
       return (
         matchesPrice &&
         matchesRating &&
         matchesKeywords &&
-        matchesExternalLocation &&
-        matchesExternalActivityName
+        matchesExternalSearch &&
+        matchesDifficulty
       );
     });
 

@@ -41,11 +41,12 @@ import ActivitiesDetailContent, { ActivityFilterCriteria } from "../components/S
 import TrekkingDetailContent, { TrekFilterCriteria } from "../components/Service/TrekkingDetailContent";
 import HotelBookingDetailContent, { HotelFilterCriteria } from "../components/Service/HotelBookingDetailContent";
 import TravelInsuranceDetailContent, { InsuranceFilterCriteria } from "../components/Service/TravelInsuranceDetailContent";
+import { INSURANCE_PLANS } from "../components/Service/insuranceData";
 import VehicleRentalDetailContent, {
   VehicleFilterCriteria,
   AVAILABLE_VEHICLE_ROUTES,
 } from "../components/Service/VehicleRentalDetailContent";
-import { getAllVehicles } from "../api/BackendApi";
+import { getAllVehicles, getPackagesByCategory, getHotels, getVisaCategories, getInsurancePlans } from "../api/BackendApi";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
 import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
 
@@ -140,13 +141,134 @@ const ServiceDetail: React.FC = () => {
   const [visaSearchEntry, setVisaSearchEntry] = useState("all");
   const [appliedVisaFilter, setAppliedVisaFilter] = useState<VisaFilterCriteria | null>(null);
 
+  // Visa autocomplete state
+  const [visaSuggestions, setVisaSuggestions] = useState<string[]>([]);
+  const [showVisaDropdown, setShowVisaDropdown] = useState(false);
+  const [allVisaSuggestionPool, setAllVisaSuggestionPool] = useState<string[]>([]);
+  const visaDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close visa dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (visaDropdownRef.current && !visaDropdownRef.current.contains(e.target as Node)) {
+        setShowVisaDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleVisaSearch = () => {
+    setShowVisaDropdown(false);
+    setAppliedVisaFilter({
+      country: visaSearchCountry,
+      visaType: visaSearchType,
+      entryType: visaSearchEntry,
+    });
+    scrollToSection("section-services", "SERVICES");
+  };
+
   // Heli Search Bar State
-  const [heliLocationInput, setHeliLocationInput] = useState("");
+  const [heliLocationInput, setHeliLocationInput] = useState("all");
   const [heliNameInput, setHeliNameInput] = useState("");
   const [appliedHeliFilter, setAppliedHeliFilter] = useState<{ location: string; name: string } | null>(null);
 
+  // Heli name autocomplete state
+  const [heliNameSuggestions, setHeliNameSuggestions] = useState<string[]>([]);
+  const [showHeliNameDropdown, setShowHeliNameDropdown] = useState(false);
+  const [allHeliNamePool, setAllHeliNamePool] = useState<string[]>([]);
+  const heliNameDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Heli region custom dropdown state
+  const [showHeliRegionDropdown, setShowHeliRegionDropdown] = useState(false);
+  const heliRegionDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Dynamically built from API — only real heli package locations
+  const [heliRegions, setHeliRegions] = useState<{ value: string; label: string }[]>([
+    { value: "all", label: "All Regions" },
+  ]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (heliNameDropdownRef.current && !heliNameDropdownRef.current.contains(e.target as Node)) {
+        setShowHeliNameDropdown(false);
+      }
+      if (heliRegionDropdownRef.current && !heliRegionDropdownRef.current.contains(e.target as Node)) {
+        setShowHeliRegionDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch heli package name suggestions AND locations for autocomplete / region dropdown
+  useEffect(() => {
+    if (!isHeliServices) return;
+    const fetchHeliSuggestions = async () => {
+      try {
+        const response = await getPackagesByCategory("Heli Services");
+        const pkgs =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          // ── Name pool (for autocomplete) ──────────────────────────
+          const nameMap = new Map<string, string>();
+          // ── Location pool (for region dropdown) ───────────────────
+          const locMap = new Map<string, string>(); // key=lowercase → display label
+
+          pkgs.forEach((pkg: any) => {
+            // Names
+            const rawName = pkg.title || pkg.name;
+            if (rawName && typeof rawName === "string") {
+              const clean = rawName.trim();
+              if (clean.length >= 2) {
+                const key = clean.toLowerCase();
+                if (!nameMap.has(key)) nameMap.set(key, clean);
+              }
+            }
+
+            // Locations — try every field that might hold a region
+            const rawLoc =
+              pkg.location || pkg.destination || pkg.place || pkg.region || pkg.area;
+            if (rawLoc && typeof rawLoc === "string") {
+              // A single field may contain multiple locations split by comma or slash
+              rawLoc.split(/[,/]/).forEach((part: string) => {
+                const clean = part.trim();
+                if (clean.length >= 2) {
+                  const key = clean.toLowerCase();
+                  if (!locMap.has(key)) {
+                    // Title-case the display label
+                    const label = clean
+                      .split(/\s+/)
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                      .join(" ");
+                    locMap.set(key, label);
+                  }
+                }
+              });
+            }
+          });
+
+          setAllHeliNamePool(Array.from(nameMap.values()));
+
+          // Build region list: "All Regions" first, then sorted unique locations
+          const dynamicRegions = Array.from(locMap.values())
+            .sort((a, b) => a.localeCompare(b))
+            .map((label) => ({ value: label, label }));
+          setHeliRegions([{ value: "all", label: "All Regions" }, ...dynamicRegions]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch heli suggestions:", err);
+      }
+    };
+    fetchHeliSuggestions();
+  }, [isHeliServices]);
+
   const handleHeliSearch = () => {
-    const loc = heliLocationInput.trim();
+    setShowHeliNameDropdown(false);
+    setShowHeliRegionDropdown(false);
+    const loc = heliLocationInput === "all" ? "" : heliLocationInput.trim();
     const name = heliNameInput.trim();
     if (!loc && !name) {
       setAppliedHeliFilter(null);
@@ -156,21 +278,30 @@ const ServiceDetail: React.FC = () => {
     setTimeout(() => scrollToSection("section-services", "SERVICES"), 80);
   };
 
-  const handleVisaSearch = () => {
-    setAppliedVisaFilter({
-      country: visaSearchCountry,
-      visaType: visaSearchType,
-      entryType: visaSearchEntry,
-    });
-    scrollToSection("section-services", "SERVICES");
-  };
-
   // Tours Search Bar State
   const [tourDestinationType, setTourDestinationType] = useState("all");
   const [tourLocationSearch, setTourLocationSearch] = useState("");
   const [appliedTourFilter, setAppliedTourFilter] = useState<TourFilterCriteria | null>(null);
 
+  // Tours autocomplete state
+  const [tourSuggestions, setTourSuggestions] = useState<string[]>([]);
+  const [showTourDropdown, setShowTourDropdown] = useState(false);
+  const [allTourSuggestionPool, setAllTourSuggestionPool] = useState<string[]>([]);
+  const tourDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close tour dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tourDropdownRef.current && !tourDropdownRef.current.contains(e.target as Node)) {
+        setShowTourDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleTourSearch = () => {
+    setShowTourDropdown(false);
     setAppliedTourFilter({
       destinationType: tourDestinationType,
       location: tourLocationSearch,
@@ -179,38 +310,97 @@ const ServiceDetail: React.FC = () => {
   };
 
   // Activity Search Bar State
-  const [activityLocationSearch, setActivityLocationSearch] = useState("");
-  const [activityNameSearch, setActivityNameSearch] = useState("");
+  const [activitySearchQuery, setActivitySearchQuery] = useState("");
+  const [activityAdventureLevel, setActivityAdventureLevel] = useState("all");
   const [appliedActivityFilter, setAppliedActivityFilter] = useState<ActivityFilterCriteria | null>(null);
 
+  // Activity autocomplete state
+  const [activitySuggestions, setActivitySuggestions] = useState<string[]>([]);
+  const [showActivityDropdown, setShowActivityDropdown] = useState(false);
+  const [allActivitySuggestionPool, setAllActivitySuggestionPool] = useState<string[]>([]);
+  const activityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close activity dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (activityDropdownRef.current && !activityDropdownRef.current.contains(e.target as Node)) {
+        setShowActivityDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleActivitySearch = () => {
+    setShowActivityDropdown(false);
     setAppliedActivityFilter({
-      location: activityLocationSearch,
-      activityName: activityNameSearch,
+      query: activitySearchQuery,
+      location: activitySearchQuery,
+      activityName: activitySearchQuery,
+      difficulty: activityAdventureLevel,
     });
     scrollToSection("section-services", "SERVICES");
   };
 
   // Trekking Search Bar State
   const [trekLocationSearch, setTrekLocationSearch] = useState("");
+  const [trekAdventureLevel, setTrekAdventureLevel] = useState("all");
   const [trekDurationSearch, setTrekDurationSearch] = useState("");
   const [appliedTrekFilter, setAppliedTrekFilter] = useState<TrekFilterCriteria | null>(null);
 
+  // Trekking autocomplete state
+  const [trekSuggestions, setTrekSuggestions] = useState<string[]>([]);
+  const [showTrekDropdown, setShowTrekDropdown] = useState(false);
+  const [allTrekSuggestionPool, setAllTrekSuggestionPool] = useState<string[]>([]);
+  const trekDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close trek dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (trekDropdownRef.current && !trekDropdownRef.current.contains(e.target as Node)) {
+        setShowTrekDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleTrekkingSearch = () => {
+    setShowTrekDropdown(false);
     setAppliedTrekFilter({
       location: trekLocationSearch,
-      duration: trekDurationSearch,
+      difficulty: trekAdventureLevel,
     });
     scrollToSection("section-services", "SERVICES");
   };
 
   // Insurance Search Bar State
+  const [insuranceSearchName, setInsuranceSearchName] = useState("");
   const [insuranceSearchType, setInsuranceSearchType] = useState("all");
   const [insuranceSearchDays, setInsuranceSearchDays] = useState("");
   const [appliedInsuranceFilter, setAppliedInsuranceFilter] = useState<InsuranceFilterCriteria | null>(null);
 
+  // Insurance autocomplete state
+  const [insuranceSuggestions, setInsuranceSuggestions] = useState<string[]>([]);
+  const [showInsuranceDropdown, setShowInsuranceDropdown] = useState(false);
+  const [allInsuranceSuggestionPool, setAllInsuranceSuggestionPool] = useState<string[]>([]);
+  const insuranceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close insurance dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (insuranceDropdownRef.current && !insuranceDropdownRef.current.contains(e.target as Node)) {
+        setShowInsuranceDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleInsuranceSearch = () => {
+    setShowInsuranceDropdown(false);
     setAppliedInsuranceFilter({
+      name: insuranceSearchName,
       insuranceType: insuranceSearchType,
       days: insuranceSearchDays,
     });
@@ -219,6 +409,7 @@ const ServiceDetail: React.FC = () => {
 
   // Hotel Booking Search Bar State
   const [hotelSearchRegion, setHotelSearchRegion] = useState("all");
+  const [hotelSearchNameOrLocation, setHotelSearchNameOrLocation] = useState("");
   const [hotelSearchLocation, setHotelSearchLocation] = useState("");
   const [hotelSearchName, setHotelSearchName] = useState("");
   const [hotelSearchCheckIn, setHotelSearchCheckIn] = useState("");
@@ -228,15 +419,34 @@ const ServiceDetail: React.FC = () => {
   const [showHotelCheckOut, setShowHotelCheckOut] = useState(false);
   const [appliedHotelFilter, setAppliedHotelFilter] = useState<HotelFilterCriteria | null>(null);
 
+  // Hotel autocomplete state
+  const [hotelSuggestions, setHotelSuggestions] = useState<string[]>([]);
+  const [showHotelDropdown, setShowHotelDropdown] = useState(false);
+  const [allHotelSuggestionPool, setAllHotelSuggestionPool] = useState<string[]>([]);
+  const hotelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close hotel dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (hotelDropdownRef.current && !hotelDropdownRef.current.contains(e.target as Node)) {
+        setShowHotelDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const isLocationVisible = showHotelLocation || Boolean(hotelSearchLocation) || showHotelCheckIn || Boolean(hotelSearchCheckIn) || showHotelCheckOut || Boolean(hotelSearchCheckOut);
   const isCheckInVisible = showHotelCheckIn || Boolean(hotelSearchCheckIn) || showHotelCheckOut || Boolean(hotelSearchCheckOut);
   const isCheckOutVisible = showHotelCheckOut || Boolean(hotelSearchCheckOut);
 
   const handleHotelSearch = () => {
+    setShowHotelDropdown(false);
     setAppliedHotelFilter({
       region: hotelSearchRegion,
-      location: hotelSearchLocation,
-      hotelName: hotelSearchName,
+      nameOrLocation: hotelSearchNameOrLocation,
+      location: hotelSearchNameOrLocation || hotelSearchLocation,
+      hotelName: hotelSearchNameOrLocation || hotelSearchName,
       checkInDate: hotelSearchCheckIn,
       checkOutDate: hotelSearchCheckOut,
     });
@@ -350,7 +560,283 @@ const ServiceDetail: React.FC = () => {
     fetchDynamicVehicleData();
   }, [isVehicleRental]);
 
-  // Floating Autocomplete dropdown states for FROM and TO
+  // Fetch tour suggestions pool for autocomplete
+  useEffect(() => {
+    if (!isTours) return;
+    const fetchTourSuggestions = async () => {
+      try {
+        const response = await getPackagesByCategory("Tours");
+        const pkgs =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          // Use Map keyed by lowercase for case-insensitive deduplication
+          // e.g. "pokhara" and "Pokhara" → stored as just "Pokhara" (first seen wins)
+          const seenMap = new Map<string, string>();
+
+          const addToPool = (raw: string) => {
+            const clean = raw.trim();
+            if (clean.length < 2) return;
+            const key = clean.toLowerCase();
+            if (!seenMap.has(key)) {
+              // Normalize to Title Case: "pokhara valley" → "Pokhara Valley"
+              const titleCase = clean
+                .split(/\s+/)
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(" ");
+              seenMap.set(key, titleCase);
+            }
+          };
+
+          pkgs.forEach((pkg: any) => {
+            if (pkg.title && typeof pkg.title === "string") addToPool(pkg.title);
+            if (pkg.name && typeof pkg.name === "string") addToPool(pkg.name);
+            const loc = pkg.location || pkg.destination || pkg.place || pkg.city;
+            if (loc && typeof loc === "string") {
+              loc.split(/[,/]/).forEach((l: string) => addToPool(l));
+            }
+          });
+
+          setAllTourSuggestionPool(Array.from(seenMap.values()));
+        }
+      } catch (err) {
+        console.error("Failed to fetch tour suggestions:", err);
+      }
+    };
+    fetchTourSuggestions();
+  }, [isTours]);
+
+  // Fetch trek suggestions pool for autocomplete
+  useEffect(() => {
+    if (!isTrekking) return;
+    const fetchTrekSuggestions = async () => {
+      try {
+        const response = await getPackagesByCategory("Trekking");
+        const pkgs =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          // Use Map keyed by lowercase for case-insensitive deduplication
+          const seenMap = new Map<string, string>();
+
+          const addToPool = (raw: string) => {
+            const clean = raw.trim();
+            if (clean.length < 2) return;
+            const key = clean.toLowerCase();
+            if (!seenMap.has(key)) {
+              // Normalize to Title Case
+              const titleCase = clean
+                .split(/\s+/)
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(" ");
+              seenMap.set(key, titleCase);
+            }
+          };
+
+          pkgs.forEach((pkg: any) => {
+            if (pkg.title && typeof pkg.title === "string") addToPool(pkg.title);
+            if (pkg.name && typeof pkg.name === "string") addToPool(pkg.name);
+            const loc = pkg.location || pkg.destination || pkg.place || pkg.city;
+            if (loc && typeof loc === "string") {
+              loc.split(/[,/]/).forEach((l: string) => addToPool(l));
+            }
+          });
+
+          setAllTrekSuggestionPool(Array.from(seenMap.values()));
+        }
+      } catch (err) {
+        console.error("Failed to fetch trek suggestions:", err);
+      }
+    };
+    fetchTrekSuggestions();
+  }, [isTrekking]);
+
+  // Fetch activity suggestions pool for autocomplete
+  useEffect(() => {
+    if (!isActivities) return;
+    const fetchActivitySuggestions = async () => {
+      try {
+        const response = await getPackagesByCategory("Adventure Activities");
+        const pkgs =
+          response.data?.data?.data ??
+          response.data?.data ??
+          [];
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          // Use Map keyed by lowercase for case-insensitive deduplication
+          const seenMap = new Map<string, string>();
+
+          const addToPool = (raw: string) => {
+            const clean = raw.trim();
+            if (clean.length < 2) return;
+            const key = clean.toLowerCase();
+            if (!seenMap.has(key)) {
+              // Normalize to Title Case
+              const titleCase = clean
+                .split(/\s+/)
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(" ");
+              seenMap.set(key, titleCase);
+            }
+          };
+
+          pkgs.forEach((pkg: any) => {
+            if (pkg.title && typeof pkg.title === "string") addToPool(pkg.title);
+            if (pkg.name && typeof pkg.name === "string") addToPool(pkg.name);
+            const loc = pkg.location || pkg.destination || pkg.place || pkg.city;
+            if (loc && typeof loc === "string") {
+              loc.split(/[,/]/).forEach((l: string) => addToPool(l));
+            }
+          });
+
+          setAllActivitySuggestionPool(Array.from(seenMap.values()));
+        }
+      } catch (err) {
+        console.error("Failed to fetch activity suggestions:", err);
+      }
+    };
+    fetchActivitySuggestions();
+  }, [isActivities]);
+
+  // Fetch hotel suggestions pool for autocomplete
+  useEffect(() => {
+    if (!isHotelBooking) return;
+    const fetchHotelSuggestions = async () => {
+      try {
+        const response = await getHotels();
+        const responseData = response?.data?.data;
+        const apiHotels: any[] = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray(responseData?.data)
+          ? responseData.data
+          : [];
+        if (Array.isArray(apiHotels) && apiHotels.length > 0) {
+          const seenMap = new Map<string, string>();
+
+          const addToPool = (raw: string) => {
+            const clean = raw.trim();
+            if (clean.length < 2) return;
+            const key = clean.toLowerCase();
+            if (!seenMap.has(key)) {
+              const titleCase = clean
+                .split(/\s+/)
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(" ");
+              seenMap.set(key, titleCase);
+            }
+          };
+
+          apiHotels.forEach((hotel: any) => {
+            const name = hotel.hotel_name || hotel.name;
+            if (name && typeof name === "string") addToPool(name);
+            const city = hotel.city;
+            if (city && typeof city === "string") addToPool(city);
+            const loc = hotel.location || hotel.address || hotel.destination;
+            if (loc && typeof loc === "string") {
+              loc.split(/[,/]/).forEach((l: string) => addToPool(l));
+            }
+          });
+
+          setAllHotelSuggestionPool(Array.from(seenMap.values()));
+        }
+      } catch (err) {
+        console.error("Failed to fetch hotel suggestions:", err);
+      }
+    };
+    fetchHotelSuggestions();
+  }, [isHotelBooking]);
+
+  // Fetch visa suggestions pool for autocomplete
+  useEffect(() => {
+    if (!isVisaServices) return;
+    const fetchVisaSuggestions = async () => {
+      try {
+        const response = await getVisaCategories();
+        const categories: any[] = response.data?.data || [];
+        if (Array.isArray(categories) && categories.length > 0) {
+          const seenMap = new Map<string, string>();
+
+          const addToPool = (raw: string) => {
+            const clean = raw.trim();
+            if (clean.length < 2) return;
+            const key = clean.toLowerCase();
+            if (!seenMap.has(key)) {
+              const titleCase = clean
+                .split(/\s+/)
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(" ");
+              seenMap.set(key, titleCase);
+            }
+          };
+
+          categories.forEach((cat: any) => {
+            const countryName = cat.country?.country_name;
+            if (countryName && typeof countryName === "string") addToPool(countryName);
+            const name = cat.name;
+            if (name && typeof name === "string") addToPool(name);
+          });
+
+          setAllVisaSuggestionPool(Array.from(seenMap.values()));
+        }
+      } catch (err) {
+        console.error("Failed to fetch visa suggestions:", err);
+      }
+    };
+    fetchVisaSuggestions();
+  }, [isVisaServices]);
+
+  // Fetch insurance suggestions pool for autocomplete (strictly plan names only)
+  useEffect(() => {
+    if (!isTravelInsurance) return;
+    const fetchInsuranceSuggestions = async () => {
+      try {
+        const response = await getInsurancePlans();
+        const rawPlans = Array.isArray(response.data?.data)
+          ? response.data.data
+          : Array.isArray(response.data?.data?.data)
+          ? response.data.data.data
+          : Array.isArray(response.data)
+          ? response.data
+          : [];
+
+        const seenMap = new Map<string, string>();
+        const addToPool = (raw: string) => {
+          if (!raw || typeof raw !== "string") return;
+          const clean = raw.trim();
+          if (clean.length < 2) return;
+          const key = clean.toLowerCase();
+          if (!seenMap.has(key)) {
+            seenMap.set(key, clean);
+          }
+        };
+
+        if (rawPlans.length > 0) {
+          rawPlans.forEach((plan: any) => {
+            const planName = plan.name || plan.title;
+            if (planName) addToPool(planName);
+          });
+        } else if (Array.isArray(INSURANCE_PLANS)) {
+          // Fallback only if no plans returned from API
+          INSURANCE_PLANS.forEach((plan) => {
+            if (plan.name) addToPool(plan.name);
+          });
+        }
+
+        setAllInsuranceSuggestionPool(Array.from(seenMap.values()));
+      } catch (err) {
+        console.error("Failed to fetch insurance suggestions:", err);
+        // Fallback to static plan names on network error
+        if (Array.isArray(INSURANCE_PLANS)) {
+          const names = INSURANCE_PLANS.map((p) => p.name).filter(Boolean);
+          setAllInsuranceSuggestionPool(names);
+        }
+      }
+    };
+    fetchInsuranceSuggestions();
+  }, [isTravelInsurance]);
+
+
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const fromDropdownRef = useRef<HTMLDivElement>(null);
@@ -465,7 +951,74 @@ const ServiceDetail: React.FC = () => {
     if (isTours) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Left: All Destination / Domestic Tour / International Tour */}
+          {/* Left: Location or Name Search with Autocomplete */}
+          <div ref={tourDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <MapPin size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                SEARCH BY LOCATION OR NAME
+              </label>
+              <input
+                type="text"
+                value={tourLocationSearch}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTourLocationSearch(val);
+                  if (val.trim().length > 0) {
+                    const q = val.trim().toLowerCase();
+                    const matched = allTourSuggestionPool
+                      .filter((s) => s.toLowerCase().includes(q))
+                      .slice(0, 20);
+                    setTourSuggestions(matched);
+                    setShowTourDropdown(matched.length > 0);
+                  } else {
+                    setTourSuggestions([]);
+                    setShowTourDropdown(false);
+                  }
+                }}
+                onFocus={() => {
+                  if (tourLocationSearch.trim().length > 0 && tourSuggestions.length > 0) {
+                    setShowTourDropdown(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowTourDropdown(false);
+                    handleTourSearch();
+                  } else if (e.key === "Escape") {
+                    setShowTourDropdown(false);
+                  }
+                }}
+                placeholder="Kathmandu, Pokhara, Chitwan or tour name..."
+                className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+              />
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {showTourDropdown && tourSuggestions.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto"
+              >
+                {tourSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setTourLocationSearch(suggestion);
+                      setShowTourDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  >
+                    <MapPin size={13} className="text-pink-400 flex-shrink-0" />
+                    <span className="font-medium">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: All Destination / Domestic Tour / International Tour */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <Globe size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
@@ -484,24 +1037,6 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Location Search Input */}
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <MapPin size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                SEARCH BY LOCATION
-              </label>
-              <input
-                type="text"
-                value={tourLocationSearch}
-                onChange={(e) => setTourLocationSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleTourSearch()}
-                placeholder="Kathmandu, Pokhara, Chitwan..."
-                className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
-              />
-            </div>
-          </div>
-
           <button
             onClick={handleTourSearch}
             className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer"
@@ -512,42 +1047,95 @@ const ServiceDetail: React.FC = () => {
       );
     }
 
+
     if (isTrekking) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Left: Location Search */}
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+          {/* Left: Location or Name Search with Autocomplete */}
+          <div ref={trekDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <MapPin size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                SEARCH BY LOCATION
+                SEARCH BY LOCATION OR NAME
               </label>
               <input
                 type="text"
                 value={trekLocationSearch}
-                onChange={(e) => setTrekLocationSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleTrekkingSearch()}
-                placeholder="Everest, Annapurna, Pokhara..."
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTrekLocationSearch(val);
+                  if (val.trim().length > 0) {
+                    const q = val.trim().toLowerCase();
+                    const matched = allTrekSuggestionPool
+                      .filter((s) => s.toLowerCase().includes(q))
+                      .slice(0, 20);
+                    setTrekSuggestions(matched);
+                    setShowTrekDropdown(matched.length > 0);
+                  } else {
+                    setTrekSuggestions([]);
+                    setShowTrekDropdown(false);
+                  }
+                }}
+                onFocus={() => {
+                  if (trekLocationSearch.trim().length > 0 && trekSuggestions.length > 0) {
+                    setShowTrekDropdown(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowTrekDropdown(false);
+                    handleTrekkingSearch();
+                  } else if (e.key === "Escape") {
+                    setShowTrekDropdown(false);
+                  }
+                }}
+                placeholder="Everest, Annapurna, Manaslu or trek name..."
                 className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
               />
             </div>
+
+            {/* Autocomplete Dropdown */}
+            {showTrekDropdown && trekSuggestions.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto"
+              >
+                {trekSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setTrekLocationSearch(suggestion);
+                      setShowTrekDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  >
+                    <MapPin size={13} className="text-pink-400 flex-shrink-0" />
+                    <span className="font-medium">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Right: Duration Search */}
+          {/* Right: Trekking Level Dropdown */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Clock size={18} className="text-pink-500 flex-shrink-0" />
+            <Mountain size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                SEARCH BY DURATION
+                TREKKING LEVEL
               </label>
-              <input
-                type="text"
-                value={trekDurationSearch}
-                onChange={(e) => setTrekDurationSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleTrekkingSearch()}
-                placeholder="7 days, 14 nights, short trek..."
-                className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
-              />
+              <select
+                value={trekAdventureLevel}
+                onChange={(e) => setTrekAdventureLevel(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="all">All Trekking Levels</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Hard">Hard</option>
+                <option value="Extreme">Extreme</option>
+              </select>
             </div>
           </div>
 
@@ -564,39 +1152,91 @@ const ServiceDetail: React.FC = () => {
     if (isActivities) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Left: Location Search */}
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+          {/* Left: Search by Name and Location with Autocomplete */}
+          <div ref={activityDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <MapPin size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                SEARCH BY LOCATION
+                SEARCH BY NAME AND LOCATION
               </label>
               <input
                 type="text"
-                value={activityLocationSearch}
-                onChange={(e) => setActivityLocationSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleActivitySearch()}
-                placeholder="Pokhara, Kushma, Kathmandu..."
+                value={activitySearchQuery}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setActivitySearchQuery(val);
+                  if (val.trim().length > 0) {
+                    const q = val.trim().toLowerCase();
+                    const matched = allActivitySuggestionPool
+                      .filter((s) => s.toLowerCase().includes(q))
+                      .slice(0, 20);
+                    setActivitySuggestions(matched);
+                    setShowActivityDropdown(matched.length > 0);
+                  } else {
+                    setActivitySuggestions([]);
+                    setShowActivityDropdown(false);
+                  }
+                }}
+                onFocus={() => {
+                  if (activitySearchQuery.trim().length > 0 && activitySuggestions.length > 0) {
+                    setShowActivityDropdown(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowActivityDropdown(false);
+                    handleActivitySearch();
+                  } else if (e.key === "Escape") {
+                    setShowActivityDropdown(false);
+                  }
+                }}
+                placeholder="Pokhara, Paragliding, Bungee, Kushma..."
                 className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
               />
             </div>
+
+            {/* Autocomplete Dropdown */}
+            {showActivityDropdown && activitySuggestions.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto"
+              >
+                {activitySuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setActivitySearchQuery(suggestion);
+                      setShowActivityDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  >
+                    <MapPin size={13} className="text-pink-400 flex-shrink-0" />
+                    <span className="font-medium">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Right: Adventure Activity / Package Search */}
+          {/* Right: Adventure Level Dropdown */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Sparkles size={18} className="text-pink-500 flex-shrink-0" />
+            <Activity size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                SEARCH BY ADVENTURE ACTIVITY
+                ADVENTURE LEVEL
               </label>
-              <input
-                type="text"
-                value={activityNameSearch}
-                onChange={(e) => setActivityNameSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleActivitySearch()}
-                placeholder="Paragliding, Bungee, Air Package..."
-                className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
-              />
+              <select
+                value={activityAdventureLevel}
+                onChange={(e) => setActivityAdventureLevel(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="all">All Adventure Levels</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Hard">Hard</option>
+                <option value="Extreme">Extreme</option>
+              </select>
             </div>
           </div>
 
@@ -612,18 +1252,85 @@ const ServiceDetail: React.FC = () => {
 
     if (isHotelBooking) {
       return (
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:py-4 sm:px-3.5 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 transition-all duration-300">
-          {/* 1. At left side: Search by Region: Domestic and International (dropdown - always visible) */}
-          <div className="flex items-center gap-2 flex-1 min-w-0 px-2 sm:px-2.5 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Globe size={16} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full min-w-0">
-              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Left: Search by Hotel Name or Location with Autocomplete */}
+          <div ref={hotelDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Building2 size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                SEARCH BY HOTEL NAME OR LOCATION
+              </label>
+              <input
+                type="text"
+                value={hotelSearchNameOrLocation}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setHotelSearchNameOrLocation(val);
+                  if (val.trim().length > 0) {
+                    const q = val.trim().toLowerCase();
+                    const matched = allHotelSuggestionPool
+                      .filter((s) => s.toLowerCase().includes(q))
+                      .slice(0, 20);
+                    setHotelSuggestions(matched);
+                    setShowHotelDropdown(matched.length > 0);
+                  } else {
+                    setHotelSuggestions([]);
+                    setShowHotelDropdown(false);
+                  }
+                }}
+                onFocus={() => {
+                  if (hotelSearchNameOrLocation.trim().length > 0 && hotelSuggestions.length > 0) {
+                    setShowHotelDropdown(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowHotelDropdown(false);
+                    handleHotelSearch();
+                  } else if (e.key === "Escape") {
+                    setShowHotelDropdown(false);
+                  }
+                }}
+                placeholder="Hyatt, Marriott, Kathmandu, Pokhara..."
+                className="text-sm font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+              />
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {showHotelDropdown && hotelSuggestions.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto"
+              >
+                {hotelSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setHotelSearchNameOrLocation(suggestion);
+                      setShowHotelDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  >
+                    <Building2 size={13} className="text-pink-400 flex-shrink-0" />
+                    <span className="font-medium">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Search by Region */}
+          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Globe size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                 SEARCH BY REGION
               </label>
               <select
                 value={hotelSearchRegion}
                 onChange={(e) => setHotelSearchRegion(e.target.value)}
-                className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full truncate"
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
               >
                 <option value="all">All Regions</option>
                 <option value="domestic">Domestic</option>
@@ -632,114 +1339,9 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. Search by Hotel name (always visible by default; click reveals Location) */}
-          <div
-            onClick={() => setShowHotelLocation(true)}
-            className="flex items-center gap-2 flex-1 min-w-0 px-2 sm:px-2.5 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-text"
-          >
-            <Building2 size={16} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full min-w-0">
-              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
-                SEARCH BY HOTEL NAME
-              </label>
-              <input
-                type="text"
-                value={hotelSearchName}
-                onChange={(e) => {
-                  setHotelSearchName(e.target.value);
-                  setShowHotelLocation(true);
-                }}
-                onFocus={() => setShowHotelLocation(true)}
-                onClick={() => setShowHotelLocation(true)}
-                onKeyDown={(e) => e.key === "Enter" && handleHotelSearch()}
-                placeholder="Hotel name..."
-                className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full truncate"
-              />
-            </div>
-          </div>
-
-          {/* 3. Search by location (revealed when Hotel Name is clicked; click reveals Checkin) */}
-          {isLocationVisible && (
-            <div
-              onClick={() => setShowHotelCheckIn(true)}
-              className="flex items-center gap-2 flex-1 min-w-0 px-2 sm:px-2.5 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-text transition-all duration-200"
-            >
-              <MapPin size={16} className="text-pink-500 flex-shrink-0" />
-              <div className="flex flex-col w-full min-w-0">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
-                  SEARCH BY LOCATION
-                </label>
-                <input
-                  type="text"
-                  value={hotelSearchLocation}
-                  onChange={(e) => {
-                    setHotelSearchLocation(e.target.value);
-                    setShowHotelCheckIn(true);
-                  }}
-                  onFocus={() => setShowHotelCheckIn(true)}
-                  onClick={() => setShowHotelCheckIn(true)}
-                  onKeyDown={(e) => e.key === "Enter" && handleHotelSearch()}
-                  placeholder="City, area..."
-                  className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full truncate"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 4. Checkin date (revealed when Location is clicked; click reveals Checkout) */}
-          {isCheckInVisible && (
-            <div
-              onClick={() => setShowHotelCheckOut(true)}
-              className="flex items-center gap-1.5 flex-1 min-w-0 px-1.5 sm:px-2 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-pointer transition-all duration-200"
-            >
-              <Calendar size={16} className="text-pink-500 flex-shrink-0" />
-              <div className="flex flex-col w-full min-w-0">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
-                  CHECKIN DATE
-                </label>
-                <input
-                  type="date"
-                  min={todayDateStr}
-                  value={hotelSearchCheckIn}
-                  onFocus={() => setShowHotelCheckOut(true)}
-                  onClick={() => setShowHotelCheckOut(true)}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const finalVal = val && val < todayDateStr ? todayDateStr : val;
-                    setHotelSearchCheckIn(finalVal);
-                    setShowHotelCheckOut(true);
-                    if (hotelSearchCheckOut && finalVal && hotelSearchCheckOut < finalVal) {
-                      setHotelSearchCheckOut("");
-                    }
-                  }}
-                  className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:p-0"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 5. Checkout date (revealed when Checkin is clicked) */}
-          {isCheckOutVisible && (
-            <div className="flex items-center gap-1.5 flex-1 min-w-0 px-1.5 sm:px-2 py-1.5 sm:py-2.5 border-b sm:border-b-0 sm:border-r border-gray-100 cursor-pointer transition-all duration-200">
-              <Calendar size={16} className="text-pink-500 flex-shrink-0" />
-              <div className="flex flex-col w-full min-w-0">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate">
-                  CHECKOUT DATE
-                </label>
-                <input
-                  type="date"
-                  min={hotelSearchCheckIn && hotelSearchCheckIn >= todayDateStr ? hotelSearchCheckIn : todayDateStr}
-                  value={hotelSearchCheckOut}
-                  onChange={(e) => setHotelSearchCheckOut(e.target.value)}
-                  className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none py-1 cursor-pointer w-full min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:p-0"
-                />
-              </div>
-            </div>
-          )}
-
           <button
             onClick={handleHotelSearch}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-6 sm:px-7 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95 flex-shrink-0"
+            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95 flex-shrink-0"
           >
             SEARCH
           </button>
@@ -750,26 +1352,71 @@ const ServiceDetail: React.FC = () => {
     if (isVisaServices) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* 1. Left: Visa Type */}
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <FileText size={18} className="text-pink-500 flex-shrink-0" />
+          {/* 1. Left: Destination / Visa Name (Text Input with Autocomplete Dropdown) */}
+          <div ref={visaDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <Globe size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                VISA TYPE
+                DESTINATION / VISA NAME
               </label>
-              <select
-                value={visaSearchType}
-                onChange={(e) => setVisaSearchType(e.target.value)}
-                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
-              >
-                <option value="all">All Visa Types</option>
-                <option value="tourist">Tourist Visa</option>
-                <option value="student">Student Visa</option>
-                <option value="business">Business Visa</option>
-                <option value="transit">Transit Visa</option>
-                <option value="express">Express Fast-Track</option>
-              </select>
+              <input
+                type="text"
+                value={visaSearchCountry}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setVisaSearchCountry(val);
+                  if (val.trim().length > 0) {
+                    const q = val.trim().toLowerCase();
+                    const matched = allVisaSuggestionPool
+                      .filter((s) => s.toLowerCase().includes(q))
+                      .slice(0, 20);
+                    setVisaSuggestions(matched);
+                    setShowVisaDropdown(matched.length > 0);
+                  } else {
+                    setVisaSuggestions([]);
+                    setShowVisaDropdown(false);
+                  }
+                }}
+                onFocus={() => {
+                  if (visaSearchCountry.trim().length > 0 && visaSuggestions.length > 0) {
+                    setShowVisaDropdown(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowVisaDropdown(false);
+                    handleVisaSearch();
+                  } else if (e.key === "Escape") {
+                    setShowVisaDropdown(false);
+                  }
+                }}
+                placeholder="Search destination or visa name..."
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+              />
             </div>
+
+            {/* Autocomplete Dropdown */}
+            {showVisaDropdown && visaSuggestions.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto"
+              >
+                {visaSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setVisaSearchCountry(suggestion);
+                      setShowVisaDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  >
+                    <Globe size={13} className="text-pink-400 flex-shrink-0" />
+                    <span className="font-medium">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 2. Center: Entry Type */}
@@ -791,21 +1438,25 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Right: Country (Text Input) */}
+          {/* 3. Right: Visa Type */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Globe size={18} className="text-pink-500 flex-shrink-0" />
+            <FileText size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
               <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                DESTINATION COUNTRY
+                VISA TYPE
               </label>
-              <input
-                type="text"
-                value={visaSearchCountry}
-                onChange={(e) => setVisaSearchCountry(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleVisaSearch()}
-                placeholder="Search destination country..."
-                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
-              />
+              <select
+                value={visaSearchType}
+                onChange={(e) => setVisaSearchType(e.target.value)}
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer"
+              >
+                <option value="all">All Visa Types</option>
+                <option value="tourist">Tourist Visa</option>
+                <option value="student">Student Visa</option>
+                <option value="business">Business Visa</option>
+                <option value="transit">Transit Visa</option>
+                <option value="express">Express Fast-Track</option>
+              </select>
             </div>
           </div>
 
@@ -822,7 +1473,77 @@ const ServiceDetail: React.FC = () => {
     if (isTravelInsurance) {
       return (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* 1. Insurance Type Dropdown */}
+          {/* Left: Search by Name with Autocomplete */}
+          <div ref={insuranceDropdownRef} className="relative flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <ShieldCheck size={18} className="text-pink-500 flex-shrink-0" />
+            <div className="flex flex-col w-full">
+              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                SEARCH BY NAME
+              </label>
+              <input
+                type="text"
+                value={insuranceSearchName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInsuranceSearchName(val);
+                  if (val.trim().length > 0) {
+                    const q = val.trim().toLowerCase();
+                    const matched = allInsuranceSuggestionPool
+                      .filter((s) => s.toLowerCase().includes(q))
+                      .slice(0, 20);
+                    setInsuranceSuggestions(matched);
+                    setShowInsuranceDropdown(matched.length > 0);
+                  } else {
+                    setInsuranceSuggestions([]);
+                    setShowInsuranceDropdown(false);
+                  }
+                }}
+                onFocus={() => {
+                  const q = insuranceSearchName.trim().toLowerCase();
+                  const matched = q
+                    ? allInsuranceSuggestionPool.filter((s) => s.toLowerCase().includes(q)).slice(0, 20)
+                    : allInsuranceSuggestionPool.slice(0, 10);
+                  setInsuranceSuggestions(matched);
+                  if (matched.length > 0) setShowInsuranceDropdown(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowInsuranceDropdown(false);
+                    handleInsuranceSearch();
+                  } else if (e.key === "Escape") {
+                    setShowInsuranceDropdown(false);
+                  }
+                }}
+                placeholder="High Altitude Trekking, Outbound Travel..."
+                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
+              />
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {showInsuranceDropdown && insuranceSuggestions.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto"
+              >
+                {insuranceSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setInsuranceSearchName(suggestion);
+                      setShowInsuranceDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  >
+                    <ShieldCheck size={13} className="text-pink-400 flex-shrink-0" />
+                    <span className="font-medium">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Insurance Type Dropdown */}
           <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
             <Shield size={18} className="text-pink-500 flex-shrink-0" />
             <div className="flex flex-col w-full">
@@ -841,29 +1562,9 @@ const ServiceDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. Days Input */}
-          <div className="flex items-center gap-3 w-full px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-            <Clock size={18} className="text-pink-500 flex-shrink-0" />
-            <div className="flex flex-col w-full">
-              <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                DAYS
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={insuranceSearchDays}
-                onChange={(e) => setInsuranceSearchDays(e.target.value.replace(/\D/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && handleInsuranceSearch()}
-                placeholder="Enter number of days..."
-                className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
-              />
-            </div>
-          </div>
-
           <button
             onClick={handleInsuranceSearch}
-            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95"
+            className="rounded-xl sm:rounded-2xl bg-pink-600 hover:bg-pink-700 py-3.5 sm:py-4 px-8 text-white font-bold text-xs tracking-wider transition-colors shadow-md whitespace-nowrap cursor-pointer active:scale-95 flex-shrink-0"
           >
             SEARCH
           </button>
@@ -950,7 +1651,7 @@ const ServiceDetail: React.FC = () => {
 
                 {/* Autocomplete Dropdown for FROM */}
                 {showFromDropdown && matchingFromLocations.length > 0 && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[210px] bg-white rounded-xl shadow-2xl border border-pink-100 z-50 py-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
+                  <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[210px] bg-white rounded-xl shadow-2xl border border-pink-100 z-[999] py-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
                     <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
                       Matching Locations
                     </div>
@@ -1002,7 +1703,7 @@ const ServiceDetail: React.FC = () => {
 
                 {/* Autocomplete Dropdown for TO */}
                 {showToDropdown && matchingToLocations.length > 0 && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[210px] bg-white rounded-xl shadow-2xl border border-pink-100 z-50 py-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
+                  <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[210px] bg-white rounded-xl shadow-2xl border border-pink-100 z-[999] py-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
                     <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
                       Matching Destinations
                     </div>
@@ -1158,42 +1859,122 @@ const ServiceDetail: React.FC = () => {
     // Heli Services
     return (
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-3 sm:p-4 border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        {/* Location */}
-        <div className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-          <MapPin size={18} className="text-pink-500 flex-shrink-0" />
-          <div className="flex flex-col w-full">
-            <label htmlFor="heli-location-input" className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              LOCATION
-            </label>
-            <input
-              id="heli-location-input"
-              type="text"
-              value={heliLocationInput}
-              onChange={(e) => setHeliLocationInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleHeliSearch()}
-              placeholder="Everest, Annapurna..."
-              className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
-            />
-          </div>
-        </div>
-
-        {/* Name / Title */}
-        <div className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+        {/* Left: Search by Name/Title with Autocomplete */}
+        <div ref={heliNameDropdownRef} className="relative flex items-center gap-3 flex-1 min-w-0 px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
           <Wind size={18} className="text-pink-500 flex-shrink-0" />
           <div className="flex flex-col w-full">
             <label htmlFor="heli-name-input" className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              NAME / TITLE
+              SEARCH BY NAME / TITLE
             </label>
             <input
               id="heli-name-input"
               type="text"
               value={heliNameInput}
-              onChange={(e) => setHeliNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleHeliSearch()}
-              placeholder="Search package name..."
+              onChange={(e) => {
+                const val = e.target.value;
+                setHeliNameInput(val);
+                if (val.trim().length > 0) {
+                  const q = val.trim().toLowerCase();
+                  const matched = allHeliNamePool
+                    .filter((s) => s.toLowerCase().includes(q))
+                    .slice(0, 20);
+                  setHeliNameSuggestions(matched);
+                  setShowHeliNameDropdown(matched.length > 0);
+                } else {
+                  setHeliNameSuggestions([]);
+                  setShowHeliNameDropdown(false);
+                }
+              }}
+              onFocus={() => {
+                const q = heliNameInput.trim().toLowerCase();
+                const matched = q
+                  ? allHeliNamePool.filter((s) => s.toLowerCase().includes(q)).slice(0, 20)
+                  : allHeliNamePool.slice(0, 10);
+                setHeliNameSuggestions(matched);
+                if (matched.length > 0) setShowHeliNameDropdown(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setShowHeliNameDropdown(false);
+                  handleHeliSearch();
+                } else if (e.key === "Escape") {
+                  setShowHeliNameDropdown(false);
+                }
+              }}
+              placeholder="Everest Base Camp Heli Tour..."
               className="text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 placeholder:text-gray-400 placeholder:font-normal w-full"
             />
           </div>
+
+          {/* Autocomplete Dropdown */}
+          {showHeliNameDropdown && heliNameSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-64 overflow-y-auto">
+              {heliNameSuggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setHeliNameInput(suggestion);
+                    setShowHeliNameDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                >
+                  <Wind size={13} className="text-pink-400 flex-shrink-0" />
+                  <span className="font-medium">{suggestion}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Search by Region (Custom Dropdown – 8 visible, scrollable) */}
+        <div ref={heliRegionDropdownRef} className="relative flex items-center gap-3 flex-1 min-w-0 px-3 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+          <MapPin size={18} className="text-pink-500 flex-shrink-0" />
+          <div className="flex flex-col w-full">
+            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              SEARCH BY REGION
+            </label>
+            {/* Trigger button */}
+            <button
+              type="button"
+              onClick={() => setShowHeliRegionDropdown((prev) => !prev)}
+              className="flex items-center justify-between w-full text-sm font-semibold text-gray-800 bg-transparent focus:outline-none py-1 cursor-pointer text-left"
+            >
+              <span>
+                {heliRegions.find((r) => r.value === heliLocationInput)?.label ?? "All Regions"}
+              </span>
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${showHeliRegionDropdown ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+
+          {/* Custom dropdown panel – max 8 rows (8 × 40px = 320px), scrollable */}
+          {showHeliRegionDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-2xl z-[999] max-h-[320px] overflow-y-auto">
+              {heliRegions.map((region) => (
+                <button
+                  key={region.value}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setHeliLocationInput(region.value);
+                    setShowHeliRegionDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors border-b border-gray-50 last:border-0 cursor-pointer ${
+                    heliLocationInput === region.value
+                      ? "bg-pink-50 text-pink-600 font-bold"
+                      : "text-gray-700 hover:bg-pink-50 hover:text-pink-600 font-medium"
+                  }`}
+                >
+                  <MapPin size={13} className="text-pink-400 flex-shrink-0" />
+                  <span>{region.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button
@@ -1242,13 +2023,15 @@ const ServiceDetail: React.FC = () => {
       {/* ── 1. TOP BANNER SECTION (Omitted on dedicated Heli Tour Details Page) ── */}
       {!isHeliTourDetailPage && (
         <div className="w-full flex flex-col items-center">
-          <div className="w-full relative shadow-md bg-white border-b border-gray-200">
+          <div className="w-full relative z-30 shadow-md bg-white border-b border-gray-200">
           {/* ── 1. TOP BANNER SECTION (With 1. Title at top, 2. SearchBar in middle, 3. Quote below) ── */}
           {isTours ? (
             /* ── TOURS HERO BANNER (Exactly matching Adventure Activities) ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -1259,7 +2042,7 @@ const ServiceDetail: React.FC = () => {
                   </h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">
                   {renderFloatingSearchBar()}
                 </div>
                 {service.shortDesc && (
@@ -1293,9 +2076,11 @@ const ServiceDetail: React.FC = () => {
 
           ) : isActivities ? (
             /* ── ACTIVITIES HERO BANNER (Original, unchanged) ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -1306,7 +2091,7 @@ const ServiceDetail: React.FC = () => {
                   </h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">
                   {renderFloatingSearchBar()}
                 </div>
                 {service.shortDesc && (
@@ -1340,9 +2125,11 @@ const ServiceDetail: React.FC = () => {
 
           ) : isTrekking ? (
             /* ── TREKKING HERO BANNER (Exactly matching Adventure Activities) ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -1353,7 +2140,7 @@ const ServiceDetail: React.FC = () => {
                   </h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">
                   {renderFloatingSearchBar()}
                 </div>
                 {service.shortDesc && (
@@ -1387,16 +2174,18 @@ const ServiceDetail: React.FC = () => {
 
           ) : isHotelBooking ? (
             /* ── HOTEL BOOKING HERO ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
                   <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">{renderFloatingSearchBar()}</div>
                 {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
@@ -1416,16 +2205,18 @@ const ServiceDetail: React.FC = () => {
 
           ) : isTravelInsurance ? (
             /* ── TRAVEL INSURANCE HERO ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
                   <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">{renderFloatingSearchBar()}</div>
                 {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
@@ -1445,16 +2236,18 @@ const ServiceDetail: React.FC = () => {
 
           ) : isVehicleRental ? (
             /* ── VEHICLE RENTAL HERO ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
                   <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">{renderFloatingSearchBar()}</div>
                 {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
@@ -1474,16 +2267,18 @@ const ServiceDetail: React.FC = () => {
 
           ) : isHeliServices ? (
             /* ── HELI SERVICES HERO ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
                   <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">{renderFloatingSearchBar()}</div>
                 {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
@@ -1503,16 +2298,18 @@ const ServiceDetail: React.FC = () => {
 
           ) : (
             /* ── VISA SERVICES HERO ── */
-            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-hidden pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <img src={service.heroImage} alt={service.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+            <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
+              </div>
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
                   <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight drop-shadow-2xl">{service.name}</h1>
                   <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-[#E91E63] mx-auto rounded-full mb-2 sm:mb-2.5 shadow-md" />
                 </div>
-                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
+                <div className="w-full max-w-4xl my-5 sm:my-6 relative z-30">{renderFloatingSearchBar()}</div>
                 <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">
                   "Expert assistance for seamless visa applications, embassy counseling, and swift approvals"
                 </p>
@@ -1580,8 +2377,8 @@ const ServiceDetail: React.FC = () => {
                 filter={appliedActivityFilter}
                 onClearFilter={() => {
                   setAppliedActivityFilter(null);
-                  setActivityLocationSearch("");
-                  setActivityNameSearch("");
+                  setActivitySearchQuery("");
+                  setActivityAdventureLevel("all");
                 }}
               />
             ) : isTrekking ? (
@@ -1590,6 +2387,7 @@ const ServiceDetail: React.FC = () => {
                 onClearFilter={() => {
                   setAppliedTrekFilter(null);
                   setTrekLocationSearch("");
+                  setTrekAdventureLevel("all");
                   setTrekDurationSearch("");
                 }}
               />
@@ -1599,6 +2397,7 @@ const ServiceDetail: React.FC = () => {
                 onClearFilter={() => {
                   setAppliedHotelFilter(null);
                   setHotelSearchRegion("all");
+                  setHotelSearchNameOrLocation("");
                   setHotelSearchLocation("");
                   setHotelSearchName("");
                   setHotelSearchCheckIn("");

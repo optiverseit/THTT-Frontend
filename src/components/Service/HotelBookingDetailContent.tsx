@@ -10,10 +10,11 @@ import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 
 export interface HotelFilterCriteria {
   region: string;
-  location: string;
-  hotelName: string;
-  checkInDate: string;
-  checkOutDate: string;
+  location?: string;
+  hotelName?: string;
+  nameOrLocation?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
 }
 
 interface HotelBookingDetailContentProps {
@@ -436,18 +437,32 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
         if (regionFilter === "domestic" && !item.isDomestic) return false;
         if (regionFilter === "international" && item.isDomestic) return false;
 
-        // 2. Search Bar: Location
-        if (locFilter) {
-          const matchLoc =
-            item.cityLower.includes(locFilter) ||
-            item.locationLower.includes(locFilter) ||
-            item.addressLower.includes(locFilter);
-          if (!matchLoc) return false;
-        }
+        // 2 & 3. Search Bar: Hotel Name or Location
+        const nameOrLoc = (filter?.nameOrLocation || "").trim().toLowerCase();
+        if (nameOrLoc) {
+          const words = nameOrLoc.split(/[\s,&]+/).filter(Boolean);
+          const searchIn = [
+            item.nameLower,
+            item.cityLower,
+            item.locationLower,
+            item.addressLower,
+          ].join(" ");
+          const match = words.every((w) => searchIn.includes(w));
+          if (!match) return false;
+        } else {
+          // Fallback: Individual Location
+          if (locFilter) {
+            const matchLoc =
+              item.cityLower.includes(locFilter) ||
+              item.locationLower.includes(locFilter) ||
+              item.addressLower.includes(locFilter);
+            if (!matchLoc) return false;
+          }
 
-        // 3. Search Bar: Hotel Name
-        if (nameFilter) {
-          if (!item.nameLower.includes(nameFilter)) return false;
+          // Fallback: Individual Hotel Name
+          if (nameFilter) {
+            if (!item.nameLower.includes(nameFilter)) return false;
+          }
         }
 
         // 4 & 5. Search Bar: Checkin and Checkout Date comparison against hotel's Available dates
@@ -509,6 +524,7 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
 
   const hasActiveSearchBarFilter = Boolean(
     (filter?.region && filter.region !== "all") ||
+      filter?.nameOrLocation?.trim() ||
       filter?.location?.trim() ||
       filter?.hotelName?.trim() ||
       filter?.checkInDate ||

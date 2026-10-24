@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Package } from "../../assets/data/types";
 import {
@@ -57,8 +57,9 @@ const TREK_FAQS = [
 ];
 
 export interface TrekFilterCriteria {
-  location?: string;  // free-text location search (e.g. Everest, Pokhara)
+  location?: string;  // free-text location or name search (e.g. Everest, Pokhara)
   duration?: string;  // free-text duration search (e.g. 7 days, 14 days)
+  difficulty?: string; // adventure level / difficulty (Easy, Moderate, Hard, Extreme)
 }
 
 export interface TrekkingDetailContentProps {
@@ -308,6 +309,7 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
     const searchIn = [
       pkg.location || "",
       pkg.title || "",
+      pkg.name || "",
       pkg.description || "",
       pkg.trek_region || "",
     ].join(" ").toLowerCase();
@@ -325,8 +327,9 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
 
   const hasLocationFilter = Boolean(filter?.location && filter.location.trim() !== "");
   const hasDurationFilter = Boolean(filter?.duration && filter.duration.trim() !== "");
+  const hasDifficultyFilter = Boolean(filter?.difficulty && filter.difficulty !== "all" && filter.difficulty.trim() !== "");
 
-  const isExternalFilterActive = Boolean(filter && (hasLocationFilter || hasDurationFilter));
+  const isExternalFilterActive = Boolean(filter && (hasLocationFilter || hasDurationFilter || hasDifficultyFilter));
 
   const handleClearAllFilters = () => {
     setActiveTab("all");
@@ -379,11 +382,18 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
       ) return false;
     }
 
-    // 2. External location search
+    // 2. External location or name search
     if (!matchesTrekLocation(pkg, filter?.location)) return false;
 
     // 3. External duration search
     if (!matchesTrekDuration(pkg, filter?.duration)) return false;
+
+    // 4. External adventure level / difficulty search
+    if (hasDifficultyFilter) {
+      const targetDiff = (filter?.difficulty || "").trim().toLowerCase();
+      const pkgDiff = (pkg.difficulty || "").trim().toLowerCase();
+      if (pkgDiff !== targetDiff) return false;
+    }
 
     return true;
   });

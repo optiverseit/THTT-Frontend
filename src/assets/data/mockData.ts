@@ -1739,57 +1739,57 @@ export const packages: Package[] = [
 export const testimonials: Testimonial[] = [
   {
     id: "t1",
-    name: "John Doe",
-    country: "United Kingdom",
+    name: "Sunita Thapa",
+    country: "Nepal (Pokhara)",
     message:
       "Trip Himalaya made our EBC trek absolutely unforgettable. The organization, local sherpa guides, and teahouse arrangements were top-notch!",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
+    avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t2",
-    name: "Anita Sharma",
-    country: "Nepal",
+    name: "Oliver Smith",
+    country: "United Kingdom",
     message:
-      "Best service for domestic air tickets and Pokhara luxury holiday. Highly recommended for their prompt WhatsApp responses.",
+      "Best service for domestic air tickets and Pokhara luxury holiday. Highly recommended for their prompt WhatsApp responses and professional attitude.",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200",
+    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t3",
-    name: "David Smith",
-    country: "USA",
+    name: "Bikash Shrestha",
+    country: "Nepal (Kathmandu)",
     message:
       "Amazing hospitality and expert guidance. They handled our tourist visa, vehicle rental, and 5-star hotel bookings seamlessly.",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
+    avatar: "https://images.unsplash.com/photo-1618641986557-1ecd230959aa?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t4",
-    name: "Sarah Jenkins",
-    country: "Australia (Sydney)",
+    name: "Anna Müller",
+    country: "Germany (Munich)",
     message:
-      "The Everest helicopter tour was the absolute highlight of our honeymoon. The pilot was warm and confident, and the breakfast view at Kala Patthar was majestic.",
+      "The Everest helicopter tour was the absolute highlight of our honeymoon. The pilot was warm and confident, and the breakfast view at Kala Patthar was truly majestic.",
     rating: 5,
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t5",
-    name: "Carlos Mendez",
-    country: "Spain (Madrid)",
+    name: "Anisha Rai",
+    country: "Nepal (Dharan)",
     message:
-      "Very reliable vehicle rental with a courteous driver. Navigated the winding roads from Kathmandu to Chitwan safely and comfortably.",
+      "Very reliable vehicle rental with a courteous driver. Navigated the winding roads from Kathmandu to Chitwan safely and comfortably. Will book again!",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200",
+    avatar: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "t6",
-    name: "Mei Ling",
-    country: "Singapore",
+    name: "Sofia García",
+    country: "Spain (Madrid)",
     message:
-      "Seamless adventure activities booking in Pokhara! Paragliding video delivery was immediate, and their team was so attentive to safety.",
+      "Seamless adventure activities booking in Pokhara! Paragliding video delivery was immediate, and their team was so attentive to safety throughout.",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200",
+    avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=200",
   },
 ];
 

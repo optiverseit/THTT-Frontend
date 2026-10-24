@@ -10,6 +10,44 @@ interface TestimonialProp {
 
 type SortType = "recent" | "highest" | "lowest";
 
+// Gradient palette indexed by first char code for consistent colour per guest name
+const AVATAR_PALETTES: [string, string][] = [
+  ["#E91E63", "#200B3B"],
+  ["#7C3AED", "#4C1D95"],
+  ["#0EA5E9", "#075985"],
+  ["#10B981", "#065F46"],
+  ["#F59E0B", "#92400E"],
+  ["#EF4444", "#7F1D1D"],
+  ["#EC4899", "#831843"],
+  ["#14B8A6", "#134E4A"],
+];
+
+const VehicleGuestAvatar: React.FC<{ name: string; avatar?: string }> = ({ name, avatar }) => {
+  const [imgError, setImgError] = useState(false);
+  const initial = (name || "G").trim().charAt(0).toUpperCase();
+  const [from, to] = AVATAR_PALETTES[(initial.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
+
+  if (avatar && !imgError) {
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        onError={() => setImgError(true)}
+        className="w-12 h-12 rounded-full object-cover border-2 border-pink-100 shadow-xs flex-shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-pink-100 shadow-xs"
+      style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+    >
+      <span className="text-white font-black text-lg leading-none select-none">{initial}</span>
+    </div>
+  );
+};
+
 const VehicleTestimonial: React.FC = () => {
   const { allTestimonies = [], pkg } = useOutletContext<TestimonialProp>();
   const [sortBy, setSortBy] = useState<SortType>("recent");
@@ -94,11 +132,7 @@ const VehicleTestimonial: React.FC = () => {
               <div key={t.id} className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 hover:border-pink-100 transition-all space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <img
-                      src={t.userAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"}
-                      alt={t.userName}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-pink-100 shadow-xs"
-                    />
+                    <VehicleGuestAvatar name={t.userName} avatar={t.userAvatar} />
                     <div>
                       <h4 className="font-extrabold text-sm sm:text-base text-[#200B3B] flex items-center gap-1.5">
                         <span>{t.userName}</span>

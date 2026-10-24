@@ -1,11 +1,11 @@
-import { Filter, Star, Tag, Award, Navigation } from "lucide-react";
-import React from "react";
+import { Filter, Star, Tag, Award, Navigation, ChevronDown, SlidersHorizontal } from "lucide-react";
+import React, { useState } from "react";
 import {
   useGlobalCurrency,
   displayPrice,
 } from "../../context/CurrencyContext";
 
-interface VehicleSidebarFilterProps {
+export interface VehicleSidebarFilterProps {
   priceRange: number;
   setPriceRange: React.Dispatch<React.SetStateAction<number>>;
   selectedKeywords: string[];
@@ -33,13 +33,14 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
   selectedBadges = [],
   setSelectedBadges,
   minPrice = 0,
-  maxPrice = 500000,
-  step = 5000,
+  maxPrice = 50000,
+  step = 500,
   selectedTripType = "",
   setSelectedTripType,
 }) => {
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
   const ratings = [5, 4, 3, 2, 1];
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const sliderMin = minPrice;
   const sliderMax = maxPrice;
@@ -79,24 +80,18 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
     if (setSelectedTripType) setSelectedTripType("");
   };
 
-  return (
-    <div className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <Filter size={16} className="text-[#E91E63]" />
-          <h3 className="text-sm font-black text-[#200B3B]">Filter By</h3>
-        </div>
-        <button
-          onClick={clearAllFilters}
-          className="text-[10px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
-        >
-          CLEAR ALL
-        </button>
-      </div>
+  const activeFilterCount =
+    (selectedRating > 0 ? 1 : 0) +
+    selectedKeywords.length +
+    (selectedBadges?.length || 0) +
+    (selectedTripType ? 1 : 0) +
+    (currentPriceRange < sliderMax ? 1 : 0);
 
+  /* ─────────── shared inner panel ─────────── */
+  const renderFilterContent = () => (
+    <>
       {/* 1. PRICE RANGE */}
-      <div className="py-5 border-b border-gray-100">
+      <div className="py-4 border-b border-gray-100">
         <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block mb-3">
           PRICE RANGE (
           {selectedCurrency === "nepali"
@@ -113,20 +108,31 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
           step={sliderStep}
           value={currentPriceRange}
           className="w-full accent-[#E91E63] cursor-pointer h-1.5 bg-gray-200 rounded-lg outline-none"
+          onInput={(e) => setPriceRange(Number((e.target as HTMLInputElement).value))}
           onChange={(e) => setPriceRange(Number(e.target.value))}
         />
-        <div className="flex justify-between items-center text-xs font-bold mt-3">
-          <span className="text-gray-400">
+        <div className="flex justify-between items-center text-xs font-bold mt-2">
+          <button
+            type="button"
+            onClick={() => setPriceRange(sliderMin)}
+            className="text-gray-400 hover:text-[#E91E63] hover:underline cursor-pointer transition-colors"
+            title="Set to minimum price"
+          >
             {displayPrice(sliderMin, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
-          </span>
-          <span className="text-[#E91E63] font-black">
+          </button>
+          <button
+            type="button"
+            onClick={() => setPriceRange(sliderMax)}
+            className="text-[#E91E63] font-black hover:underline cursor-pointer transition-colors"
+            title="Set to maximum price"
+          >
             {displayPrice(currentPriceRange, selectedCurrency, nprPerOneDollar, nprPerOneINR)}
-          </span>
+          </button>
         </div>
       </div>
 
       {/* 2. RATINGS */}
-      <div className="py-5 border-b border-gray-100">
+      <div className="py-4 border-b border-gray-100">
         <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase block mb-3">
           RATINGS
         </label>
@@ -136,6 +142,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
             return (
               <button
                 key={starCount}
+                type="button"
                 onClick={() => setSelectedRating(isSelected ? 0 : starCount)}
                 className={`w-full flex items-center justify-between px-3.5 py-2 rounded-full transition-colors text-xs font-semibold cursor-pointer ${
                   isSelected
@@ -163,7 +170,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
       </div>
 
       {/* 3. KEYWORDS */}
-      <div className="pt-5">
+      <div className="pt-4">
         <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
           <Tag size={12} className="text-[#E91E63]" />
           <span>KEYWORDS</span>
@@ -174,6 +181,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
             return (
               <button
                 key={kw}
+                type="button"
                 onClick={() =>
                   setSelectedKeywords((prev) =>
                     isSelected
@@ -196,7 +204,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
 
       {/* 4. TRIP TYPE */}
       {setSelectedTripType && (
-        <div className="pt-5 border-t border-gray-100 mt-1">
+        <div className="pt-4 border-t border-gray-100 mt-5">
           <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
             <Navigation size={12} className="text-[#E91E63]" />
             <span>TRIP</span>
@@ -207,6 +215,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
               return (
                 <button
                   key={value}
+                  type="button"
                   onClick={() =>
                     setSelectedTripType(isSelected ? "" : value)
                   }
@@ -229,7 +238,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
 
       {/* 5. HIGHLIGHTS / BADGE FILTER */}
       {setSelectedBadges && (
-        <div className="pt-5 border-t border-gray-100 mt-6">
+        <div className="pt-4 border-t border-gray-100 mt-5">
           <label className="text-[10px] font-black text-[#200B3B] tracking-widest uppercase flex items-center gap-1.5 mb-3">
             <Award size={12} className="text-[#E91E63]" />
             <span>HIGHLIGHTS</span>
@@ -256,6 +265,7 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
               return (
                 <button
                   key={label}
+                  type="button"
                   onClick={() =>
                     setSelectedBadges((prev) =>
                       prev.includes(label) ? [] : [label]
@@ -274,7 +284,85 @@ const VehicleSidebarFilter: React.FC<VehicleSidebarFilterProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* ══════════════════════════════════════════
+          MOBILE  — compact toggle bar (< lg)
+      ══════════════════════════════════════════ */}
+      <div className="lg:hidden">
+        {/* Toggle Button Row */}
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl shadow-sm border border-gray-100 cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={15} className="text-[#E91E63]" />
+            <span className="text-sm font-bold text-[#200B3B]">Filter</span>
+            {activeFilterCount > 0 && (
+              <span className="bg-[#E91E63] text-white text-[10px] font-black rounded-full px-1.5 py-0.5 leading-none">
+                {activeFilterCount}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAllFilters();
+                }}
+                className="text-[10px] font-bold text-[#E91E63] uppercase tracking-wider"
+              >
+                Clear
+              </button>
+            )}
+            <ChevronDown
+              size={16}
+              className={`text-gray-400 transition-transform duration-200 ${
+                mobileOpen ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+        </button>
+
+        {/* Collapsible Panel */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            mobileOpen ? "max-h-[800px] opacity-100 mt-2" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+            {renderFilterContent()}
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════
+          DESKTOP  — full sidebar card (lg+)
+      ══════════════════════════════════════════ */}
+      <div className="hidden lg:block w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-[#E91E63]" />
+            <h3 className="text-sm font-black text-[#200B3B]">Filter By</h3>
+          </div>
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="text-[10px] font-bold text-[#E91E63] hover:underline uppercase tracking-wider cursor-pointer"
+          >
+            CLEAR ALL
+          </button>
+        </div>
+        {renderFilterContent()}
+      </div>
+    </>
   );
 };
 

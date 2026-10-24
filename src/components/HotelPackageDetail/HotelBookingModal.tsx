@@ -26,6 +26,7 @@ export interface HotelBookingTier {
   id: number | null;
   name: string;
   ageGroup: string;
+  pricingUnit?: string;
   nprPrice: number;
 }
 export interface HotelBookingModalProps {
@@ -45,7 +46,13 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const pricingTiers: HotelBookingTier[] = React.useMemo(() => {
     if (!pkg?.pricingTable || !Array.isArray(pkg.pricingTable)) return [];
-    return pkg.pricingTable.map((row: any) => ({ id: row.id ? Number(row.id) : null, name: row.service || row.room_name || "Standard Room", ageGroup: row.ageGroup || row.pricing_unit || "Per Night Stay", nprPrice: Number(row.priceNepali ?? row.price_npr ?? 0) }));
+    return pkg.pricingTable.map((row: any) => ({
+      id: row.id ? Number(row.id) : null,
+      name: row.service || row.room_name || "Standard Room",
+      ageGroup: row.ageGroup || row.pricing_unit || "Per Night Stay",
+      pricingUnit: row.pricingUnit || row.pricing_unit || "",
+      nprPrice: Number(row.priceNepali ?? row.price_npr ?? 0),
+    }));
   }, [pkg]);
   const [selectedTierIndex, setSelectedTierIndex] = useState<number>(initialTierIndex);
   const [guestsCount, setGuestsCount] = useState<number>(initialGuests);
@@ -158,6 +165,13 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
   const unitPriceFormatted = displayPrice(unitPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR);
   const totalNpr = unitPrice * nightsCount * guestsCount;
   const totalPriceFormatted = displayPrice(totalNpr, selectedCurrency, nprPerOneDollar, nprPerOneINR);
+  const isPerNight = (() => {
+    const unit = (currentTier?.pricingUnit || currentTier?.ageGroup || "").toUpperCase();
+    if (unit.includes("NIGHT")) return true;
+    if (unit.includes("DAY")) return false;
+    const pkgDuration = (pkg?.duration || "").toUpperCase();
+    return pkgDuration.includes("NIGHT") || !pkgDuration.includes("DAY");
+  })();
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
@@ -197,6 +211,23 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
       setFormData((prev) => ({ ...prev, numberOfDays: value, travelDateTo: checkout }));
     } else setFormData((prev) => ({ ...prev, [name]: value }));
   };
+  const focusAndScrollToField = (elementId: string, errorMsg: string) => {
+    setSubmitError(errorMsg);
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        if ("focus" in el) {
+          (el as HTMLElement).focus({ preventScroll: true });
+        }
+        el.classList.add("ring-2", "ring-[#E11D48]", "border-[#E11D48]");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-[#E11D48]", "border-[#E11D48]");
+        }, 3000);
+      }
+    }, 50);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSessionValid()) {
@@ -204,17 +235,17 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
       window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
       return;
     }
-    if (!formData.termsAgreed) return setSubmitError("Please review and accept the hotel reservation terms to proceed.");
-    if (!formData.fullName.trim()) return setSubmitError("Please enter the primary guest full name.");
-    if (!formData.email.trim()) return setSubmitError("Please enter an email address.");
-    if (!formData.phone.trim()) return setSubmitError("Please enter a contact phone / WhatsApp number.");
-    if (!formData.nationality.trim()) return setSubmitError("Please enter your nationality.");
-    if (!formData.travelDateFrom) return setSubmitError("Please select a check-in date.");
-    if (!currentTier?.id) return setSubmitError("Please select a valid room type.");
-    if (hasChildren && (!childrenCount || Number(childrenCount) < 1)) return setSubmitError("Please enter the number of children.");
-    if (hasChildren && Number(childrenCount) > guestsCount) return setSubmitError("Number of children cannot exceed total guests.");
-    if (!attachedFile) return setSubmitError("Please upload the required file attachment (JPG, JPEG, PNG, or PDF under 1 MB).");
-    if (fileError) return setSubmitError(fileError);
+    if (!currentTier?.id) return focusAndScrollToField("hotel-room-type-select", "Please select a valid room type.");
+    if (!formData.fullName.trim()) return focusAndScrollToField("hotel-full-name-input", "Please enter the primary guest full name.");
+    if (!formData.email.trim()) return focusAndScrollToField("hotel-email-input", "Please enter an email address.");
+    if (!formData.phone.trim()) return focusAndScrollToField("hotel-phone-input", "Please enter a contact phone / WhatsApp number.");
+    if (!formData.travelDateFrom) return focusAndScrollToField("hotel-checkin-input", "Please select a check-in date.");
+    if (!formData.nationality.trim()) return focusAndScrollToField("hotel-nationality-input", "Please enter your nationality.");
+    if (!bedsInRoom || Number(bedsInRoom) < 1) return focusAndScrollToField("hotel-guests-input", "Please enter the number of guests.");
+    if (hasChildren && (!childrenCount || Number(childrenCount) < 1)) return focusAndScrollToField("hotel-children-input", "Please enter the number of children.");
+    if (!attachedFile) return focusAndScrollToField("hotel-attachment-container", "Please upload the required file attachment (JPG, JPEG, PNG, or PDF under 1 MB).");
+    if (fileError) return focusAndScrollToField("hotel-attachment-container", fileError);
+    if (!formData.termsAgreed) return focusAndScrollToField("hotel-terms-checkbox", "Please review and accept the hotel reservation terms to proceed.");
     const hotelId = Number(pkg.backendId ?? pkg.id);
     if (!hotelId || Number.isNaN(hotelId)) return setSubmitError("Invalid hotel. Please refresh the page and try again.");
     try {
@@ -358,11 +389,580 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
   };
   const handleWhatsAppForward = () => {
     const paymentMethodDisplay = selectedPaymentMethod === "esewa" ? "eSewa Online Payment" : "Pay at Hotel Reception (Pay Later)";
-    const msg = encodeURIComponent(`*Official Hotel Reservation Confirmation*\n\n📌 *Reservation Ref:* ${submissionId}\n🏨 *Hotel Name:* ${pkg.title}\n📍 *Location:* ${pkg.location || "Nepal"}\n🛏️ *Room Type:* ${currentTier?.name || "Room"}\n📅 *Duration:* ${nightsCount} Day(s)\n👥 *Guests:* ${guestsCount} Person(s)\n📅 *Check-in Date:* ${formData.travelDateFrom}\n📅 *Check-out Date:* ${formData.travelDateTo}\n💵 *Total Price:* ${totalPriceFormatted}\n💳 *Payment Method:* ${paymentMethodDisplay}\n📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n👤 *Primary Guest:* ${formData.fullName}\n🌍 *Nationality:* ${formData.nationality}\n📞 *Contact:* ${formData.phoneCode} ${formData.phone}\n✉️ *Email:* ${formData.email}${formData.specialNotes ? `\n📝 *Special Requests:* ${formData.specialNotes}` : ""}\n\nHello Trip Himalaya, please confirm my hotel reservation details.`);
+    const msg = encodeURIComponent(`*Official Hotel Reservation Confirmation*\n\n📌 *Reservation Ref:* ${submissionId}\n🏨 *Hotel Name:* ${pkg.title}\n📍 *Location:* ${pkg.location || "Nepal"}\n🛏️ *Room Type:* ${currentTier?.name || "Room"}\n📅 *Duration:* ${nightsCount} Day(s)\n👥 *Rooms:* ${guestsCount} Room(s)${bedsInRoom ? `\n👥 *Guests:* ${bedsInRoom} Person(s)` : ""}\n📅 *Check-in Date:* ${formData.travelDateFrom}\n📅 *Check-out Date:* ${formData.travelDateTo}\n💵 *Total Price:* ${totalPriceFormatted}\n💳 *Payment Method:* ${paymentMethodDisplay}\n📊 *Payment Status:* ${paymentStatus.toUpperCase()}\n👤 *Primary Guest:* ${formData.fullName}\n🌍 *Nationality:* ${formData.nationality}\n📞 *Contact:* ${formData.phoneCode} ${formData.phone}\n✉️ *Email:* ${formData.email}${formData.specialNotes ? `\n📝 *Special Requests:* ${formData.specialNotes}` : ""}\n\nHello Trip Himalaya, please confirm my hotel reservation details.`);
     window.open(`https://wa.me/${WHATSAPP_CONTACT_NUMBER}?text=${msg}`, "_blank", "noopener,noreferrer");
   };
   const handlePrintReceipt = () => {
-    const printContent = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>Hotel_Reservation_${submissionId}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#fff;color:#0f172a;font-size:12px}.page{width:210mm;min-height:297mm;padding:14mm}.header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #2D1347;padding-bottom:10px;margin-bottom:14px}.logo{width:55px}.brand{font-size:18px;font-weight:900;color:#2D1347}.band{background:#2D1347;color:white;padding:9px 12px;border-radius:6px;display:flex;justify-content:space-between;margin-bottom:16px}.section{font-weight:800;color:#2D1347;background:#f3e8ff;padding:5px 8px;margin:12px 0 7px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 20px}.row{display:flex;justify-content:space-between;border-bottom:1px dashed #ddd;padding:5px}.label{color:#64748b}.value{font-weight:700;text-align:right}.total{font-size:16px;color:#2D1347}.footer{margin-top:25px;border-top:1px solid #ddd;padding-top:10px;text-align:center;color:#64748b;font-size:10px}</style></head><body><div class="page"><div class="header"><div style="display:flex;align-items:center;gap:10px"><img class="logo" src="${THTTLogo}"/><div><div class="brand">Trip Himalaya Tours & Travel</div><div>Hotel Reservations Desk</div></div></div><div>Kathmandu, Nepal<br/>+977 9851403761</div></div><div class="band"><strong>HOTEL RESERVATION VOUCHER</strong><strong>REF: ${submissionId}</strong></div><div class="section">Hotel & Stay Information</div><div class="grid"><div class="row"><span class="label">Hotel</span><span class="value">${pkg.title}</span></div><div class="row"><span class="label">Location</span><span class="value">${pkg.location || "Nepal"}</span></div><div class="row"><span class="label">Room</span><span class="value">${currentTier?.name || "-"}</span></div><div class="row"><span class="label">Guests</span><span class="value">${guestsCount}</span></div><div class="row"><span class="label">Check-in</span><span class="value">${formData.travelDateFrom}</span></div><div class="row"><span class="label">Check-out</span><span class="value">${formData.travelDateTo}</span></div><div class="row"><span class="label">Days</span><span class="value">${nightsCount}</span></div><div class="row"><span class="label">Room Rate</span><span class="value">${unitPriceFormatted}</span></div></div><div class="section">Guest Details</div><div class="grid"><div class="row"><span class="label">Guest</span><span class="value">${formData.fullName}</span></div><div class="row"><span class="label">Nationality</span><span class="value">${formData.nationality}</span></div><div class="row"><span class="label">Phone</span><span class="value">${formData.phoneCode} ${formData.phone}</span></div><div class="row"><span class="label">Email</span><span class="value">${formData.email}</span></div></div><div class="section">Payment</div><div class="grid"><div class="row"><span class="label">Method</span><span class="value">${selectedPaymentMethod === "esewa" ? "eSewa" : "Pay Later"}</span></div><div class="row"><span class="label">Total</span><span class="value total">${totalPriceFormatted}</span></div></div><div class="footer">Present this voucher at check-in with valid identification.</div></div></body></html>`;
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Hotel_Reservation_Slip_${submissionId}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #fff;
+            color: #0f172a;
+            font-size: 11.5px;
+            line-height: 1.5;
+          }
+
+          /* ── PAGE WRAPPER ── */
+          .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 14mm 14mm 12mm 14mm;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+          }
+
+          /* ── LETTERHEAD ── */
+          .letterhead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #000;
+            margin-bottom: 12px;
+          }
+          .lh-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+          }
+          .logo-img {
+            height: 80px;
+            width: auto;
+            object-fit: contain;
+            flex-shrink: 0;
+          }
+          .company-name-block {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .company-name-main {
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: -0.3px;
+            line-height: 1.1;
+            color: #000;
+          }
+          .company-tagline {
+            font-size: 9.5px;
+            color: #000;
+            font-weight: 600;
+            margin-top: 3px;
+          }
+          .company-contact-row {
+            font-size: 9px;
+            color: #222;
+            margin-top: 2px;
+            font-weight: 500;
+          }
+          .lh-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+          }
+          .official-badge {
+            display: inline-block;
+            border: 1.5px solid #000;
+            color: #000;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 3px 10px;
+            border-radius: 3px;
+          }
+          .slip-date {
+            font-size: 9.5px;
+            color: #000;
+            font-weight: 500;
+          }
+
+          /* ── DOC TITLE BAND ── */
+          .title-band {
+            background: #000;
+            color: #fff;
+            padding: 9px 14px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .title-band h1 {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+          }
+          .title-band .destination {
+            font-size: 10px;
+            color: #ccc;
+            font-weight: 600;
+          }
+          .title-band .doc-id {
+            text-align: right;
+          }
+          .title-band .doc-id-label {
+            font-size: 8px;
+            color: #aaa;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .title-band .doc-id-val {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+          }
+
+          /* ── REFERENCE BOX ── */
+          .ref-box {
+            display: flex;
+            align-items: stretch;
+            border: 1px solid #000;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 14px;
+          }
+          .ref-accent {
+            width: 5px;
+            background: #000;
+            flex-shrink: 0;
+          }
+          .ref-content {
+            flex: 1;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+          }
+          .ref-label {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+          }
+          .ref-value {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: #000;
+            letter-spacing: 0.5px;
+          }
+
+          /* ── SECTION HEADING ── */
+          .section-heading {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            margin-top: 8px;
+          }
+          .section-heading .sh-line {
+            flex: 1;
+            height: 1px;
+            background: #000;
+          }
+          .section-heading .sh-text {
+            font-size: 7.5px;
+            font-weight: 800;
+            color: #000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+          }
+
+          /* ── DETAIL TABLE ── */
+          .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2px;
+            border: 1.5px solid #3B145C;
+          }
+          .detail-table th {
+            padding: 5px 8px;
+            border: 1px solid #3B145C;
+            text-align: left;
+            vertical-align: middle;
+            font-size: 7.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #200B3B;
+            color: #ffffff;
+          }
+          .detail-table td {
+            padding: 5px 8px;
+            border: 1px solid #C4ADE8;
+            vertical-align: middle;
+          }
+          .detail-table tbody tr:nth-child(even) td {
+            background: #F3EEFF;
+          }
+          .detail-table tbody tr:nth-child(odd) td {
+            background: #ffffff;
+          }
+          .td-label {
+            font-size: 7.5px;
+            font-weight: 700;
+            color: #3B145C;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            width: 38%;
+            background: #EDE5F8 !important;
+            border-right: 2px solid #9B6FD4 !important;
+          }
+          .td-value {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #1A0B2E;
+          }
+          .td-value.mono { font-family: 'Courier New', monospace; }
+          .td-value.accent { color: #200B3B; font-weight: 800; }
+          .td-value.fee {
+            color: #1A0B2E;
+            font-size: 11px;
+            font-weight: 900;
+            font-family: 'Inter', sans-serif;
+          }
+
+          /* ── TWO-COLUMN GRID ── */
+          .two-col-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 0;
+          }
+          .two-col-grid .col-block {
+            display: flex;
+            flex-direction: column;
+          }
+          .two-col-grid .col-block .section-heading {
+            margin-top: 0;
+          }
+          .two-col-grid .detail-table {
+            flex: 1;
+          }
+
+          /* ── NOTICE BOX ── */
+          .notice-box {
+            border: 1px solid #999;
+            background: #f9f9f9;
+            border-radius: 6px;
+            padding: 9px 12px;
+            margin-top: 10px;
+            font-size: 10px;
+            color: #000;
+            line-height: 1.5;
+          }
+          .notice-box strong { color: #000; }
+
+          /* ── CHECKLIST ── */
+          .checklist-box {
+            border: 1px solid #999;
+            border-radius: 6px;
+            padding: 9px 12px;
+            margin-top: 10px;
+            background: #f9f9f9;
+          }
+          .checklist-title {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #000;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #999;
+            padding-bottom: 4px;
+          }
+          .checklist-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px 20px;
+          }
+          .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 5px;
+            font-size: 9.5px;
+            color: #000;
+            line-height: 1.4;
+          }
+          .ci-icon {
+            color: #000;
+            font-weight: 900;
+            font-size: 10px;
+            flex-shrink: 0;
+            margin-top: 1px;
+          }
+
+          /* ── FOOTER ── */
+          .doc-footer {
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1.5px solid #000000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8.5px;
+            color: #000;
+          }
+          .watermark-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            user-select: none;
+            z-index: 999;
+          }
+          .watermark {
+            transform: rotate(-28deg);
+            font-size: 38px;
+            font-weight: 900;
+            color: rgba(45, 19, 71, 0.06);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 2.2;
+            white-space: nowrap;
+            text-align: center;
+            mix-blend-mode: multiply;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="watermark-wrapper"><div class="watermark">Trip Himalaya Tours and Travels</div></div>
+
+          <!-- LETTERHEAD -->
+          <div class="letterhead">
+            <div class="lh-left">
+              <img src="${THTTLogo}" class="logo-img" alt="Trip Himalaya Tours and Travels" />
+              <div class="company-name-block">
+                <div class="company-name-main">Trip Himalaya <span class="name-pink">Tours &amp; Travels Pvt. Ltd.</span></div>
+                <div class="company-tagline" style="margin-top:4px;">Govt. Approved Travel &amp; Tour Counseling Agency</div>
+                <div class="company-contact-row" style="margin-top:3px;">Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal &nbsp;|&nbsp; 977-9851403761 &nbsp;|&nbsp; pradip.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np</div>
+              </div>
+            </div>
+            <div class="lh-right">
+              <div class="official-badge">Official Document</div>
+              <div class="slip-date">Issued: ${submittedAt || new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</div>
+            </div>
+          </div>
+
+          <!-- DOC TITLE BAND -->
+          <div class="title-band">
+            <div>
+              <h1>Hotel Reservation Confirmation Slip</h1>
+              <div class="destination">Property: ${pkg.title} &nbsp;/&nbsp; ${pkg.location || "Nepal"}</div>
+            </div>
+            <div class="doc-id">
+              <div class="doc-id-label">Document ID</div>
+              <div class="doc-id-val">${submissionId}</div>
+            </div>
+          </div>
+
+          <!-- SUBMISSION REFERENCE -->
+          <div class="ref-box">
+            <div class="ref-accent"></div>
+            <div class="ref-content">
+              <div>
+                <div class="ref-label">Official Reservation Reference Number</div>
+                <div class="ref-value">${submissionId}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOP ROW: GUEST INFO + HOTEL DETAILS (2 columns) -->
+          <div class="two-col-grid">
+
+            <!-- LEFT: GUEST INFORMATION -->
+            <div class="col-block">
+              <div class="section-heading" style="margin-top:0;">
+                <div class="sh-text">Guest Information</div>
+                <div class="sh-line"></div>
+              </div>
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th style="width:42%;">Field</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-label">Full Name</td>
+                    <td class="td-value accent">${formData.fullName || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Nationality</td>
+                    <td class="td-value">${formData.nationality || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Email</td>
+                    <td class="td-value">${formData.email || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Phone / WhatsApp</td>
+                    <td class="td-value">${formData.phone ? `${formData.phoneCode} ${formData.phone}` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Number of Guests</td>
+                    <td class="td-value mono">${bedsInRoom || guestsCount} Guest(s)</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Number of Rooms</td>
+                    <td class="td-value mono">${guestsCount} Room(s)</td>
+                  </tr>
+                  ${hasChildren && childrenCount ? `<tr><td class="td-label">Children</td><td class="td-value">${childrenCount} Child(ren)</td></tr>` : ""}
+                  ${formData.specialNotes ? `<tr><td class="td-label">Special Requests</td><td class="td-value">${formData.specialNotes}</td></tr>` : ""}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- RIGHT: HOTEL & STAY DETAILS -->
+            <div class="col-block">
+              <div class="section-heading" style="margin-top:0;">
+                <div class="sh-text">Hotel &amp; Stay Details</div>
+                <div class="sh-line"></div>
+              </div>
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th style="width:42%;">Field</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-label">Hotel / Property</td>
+                    <td class="td-value accent">${pkg.title}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Room Category</td>
+                    <td class="td-value">${currentTier?.name || "Standard Room"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Check-in Date</td>
+                    <td class="td-value">${formData.travelDateFrom || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Check-out Date</td>
+                    <td class="td-value">${formData.travelDateTo || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Duration</td>
+                    <td class="td-value">${nightsCount} ${isPerNight ? (nightsCount > 1 ? "Nights" : "Night") : (nightsCount > 1 ? "Days" : "Day")}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Room Rate</td>
+                    <td class="td-value">${unitPriceFormatted} ${isPerNight ? "/ night" : "/ day"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Location</td>
+                    <td class="td-value">${pkg.location || "Nepal"}</td>
+                  </tr>
+                  <tr>
+                    <td class="td-label">Submitted At</td>
+                    <td class="td-value mono">${submittedAt || new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div><!-- end .two-col-grid -->
+
+          <!-- PAYMENT INFORMATION (full width) -->
+          <div class="section-heading">
+            <div class="sh-text">Payment Information</div>
+            <div class="sh-line"></div>
+          </div>
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th style="width:38%;">Field</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-label">Payment Method</td>
+                <td class="td-value" style="font-weight:700;">${selectedPaymentMethod === "esewa" ? "eSewa Digital Wallet" : "Pay Later (Deferred at Reception)"}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Total Tariff</td>
+                <td class="td-value fee">${totalPriceFormatted}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Amount Paid</td>
+                <td class="td-value fee" style="color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus === "paid" ? totalPriceFormatted : "NPR 0 (Pay Later)"}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Payment Status</td>
+                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#b45309"};">${paymentStatus.toUpperCase()}</td>
+              </tr>
+              <tr>
+                <td class="td-label">Payment Verification</td>
+                <td class="td-value" style="font-weight:900; font-size:10px; color:${paymentStatus === "paid" ? "#047857" : "#1d4ed8"};">${paymentStatus === "paid" ? "VERIFIED" : "PENDING"}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- NEXT STEP NOTICE -->
+          <div class="notice-box">
+            <strong>Next Step:</strong> Our hotel reservations desk will coordinate with <strong>${pkg.title}</strong> to ensure your room readiness and amenities are prepared. Please present this confirmation voucher along with your valid government photo ID upon arrival at the hotel front desk.
+          </div>
+
+          <!-- CHECK-IN CHECKLIST -->
+          <div class="checklist-box">
+            <div class="checklist-title">Hotel Check-in Checklist</div>
+            <div class="checklist-grid">
+              <div class="checklist-item"><span class="ci-icon">✓</span> Original Passport / Govt. Photo ID (Citizenship, License, Student ID)</div>
+              <div class="checklist-item"><span class="ci-icon">✓</span> Hotel reservation confirmation voucher (printed / digital copy)</div>
+              <div class="checklist-item"><span class="ci-icon">✓</span> Standard check-in verification at hotel front desk</div>
+              <div class="checklist-item"><span class="ci-icon">✓</span> Special requests coordination at reception</div>
+            </div>
+          </div>
+
+          <!-- FOOTER -->
+          <div class="doc-footer">
+            <div class="footer-left">
+              This is a system-generated confirmation slip. No physical signature is required.<br>
+              For queries: 977-9851403761 &nbsp;|&nbsp; pradip.triphimalayatt@gmail.com &nbsp;|&nbsp; www.triphimalaya.com.np
+            </div>
+            <div class="footer-right">
+              Trip Himalaya Tours &amp; Travels<br>
+              Ref: ${submissionId} &nbsp;|&nbsp; ${submittedAt || "Official Copy"}
+            </div>
+          </div>
+
+        </div>
+      </body>
+      </html>
+    `;
     const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(printContent);
@@ -392,7 +992,7 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
               <span className="bg-white/10 px-3 py-1 rounded-full font-bold text-pink-300">Hotel Booking</span>
               <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full font-medium"><BedDouble size={13} className="text-pink-400"/>{currentTier?.name || "Select Room"}</span>
               {pkg.location && <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full font-medium"><MapPin size={13} className="text-pink-400"/>{pkg.location}</span>}
-              <span className="bg-[#E11D48] text-white font-extrabold px-3 py-1 rounded-full ml-auto">{unitPriceFormatted}<span className="text-[10px] font-semibold text-red-200"> / day</span></span>
+              <span className="bg-[#E11D48] text-white font-extrabold px-3 py-1 rounded-full ml-auto">{unitPriceFormatted}<span className="text-[10px] font-semibold text-red-200"> / {isPerNight ? "night" : "day"}</span></span>
             </div>
           </div>
         )}
@@ -414,9 +1014,11 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
               <div className="text-left p-3.5 rounded-2xl bg-[#FBFBFE] border border-purple-100 space-y-2 max-w-md mx-auto text-xs">
                 <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Property</span><span className="font-bold text-gray-800">{pkg.title}</span></div>
                 <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Room Category</span><span className="font-bold text-gray-800">{currentTier?.name}</span></div>
+                <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Number of Rooms</span><span className="font-bold text-gray-800">{guestsCount} Room{guestsCount > 1 ? "s" : ""}</span></div>
+                <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Number of Guests</span><span className="font-bold text-gray-800">{bedsInRoom || guestsCount} Guest{(Number(bedsInRoom) || guestsCount) > 1 ? "s" : ""}</span></div>
                 <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Check-in</span><span className="font-bold text-gray-800">{formData.travelDateFrom}</span></div>
-                <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Check-out</span><span className="font-bold text-gray-800">{formData.travelDateTo}</span></div>
-                <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Duration</span><span className="font-bold text-gray-800">{nightsCount} Day(s)</span></div>
+                <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Check-out</span><span className="font-bold text-gray-800">{formData.travelDateTo || "—"}</span></div>
+                <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Duration</span><span className="font-bold text-gray-800">{nightsCount} {isPerNight ? (nightsCount > 1 ? "Nights" : "Night") : (nightsCount > 1 ? "Days" : "Day")}</span></div>
                 <div className="flex justify-between py-1 border-b border-gray-200/60"><span className="text-gray-500">Total Tariff</span><span className="font-black text-[#2D1347]">{totalPriceFormatted}</span></div>
                 <div className="flex justify-between py-1"><span className="text-gray-500">Payment Status</span><span className={`font-bold uppercase ${paymentStatus === "paid" ? "text-emerald-600" : "text-amber-600"}`}>{paymentStatus === "paid" ? "Paid via eSewa" : "Pay Later"}</span></div>
               </div>
@@ -426,27 +1028,27 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {pricingTiers.length > 1 && <div><label className="block text-xs font-bold text-gray-700 mb-1">Room Type <span className="text-[#E11D48]">*</span></label><select value={selectedTierIndex} onChange={(e) => setSelectedTierIndex(Number(e.target.value))} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:border-[#2D1347] focus:outline-none">{pricingTiers.map((tier, index) => <option key={tier.id ?? index} value={index}>{tier.name} - {displayPrice(tier.nprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}</option>)}</select></div>}
-              <div><label className="block text-xs font-bold text-gray-700 mb-1">Primary Guest Full Name <span className="text-[#E11D48]">*</span></label><div className="relative"><User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="text" name="fullName" required placeholder="e.g. Ram Sharma" value={formData.fullName} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
+              {pricingTiers.length > 1 && <div><label className="block text-xs font-bold text-gray-700 mb-1">Room Type <span className="text-[#E11D48]">*</span></label><select id="hotel-room-type-select" value={selectedTierIndex} onChange={(e) => { setSelectedTierIndex(Number(e.target.value)); if (submitError) setSubmitError(""); }} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:border-[#2D1347] focus:outline-none transition-all">{pricingTiers.map((tier, index) => <option key={tier.id ?? index} value={index}>{tier.name} - {displayPrice(tier.nprPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR)}</option>)}</select></div>}
+              <div><label className="block text-xs font-bold text-gray-700 mb-1">Primary Guest Full Name <span className="text-[#E11D48]">*</span></label><div className="relative"><User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-full-name-input" type="text" name="fullName" required placeholder="e.g. Ram Sharma" value={formData.fullName} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Email Address <span className="text-[#E11D48]">*</span></label><div className="relative"><Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="email" name="email" required placeholder="guest@example.com" value={formData.email} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Contact / WhatsApp <span className="text-[#E11D48]">*</span></label><div className="flex h-10 border border-gray-200 rounded-xl overflow-hidden"><select name="phoneCode" value={formData.phoneCode} onChange={handleChange} className="bg-gray-50 border-r border-gray-200 px-2 text-xs font-bold focus:outline-none max-w-[110px]">{COUNTRY_CODES.map((c) => <option key={c.iso} value={c.code}>{isoToFlag(c.iso)} {c.code}</option>)}</select><input type="tel" name="phone" required placeholder="9851400000" value={formData.phone} onChange={handleChange} className="flex-1 min-w-0 px-3 text-xs focus:outline-none"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Email Address <span className="text-[#E11D48]">*</span></label><div className="relative"><Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-email-input" type="email" name="email" required placeholder="guest@example.com" value={formData.email} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Contact / WhatsApp <span className="text-[#E11D48]">*</span></label><div className="flex h-10 border border-gray-200 rounded-xl overflow-hidden"><select name="phoneCode" value={formData.phoneCode} onChange={handleChange} className="bg-gray-50 border-r border-gray-200 px-2 text-xs font-bold focus:outline-none max-w-[110px]">{COUNTRY_CODES.map((c) => <option key={c.iso} value={c.code}>{isoToFlag(c.iso)} {c.code}</option>)}</select><input id="hotel-phone-input" type="tel" name="phone" required placeholder="9851400000" value={formData.phone} onChange={handleChange} className="flex-1 min-w-0 px-3 text-xs focus:outline-none transition-all"/></div></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Check-in Date <span className="text-[#E11D48]">*</span></label><div className="relative"><Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="date" name="travelDateFrom" required min={new Date().toISOString().split("T")[0]} value={formData.travelDateFrom} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Check-out Date <span className="text-gray-400 font-normal">(Optional)</span></label><div className="relative"><Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="date" name="travelDateTo" min={formData.travelDateFrom || new Date().toISOString().split("T")[0]} value={formData.travelDateTo} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Check-in Date <span className="text-[#E11D48]">*</span></label><div className="relative"><Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-checkin-input" type="date" name="travelDateFrom" required min={new Date().toISOString().split("T")[0]} value={formData.travelDateFrom} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Check-out Date <span className="text-gray-400 font-normal">(Optional)</span></label><div className="relative"><Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-checkout-input" type="date" name="travelDateTo" min={formData.travelDateFrom || new Date().toISOString().split("T")[0]} value={formData.travelDateTo} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Number of Days <span className="text-[#E11D48]">*</span></label><input type="number" name="numberOfDays" required min={1} max={60} value={formData.numberOfDays} onChange={handleChange} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div>
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Total Guests <span className="text-[#E11D48]">*</span></label><div className="relative"><Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="number" required min={1} value={guestsCount} onChange={(e) => setGuestsCount(Math.max(1, parseInt(e.target.value, 10) || 1))} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">{isPerNight ? "Number of Nights" : "Number of Days"} <span className="text-[#E11D48]">*</span></label><input id="hotel-days-input" type="number" name="numberOfDays" required min={1} max={60} value={formData.numberOfDays} onChange={handleChange} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Number of Rooms <span className="text-[#E11D48]">*</span></label><div className="relative"><BedDouble size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-rooms-input" type="number" required min={1} value={guestsCount} onChange={(e) => { setGuestsCount(Math.max(1, parseInt(e.target.value, 10) || 1)); if (submitError) setSubmitError(""); }} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Nationality <span className="text-[#E11D48]">*</span></label><div className="relative"><Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="text" name="nationality" required placeholder="e.g. Nepali" value={formData.nationality} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
-                <div><label className="block text-xs font-bold text-gray-700 mb-1">Beds in Room <span className="text-gray-400 font-normal">(Optional)</span></label><div className="relative"><BedDouble size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="number" min={1} value={bedsInRoom} onChange={(e) => setBedsInRoom(e.target.value)} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Nationality <span className="text-[#E11D48]">*</span></label><div className="relative"><Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-nationality-input" type="text" name="nationality" required placeholder="e.g. Nepali" value={formData.nationality} onChange={handleChange} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
+                <div><label className="block text-xs font-bold text-gray-700 mb-1">Number of Guests <span className="text-[#E11D48]">*</span></label><div className="relative"><Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="hotel-guests-input" type="number" required min={1} value={bedsInRoom} onChange={(e) => { setBedsInRoom(e.target.value); if (submitError) setSubmitError(""); }} className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div></div>
               </div>
               <div className="space-y-3">
-                <div className="inline-flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2"><span className="text-xs font-bold text-gray-700">Travelling with Children?</span><button type="button" onClick={() => { setHasChildren((prev) => !prev); if (hasChildren) setChildrenCount(""); }} className={`relative inline-flex h-5 w-9 rounded-full ${hasChildren ? "bg-[#E11D48]" : "bg-gray-300"}`}><span className={`inline-block h-4 w-4 mt-[1px] rounded-full bg-white transition-transform ${hasChildren ? "translate-x-4" : "translate-x-0"}`}/></button></div>
-                {hasChildren && <div><label className="block text-xs font-bold text-gray-700 mb-1">Number of Children <span className="text-[#E11D48]">*</span></label><input type="number" required min={1} max={guestsCount} value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none"/></div>}
+                <div className="inline-flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2"><span className="text-xs font-bold text-gray-700">Travelling with Children?</span><button type="button" onClick={() => { setHasChildren((prev) => !prev); if (hasChildren) setChildrenCount(""); if (submitError) setSubmitError(""); }} className={`relative inline-flex h-5 w-9 rounded-full ${hasChildren ? "bg-[#E11D48]" : "bg-gray-300"}`}><span className={`inline-block h-4 w-4 mt-[1px] rounded-full bg-white transition-transform ${hasChildren ? "translate-x-4" : "translate-x-0"}`}/></button></div>
+                {hasChildren && <div><label className="block text-xs font-bold text-gray-700 mb-1">Number of Children <span className="text-[#E11D48]">*</span></label><input id="hotel-children-input" type="number" required min={1} value={childrenCount} onChange={(e) => { setChildrenCount(e.target.value); if (submitError) setSubmitError(""); }} className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none transition-all"/></div>}
               </div>
               <div><label className="block text-xs font-bold text-gray-700 mb-1">Special Requests <span className="text-gray-400 font-normal">(Optional)</span></label><div className="relative"><MessageSquare size={14} className="absolute left-3 top-3 text-gray-400"/><textarea name="specialNotes" rows={2} maxLength={2000} placeholder="Early check-in, quiet room, airport pickup..." value={formData.specialNotes} onChange={handleChange} className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#2D1347] focus:outline-none resize-none"/></div></div>
               {/* File Attachment Upload (just below Special Requests) */}
@@ -464,6 +1066,7 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
                 />
                 {!attachedFile ? (
                   <label
+                    id="hotel-attachment-container"
                     htmlFor="hotel-attachment-input"
                     className="flex flex-col items-center justify-center p-3 sm:p-4 border-2 border-dashed border-gray-200 hover:border-[#E11D48] rounded-xl bg-gray-50/80 hover:bg-pink-50/30 transition-all cursor-pointer group text-center"
                   >
@@ -478,7 +1081,7 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
                     </span>
                   </label>
                 ) : (
-                  <div className="flex items-center justify-between p-2.5 sm:p-3 bg-pink-50/50 border border-pink-200 rounded-xl">
+                  <div id="hotel-attachment-container" className="flex items-center justify-between p-2.5 sm:p-3 bg-pink-50/50 border border-pink-200 rounded-xl">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-8 h-8 rounded-lg bg-[#E11D48]/10 text-[#E11D48] flex items-center justify-center flex-shrink-0">
                         <FileText size={16} />
@@ -509,8 +1112,8 @@ export const HotelBookingModal: React.FC<HotelBookingModalProps> = ({ pkg, isOpe
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-between bg-[#FAF8FF] border border-purple-100 rounded-xl px-4 py-3"><div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estimated Total ({nightsCount} {nightsCount > 1 ? "Days" : "Day"} × {guestsCount} {guestsCount > 1 ? "Guests" : "Guest"} × {unitPriceFormatted})</p><p className="text-xl font-black text-[#2D1347]">{totalPriceFormatted}</p></div></div>
-              <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer"><input type="checkbox" name="termsAgreed" checked={formData.termsAgreed} onChange={handleChange} className="mt-0.5 rounded text-[#E11D48]"/><span>I agree to the hotel reservation policy and cancellation terms of Trip Himalaya.</span></label>
+              <div className="flex items-center justify-between bg-[#FAF8FF] border border-purple-100 rounded-xl px-4 py-3"><div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estimated Total ({nightsCount} {isPerNight ? (nightsCount > 1 ? "Nights" : "Night") : (nightsCount > 1 ? "Days" : "Day")} × {guestsCount} {guestsCount > 1 ? "Rooms" : "Room"} × {unitPriceFormatted})</p><p className="text-xl font-black text-[#2D1347]">{totalPriceFormatted}</p></div></div>
+              <label id="hotel-terms-container" className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer p-1.5 rounded-lg transition-all"><input id="hotel-terms-checkbox" type="checkbox" name="termsAgreed" checked={formData.termsAgreed} onChange={handleChange} className="mt-0.5 rounded text-[#E11D48]"/><span>I agree to the hotel reservation policy and cancellation terms of Trip Himalaya.</span></label>
               <button type="submit" disabled={isSubmitting || !currentTier?.id || !attachedFile} className="w-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-50">{isSubmitting ? <><Send size={15} className="animate-pulse"/><span>Processing Reservation…</span></> : <><Send size={15}/><span>Book This Hotel Room</span></>}</button>
             </form>
           )}

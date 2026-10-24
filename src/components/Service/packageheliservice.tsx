@@ -1,4 +1,4 @@
-﻿/**
+/**
  * packageheliservice.tsx
  * -----------------------------------------------------------------
  * Helicopter Services Package Component.
@@ -65,6 +65,7 @@ import {
   displayPrice,
 } from "../../context/CurrencyContext";
 import HeliServicePriceModel, { HeliTourData } from "./heliservicepricemodel";
+import SharePopover from "../reusable/SharePopover";
 import THTTLogo from "../../assets/images/THTTLogo.png";
 import Logo from "../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
@@ -95,6 +96,44 @@ import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
 // =============================================================================
 // Comprehensive Helicopter Tours Data
 // =============================================================================
+// Gradient palette indexed by first char code for consistent colour per guest name
+const AVATAR_PALETTES: [string, string][] = [
+  ["#E91E63", "#200B3B"],
+  ["#7C3AED", "#4C1D95"],
+  ["#0EA5E9", "#075985"],
+  ["#10B981", "#065F46"],
+  ["#F59E0B", "#92400E"],
+  ["#EF4444", "#7F1D1D"],
+  ["#EC4899", "#831843"],
+  ["#14B8A6", "#134E4A"],
+];
+
+const HeliGuestAvatar: React.FC<{ name: string; avatar?: string }> = ({ name, avatar }) => {
+  const [imgError, setImgError] = useState(false);
+  const initial = (name || "G").trim().charAt(0).toUpperCase();
+  const [from, to] = AVATAR_PALETTES[(initial.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
+
+  if (avatar && !imgError) {
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        onError={() => setImgError(true)}
+        className="w-11 h-11 rounded-full object-cover border-2 border-pink-100 shadow-xs flex-shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-pink-100 shadow-xs"
+      style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+    >
+      <span className="text-white font-black text-sm leading-none select-none">{initial}</span>
+    </div>
+  );
+};
+
 export interface PackageFaqApi {
   id?: number | string;
   package_id?: number | string;
@@ -149,6 +188,7 @@ export interface HeliPackageItem extends HeliTourData {
     rating: number;
     comment: string;
     date: string;
+    image?: string;
   }>;
   package_helis?: any[];
   package_vehicles?: any[];
@@ -256,7 +296,14 @@ const mapApiPackageToHeliPackage = (pkg: any): HeliPackageItem => {
       : [],
     faqs: [],
     testimonies: Array.isArray(pkg.testimonies)
-      ? pkg.testimonies
+      ? pkg.testimonies.map((t: any) => ({
+          name: t.name || t.traveler_name || t.userName || "Guest",
+          country: t.country || t.location || "",
+          rating: Math.max(0, Math.min(5, Math.round(Number(t.rating) || 5))),
+          comment: t.comment || t.review || "",
+          date: t.date || (t.review_date ? new Date(t.review_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""),
+          image: t.image || t.profile_image || t.guest_image || t.userAvatar || t.avatar || t.photo || "",
+        }))
       : [],
     package_helis:
       pkg.package_helis ?? [],
@@ -722,6 +769,7 @@ export const PackageHeliService: React.FC<{
           rating: Math.max(0, Math.min(5, Math.round(Number(item.rating) || 0))),
           comment: item.review || item.comment || "",
           date: (item.review_date || item.date) ? new Date(item.review_date || item.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
+          image: item.profile_image || item.guest_image || item.userAvatar || item.avatar || item.image || item.photo || "",
         }));
         setHeliTestimonials(mapped);
       })
@@ -2847,121 +2895,47 @@ export const PackageHeliService: React.FC<{
               </div>
             )}
             {/* â”€â”€ TOP HERO HEADER (Matching Insurance Detail Banner Design) â”€â”€ */}
-            <div
-              className="print:hidden relative rounded-3xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end"
-              style={{
-                backgroundImage: `url('${selectedTour.image}')`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
+            <div className="print:hidden relative rounded-3xl shadow-lg min-h-[220px] sm:min-h-[260px] flex flex-col justify-end z-20">
+              <div
+                className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none"
+                style={{
+                  backgroundImage: `url('${selectedTour.image}')`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent print:hidden" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 print:hidden" />
+              </div>
               {/* Share button (top-right, with dropdown) */}
-              <div ref={shareDropdownRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-20">
-                {isShareOpen && (
-                  <div className="absolute top-11 right-0 sm:top-0 sm:right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 flex-nowrap min-w-max animate-in fade-in slide-in-from-top-2 sm:slide-in-from-right-2 duration-150 z-30">
-                    {/* Facebook */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open(
-                          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                            window.location.href
-                          )}`,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                        setIsShareOpen(false);
-                      }}
-                      title="Share on Facebook"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
-                      style={{ background: "#1877F2" }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                        <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
-                      </svg>
-                    </button>
-                    {/* Instagram */}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(window.location.href).catch(() => { });
-                        setIsShareCopied(true);
-                        setTimeout(() => setIsShareCopied(false), 2000);
-                        window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
-                        setIsShareOpen(false);
-                      }}
-                      title="Share on Instagram"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
-                      style={{
-                        background:
-                          "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2" />
-                        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white" />
-                        <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
-                      </svg>
-                    </button>
-                    {/* WhatsApp */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open(
-                          `https://wa.me/?text=${encodeURIComponent(
-                            `Check out ${selectedTour.title} on Trip Himalaya: ${window.location.href}`
-                          )}`,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                        setIsShareOpen(false);
-                      }}
-                      title="Share on WhatsApp"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer"
-                      style={{ background: "#25D366" }}
-                    >
-                      <MessageCircle size={14} color="white" />
-                    </button>
-                    {/* Copy Link */}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(window.location.href).catch(() => { });
-                        setIsShareCopied(true);
-                        setTimeout(() => setIsShareCopied(false), 2000);
-                        setIsShareOpen(false);
-                      }}
-                      title={isShareCopied ? "Copied!" : "Copy Link"}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${
-                        isShareCopied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"
-                      }`}
-                    >
-                      {isShareCopied ? (
-                        <Check size={13} color="white" />
-                      ) : (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="13" height="13">
-                          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-                        </svg>
-                      )}
-                    </button>
-                    <div className="hidden sm:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setIsShareOpen((prev) => !prev)}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
-                    isShareOpen
-                      ? "bg-white text-[#2D1347]"
-                      : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
-                  }`}
-                  title="Share this tour"
-                >
-                  <Share2 size={15} />
-                </button>
+              <div ref={shareDropdownRef} className="print:hidden absolute top-3 right-4 sm:top-4 sm:right-6 z-30">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsShareOpen((prev) => !prev)}
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
+                      isShareOpen
+                        ? "bg-white text-gray-900 shadow-xl"
+                        : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
+                    }`}
+                    title="Share this tour"
+                    aria-label="Share this tour"
+                  >
+                    <Share2 size={16} />
+                  </button>
+
+                  {isShareOpen && (
+                    <SharePopover
+                      onClose={() => setIsShareOpen(false)}
+                      title={selectedTour.title}
+                      subtitle={selectedTour.location ? `Helicopter service in ${selectedTour.location}` : "Explore Helicopter Services with Trip Himalaya."}
+                      image={selectedTour.image || Logo}
+                      url={window.location.href}
+                      onDownloadPdf={() => window.print()}
+                      align="right"
+                    />
+                  )}
+                </div>
               </div>
               {/* Main Content & Actions */}
               <div className="relative z-10 pt-14 px-4 pb-4 sm:pt-16 sm:px-6 sm:pb-6 md:p-8">
@@ -3373,37 +3347,73 @@ export const PackageHeliService: React.FC<{
                     subtitle="Common questions answered by our flight specialists"
                   />
                 )}
-                {/* Tab 4: TESTIMONIES — only shown if API data exists */}
-                {activeDetailTab === "TESTIMONIES" && heliTestimonials.length > 0 && (
+                {/* Tab 4: TESTIMONIES */}
+                {activeDetailTab === "TESTIMONIES" && (
                   <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-                    <h3 className="text-xl font-black text-[#200B3B]">
-                      Guest Experiences &amp; Reviews
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {heliTestimonials.map((test, idx) => (
-                        <div
-                          key={idx}
-                          className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-3"
-                        >
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: test.rating }).map((_, r) => (
-                              <Star
-                                key={r}
-                                size={14}
-                                className="text-yellow-400 fill-yellow-400"
-                              />
-                            ))}
-                          </div>
-                          <p className="text-xs text-gray-700 italic font-medium leading-relaxed">
-                            "{test.comment}"
-                          </p>
-                          <div className="pt-2 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500 font-bold">
-                            <span className="text-[#200B3B]">{test.name} ({test.country})</span>
-                            <span>{test.date}</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-black text-[#200B3B]">
+                        Guest Experiences &amp; Reviews
+                      </h3>
+                      <span className="text-xs font-bold text-gray-500">
+                        {heliTestimonials.length > 0 ? `${heliTestimonials.length} reviews` : ""}
+                      </span>
                     </div>
+
+                    {heliTestimonials.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {heliTestimonials.map((test, idx) => (
+                          <div
+                            key={idx}
+                            className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: test.rating || 5 }).map((_, r) => (
+                                  <Star
+                                    key={r}
+                                    size={14}
+                                    className="text-yellow-400 fill-yellow-400"
+                                  />
+                                ))}
+                              </div>
+                              {test.date && (
+                                <span className="text-[11px] font-semibold text-gray-400">
+                                  {test.date}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs sm:text-sm text-gray-700 italic font-medium leading-relaxed">
+                              "{test.comment}"
+                            </p>
+
+                            <div className="pt-3 border-t border-gray-200/70 flex items-center gap-3">
+                              <HeliGuestAvatar name={test.name} avatar={test.image} />
+                              <div className="min-w-0">
+                                <h4 className="font-extrabold text-xs sm:text-sm text-[#200B3B] truncate">
+                                  {test.name}
+                                </h4>
+                                {test.country && (
+                                  <p className="text-[11px] text-gray-400 font-medium truncate">
+                                    {test.country}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-12 h-12 rounded-full bg-pink-50 text-[#E91E63] mx-auto flex items-center justify-center mb-3">
+                          <Star size={20} />
+                        </div>
+                        <h4 className="text-base font-black text-[#200B3B] mb-1">No Reviews Yet</h4>
+                        <p className="text-xs text-gray-500">
+                          Be the first to share your helicopter flight experience!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

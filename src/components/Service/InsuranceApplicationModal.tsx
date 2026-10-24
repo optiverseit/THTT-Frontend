@@ -834,7 +834,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                             <polyline points="22,6 12,13 2,6"/>
                           </svg>
-                          pradip.triphimalayatt@gmail.com
+                          bhishan.triphimalayatt@gmail.com
                         </span>
                         <span style={{ fontSize: "8px", color: "#e9d5ff", display: "inline-flex", alignItems: "center", gap: "3px", whiteSpace: "nowrap" }}>
                           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -996,7 +996,7 @@ export const InsuranceApplicationModal: React.FC<InsuranceApplicationModalProps>
                   <span>📞 24/7 SOS Desk: 9851403760, Tel: 01-5922697</span>
                   <span>🏥 CIWEC Clinic: 01-4424111</span>
                   <span>🏥 Swacon Hospital: 01-4112211</span>
-                  <span>✉ pradip.triphimalayatt@gmail.com</span>
+                  <span>✉ bhishan.triphimalayatt@gmail.com</span>
                 </div>
               </div>
 

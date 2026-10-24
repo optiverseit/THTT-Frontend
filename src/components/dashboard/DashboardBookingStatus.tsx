@@ -683,8 +683,8 @@ const DashboardBookingStatus: React.FC<DashboardBookingStatusProps> = ({ mode = 
                       <DetailField label="Check In" value={formatDate(raw.check_in_date)} />
                       <DetailField label="Check Out" value={formatDate(raw.check_out_date)} />
                       <DetailField label="Number of Days" value={raw.number_of_days ? `${raw.number_of_days} Day${Number(raw.number_of_days) !== 1 ? "s" : ""}` : "-"} />
-                      <DetailField label="Total Guests" value={raw.total_guests ?? "-"} />
-                      <DetailField label="Beds in Room" value={raw.beds_in_room ?? "-"} />
+                      <DetailField label="Number of Rooms" value={raw.total_guests ?? "-"} />
+                      <DetailField label="Number of Guests" value={raw.beds_in_room ?? "-"} />
                       <DetailField label="Children" value={raw.number_of_children ?? 0} />
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { Eye, X, ChevronLeft, ChevronRight, Check, Star, MapPin, Clock, Share2, 
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency } from "../../context/CurrencyContext";
 import ShareModal from "../reusable/ShareModal";
+import SharePopover from "../reusable/SharePopover";
 import Logo from "../../assets/images/Logo.png";
 import { formatDescription } from "../../utils/formatDescription";
 import HotelBookingModal from "./HotelBookingModal";
@@ -532,23 +533,25 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
       </div>
 
       {/* HERO HEADER — visa-page style with automatic 5-second slide transition */}
-      <div className="print:hidden relative overflow-hidden shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end">
-        {/* Background Images Cross-Fade */}
-        {headerImages.map((img, idx) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-              idx === currentHeaderIndex ? "opacity-100 z-0" : "opacity-0 pointer-events-none"
-            }`}
-            style={{
-              backgroundImage: `url('${img}')`,
-            }}
-          />
-        ))}
+      <div className="print:hidden relative shadow-lg min-h-[200px] sm:min-h-[280px] flex flex-col justify-end z-20">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Background Images Cross-Fade */}
+          {headerImages.map((img, idx) => (
+            <div
+              key={idx}
+              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
+                idx === currentHeaderIndex ? "opacity-100 z-0" : "opacity-0 pointer-events-none"
+              }`}
+              style={{
+                backgroundImage: `url('${img}')`,
+              }}
+            />
+          ))}
 
-        {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent z-[1]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 z-[1]" />
+          {/* Gradient overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0d0520]/92 via-[#1a0836]/65 to-transparent z-[1]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#2D1347]/40 z-[1]" />
+        </div>
 
         {/* Slide indicators if multiple images */}
         {headerImages.length > 1 && (
@@ -621,114 +624,37 @@ const faqsList = Array.isArray(pkg.allfaqs) ? pkg.allfaqs : [];
         </div>
 
         {/* Share button — top-right corner of hero */}
-        <div className="absolute top-8 right-4 sm:top-10 sm:right-8 md:top-16 md:right-11 lg:right-14 xl:right-16 z-20">
-          {isShareOpen && (
-            <div className="absolute top-0 right-11 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 p-2 flex items-center gap-1.5 min-w-max z-30">
-              {/* Facebook */}
-              <button
-                onClick={() => {
-                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank", "noopener,noreferrer");
-                  setIsShareOpen(false);
-                }}
-                title="Facebook"
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                style={{ background: "#1877F2" }}
-              >
-                <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" /></svg>
-              </button>
-              {/* Instagram */}
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl).catch(() => { });
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                  window.open("https://www.instagram.com/triphimalayatt", "_blank", "noopener,noreferrer");
-                  setIsShareOpen(false);
-                }}
-                title="Instagram"
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                style={{ background: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}
-              >
-                <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="2" />
-                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="white" />
-                  <circle cx="17.5" cy="6.5" r="1.5" fill="white" />
-                </svg>
-              </button>
-              {/* TikTok */}
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl).catch(() => { });
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                  window.open("https://www.tiktok.com/@trip.himalaya", "_blank", "noopener,noreferrer");
-                  setIsShareOpen(false);
-                }}
-                title="TikTok"
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                style={{ background: "#000000" }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-                  <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-                </svg>
-              </button>
-              {/* LinkedIn */}
-              <button
-                onClick={() => {
-                  window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(pkg.title)}`, "_blank", "noopener,noreferrer");
-                  setIsShareOpen(false);
-                }}
-                title="LinkedIn"
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                style={{ background: "#0A66C2" }}
-              >
-                <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
-                  <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
-                  <circle cx="4" cy="4" r="2" fill="white" />
-                </svg>
-              </button>
-              {/* Twitter/X */}
-              <button
-                onClick={() => {
-                  window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(pkg.title)}`, "_blank", "noopener,noreferrer");
-                  setIsShareOpen(false);
-                }}
-                title="Twitter / X"
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm cursor-pointer"
-                style={{ background: "#000000" }}
-              >
-                <svg viewBox="0 0 24 24" fill="white" width="13" height="13">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-              </button>
-              {/* Copy Link */}
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl).catch(() => { });
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                  setIsShareOpen(false);
-                }}
-                title={copied ? "Copied!" : "Copy Link"}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-sm flex-shrink-0 cursor-pointer ${copied ? "bg-emerald-500" : "bg-gray-700 hover:bg-gray-900"}`}
-              >
-                {copied ? <Check size={13} color="white" /> : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="13" height="13">
-                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-                  </svg>
-                )}
-              </button>
-              <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200/80" />
-            </div>
-          )}
-          <button
-            onClick={() => setIsShareOpen((prev) => !prev)}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white transition-all cursor-pointer shadow-lg"
-            title="Share"
-          >
-            <Share2 size={15} />
-          </button>
+        <div className="absolute top-8 right-4 sm:top-10 sm:right-8 md:top-16 md:right-11 lg:right-14 xl:right-16 z-30">
+          <div className="relative">
+            <button
+              onClick={() => setIsShareOpen((prev) => !prev)}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+                isShareOpen
+                  ? "bg-white text-gray-900 shadow-xl"
+                  : "bg-white/20 hover:bg-white/35 backdrop-blur-sm border border-white/30 text-white"
+              }`}
+              title="Share"
+              aria-label="Share hotel package"
+            >
+              <Share2 size={16} />
+            </button>
+
+            {isShareOpen && (
+              <SharePopover
+                onClose={() => setIsShareOpen(false)}
+                title={pkg.title}
+                subtitle={
+                  pkg.location
+                    ? `Explore ${pkg.location} with Trip Himalaya.`
+                    : "Explore premier hotel packages with Trip Himalaya."
+                }
+                image={pkg.image || (headerImages.length > 0 ? headerImages[0] : "")}
+                url={shareUrl}
+                onDownloadPdf={handlePrint}
+                align="right"
+              />
+            )}
+          </div>
         </div>
 
 

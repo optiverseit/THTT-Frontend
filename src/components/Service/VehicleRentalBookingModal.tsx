@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Calendar,
@@ -43,6 +43,8 @@ export interface VehicleBookingItem {
     availableSeats?: number;
     fromLocation?: string;
     destination?: string;
+    selectedRoute?: string;
+    routes?: { from: string; to: string; price?: number | string }[];
     vehicleType?: string;
     fuelType?: string;
     availableFrom?: string;
@@ -78,6 +80,9 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Selected route string for this booking (e.g. "Kathmandu to Pokhara")
+  const [selectedRoute, setSelectedRoute] = useState<string>("");
 
   const vInfo = item?.vehicleRental;
   const tripType = vInfo?.tripType || "One Way";
@@ -117,6 +122,8 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
       setFormError("");
       setUploadedFiles([]);
       setPassengersCount(1);
+      // Initialize selected route from the item passed in (the user's selected route on the card)
+      setSelectedRoute(vInfo?.selectedRoute || "");
       setFormData({
         fullName: "",
         nationality: "",
@@ -131,11 +138,48 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
         termsAgreed: false,
       });
     }
-  }, [isOpen, item?.id, vInfo?.availableFrom, vInfo?.availableTo]);
+  }, [isOpen, item?.id, vInfo?.availableFrom, vInfo?.availableTo, vInfo?.selectedRoute]);
 
   if (!isOpen || !item) return null;
 
-  const basePriceNum = Number(vInfo?.basePrice || item.price || 0);
+  // ── Dynamic price based on currently selected route ──────────────────────────
+  // Mirrors the multiplier logic in VehicleRentalDetailContent.getVehiclePrice()
+  const getRoutePrice = (routeStr: string): number => {
+    const rawBase = Number(vInfo?.basePrice || 0);
+    const itemPrice = Number(String(item.price || 0).replace(/[^0-9.]/g, ""));
+    const baseVehiclePrice = rawBase > 0 ? rawBase : itemPrice;
+
+    if (!vInfo?.routes || vInfo.routes.length === 0 || !routeStr) {
+      return itemPrice > 0 ? itemPrice : baseVehiclePrice;
+    }
+
+    const routeIdx = vInfo.routes.findIndex(
+      (rt) =>
+        `${rt.from} to ${rt.to}`.trim().toLowerCase() === routeStr.trim().toLowerCase() ||
+        `${rt.from} ➔ ${rt.to}`.trim().toLowerCase() === routeStr.trim().toLowerCase()
+    );
+
+    if (routeIdx === -1) return itemPrice > 0 ? itemPrice : baseVehiclePrice;
+
+    const rt = vInfo.routes[routeIdx];
+
+    // 1. Route has its own explicit price stored in DB
+    if (rt.price !== undefined && rt.price !== null && rt.price !== "") {
+      const parsed = Number(String(rt.price).replace(/[^0-9.]/g, ""));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+
+    // 2. Apply proportional multiplier for route index (same as card logic)
+    if (routeIdx > 0 && baseVehiclePrice > 0) {
+      const multipliers = [1, 1.25, 0.9, 1.4, 1.15];
+      const mult = multipliers[routeIdx % multipliers.length] || 1;
+      return Math.round(baseVehiclePrice * mult);
+    }
+
+    return baseVehiclePrice;
+  };
+
+  const basePriceNum = getRoutePrice(selectedRoute);
 
   // If private trip: flat rate regardless of passengers
   // If sharing/per seat: price per person * passenger count
@@ -255,8 +299,8 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
         pickup_address: formData.pickupAddress,
 
         special_requests: formData.specialNotes
-          ? `[Trip Type: ${tripType}] ${formData.specialNotes}`
-          : `[Trip Type: ${tripType}]`,
+          ? `[Route: ${selectedRoute || "Standard Route"}] [Trip Type: ${tripType}] ${formData.specialNotes}`
+          : `[Route: ${selectedRoute || "Standard Route"}] [Trip Type: ${tripType}]`,
       };
 
       const response = await createBooking(bookingData);
@@ -398,9 +442,9 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
   };
 
   const handleWhatsAppShare = () => {
-    const route = vInfo?.fromLocation && vInfo?.destination
+    const route = selectedRoute || (vInfo?.fromLocation && vInfo?.destination
       ? `${vInfo.fromLocation} to ${vInfo.destination}`
-      : item.location || "Nepal Route";
+      : item.location || "Nepal Route");
 
     const msg = encodeURIComponent(
       `*Official Vehicle Rental Booking Confirmation*\n\n` +
@@ -427,9 +471,9 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
   };
 
   const handlePrintSlip = () => {
-    const route = vInfo?.fromLocation && vInfo?.destination
+    const route = selectedRoute || (vInfo?.fromLocation && vInfo?.destination
       ? `${vInfo.fromLocation} to ${vInfo.destination}`
-      : item.location || "Nepal Route";
+      : item.location || "Nepal Route");
 
     const travelDateRange = formData.travelDateFrom || formData.travelDate
       ? `${formData.travelDateFrom || formData.travelDate}${formData.travelDateTo ? ` to ${formData.travelDateTo}` : ""}`
@@ -1188,6 +1232,45 @@ export const VehicleRentalBookingModal: React.FC<VehicleRentalBookingModalProps>
                 <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2">
                   <AlertCircle size={15} className="flex-shrink-0 text-red-500 mt-0.5" />
                   <span className="leading-snug">{formError}</span>
+                </div>
+              )}
+
+              {/* Selected Route Display & Switcher Banner */}
+              {selectedRoute && (
+                <div className="p-3 bg-purple-50/80 border border-purple-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#200B3B] text-[#FF4FA3] flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <MapPin size={15} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-black text-purple-700 uppercase tracking-wider block">
+                        Booking Route
+                      </span>
+                      <span className="text-xs sm:text-sm font-extrabold text-[#200B3B] truncate block">
+                        {selectedRoute}
+                      </span>
+                    </div>
+                  </div>
+
+                  {vInfo?.routes && vInfo.routes.length > 1 && (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase">Change:</span>
+                      <select
+                        value={selectedRoute}
+                        onChange={(e) => setSelectedRoute(e.target.value)}
+                        className="bg-white border border-purple-200 rounded-xl px-2.5 py-1 text-xs font-bold text-[#200B3B] focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer shadow-2xs"
+                      >
+                        {vInfo.routes.map((rt, idx) => {
+                          const routeName = `${rt.from} to ${rt.to}`;
+                          return (
+                            <option key={idx} value={routeName}>
+                              {rt.from} ➔ {rt.to}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
 

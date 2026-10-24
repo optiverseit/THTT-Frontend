@@ -4,5 +4,6 @@ export { default as DynamicFaqSection } from "./DynamicFaqSection";
 export { default as PreFooter } from "./PreFooter";
 export { default as Testimonials } from "./Testimonials";
 export { default as ShareModal } from "./ShareModal";
+export { default as SharePopover } from "./SharePopover";
 export { default as PaymentMethod } from "./PaymentMethod";
 export * from "./PaymentMethod";

@@ -314,8 +314,16 @@ const ServiceDetail: React.FC = () => {
             }
             if (Array.isArray(routesArr)) {
               routesArr.forEach((r: any) => {
-                if (r?.from) rawFromList.push(String(r.from));
-                if (r?.to) rawToList.push(String(r.to));
+                if (typeof r === "string") {
+                  const parts = r.split(/\s*(?:to|-|–|->)\s*/i);
+                  if (parts[0]) rawFromList.push(parts[0].trim());
+                  if (parts[1]) rawToList.push(parts[1].trim());
+                } else if (r && typeof r === "object") {
+                  const fromVal = r.from || r.from_location || r.fromLocation || r.origin;
+                  const toVal = r.to || r.to_location || r.toLocation || r.destination;
+                  if (fromVal) rawFromList.push(String(fromVal).trim());
+                  if (toVal) rawToList.push(String(toVal).trim());
+                }
               });
             }
 
@@ -911,7 +919,7 @@ const ServiceDetail: React.FC = () => {
           <div className="w-full bg-white rounded-b-2xl sm:rounded-b-3xl rounded-tr-2xl sm:rounded-tr-3xl rounded-tl-none shadow-xl border border-gray-100 relative">
 
             {/* ROW 1: From / To / Departure Date / Return Date */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center divide-y md:divide-y-0 md:divide-x divide-gray-100">
               {/* FROM */}
               <div ref={fromDropdownRef} className="relative flex items-center gap-2.5 flex-1 px-4 py-3">
                 <MapPin size={16} className="text-pink-500 flex-shrink-0" />
@@ -1071,7 +1079,7 @@ const ServiceDetail: React.FC = () => {
             <div className="h-px bg-gray-100" />
 
             {/* ROW 2: Passengers / Vehicle Type / Passenger Type / Search */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center divide-y md:divide-y-0 md:divide-x divide-gray-100">
               {/* NO. OF PASSENGERS — only for One Way and Round Trip */}
               {vehicleTripType !== "Private" && (
                 <div className="flex items-center gap-2.5 flex-1 px-4 py-3">
@@ -1136,7 +1144,7 @@ const ServiceDetail: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleVehicleSearch}
-                  className="w-full sm:w-auto rounded-xl bg-pink-600 hover:bg-pink-700 active:scale-95 py-3 px-7 text-white font-bold text-xs tracking-wider transition-all whitespace-nowrap cursor-pointer shadow-sm hover:shadow-md"
+                  className="w-full md:w-auto rounded-xl bg-pink-600 hover:bg-pink-700 active:scale-95 py-3 px-7 text-white font-bold text-xs tracking-wider transition-all whitespace-nowrap cursor-pointer shadow-sm hover:shadow-md"
                 >
                   SEARCH ROUTE
                 </button>
@@ -1448,7 +1456,7 @@ const ServiceDetail: React.FC = () => {
                 </div>
                 <div className="w-full max-w-4xl my-5 sm:my-6 relative z-20">{renderFloatingSearchBar()}</div>
                 {service.shortDesc && <p className="text-white/90 text-[10px] sm:text-[13px] font-medium max-w-xs sm:max-w-xl mx-auto leading-snug sm:leading-relaxed italic drop-shadow-xs px-2 sm:px-4 my-1 sm:my-1.5">"{service.shortDesc}"</p>}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-2.5 w-full max-w-[725px] mx-auto mt-2.5 sm:mt-3">
                   {[
                     { icon: Car, label: "50+ Fleet Vehicles", desc: "4x4 SUVs, Sedans & Vans" },
                     { icon: ShieldCheck, label: "Chauffeur Included", desc: "Mountain-Licensed Drivers" },
@@ -1674,11 +1682,13 @@ const ServiceDetail: React.FC = () => {
             ? "Request Custom Quote"
             : "WhatsApp Inquiry"
         }
-        telPhone="+9779851420882"
-        whatsappPhone="9779851420882"
+        telPhone={isHotelBooking ? "+9779851403761" : "+9779851420882"}
+        whatsappPhone={isHotelBooking ? "9779851403761" : "9779851420882"}
         whatsappMessage={
           service.id === "heli-services" || isHeliTourDetailPage
             ? "Hello Trip Himalaya (Heli Operations Desk)! I would like to inquire about helicopter services and flight packages."
+            : isHotelBooking
+            ? "Hello Trip Himalaya (Hotel Booking Team)! I would like to inquire about hotel rooms and availability. Please share details."
             : undefined
         }
       />

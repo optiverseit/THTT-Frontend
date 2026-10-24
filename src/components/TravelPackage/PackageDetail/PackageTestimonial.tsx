@@ -1,7 +1,45 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Package } from "../../../assets/data/types";
 import { useOutletContext, useParams } from "react-router-dom";
-import { Star, CheckCircle2, User } from "lucide-react";
+import { Star, CheckCircle2 } from "lucide-react";
+
+// Gradient palette — consistent colour per name based on first char code
+const AVATAR_PALETTES: [string, string][] = [
+  ["#E91E63", "#200B3B"],
+  ["#7C3AED", "#4C1D95"],
+  ["#0EA5E9", "#075985"],
+  ["#10B981", "#065F46"],
+  ["#F59E0B", "#92400E"],
+  ["#EF4444", "#7F1D1D"],
+  ["#EC4899", "#831843"],
+  ["#14B8A6", "#134E4A"],
+];
+
+const TravelerAvatar: React.FC<{ name: string; avatar?: string }> = ({ name, avatar }) => {
+  const [imgError, setImgError] = useState(false);
+  const initial = (name || "T").trim().charAt(0).toUpperCase();
+  const [from, to] = AVATAR_PALETTES[(initial.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
+
+  if (avatar && !imgError) {
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        onError={() => setImgError(true)}
+        className="w-12 h-12 rounded-full object-cover border-2 border-pink-100 shadow-sm flex-shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-pink-100 shadow-sm"
+      style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+    >
+      <span className="text-white font-black text-lg leading-none select-none">{initial}</span>
+    </div>
+  );
+};
 import PackagePricing from "./PackagePricing";
 import {
   getPublicPackageTestimonials,
@@ -216,21 +254,7 @@ const PackageTestimonial: React.FC = () => {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center gap-3.5">
-                        {profileImg ? (
-                          <img
-                            src={profileImg}
-                            alt={travelerName}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-pink-100 shadow-xs"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display =
-                                "none";
-                            }}
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-pink-50 border-2 border-pink-100 flex items-center justify-center text-[#E91E63] font-bold">
-                            {travelerName.charAt(0) || <User size={20} />}
-                          </div>
-                        )}
+                        <TravelerAvatar name={travelerName} avatar={profileImg} />
                         <div>
                           <h4 className="font-extrabold text-sm sm:text-base text-[#200B3B] flex items-center gap-1.5">
                             <span>{travelerName}</span>

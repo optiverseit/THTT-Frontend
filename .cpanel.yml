@@ -2,7 +2,5 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home8/triphima/public_html
-    - npm install --legacy-peer-deps
-    - npm run build
     - /bin/cp -R dist/* $DEPLOYPATH/
     - /bin/cp dist/.htaccess $DEPLOYPATH/

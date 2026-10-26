@@ -154,8 +154,9 @@ $message = !empty($rawMessage) ? nl2br(cleanForHtml($rawMessage)) : 'No addition
 $isQuote = ($formType === 'quote');
 $formTitle = $isQuote ? 'Plan Your Trip / Free Quote' : 'Get In Touch / Contact Us';
 $fieldLabel = $isQuote ? 'Selected Service' : 'Department of Interest';
-$subjectAdmin = ($isQuote ? "🏔️ [New Quote] " : "📬 [New Inquiry] ") . "$rawFullName - $rawService";
-$subjectUser = "We've Received Your Request! - Trip Himalaya Tours & Travels";
+$refCode = "TH-" . rand(100000, 999999);
+$subjectAdmin = ($isQuote ? "🏔️ [New Quote" : "📬 [New Inquiry") . " #{$refCode}] {$rawFullName} - {$rawService}";
+$subjectUser = "We've Received Your Request! [#{$refCode}] - Trip Himalaya Tours & Travels";
 
 // 1. Admin Email Template
 $adminHtml = <<<HTML
@@ -190,7 +191,11 @@ $adminHtml = <<<HTML
               </p>
               <table role="presentation" width="100%" style="background-color:#f8fafc;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:24px;" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;width:38%;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Full Name</td>
+                  <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;width:38%;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Reference ID</td>
+                  <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:800;color:#8B2CFF;">#{$refCode}</td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Full Name</td>
                   <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e0d3d;">{$fullName}</td>
                 </tr>
                 <tr>
@@ -237,7 +242,7 @@ $adminHtml = <<<HTML
                       ✉️ Reply to Customer
                     </a>
                     <a href="https://wa.me/{$phone}" target="_blank" style="display:inline-block;background-color:#25D366;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;padding:12px 24px;border-radius:12px;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(37,211,102,0.3);">
-                      💬 Chat on Customer's WhatsApp
+                      <img src="https://img.icons8.com/ios-filled/50/ffffff/whatsapp--v1.png" width="16" height="16" alt="WhatsApp" style="vertical-align:middle;margin-right:6px;border:0;display:inline-block;" />Chat on Customer's WhatsApp
                     </a>
                   </td>
                 </tr>
@@ -272,7 +277,7 @@ $userHtml = <<<HTML
           <tr>
             <td style="background:linear-gradient(135deg,#FF4FA3 0%,#8B2CFF 100%);padding:36px 30px;text-align:center;">
               <div style="display:inline-block;background-color:rgba(255,255,255,0.22);color:#ffffff;padding:4px 14px;border-radius:50px;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">
-                Namaste &amp; Greetings 🙏
+                Namaste 🙏
               </div>
               <h1 style="color:#ffffff;font-size:26px;font-weight:800;margin:0 0 6px 0;letter-spacing:-0.5px;">
                 We've Received Your Request!
@@ -295,6 +300,10 @@ $userHtml = <<<HTML
                   📋 Summary of Your Submission
                 </h3>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#334155;">
+                  <tr>
+                    <td style="padding:4px 0;width:35%;color:#64748b;font-weight:600;">Reference No:</td>
+                    <td style="padding:4px 0;font-weight:800;color:#8B2CFF;">#{$refCode}</td>
+                  </tr>
                   <tr>
                     <td style="padding:4px 0;width:35%;color:#64748b;font-weight:600;">{$fieldLabel}:</td>
                     <td style="padding:4px 0;font-weight:700;color:#E91E63;">{$service}</td>
@@ -325,7 +334,7 @@ $userHtml = <<<HTML
                   Connect directly with the <strong>{$teamName}</strong> on WhatsApp:
                 </p>
                 <a href="https://wa.me/977{$teamPhone}?text=Hello%20Trip%20Himalaya%20({$service})%2C%20I%20just%20submitted%20an%20inquiry%20regarding%20my%20travel%20plans." target="_blank" style="display:inline-block;background-color:#25D366;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;padding:12px 24px;border-radius:12px;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(37,211,102,0.3);">
-                  💬 Chat with {$teamName} on WhatsApp (+977-{$teamPhone})
+                  <img src="https://img.icons8.com/ios-filled/50/ffffff/whatsapp--v1.png" width="18" height="18" alt="WhatsApp" style="vertical-align:middle;margin-right:8px;border:0;display:inline-block;" />Chat with {$teamName} on WhatsApp (+977-{$teamPhone})
                 </a>
               </div>
               <div style="border-top:1px solid #f1f5f9;padding-top:20px;text-align:center;color:#94a3b8;font-size:11px;line-height:1.6;">
@@ -400,11 +409,13 @@ function sendSmtpMail($host, $port, $user, $pass, $from, $fromName, $to, $subjec
 
     $headers = [
         "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>",
+        "Reply-To: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>",
         "To: $toHeader",
         "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=",
+        "Date: " . date('r'),
         "MIME-Version: 1.0",
         "Content-Type: text/html; charset=UTF-8",
-        "Date: " . date('r')
+        "X-Mailer: Trip Himalaya Mailer"
     ];
 
     $emailData = implode("\r\n", $headers) . "\r\n\r\n" . $html . "\r\n.";

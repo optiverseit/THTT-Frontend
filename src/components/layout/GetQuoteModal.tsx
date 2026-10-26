@@ -8,6 +8,22 @@ interface GetQuoteModalProps {
   onClose: () => void;
 }
 
+const WhatsAppSvg: React.FC<{ size?: number; className?: string }> = ({
+  size = 18,
+  className = "",
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.964 9.964 0 0 0 1.333 4.993L2 22l5.233-1.237a9.994 9.994 0 0 0 4.779 1.217h.004c5.505 0 9.988-4.478 9.989-9.984 0-2.669-1.037-5.176-2.925-7.062A9.925 9.925 0 0 0 12.012 2zm0 18.293h-.003a8.318 8.318 0 0 1-4.233-1.157l-.304-.18-3.146.744.757-3.067-.198-.314a8.308 8.308 0 0 1-1.272-4.335c0-4.588 3.733-8.318 8.324-8.318 2.223 0 4.312.865 5.884 2.435a8.272 8.272 0 0 1 2.432 5.885c0 4.59-3.733 8.32-8.324 8.32zm4.561-6.225c-.25-.125-1.478-.73-1.707-.813-.229-.083-.396-.125-.562.125-.167.25-.646.813-.792.979-.146.167-.292.188-.542.063s-1.06-.391-2.019-1.246c-.746-.665-1.25-1.488-1.396-1.738-.146-.25-.016-.385.109-.51.113-.112.25-.292.375-.438.125-.146.167-.25.25-.417.083-.167.042-.313-.021-.438s-.562-1.354-.771-1.854c-.203-.487-.41-.421-.562-.429h-.479c-.167 0-.438.063-.667.313s-.875.854-.875 2.083c0 1.229.896 2.417 1.021 2.583.125.167 1.762 2.69 4.269 3.773.596.258 1.061.412 1.424.527.599.19 1.144.163 1.575.099.48-.072 1.478-.604 1.687-1.188.208-.583.208-1.083.146-1.188-.063-.104-.229-.167-.479-.292z" />
+  </svg>
+);
+
 const SERVICES = [
   "Air Ticket",
   "Tours",
@@ -202,7 +218,8 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
                   rel="noopener noreferrer"
                   className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
                 >
-                  <span>💬 Chat with {getTeamInfo(form.service).name} on WhatsApp</span>
+                  <WhatsAppSvg size={15} className="shrink-0 text-white" />
+                  <span>Chat with {getTeamInfo(form.service).name} on WhatsApp</span>
                 </a>
                 <button
                   type="button"

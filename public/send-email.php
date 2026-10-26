@@ -348,6 +348,7 @@ HTML;
  * Socket-based SMTP mail sending function for standard SSL SMTP
  */
 function sendSmtpMail($host, $port, $user, $pass, $from, $fromName, $to, $subject, $html) {
+    $recipients = is_array($to) ? $to : [$to];
     $socket = @fsockopen($host, $port, $errno, $errstr, 15);
     if (!$socket) {
         throw new Exception("Could not connect to SMTP server: $errstr ($errno)");
@@ -387,15 +388,19 @@ function sendSmtpMail($host, $port, $user, $pass, $from, $fromName, $to, $subjec
     $send("MAIL FROM:<$from>");
     $read();
 
-    $send("RCPT TO:<$to>");
-    $read();
+    foreach ($recipients as $recipient) {
+        $send("RCPT TO:<$recipient>");
+        $read();
+    }
 
     $send("DATA");
     $read();
 
+    $toHeader = implode(', ', array_map(function($r) { return "<$r>"; }, $recipients));
+
     $headers = [
         "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>",
-        "To: <$to>",
+        "To: $toHeader",
         "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=",
         "MIME-Version: 1.0",
         "Content-Type: text/html; charset=UTF-8",
@@ -419,7 +424,12 @@ function sendSmtpMail($host, $port, $user, $pass, $from, $fromName, $to, $subjec
 
 $errors = [];
 
-// 1. Compulsory Admin Notification (NOTIFICATION_EMAIL)
+// 1. Combined Compulsory Admin & Team Notification in a single fast SMTP connection
+$adminRecipients = [$adminEmail];
+if (!empty($teamEmail) && filter_var($teamEmail, FILTER_VALIDATE_EMAIL) && strtolower($teamEmail) !== strtolower($adminEmail)) {
+    $adminRecipients[] = $teamEmail;
+}
+
 try {
     sendSmtpMail(
         $smtpHost,
@@ -428,34 +438,15 @@ try {
         $smtpPass,
         $fromEmail,
         $fromName,
-        $adminEmail,
+        $adminRecipients,
         $subjectAdmin,
         $adminHtml
     );
 } catch (Exception $e) {
-    $errors[] = "Admin mail error: " . $e->getMessage();
+    $errors[] = "Admin/Team mail error: " . $e->getMessage();
 }
 
-// 2. Department Associated Team Notification
-if (!empty($teamEmail) && filter_var($teamEmail, FILTER_VALIDATE_EMAIL) && strtolower($teamEmail) !== strtolower($adminEmail)) {
-    try {
-        sendSmtpMail(
-            $smtpHost,
-            $smtpPort,
-            $smtpUser,
-            $smtpPass,
-            $fromEmail,
-            $fromName,
-            $teamEmail,
-            $subjectAdmin,
-            $adminHtml
-        );
-    } catch (Exception $e) {
-        $errors[] = "Team mail error: " . $e->getMessage();
-    }
-}
-
-// 3. Customer Confirmation Email
+// 2. Customer Confirmation Email
 if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
     try {
         sendSmtpMail(

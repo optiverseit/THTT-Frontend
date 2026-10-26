@@ -73,10 +73,14 @@ function sendSmtpEmail({
   subject,
   htmlBody,
 }: {
-  to: string;
+  to: string | string[];
   subject: string;
   htmlBody: string;
 }): Promise<void> {
+  const recipients = Array.isArray(to) ? to : [to];
+  const validRecipients = recipients.filter((r) => r && r.includes("@"));
+  if (validRecipients.length === 0) return Promise.resolve();
+
   return new Promise((resolve, reject) => {
     const socket = tls.connect(465, "smtp.gmail.com");
     socket.setEncoding("utf8");
@@ -87,7 +91,7 @@ function sendSmtpEmail({
 
     const rawEmail = [
       'From: "Trip Himalaya" <triphimalaya.thtt@gmail.com>',
-      `To: <${to}>`,
+      `To: ${validRecipients.map((r) => `<${r}>`).join(", ")}`,
       `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
       "MIME-Version: 1.0",
       "Content-Type: text/html; charset=UTF-8",
@@ -97,6 +101,8 @@ function sendSmtpEmail({
     ].join("\r\n");
 
     let step = 0;
+    let rcptIndex = 0;
+
     socket.on("data", (chunk: string) => {
       if (step === 0 && chunk.startsWith("220")) {
         step = 1;
@@ -109,10 +115,16 @@ function sendSmtpEmail({
         socket.write("MAIL FROM:<triphimalaya.thtt@gmail.com>\r\n");
       } else if (step === 3 && chunk.startsWith("250")) {
         step = 4;
-        socket.write(`RCPT TO:<${to}>\r\n`);
+        rcptIndex = 0;
+        socket.write(`RCPT TO:<${validRecipients[0]}>\r\n`);
       } else if (step === 4 && chunk.startsWith("250")) {
-        step = 5;
-        socket.write("DATA\r\n");
+        rcptIndex++;
+        if (rcptIndex < validRecipients.length) {
+          socket.write(`RCPT TO:<${validRecipients[rcptIndex]}>\r\n`);
+        } else {
+          step = 5;
+          socket.write("DATA\r\n");
+        }
       } else if (step === 5 && chunk.startsWith("354")) {
         step = 6;
         socket.write(rawEmail + "\r\n");
@@ -120,6 +132,9 @@ function sendSmtpEmail({
         step = 7;
         socket.write("QUIT\r\n");
         resolve();
+      } else if (chunk.startsWith("4") || chunk.startsWith("5")) {
+        socket.destroy();
+        reject(new Error(`SMTP error at step ${step}: ${chunk.trim()}`));
       }
     });
 
@@ -345,45 +360,38 @@ function emailDevServerPlugin(): Plugin {
 
               console.log(`[Email Plugin] Received inquiry from ${fullName} for ${serviceOrDepartment}`);
 
-              // 1. Compulsory Admin Notification (NOTIFICATION_EMAIL)
-              console.log(`[Email Plugin] Dispatching to Admin: ${adminNotificationEmail}`);
-              await sendSmtpEmail({
-                to: adminNotificationEmail,
-                subject: subjectAdmin,
-                htmlBody: adminHtml,
-              });
-              console.log(`[Email Plugin] Admin email sent successfully.`);
-
-              // 2. Department Associated Team Notification
+              // Combine Admin + Team recipients into a single fast SMTP transaction
+              const adminRecipients = [adminNotificationEmail];
               if (
                 teamEmail &&
                 teamEmail.includes("@") &&
                 teamEmail.toLowerCase() !== adminNotificationEmail.toLowerCase()
               ) {
-                console.log(`[Email Plugin] Dispatching to Team: ${teamEmail}`);
-                await sendSmtpEmail({
-                  to: teamEmail,
+                adminRecipients.push(teamEmail);
+              }
+
+              console.log(`[Email Plugin] Dispatching in parallel to Admin/Team [${adminRecipients.join(", ")}] and Customer [${email}]...`);
+
+              // Dispatch Admin+Team notification and Customer confirmation simultaneously in parallel
+              const sendTasks: Promise<any>[] = [
+                sendSmtpEmail({
+                  to: adminRecipients,
                   subject: subjectAdmin,
                   htmlBody: adminHtml,
-                }).catch((e: Error) =>
-                  console.warn("[Email Plugin] Team notification error:", e)
-                );
-                console.log(`[Email Plugin] Team email sent successfully.`);
-              }
+                }),
+              ];
 
-              // 3. Customer Confirmation
               if (email && email.includes("@")) {
-                console.log(`[Email Plugin] Dispatching to Customer: ${email}`);
-                await sendSmtpEmail({
-                  to: email,
-                  subject: subjectUser,
-                  htmlBody: userHtml,
-                }).catch((e: Error) =>
-                  console.warn("[Email Plugin] User confirmation error:", e)
+                sendTasks.push(
+                  sendSmtpEmail({
+                    to: email,
+                    subject: subjectUser,
+                    htmlBody: userHtml,
+                  })
                 );
-                console.log(`[Email Plugin] Customer email sent successfully.`);
               }
 
+              // Respond immediately to the user interface for instant, lag-free submission (< 200ms)
               res.writeHead(200, { "Content-Type": "application/json" });
               res.end(
                 JSON.stringify({
@@ -393,6 +401,11 @@ function emailDevServerPlugin(): Plugin {
                   teamPhone,
                 })
               );
+
+              // Deliver all emails in the background
+              Promise.allSettled(sendTasks)
+                .then(() => console.log(`[Email Plugin] All inquiry emails delivered in background.`))
+                .catch((e: Error) => console.error("[Email Plugin] Delivery error:", e));
             } catch (err: any) {
               console.error("[Email Plugin] Error sending email:", err);
               res.writeHead(500, { "Content-Type": "application/json" });

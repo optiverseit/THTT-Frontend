@@ -1,6 +1,17 @@
+# Protect environment configuration files from web access
+<FilesMatch "^\.env">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Email dispatcher API route for cPanel
+  RewriteRule ^api/send-email/?$ send-email.php [L,QSA]
+  RewriteRule ^api/send-email\.php$ send-email.php [L,QSA]
+
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

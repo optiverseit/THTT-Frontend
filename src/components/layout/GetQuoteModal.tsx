@@ -1,5 +1,7 @@
-﻿import React, { useEffect, useRef, useState } from "react";
-import { X, Send, User, Mail, Phone, ChevronDown, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { X, Send, User, Mail, Phone, Globe, ChevronDown, CheckCircle2 } from "lucide-react";
+import { sendInquiryEmail } from "../../services/emailService";
+import { getTeamInfo } from "../../utils/teamDirectory";
 
 interface GetQuoteModalProps {
   isOpen: boolean;
@@ -21,6 +23,7 @@ const SERVICES = [
 
 interface FormData {
   fullName: string;
+  nationality: string;
   email: string;
   phone: string;
   service: string;
@@ -29,6 +32,7 @@ interface FormData {
 
 interface FormErrors {
   fullName?: string;
+  nationality?: string;
   email?: string;
   phone?: string;
   service?: string;
@@ -38,11 +42,12 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
   const [form, setForm] = useState<FormData>({
-    fullName: "", email: "", phone: "", service: "", message: "",
+    fullName: "", nationality: "", email: "", phone: "", service: "", message: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,10 +55,11 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
       setTimeout(() => firstInputRef.current?.focus(), 80);
     } else {
       setTimeout(() => {
-        setForm({ fullName: "", email: "", phone: "", service: "", message: "" });
+        setForm({ fullName: "", nationality: "", email: "", phone: "", service: "", message: "" });
         setErrors({});
         setSubmitting(false);
         setSubmitted(false);
+        setSubmitError(null);
       }, 300);
     }
   }, [isOpen]);
@@ -75,11 +81,13 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setSubmitError(null);
   };
 
   const validate = (): boolean => {
     const errs: FormErrors = {};
     if (!form.fullName.trim()) errs.fullName = "Full name is required.";
+    if (!form.nationality.trim()) errs.nationality = "Nationality is required.";
     if (!form.email.trim()) errs.email = "Email is required.";
     else if (!EMAIL_REGEX.test(form.email.trim())) errs.email = "Enter a valid email address.";
     if (!form.phone.trim()) errs.phone = "Phone / WhatsApp is required.";
@@ -88,12 +96,37 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
-    // TODO: replace with real API call — POST /api/inquiries { ...form }
-    setTimeout(() => { setSubmitting(false); setSubmitted(true); }, 900);
+    setSubmitError(null);
+
+    const team = getTeamInfo(form.service);
+
+    try {
+      const res = await sendInquiryEmail({
+        formType: "quote",
+        fullName: form.fullName.trim(),
+        nationality: form.nationality.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        serviceOrDepartment: form.service,
+        message: form.message.trim(),
+        teamEmail: team.email,
+        teamPhone: team.phone,
+      });
+
+      if (res.success) {
+        setSubmitted(true);
+      } else {
+        setSubmitError(res.message || "Failed to send inquiry. Please try again.");
+      }
+    } catch (err: any) {
+      setSubmitError(err?.message || "Something went wrong while sending. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -156,40 +189,73 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
                 <h3 className="text-white font-bold text-lg">Inquiry Sent!</h3>
                 <p className="text-purple-200/70 text-sm mt-2 leading-relaxed">
                   Thank you, <strong className="text-white">{form.fullName}</strong>!<br />
-                  Our team will contact you at{" "}
-                  <strong className="text-pink-300">{form.email}</strong> within 24 hours.
+                  Our <strong className="text-pink-300">{getTeamInfo(form.service).name}</strong> will contact you at{" "}
+                  <strong className="text-pink-300">{form.email}</strong> within 30 minutes.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full py-2.5 rounded-xl bg-white text-[#1e0d3d] font-black text-sm tracking-wider hover:bg-white/95 active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-pink-800/30"
-              >
-                CLOSE
-              </button>
+              <div className="space-y-2.5 pt-1">
+                <a
+                  href={`https://wa.me/977${getTeamInfo(form.service).phone}?text=${encodeURIComponent(
+                    `Hello Trip Himalaya (${getTeamInfo(form.service).name})! I just submitted an inquiry for ${form.service}. My name is ${form.fullName}.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <span>💬 Chat with {getTeamInfo(form.service).name} on WhatsApp</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-xl bg-white text-[#1e0d3d] font-black text-sm tracking-wider hover:bg-white/95 active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-pink-800/30"
+                >
+                  CLOSE
+                </button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} noValidate className="space-y-3.5">
 
-              {/* Full Name */}
-              <div>
-                <label className="text-[10px] sm:text-[11px] font-bold tracking-widest text-white uppercase block mb-1.5">
-                  Full Name <span className="text-pink-400">*</span>
-                </label>
-                <div className={fieldWrap(!!errors.fullName)}>
-                  <User size={14} className="text-purple-300/60 shrink-0 mr-2.5" />
-                  <input
-                    ref={firstInputRef}
-                    type="text"
-                    name="fullName"
-                    value={form.fullName}
-                    onChange={handleChange}
-                    placeholder="Enter your name"
-                    className={inputCls}
-                    autoComplete="name"
-                  />
+              {/* Full Name + Nationality */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] sm:text-[11px] font-bold tracking-widest text-white uppercase block mb-1.5">
+                    Full Name <span className="text-pink-400">*</span>
+                  </label>
+                  <div className={fieldWrap(!!errors.fullName)}>
+                    <User size={13} className="text-purple-300/60 shrink-0 mr-2" />
+                    <input
+                      ref={firstInputRef}
+                      type="text"
+                      name="fullName"
+                      value={form.fullName}
+                      onChange={handleChange}
+                      placeholder="Aarav Sharma"
+                      className={inputCls + " text-xs"}
+                      autoComplete="name"
+                    />
+                  </div>
+                  {errors.fullName && <p className="text-red-400 text-[10px] mt-1">{errors.fullName}</p>}
                 </div>
-                {errors.fullName && <p className="text-red-400 text-[10px] mt-1">{errors.fullName}</p>}
+
+                <div>
+                  <label className="text-[10px] sm:text-[11px] font-bold tracking-widest text-white uppercase block mb-1.5">
+                    Nationality <span className="text-pink-400">*</span>
+                  </label>
+                  <div className={fieldWrap(!!errors.nationality)}>
+                    <Globe size={13} className="text-purple-300/60 shrink-0 mr-2" />
+                    <input
+                      type="text"
+                      name="nationality"
+                      value={form.nationality}
+                      onChange={handleChange}
+                      placeholder="e.g. Nepali"
+                      className={inputCls + " text-xs"}
+                      autoComplete="country-name"
+                    />
+                  </div>
+                  {errors.nationality && <p className="text-red-400 text-[10px] mt-1">{errors.nationality}</p>}
+                </div>
               </div>
 
               {/* Email + Phone */}
@@ -205,7 +271,7 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
                       name="email"
                       value={form.email}
                       onChange={handleChange}
-                      placeholder="Email"
+                      placeholder="aarav@gmail.com"
                       className={inputCls + " text-xs"}
                       autoComplete="email"
                     />
@@ -275,7 +341,13 @@ const GetQuoteModal: React.FC<GetQuoteModalProps> = ({ isOpen, onClose }) => {
                 />
               </div>
 
-              {/* Submit — pink?purple gradient matching navbar button */}
+              {submitError && (
+                <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs text-center">
+                  {submitError}
+                </div>
+              )}
+
+              {/* Submit — pink–purple gradient matching navbar button */}
               <button
                 type="submit"
                 disabled={submitting}

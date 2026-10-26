@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
+import { sendInquiryEmail } from "../services/emailService";
 
 // =============================================================================
 // WhatsApp SVG Icon
@@ -140,7 +141,7 @@ const TEAMS_DIRECTORY = [
     icon: Shield,
     bgColor: "#0284c7",
     phone: "9851403760",
-    email: "pradip.triphimalayatt@gmail.com",
+    email: "bhishan.triphimalayatt@gmail.com",
     role: "High-Altitude Medical & Trip Protection",
   },
   {
@@ -159,6 +160,14 @@ const TEAMS_DIRECTORY = [
     email: "actriphimalaya@gmail.com",
     role: "Invoices, Payments & Receipts",
   },
+  {
+    name: "Customer Support Team",
+    icon: MessageCircle,
+    bgColor: "#0284c7",
+    phone: "9851356882",
+    email: "samarpan.triphimalayatt@gmail.com",
+    role: "General Support, Assistance & Complaints",
+  },
 ];
 
 // =============================================================================
@@ -167,6 +176,7 @@ const TEAMS_DIRECTORY = [
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
     fullName: "",
+    nationality: "",
     email: "",
     phone: "",
     department: "Tours & Holidays Team",
@@ -175,6 +185,7 @@ const Contact: React.FC = () => {
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -188,26 +199,50 @@ const Contact: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setSubmitError(null);
 
-    // Simulate instant sending
-    setTimeout(() => {
+    const selectedTeam = TEAMS_DIRECTORY.find((t) => t.name === formData.department);
+
+    try {
+      const res = await sendInquiryEmail({
+        formType: "contact",
+        fullName: formData.fullName.trim(),
+        nationality: formData.nationality.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        serviceOrDepartment: formData.department,
+        message: formData.message.trim(),
+        teamEmail: selectedTeam?.email,
+        teamPhone: selectedTeam?.phone,
+      });
+
+      if (res.success) {
+        setSubmitted(true);
+      } else {
+        setSubmitError(res.message || "Failed to send your message. Please try again or reach out on WhatsApp.");
+      }
+    } catch (err: any) {
+      setSubmitError(err?.message || "An unexpected error occurred while sending. Please try again.");
+    } finally {
       setSubmitting(false);
-      setSubmitted(true);
-    }, 700);
+    }
   };
 
   const handleOpenWhatsApp = () => {
+    const selectedTeam = TEAMS_DIRECTORY.find((t) => t.name === formData.department);
+    const waNumber = selectedTeam?.phone || "9851420882";
     const text = encodeURIComponent(
-      `Hello Trip Himalaya! My name is ${formData.fullName || "Traveler"}.\n` +
+      `Hello Trip Himalaya (${formData.department})! My name is ${formData.fullName || "Traveler"}.\n` +
+      `Nationality: ${formData.nationality || "N/A"}\n` +
       `Email: ${formData.email || "N/A"}\n` +
       `Phone: ${formData.phone || "N/A"}\n` +
       `Department: ${formData.department}\n` +
       `Message: ${formData.message || "I would like to inquire about your travel services."}`
     );
-    window.open(`https://wa.me/9779851420882?text=${text}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/977${waNumber}?text=${text}`, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -362,8 +397,10 @@ const Contact: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setSubmitted(false);
+                        setSubmitError(null);
                         setFormData({
                           fullName: "",
+                          nationality: "",
                           email: "",
                           phone: "",
                           department: "Tours & Holidays Team",
@@ -378,7 +415,7 @@ const Contact: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-4.5">
-                  {/* Name & Email Row */}
+                  {/* Name & Nationality Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
@@ -389,10 +426,27 @@ const Contact: React.FC = () => {
                         required
                         value={formData.fullName}
                         onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        placeholder="John Doe"
+                        placeholder="Aarav Sharma"
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-gray-800 placeholder:text-xs placeholder:font-normal placeholder-gray-400 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/20 transition-all font-medium"
                       />
                     </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                        Nationality *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.nationality}
+                        onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                        placeholder="e.g. Nepali, American"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-gray-800 placeholder:text-xs placeholder:font-normal placeholder-gray-400 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/20 transition-all font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email & Phone Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
                         Email Address *
@@ -402,14 +456,10 @@ const Contact: React.FC = () => {
                         required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="john@example.com"
+                        placeholder="aarav@gmail.com"
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-gray-800 placeholder:text-xs placeholder:font-normal placeholder-gray-400 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/20 transition-all font-medium"
                       />
                     </div>
-                  </div>
-
-                  {/* Phone & Department Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
                         Phone / WhatsApp Number *
@@ -423,65 +473,67 @@ const Contact: React.FC = () => {
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-gray-800 placeholder:text-xs placeholder:font-normal placeholder-gray-400 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/20 transition-all font-medium"
                       />
                     </div>
-                    <div className="relative" ref={dropdownRef}>
-                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Department / Service of Interest
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsDropdownOpen((prev) => !prev)}
-                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs sm:text-sm text-gray-800 font-medium flex items-center justify-between text-left transition-all cursor-pointer ${
-                          isDropdownOpen
-                            ? "bg-white border-[#E91E63] ring-2 ring-[#E91E63]/20"
-                            : "border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <span className="truncate pr-2 text-xs sm:text-sm font-medium">
-                          {formData.department}
-                        </span>
-                        <ChevronDown
-                          size={16}
-                          className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
-                            isDropdownOpen ? "rotate-180 text-[#E91E63]" : ""
-                          }`}
-                        />
-                      </button>
+                  </div>
 
-                      {isDropdownOpen && (
-                        <div className="absolute left-0 right-0 top-full mt-1.5 w-full bg-white rounded-xl shadow-xl border border-slate-200 z-50 max-h-60 overflow-y-auto py-1 divide-y divide-slate-100">
-                          {TEAMS_DIRECTORY.map((team) => {
-                            const isSelected = formData.department === team.name;
-                            return (
-                              <button
-                                type="button"
-                                key={team.name}
-                                onClick={() => {
-                                  setFormData({ ...formData, department: team.name });
-                                  setIsDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-3.5 py-2 transition-colors flex items-center justify-between cursor-pointer ${
-                                  isSelected
-                                    ? "bg-pink-50 text-[#E91E63]"
-                                    : "text-gray-700 hover:bg-slate-50"
-                                }`}
-                              >
-                                <div className="min-w-0 pr-2">
-                                  <div className="text-xs font-semibold truncate leading-snug">
-                                    {team.name}
-                                  </div>
-                                  <div className="text-[10px] text-gray-400 truncate mt-0.5">
-                                    {team.role}
-                                  </div>
+                  {/* Department Row */}
+                  <div className="relative" ref={dropdownRef}>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      Department / Service of Interest
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen((prev) => !prev)}
+                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs sm:text-sm text-gray-800 font-medium flex items-center justify-between text-left transition-all cursor-pointer ${
+                        isDropdownOpen
+                          ? "bg-white border-[#E91E63] ring-2 ring-[#E91E63]/20"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <span className="truncate pr-2 text-xs sm:text-sm font-medium">
+                        {formData.department}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+                          isDropdownOpen ? "rotate-180 text-[#E91E63]" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 w-full bg-white rounded-xl shadow-xl border border-slate-200 z-50 max-h-60 overflow-y-auto py-1 divide-y divide-slate-100">
+                        {TEAMS_DIRECTORY.map((team) => {
+                          const isSelected = formData.department === team.name;
+                          return (
+                            <button
+                              type="button"
+                              key={team.name}
+                              onClick={() => {
+                                setFormData({ ...formData, department: team.name });
+                                setIsDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3.5 py-2 transition-colors flex items-center justify-between cursor-pointer ${
+                                isSelected
+                                  ? "bg-pink-50 text-[#E91E63]"
+                                  : "text-gray-700 hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="min-w-0 pr-2">
+                                <div className="text-xs font-semibold truncate leading-snug">
+                                  {team.name}
                                 </div>
-                                {isSelected && (
-                                  <Check size={14} className="text-[#E91E63] flex-shrink-0" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                                <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                                  {team.role}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Check size={14} className="text-[#E91E63] flex-shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Message */}
@@ -498,6 +550,12 @@ const Contact: React.FC = () => {
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-gray-800 placeholder:text-xs placeholder:font-normal placeholder-gray-400 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/20 transition-all font-medium resize-y"
                     />
                   </div>
+
+                  {submitError && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs text-center font-medium">
+                      {submitError}
+                    </div>
+                  )}
 
                   {/* Submit Button */}
                   <div className="pt-2">

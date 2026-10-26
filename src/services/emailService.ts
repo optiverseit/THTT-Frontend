@@ -65,7 +65,7 @@ export async function sendInquiryEmail(payload: InquiryPayload): Promise<Inquiry
   }
 
   return {
-    success: true,
-    message: "Inquiry received. Our team will contact you within 30 minutes.",
+    success: false,
+    message: "Unable to send inquiry email. Please check your internet connection or reach out on WhatsApp.",
   };
 }

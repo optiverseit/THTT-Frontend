@@ -391,7 +391,7 @@ const Contact: React.FC = () => {
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-600 text-white font-bold text-xs px-5 py-3 rounded-xl transition-colors shadow-md"
                     >
                       <WhatsAppSvg size={16} />
-                      <span>Also Chat on WhatsApp Now</span>
+                      <span>Chat on WhatsApp Now</span>
                     </button>
                     <button
                       type="button"

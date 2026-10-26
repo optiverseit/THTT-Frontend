@@ -88,7 +88,7 @@ function sendSmtpEmail({
     const rawEmail = [
       'From: "Trip Himalaya" <triphimalaya.thtt@gmail.com>',
       `To: <${to}>`,
-      `Subject: ${subject}`,
+      `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
       "MIME-Version: 1.0",
       "Content-Type: text/html; charset=UTF-8",
       "",
@@ -343,12 +343,16 @@ function emailDevServerPlugin(): Plugin {
 </body>
 </html>`;
 
+              console.log(`[Email Plugin] Received inquiry from ${fullName} for ${serviceOrDepartment}`);
+
               // 1. Compulsory Admin Notification (NOTIFICATION_EMAIL)
+              console.log(`[Email Plugin] Dispatching to Admin: ${adminNotificationEmail}`);
               await sendSmtpEmail({
                 to: adminNotificationEmail,
                 subject: subjectAdmin,
                 htmlBody: adminHtml,
               });
+              console.log(`[Email Plugin] Admin email sent successfully.`);
 
               // 2. Department Associated Team Notification
               if (
@@ -356,6 +360,7 @@ function emailDevServerPlugin(): Plugin {
                 teamEmail.includes("@") &&
                 teamEmail.toLowerCase() !== adminNotificationEmail.toLowerCase()
               ) {
+                console.log(`[Email Plugin] Dispatching to Team: ${teamEmail}`);
                 await sendSmtpEmail({
                   to: teamEmail,
                   subject: subjectAdmin,
@@ -363,17 +368,20 @@ function emailDevServerPlugin(): Plugin {
                 }).catch((e: Error) =>
                   console.warn("[Email Plugin] Team notification error:", e)
                 );
+                console.log(`[Email Plugin] Team email sent successfully.`);
               }
 
               // 3. Customer Confirmation
               if (email && email.includes("@")) {
-                sendSmtpEmail({
+                console.log(`[Email Plugin] Dispatching to Customer: ${email}`);
+                await sendSmtpEmail({
                   to: email,
                   subject: subjectUser,
                   htmlBody: userHtml,
                 }).catch((e: Error) =>
                   console.warn("[Email Plugin] User confirmation error:", e)
                 );
+                console.log(`[Email Plugin] Customer email sent successfully.`);
               }
 
               res.writeHead(200, { "Content-Type": "application/json" });

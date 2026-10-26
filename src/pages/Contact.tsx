@@ -77,7 +77,7 @@ const HelicopterIcon: React.FC<{ size?: number; color?: string; className?: stri
 );
 
 // =============================================================================
-// Teams Contact Data
+// Contact Data
 // =============================================================================
 const TEAMS_DIRECTORY = [
   {

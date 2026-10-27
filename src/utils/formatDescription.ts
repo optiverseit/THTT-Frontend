@@ -151,17 +151,16 @@ export function formatDescription(raw: string | null | undefined): string {
 
     if (
       trimmed.endsWith(":") &&
-      trimmed.length <= 80 &&
+      trimmed.length <= 130 &&
       !hasSentencePunctuation &&
       !isUrl
     ) {
       const isFirst = parts.length === 0;
       closeList();
       parts.push(
-        `<p style="font-weight:800;color:#2D1347;margin:${isFirst ? "0" : "14px"} 0 3px 0;font-size:0.9em;letter-spacing:0.01em;">${escapeHtml(
+        `<p style="font-weight:800;color:#2D1347;margin:${isFirst ? "0" : "14px"} 0 3px 0;font-size:0.9em;letter-spacing:0.01em;">${parseInlineFormatting(
           trimmed
         )}</p>`
-
       );
       continue;
     }
@@ -172,7 +171,7 @@ export function formatDescription(raw: string | null | undefined): string {
 
     closeList();
     parts.push(
-      `<p style="color:#4B5563;margin:${isFirst ? "0" : "5px"} 0 5px 0;font-size:0.875em;line-height:1.75;">${escapeHtml(
+      `<p style="color:#4B5563;margin:${isFirst ? "0" : "5px"} 0 5px 0;font-size:0.875em;line-height:1.75;">${parseInlineFormatting(
         trimmed
       )}</p>`
     );
@@ -182,7 +181,7 @@ export function formatDescription(raw: string | null | undefined): string {
   return parts.join("");
 }
 
-/** Formats list item content, highlighting label before '–', '-', or ':' */
+/** Formats list item content, highlighting label before '–', '-', or ':' and supporting **bold** */
 function formatItemContent(content: string): string {
   const sepMatch = content.match(/^([^–—\-\:]{2,50})\s*([–—\-]|:)\s+(.*)$/);
   if (sepMatch) {
@@ -190,9 +189,16 @@ function formatItemContent(content: string): string {
     const sepDisplay = sep === ":" ? ": " : " – ";
     return `<strong style="font-weight:700;color:#1F2937;">${escapeHtml(
       label.trim()
-    )}</strong>${sepDisplay}${escapeHtml(rest.trim())}`;
+    )}</strong>${sepDisplay}${parseInlineFormatting(rest.trim())}`;
   }
-  return escapeHtml(content);
+  return parseInlineFormatting(content);
+}
+
+/** Parses inline styling such as **bold** and escapes HTML safely */
+function parseInlineFormatting(str: string): string {
+  const escaped = escapeHtml(str);
+  // Support **bold** syntax anywhere in text
+  return escaped.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700;color:#1F2937;">$1</strong>');
 }
 
 /** Minimal HTML escaping for plain-text paths */

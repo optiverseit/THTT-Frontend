@@ -141,23 +141,34 @@ c. Bank statement (last 3 months)
 
 ---
 
-### Rule 6 — Inline Title (short line ending with `:`)  ⬅ *newly added*
+### Rule 6 — Inline Title (short line ending with `:`)
 
 | | |
 |---|---|
-| **Pattern** | Line **ends with `:`** AND length ≤ 80 chars AND no mid-sentence punctuation AND not a URL |
-| **Detection** | `trimmed.endsWith(":") && length ≤ 80 && no [.!?,] before colon && not http://` |
+| **Pattern** | Line **ends with `:`** AND length ≤ 130 chars AND no mid-sentence punctuation AND not a URL |
+| **Detection** | `trimmed.endsWith(":") && length ≤ 130 && no [.!?,] before colon && not http://` |
 | **Style** | `font-weight: 800`, color `#2D1347` (dark purple), `margin-top: 14px`, `font-size: 0.9em` |
 
-**CMS input example (from the image you showed):**
+**CMS input example:**
 ```
+90 Days Valid | 60 Days Stay | Single Entry | 7-10 Working Days | e-Visa Application:
 Required Documentation:
 Purpose of Visit:
-Eligibility Requirements:
-Important Information:
 ```
 
-**Rendered as:** Bold dark-purple section label, tighter spacing below it so the next paragraph reads as its body.
+**Rendered as:** Bold dark-purple section title!
+
+---
+
+### Rule 6b — Markdown Bold Syntax (`**bold text**`)
+
+You can now use standard markdown double asterisks (`**...**`) anywhere in your text:
+
+```
+**90 Days Valid** | **60 Days Stay** | **Single Entry**
+```
+
+**Rendered as:** Any text enclosed in `**...**` becomes bold.
 
 > [!NOTE]
 > **Why it doesn't bold normal sentences ending in colon:**  

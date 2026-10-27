@@ -1,7 +1,12 @@
-# Protect environment configuration files from web access
-<FilesMatch "^\.env">
-  Order allow,deny
-  Deny from all
+# Strictly block any environment files from direct HTTP access
+<FilesMatch "^(\.env|env\.)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
 </FilesMatch>
 
 <IfModule mod_rewrite.c>

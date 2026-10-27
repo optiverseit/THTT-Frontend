@@ -4,3 +4,4 @@ deployment:
     - export DEPLOYPATH=/home8/triphima/public_html
     - /bin/cp -R dist/* $DEPLOYPATH/
     - /bin/cp dist/.htaccess $DEPLOYPATH/
+    - if [ -f .env.production ]; then /bin/cp -f .env.production $DEPLOYPATH/.env.production; fi

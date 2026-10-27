@@ -4,8 +4,10 @@
  * LinkedIn, Telegram, Email, and Native Web Share API.
  */
 
+import { getEnv } from "../config/env";
+
 export const PRODUCTION_DOMAIN =
-  (import.meta.env.VITE_SITE_URL as string) || "https://triphimalaya.com.np";
+  getEnv("VITE_SITE_URL") || "https://triphimalaya.com.np";
 
 /**
  * Returns a valid public URL suitable for external crawlers (Facebook, LinkedIn, Twitter scraper).

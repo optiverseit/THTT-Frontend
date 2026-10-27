@@ -4,9 +4,10 @@ import {
   touchSession,
   clearAuthSession,
 } from "../utils/sessionManager";
+import { getApiBaseUrl } from "../config/env";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -15,6 +16,9 @@ const axiosInstance = axios.create({
 // This runs before every API request
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Dynamically update baseURL if runtime server config has loaded
+    config.baseURL = getApiBaseUrl();
+
     const token = localStorage.getItem("token");
 
     // Strong frontend security: check if 30-min session or JWT token has expired
@@ -64,7 +68,7 @@ axiosInstance.interceptors.response.use(
         }
 
         const refreshResponse = await axios.post(
-          `${import.meta.env.VITE_BASE_URL}/auth/refresh`,
+          `${getApiBaseUrl()}/auth/refresh`,
           refreshToken,
           {
             headers: {

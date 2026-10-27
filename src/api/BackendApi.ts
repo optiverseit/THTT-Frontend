@@ -242,11 +242,8 @@ export const getPublicPackageGallery = (packageId: string | number) => {
 };
 
 // Helper: derive backend root URL (strips trailing /api from VITE_BASE_URL)
-// e.g.  https://thtt-backend.onrender.com/api  →  https://thtt-backend.onrender.com
-const getBackendRootUrl = () =>
-  (import.meta.env.VITE_BASE_URL as string || "")
-    .replace(/\/api\/?$/i, "")
-    .replace(/\/+$/, "");
+// e.g.  https://thtt-backend.triphimalaya.com.np/api  →  https://thtt-backend.triphimalaya.com.np
+import { getBackendRootUrl } from "../config/env";
 
 
 // ==========================================

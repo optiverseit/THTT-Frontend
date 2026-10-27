@@ -12,6 +12,9 @@
   RewriteRule ^api/send-email/?$ send-email.php [L,QSA]
   RewriteRule ^api/send-email\.php$ send-email.php [L,QSA]
 
+  # Runtime Environment Config route for cPanel
+  RewriteRule ^env-config\.js$ env-config.php [L]
+
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

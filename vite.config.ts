@@ -17,7 +17,8 @@ function escapeHtml(text?: string): string {
 
 function loadEnvValue(key: string, defaultValue: string): string {
   const envFiles = [
-    path.resolve(process.cwd(), ".env.production"),
+    path.resolve(process.cwd(), ".env.development"),
+    path.resolve(process.cwd(), ".env.local"),
     path.resolve(process.cwd(), ".env"),
   ];
   for (const file of envFiles) {
@@ -151,6 +152,19 @@ function emailDevServerPlugin(): Plugin {
     name: "email-dev-server-plugin",
     configureServer(server) {
       server.middlewares.use(async (req: any, res: any, next: () => void) => {
+        if (req.url?.startsWith("/env-config.php") || req.url?.startsWith("/env-config.js")) {
+          const baseUrl = loadEnvValue("VITE_BASE_URL", "https://thtt-backend.onrender.com/api");
+          const googleClientId = loadEnvValue("VITE_GOOGLE_CLIENT_ID", "178127958696-vk4jhq3sh9jk8ki3h92c7q832qtemlb5.apps.googleusercontent.com");
+          res.writeHead(200, { "Content-Type": "application/javascript" });
+          res.end(
+            `window.__ENV__ = Object.assign(window.__ENV__ || {}, ${JSON.stringify({
+              VITE_BASE_URL: baseUrl,
+              VITE_GOOGLE_CLIENT_ID: googleClientId,
+            })});`
+          );
+          return;
+        }
+
         if (
           (req.url?.startsWith("/api/send-email") ||
             req.url?.startsWith("/send-email.php")) &&

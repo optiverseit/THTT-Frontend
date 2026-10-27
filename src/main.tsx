@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./index.css";
 import App from "./App";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import { getGoogleClientId } from "./config/env";
 
 const rootElement = document.getElementById("root");
 
@@ -16,7 +17,7 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
     <ErrorBoundary>
       <GoogleOAuthProvider
-        clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
+        clientId={getGoogleClientId()}
         locale="en"
       >
         <BrowserRouter>

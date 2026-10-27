@@ -51,6 +51,7 @@ import PermitService from "../work-permit/permit-details/PermitService";
 import SharePopover from "../reusable/SharePopover";
 import { services } from "../../assets/data/mockData";
 import { formatDescription } from "../../utils/formatDescription";
+import { getBackendRootUrl } from "../../config/env";
 export interface CostOption {
   name: string;
   days: string;
@@ -99,7 +100,7 @@ const resolveImageUrl = (img?: string | null): string => {
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:")) {
     return trimmed;
   }
-  const baseUrl = (import.meta.env.VITE_BASE_URL || "").replace(/\/api\/?$/i, "").replace(/\/+$/, "");
+  const baseUrl = getBackendRootUrl();
   const cleanPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return baseUrl ? `${baseUrl}${cleanPath}` : cleanPath;
 

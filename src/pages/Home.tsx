@@ -5,10 +5,13 @@ import HomeHero from "../components/Home/HomeHero";
 import CustomerTestimonial from "../components/Home/CustomerTestimonial";
 import Packages from "../components/Home/Package";
 import PreFooter from "../components/reusable/PreFooter";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 const Home = () => {
   return (
     <div className="relative w-full bg-white ">
+      <SEO {...pagesSEO.home} />
       {/* components */}
       <Banner />
       <PremiumTravel />

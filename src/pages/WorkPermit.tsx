@@ -15,6 +15,8 @@ import WorkPermitProcess from "../components/work-permit/WorkPermitProcess";
 import WorkPermitFaq from "../components/work-permit/WorkPermitFaq";
 import PreFooter from "../components/reusable/PreFooter";
 import { getGroupedWorkPermitCountries } from "../api/BackendApi";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 interface Country {
   id: number;
@@ -164,6 +166,7 @@ const WorkPermit = () => {
 
   return (
     <>
+      <SEO {...pagesSEO.serviceWorkPermit} />
       <div className="w-full flex flex-col items-center">
         <div className="w-full relative z-30 shadow-md bg-white">
 

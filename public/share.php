@@ -15,8 +15,8 @@ header('Expires: 0');
 $productionDomain = 'https://triphimalaya.com.np';
 $backendApiBase   = 'https://thtt-backend.triphimalaya.com.np/api';
 $backendMediaBase = 'https://thtt-backend.triphimalaya.com.np';
-$fallbackImage    = 'https://triphimalaya.com.np/Logo.png';
-$siteName         = 'Trip Himalaya Tours & Travel';
+$fallbackImage    = 'https://triphimalaya.com.np/THTTLogo.png';
+$siteName         = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
 
 /**
  * Detect whether the incoming request is from a social media crawler/scraper
@@ -163,10 +163,10 @@ if ((empty($title) || empty($img)) && !empty($type) && !empty($id)) {
 
 // 4. Default fallbacks if still empty
 if (empty($title)) {
-    $title = 'Trip Himalaya Tours & Travel Pvt. Ltd.';
+    $title = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
 }
 if (empty($desc)) {
-    $desc = 'Explore premier travel & tour packages, Himalayan trekking, thrill adventure activities, expert visa services, travel insurance & hotel bookings in Nepal & worldwide.';
+    $desc = 'Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance.';
 }
 
 // 5. Normalize image URL (ensure absolute https URL and not data URI)

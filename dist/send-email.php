@@ -30,21 +30,55 @@ if (!$data) {
     exit();
 }
 
+// --- ANTI-SPAM & ANTI-PHISHING DEFENSE ---
+// 1. Honeypot check (Automated bots fill hidden fields)
+$honeypot = trim($data['website'] ?? $data['url'] ?? $data['company_fax'] ?? $data['honeypot'] ?? '');
+if (!empty($honeypot)) {
+    // Silently drop bot spam without executing SMTP
+    http_response_code(200);
+    echo json_encode(["success" => true, "message" => "Inquiry received."]);
+    exit();
+}
+
 function cleanForHtml($str) {
     return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-$rawFullName = trim($data['fullName'] ?? '');
-$rawNationality = trim($data['nationality'] ?? '');
-$rawEmail = trim($data['email'] ?? '');
-$rawPhone = trim($data['phone'] ?? '');
-$rawService = trim($data['serviceOrDepartment'] ?? $data['service'] ?? $data['department'] ?? 'General Inquiry');
+$rawFullName = str_replace(["\r", "\n"], '', trim($data['fullName'] ?? ''));
+$rawNationality = str_replace(["\r", "\n"], '', trim($data['nationality'] ?? ''));
+$rawEmail = str_replace(["\r", "\n"], '', trim($data['email'] ?? ''));
+$rawPhone = str_replace(["\r", "\n"], '', trim($data['phone'] ?? ''));
+$rawService = str_replace(["\r", "\n"], '', trim($data['serviceOrDepartment'] ?? $data['service'] ?? $data['department'] ?? 'General Inquiry'));
 $rawMessage = trim($data['message'] ?? '');
 $formType = trim($data['formType'] ?? 'quote'); // 'quote' | 'contact'
 
 if (empty($rawFullName) || empty($rawEmail) || empty($rawPhone)) {
     http_response_code(422);
     echo json_encode(["success" => false, "message" => "Full Name, Email, and Phone are required."]);
+    exit();
+}
+
+// 2. Strict Email Syntax Validation
+if (!filter_var($rawEmail, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(422);
+    echo json_encode(["success" => false, "message" => "Invalid email address format."]);
+    exit();
+}
+
+// 3. Phishing, Malware & High-Volume Spam Link Filter
+$combinedPayload = strtolower($rawFullName . ' ' . $rawMessage);
+$spamPatterns = ['viagra', 'cialis', 'casino', 'poker', 'crypto investment', 'whatsapp me on', '.ru/', 'bit.ly/'];
+foreach ($spamPatterns as $pattern) {
+    if (strpos($combinedPayload, $pattern) !== false) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "Message flagged as spam."]);
+        exit();
+    }
+}
+// Block messages with more than 2 external URLs (common spam signature)
+if (preg_match_all('#https?://#i', $rawMessage) > 2) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Too many URLs in message body."]);
     exit();
 }
 
@@ -339,6 +373,10 @@ $userHtml = <<<HTML
                   <img src="https://img.icons8.com/ios-filled/50/ffffff/whatsapp--v1.png" width="18" height="18" alt="WhatsApp" style="vertical-align:middle;margin-right:8px;border:0;display:inline-block;" />Chat with {$teamName} on WhatsApp (+977-{$teamPhone})
                 </a>
               </div>
+              <div style="background-color:#f8fafc;border-left:4px solid #8B2CFF;padding:14px 16px;border-radius:8px;margin-bottom:24px;font-size:12px;color:#475569;line-height:1.5;text-align:left;">
+                <strong style="color:#1e0d3d;">🛡️ Official Corporate Anti-Phishing Notice:</strong><br/>
+                Trip Himalaya Tours &amp; Travels Pvt. Ltd. is a legally registered company in Nepal (Regd. Office: Airport, Shambhu Marg, Kathmandu). We will <strong>never</strong> ask for your bank password, OTP, or credit card PIN over email or WhatsApp. Always verify communications originate from <strong>@triphimalaya.com.np</strong> or verified phone lines: +977-9851420882.
+              </div>
               <div style="border-top:1px solid #f1f5f9;padding-top:20px;text-align:center;color:#94a3b8;font-size:11px;line-height:1.6;">
                 <strong>Trip Himalaya Tours &amp; Travels Pvt. Ltd.</strong><br/>
                 Airport, Shambhu Marg, Road No. 04, Kathmandu, Nepal<br/>
@@ -409,15 +447,19 @@ function sendSmtpMail($host, $port, $user, $pass, $from, $fromName, $to, $subjec
 
     $toHeader = implode(', ', array_map(function($r) { return "<$r>"; }, $recipients));
 
+    $messageId = sprintf("<%s.%s@triphimalaya.com.np>", bin2hex(random_bytes(12)), time());
     $headers = [
         "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>",
         "Reply-To: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>",
         "To: $toHeader",
         "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=",
         "Date: " . date('r'),
+        "Message-ID: $messageId",
         "MIME-Version: 1.0",
         "Content-Type: text/html; charset=UTF-8",
-        "X-Mailer: Trip Himalaya Mailer"
+        "Organization: Trip Himalaya Tours & Travels Pvt. Ltd.",
+        "X-Mailer: Trip Himalaya Authenticated Mailer v2.0",
+        "X-Entity-Ref-ID: triphimalaya-auth-" . time()
     ];
 
     $emailData = implode("\r\n", $headers) . "\r\n\r\n" . $html . "\r\n.";

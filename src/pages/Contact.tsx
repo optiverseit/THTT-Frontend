@@ -25,6 +25,8 @@ import {
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
 import { sendInquiryEmail } from "../services/emailService";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 // =============================================================================
 // WhatsApp SVG Icon
@@ -247,6 +249,7 @@ const Contact: React.FC = () => {
 
   return (
     <div className="w-full bg-slate-50 min-h-screen">
+      <SEO {...pagesSEO.contact} />
       {/* ── 1. Hero Banner ── */}
       <BannerSection
         background="https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=2000"

@@ -1,9 +1,11 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
 import { getAllDocuments } from "../api/BackendApi";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 interface DocumentationItem {
   id: number;
@@ -94,6 +96,7 @@ export default function DocumentationPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50 font-sans">
+      <SEO {...pagesSEO.documentation} />
       <BannerSection
         heading="COMPREHENSIVE SOLUTIONS"
         title="Our Documentation"

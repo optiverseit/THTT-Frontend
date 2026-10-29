@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import PreFooter from "../../reusable/PreFooter";
 import { Compass } from "lucide-react";
+import { SEO } from "../../reusable";
 import {
   getPackageById,
   getPackageInclusions,
@@ -549,6 +550,25 @@ const PackageDetails: React.FC = () => {
   // ============================================================
   return (
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-14 sm:pt-16 md:pt-0 print:min-h-0 print:bg-white">
+      <SEO
+        title={pkg.title ? `${pkg.title} | Trip Himalaya` : "Nepal Tour Package | Trip Himalaya"}
+        description={pkg.description ? pkg.description.replace(/<[^>]+>/g, "").slice(0, 160) : `Book ${pkg.title || "Nepal tour"} with Trip Himalaya. Best price guarantee, licensed local guides, and 24/7 travel support.`}
+        keywords={`${pkg.title || "Nepal Tour"}, Nepal tour packages, Nepal trekking packages, Trip Himalaya, Nepal holiday, ${pkg.location || "Nepal"}`}
+        canonicalPath={`/details/${packageId}`}
+        image={packageImage}
+        type="website"
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "TouristTrip",
+          "name": pkg.title || "Nepal Tour Package",
+          "description": pkg.description ? pkg.description.replace(/<[^>]+>/g, "").slice(0, 160) : "Nepal tour with Trip Himalaya",
+          "touristType": "Sightseeing, Trekking & Holiday",
+          "provider": {
+            "@type": "TravelAgency",
+            "name": "Trip Himalaya Tours & Travel"
+          }
+        }}
+      />
       {/* ======================================================
           PACKAGE HERO / IMAGE GRID
       ====================================================== */}

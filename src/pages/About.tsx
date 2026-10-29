@@ -1,14 +1,17 @@
-﻿import React from "react";
+import React from "react";
 import {
   CheckCircle2, Shield, Users, Target, Eye, Plane, Hotel,
   Car, Mountain, Briefcase, CreditCard, MapPin, Heart, Globe,
   Zap, Activity, History,
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 const About: React.FC = () => {
   return (
     <div className="w-full bg-white">
+      <SEO {...pagesSEO.about} />
       {/* Hero Header matching Image 4 style */}
       <BannerSection
         background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plane, Map, Activity, Mountain, Bed, Shield, ShieldCheck,
@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 import { services as mockServices } from "../assets/data/mockData";
 import type { Service } from "../assets/data/types";
 
@@ -105,6 +107,7 @@ export default function ServicesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50 font-sans">
+      <SEO {...pagesSEO.services} />
       {/* BannerSection matching Image 4 structure */}
       <BannerSection
         heading="COMPREHENSIVE SOLUTIONS"

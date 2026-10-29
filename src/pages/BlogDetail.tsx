@@ -16,6 +16,7 @@ import PreFooter from "../components/reusable/PreFooter";
 import { blogPosts } from "../assets/data/mockData";
 import ShareModal from "../components/reusable/ShareModal";
 import { shareToPlatform } from "../utils/shareUtils";
+import { SEO } from "../components/reusable";
 
 const BlogDetailMore: React.FC = () => {
   const navigate = useNavigate();
@@ -78,6 +79,30 @@ const BlogDetailMore: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#4A5568]">
+      <SEO
+        title={`${post.title} | Trip Himalaya Travel Blog`}
+        description={post.excerpt ? post.excerpt.slice(0, 160) : `Read ${post.title} on Trip Himalaya. Tips, advice, and stories about Nepal travel and trekking.`}
+        keywords={`${post.title}, Nepal travel blog, ${post.category}, Nepal trekking tips, Trip Himalaya stories`}
+        canonicalPath={`/blog/${post.slug}`}
+        image={post.image}
+        type="article"
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          "headline": post.title,
+          "description": post.excerpt,
+          "image": post.image,
+          "datePublished": post.date,
+          "author": {
+            "@type": "Person",
+            "name": post.author || "Trip Himalaya Team"
+          },
+          "publisher": {
+            "@type": "TravelAgency",
+            "name": "Trip Himalaya Tours & Travel"
+          }
+        }}
+      />
 
       {/* ── HERO: Full-width image with overlay title ── */}
       <section className="relative w-full h-[65vh] min-h-[480px] overflow-hidden">

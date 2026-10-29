@@ -10,6 +10,10 @@
 </FilesMatch>
 
 <IfModule mod_rewrite.c>
+  # Prevent directory indexing (fixes LiteSpeed "Name Last Modified Size Directory" listing)
+  Options -Indexes
+  DirectoryIndex index.html index.php
+
   RewriteEngine On
   RewriteBase /
 
@@ -19,6 +23,14 @@
 
   # Runtime Environment Config route for cPanel
   RewriteRule ^env-config\.js$ env-config.php [L]
+
+  # Dynamic Social Share Bridge route
+  RewriteRule ^share/?$ share.php [L,QSA]
+
+  # Route social media crawlers (Facebook, WhatsApp, Twitter, LinkedIn, etc.)
+  # requesting detail pages directly to share.php to generate rich page-specific previews
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot) [NC]
+  RewriteRule ^(visa-details|details|hotel-detail|vehicle-detail|work-permit-details|service|documentation|blog|video|insurance-details)/([0-9a-zA-Z_-]+)/?$ share.php?type=$1&id=$2 [L,QSA]
 
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f

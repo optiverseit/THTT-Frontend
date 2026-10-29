@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Check, Link2 } from "lucide-react";
-import { getCrawlerSafeUrl, getCurrentUrl, copyToClipboard, openSharePopup } from "../../utils/shareUtils";
+import {
+  getCrawlerSafeUrl,
+  getCurrentUrl,
+  copyToClipboard,
+  openSharePopup,
+  getSocialShareBridgeUrl,
+} from "../../utils/shareUtils";
 import Logo from "../../assets/images/Logo.png";
 
 export interface SharePopoverProps {
@@ -28,6 +34,14 @@ export const SharePopover: React.FC<SharePopoverProps> = ({
 
   const activeUrl = url || getCurrentUrl();
   const crawlerUrl = getCrawlerSafeUrl(activeUrl);
+
+  // Enriched social bridge URL containing title, desc, and image for Facebook/WhatsApp/Messenger preview cards
+  const socialBridgeUrl = getSocialShareBridgeUrl({
+    url: activeUrl,
+    title,
+    text: subtitle,
+    image,
+  });
 
   // Friendly display URL matching triphimalaya.com.np format
   const displayUrl = activeUrl.startsWith("http://localhost") || activeUrl.startsWith("http://127.0.0.1")
@@ -60,7 +74,8 @@ export const SharePopover: React.FC<SharePopoverProps> = ({
 
   // Copy Link Action
   const handleCopyLink = async () => {
-    const ok = await copyToClipboard(activeUrl);
+    const linkToCopy = displayUrl || activeUrl;
+    const ok = await copyToClipboard(linkToCopy);
     if (ok) {
       setCopied(true);
       showToast("Link copied to clipboard!");
@@ -72,16 +87,16 @@ export const SharePopover: React.FC<SharePopoverProps> = ({
   const handleMessenger = () => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (isMobile) {
-      window.location.href = `fb-messenger://share/?link=${encodeURIComponent(crawlerUrl)}`;
+      window.location.href = `fb-messenger://share/?link=${encodeURIComponent(socialBridgeUrl)}`;
       setTimeout(() => {
         openSharePopup(
-          `https://www.facebook.com/dialog/send?link=${encodeURIComponent(crawlerUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(crawlerUrl)}`,
+          `https://www.facebook.com/dialog/send?link=${encodeURIComponent(socialBridgeUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(socialBridgeUrl)}`,
           "Share to Messenger"
         );
       }, 700);
     } else {
       openSharePopup(
-        `https://www.facebook.com/dialog/send?link=${encodeURIComponent(crawlerUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(crawlerUrl)}`,
+        `https://www.facebook.com/dialog/send?link=${encodeURIComponent(socialBridgeUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(socialBridgeUrl)}`,
         "Share to Messenger"
       );
     }
@@ -90,22 +105,22 @@ export const SharePopover: React.FC<SharePopoverProps> = ({
   // Facebook Post Share Action
   const handleFacebookPost = () => {
     openSharePopup(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(crawlerUrl)}`,
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(socialBridgeUrl)}`,
       "Share on Facebook"
     );
   };
 
   // WhatsApp Share Action
   const handleWhatsApp = () => {
-    const text = `${title}\n${activeUrl}`;
+    const text = `${title}\n${socialBridgeUrl}`;
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     openSharePopup(waUrl, "Share via WhatsApp");
   };
 
   // Viber Share Action
   const handleViber = async () => {
-    await copyToClipboard(activeUrl);
-    const msg = `${title} ${activeUrl}`;
+    await copyToClipboard(socialBridgeUrl);
+    const msg = `${title} ${socialBridgeUrl}`;
     window.location.href = `viber://forward?text=${encodeURIComponent(msg)}`;
     showToast("Opening Viber (link copied to clipboard)");
   };

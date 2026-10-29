@@ -69,6 +69,41 @@ export interface ShareData {
 }
 
 /**
+ * Builds an enriched social share URL using the server-side share bridge (share.php)
+ * that provides explicit Open Graph and Twitter Card tags to crawlers for Facebook,
+ * Messenger, WhatsApp, Twitter/X, LinkedIn, Telegram, etc.
+ */
+export function getSocialShareBridgeUrl(data: ShareData): string {
+  const targetUrl = getCrawlerSafeUrl(data.url);
+  const siteUrl = PRODUCTION_DOMAIN.replace(/\/+$/, "");
+
+  let resolvedImage = data.image ? String(data.image).trim() : "";
+  if (resolvedImage) {
+    if (resolvedImage.startsWith("data:")) {
+      resolvedImage = "";
+    } else if (resolvedImage.startsWith("//")) {
+      resolvedImage = "https:" + resolvedImage;
+    } else if (resolvedImage.startsWith("/")) {
+      resolvedImage = siteUrl + resolvedImage;
+    } else if (!resolvedImage.startsWith("http://") && !resolvedImage.startsWith("https://")) {
+      if (resolvedImage.includes("uploads/") || resolvedImage.includes("storage/")) {
+        resolvedImage = `https://thtt-backend.triphimalaya.com.np/${resolvedImage.replace(/^\/+/, "")}`;
+      } else {
+        resolvedImage = `${siteUrl}/${resolvedImage.replace(/^\/+/, "")}`;
+      }
+    }
+  }
+
+  const params = new URLSearchParams();
+  if (data.title) params.set("title", data.title);
+  if (data.text) params.set("desc", data.text);
+  if (resolvedImage) params.set("img", resolvedImage);
+  if (targetUrl) params.set("url", targetUrl);
+
+  return `${siteUrl}/share.php?${params.toString()}`;
+}
+
+/**
  * Dispatches sharing to a specific platform.
  */
 export function shareToPlatform(
@@ -79,12 +114,13 @@ export function shareToPlatform(
   const directUrl = data.url || (typeof window !== "undefined" ? window.location.href : crawlerUrl);
   const title = data.title || "Trip Himalaya Tours & Travel";
   const text = data.text || title;
+  const bridgeUrl = getSocialShareBridgeUrl(data);
 
   switch (platform) {
     case "facebook": {
-      // Facebook Sharer requires a public crawler-accessible URL
+      // Facebook Sharer requires the rich Open Graph bridge URL so the specific page image & title appear
       const shareEndpoint = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-        crawlerUrl
+        bridgeUrl
       )}`;
       openSharePopup(shareEndpoint, "Share on Facebook");
       break;
@@ -97,35 +133,35 @@ export function shareToPlatform(
     }
 
     case "whatsapp": {
-      // WhatsApp can receive formatted message with title and link
-      const message = `${title}\n\n${text !== title ? `${text}\n\n` : ""}${directUrl}`;
+      // WhatsApp message with title and bridge URL so WhatsApp generates the specific page link preview
+      const message = `${title}\n\n${text && text !== title ? `${text}\n\n` : ""}${bridgeUrl}`;
       const shareEndpoint = `https://wa.me/?text=${encodeURIComponent(message)}`;
       openSharePopup(shareEndpoint, "Share via WhatsApp");
       break;
     }
 
     case "twitter": {
-      // Twitter / X intent
+      // Twitter / X intent with rich bridge URL for summary_large_image card
       const shareEndpoint = `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-        crawlerUrl
+        bridgeUrl
       )}&text=${encodeURIComponent(text)}`;
       openSharePopup(shareEndpoint, "Share on X");
       break;
     }
 
     case "linkedin": {
-      // LinkedIn official share-offsite
+      // LinkedIn official share-offsite with rich bridge URL
       const shareEndpoint = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-        crawlerUrl
+        bridgeUrl
       )}`;
       openSharePopup(shareEndpoint, "Share on LinkedIn");
       break;
     }
 
     case "telegram": {
-      // Telegram share
+      // Telegram share with rich bridge URL
       const shareEndpoint = `https://t.me/share/url?url=${encodeURIComponent(
-        crawlerUrl
+        bridgeUrl
       )}&text=${encodeURIComponent(text)}`;
       openSharePopup(shareEndpoint, "Share on Telegram");
       break;
@@ -133,7 +169,7 @@ export function shareToPlatform(
 
     case "email": {
       // Standard mailto
-      const body = `${title}\n\n${text !== title ? `${text}\n\n` : ""}Check it out here:\n${directUrl}`;
+      const body = `${title}\n\n${text && text !== title ? `${text}\n\n` : ""}Check it out here:\n${directUrl}`;
       window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(
         body
       )}`;
@@ -141,16 +177,16 @@ export function shareToPlatform(
     }
 
     case "viber": {
-      // Viber direct share
-      const message = `${title} ${directUrl}`;
+      // Viber direct share with rich bridge URL
+      const message = `${title} ${bridgeUrl}`;
       window.location.href = `viber://forward?text=${encodeURIComponent(message)}`;
       break;
     }
 
     case "reddit": {
-      // Reddit submit
+      // Reddit submit with rich bridge URL
       const shareEndpoint = `https://reddit.com/submit?url=${encodeURIComponent(
-        crawlerUrl
+        bridgeUrl
       )}&title=${encodeURIComponent(title)}`;
       openSharePopup(shareEndpoint, "Share on Reddit");
       break;

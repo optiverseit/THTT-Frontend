@@ -87,8 +87,8 @@ const mapBasicPlan = (category: VisaCategory): VisaDetailPlan => {
     countryId: category.country_id,
     visaCategoryId: category.id,
 
-    image: category.visa_image || null,
-    visa_image: category.visa_image || null,
+    image: extractApiImage(category),
+    visa_image: extractApiImage(category),
     shortDescription: category.short_description || null,
 
     created_at: category.created_at,
@@ -170,8 +170,8 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     countryId: category.country_id,
     visaCategoryId: category.id,
 
-    image: category.visa_image || null,
-    visa_image: category.visa_image || null,
+    image: extractApiImage(category),
+    visa_image: extractApiImage(category),
     shortDescription: category.short_description || null,
 
     created_at: category.created_at,

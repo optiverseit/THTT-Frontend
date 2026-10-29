@@ -9,6 +9,8 @@ import {
 import PreFooter from "../components/reusable/PreFooter";
 import BannerSection from "../components/reusable/BannerSection";
 import { galleryData } from "../assets/data/mockData";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 
 const categories = [
@@ -107,6 +109,7 @@ const Gallery: React.FC = () => {
 
   return (
     <div className="w-full bg-white font-sans min-h-screen">
+      <SEO {...pagesSEO.gallery} />
       
       {/* ── HERO HEADER matching Image 4 style ── */}
       <BannerSection

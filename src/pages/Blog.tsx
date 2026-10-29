@@ -18,6 +18,8 @@ import { blogPosts, videoPosts } from "../assets/data/mockData";
 import type { BlogPost, VideoPost } from "../assets/data/types";
 import PreFooter from "../components/reusable/PreFooter";
 import { copyToClipboard, triggerNativeShare } from "../utils/shareUtils";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 // Re-export for backward compatibility
 export type { BlogPost };
@@ -496,6 +498,7 @@ const Blog: React.FC = () => {
 
   return (
     <div className="bg-[#F8F8FB] min-h-screen font-sans">
+      <SEO {...pagesSEO.blog} />
 
       {/* ── BLOG HERO (Activities-style, mode-aware) ── */}
       <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">

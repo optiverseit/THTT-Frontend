@@ -6,4 +6,6 @@ export { default as Testimonials } from "./Testimonials";
 export { default as ShareModal } from "./ShareModal";
 export { default as SharePopover } from "./SharePopover";
 export { default as PaymentMethod } from "./PaymentMethod";
+export { default as SEO } from "./SEO";
+export * from "./SEO";
 export * from "./PaymentMethod";

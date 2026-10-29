@@ -24,6 +24,8 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useGlobalCurrency } from "../context/CurrencyContext";
 import { isSessionValid, clearAuthSession } from "../utils/sessionManager";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 
 interface Category {
@@ -651,8 +653,8 @@ const Packages: React.FC = () => {
   // =========================================================
 
   return (
-
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans">
+      <SEO {...pagesSEO.packages} />
 
 
       {/* =================================================

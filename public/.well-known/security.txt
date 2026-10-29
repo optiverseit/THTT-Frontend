@@ -1,0 +1,18 @@
+# ------------------------------------------------------------------------------
+# Security Policy & Anti-Phishing Contact for Trip Himalaya Tours & Travel Pvt. Ltd.
+# RFC 9116 Standard
+# ------------------------------------------------------------------------------
+Contact: mailto:triphimalayatt@gmail.com
+Contact: tel:+977-9851420882
+Preferred-Languages: en, ne
+Canonical: https://triphimalaya.com.np/.well-known/security.txt
+Policy: https://triphimalaya.com.np/about
+
+# Official Identity & Anti-Phishing Advisory:
+# Official Website: https://triphimalaya.com.np
+# Official Corporate Name: Trip Himalaya Tours & Travel Pvt. Ltd.
+# Registered Jurisdiction: Government of Nepal, Office of Company Registrar
+# Official Phone / WhatsApp: +977-9851420882 | +977-9851403761
+# Official Email: triphimalayatt@gmail.com
+# Trip Himalaya Tours & Travel Pvt. Ltd. will NEVER request payment credentials,
+# passwords, or sensitive bank OTPs via unverified third-party links or unsolicited SMS.

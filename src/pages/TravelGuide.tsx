@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { ChevronRight, Plane, Phone } from "lucide-react";
 import { getTravelGuides } from "../api/BackendApi";
 import { formatDescription } from "../utils/formatDescription";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 interface TravelGuideItem {
   id: number;
@@ -55,6 +57,13 @@ const TravelGuide: React.FC = () => {
 
   return (
     <div className="w-full bg-white h-full">
+      <SEO
+        title={activeGuide?.title ? `${activeGuide.title} | Nepal Travel Guide | Trip Himalaya` : pagesSEO.travelGuide.title}
+        description={activeGuide?.description ? activeGuide.description.replace(/<[^>]+>/g, "").slice(0, 160) : pagesSEO.travelGuide.description}
+        keywords={pagesSEO.travelGuide.keywords}
+        canonicalPath="/travel-guide"
+        type="article"
+      />
       <BannerSection
         background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
         alt="Himalayan Peaks"

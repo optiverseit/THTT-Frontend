@@ -49,6 +49,8 @@ import VehicleRentalDetailContent, {
 import { getAllVehicles, getPackagesByCategory, getHotels, getVisaCategories, getInsurancePlans } from "../api/BackendApi";
 import HeliServicesDetailContent from "../components/Service/HeliServicesDetailContent";
 import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 const ServiceDetail: React.FC = () => {
   const { slug, tourId } = useParams<{ slug: string; tourId?: string }>();
@@ -2018,8 +2020,42 @@ const ServiceDetail: React.FC = () => {
     return `Our ${service.name} Offerings`;
   };
 
+  const activeSEO = (() => {
+    if (isVisaServices) return pagesSEO.serviceVisa;
+    if (isHeliServices) return pagesSEO.serviceHeli;
+    if (isHotelBooking) return pagesSEO.serviceHotel;
+    if (isVehicleRental) return pagesSEO.serviceVehicle;
+    if (isTravelInsurance) return pagesSEO.serviceInsurance;
+    if (isTrekking) {
+      return {
+        title: "Trekking in Nepal & Himalayan Expeditions | Trip Himalaya",
+        description: "Premier trekking packages in Nepal: Everest Base Camp Trek, Annapurna Base Camp, Circuit, Langtang Valley, Mardi Himal, Manaslu, and Mustang.",
+        keywords: "Trekking in Nepal, Nepal trekking packages, Everest Base Camp Trek, Annapurna Base Camp Trek, Annapurna Circuit Trek, Langtang Valley Trek, Mardi Himal Trek, Manaslu Circuit Trek, Upper Mustang Trek, Poon Hill Trek, Nepal trekking cost",
+        canonicalPath: `/service/${slug}`,
+        type: "website" as const,
+      };
+    }
+    if (isActivities) {
+      return {
+        title: "Adventure Tours & Extreme Sports in Nepal | Trip Himalaya",
+        description: "Himalayan adventure tours in Nepal: Mountain biking, peak climbing, white water rafting, bungee jumping, and paragliding with expert guides.",
+        keywords: "Adventure tours in Nepal, Mountain biking in Nepal, Nepal mountain biking tours, Nepal peak climbing, Nepal expedition packages, Himalayan adventure tours",
+        canonicalPath: `/service/${slug}`,
+        type: "website" as const,
+      };
+    }
+    return {
+      title: `${service.name} in Nepal | Trip Himalaya`,
+      description: service.shortDesc || `Professional ${service.name} services in Nepal provided by Trip Himalaya Tours & Travel.`,
+      keywords: `${service.name} Nepal, ${service.name} Kathmandu, Trip Himalaya services`,
+      canonicalPath: `/service/${slug}`,
+      type: "website" as const,
+    };
+  })();
+
   return (
     <>
+      <SEO {...activeSEO} />
       {/* ── 1. TOP BANNER SECTION (Omitted on dedicated Heli Tour Details Page) ── */}
       {!isHeliTourDetailPage && (
         <div className="w-full flex flex-col items-center">

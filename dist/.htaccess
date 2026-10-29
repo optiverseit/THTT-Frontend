@@ -1,5 +1,30 @@
-# Strictly block any environment files from direct HTTP access
-<FilesMatch "^(\.env|env\.)">
+# ------------------------------------------------------------------------------
+# 1. SECURITY HEADERS: Anti-Phishing, Anti-Clickjacking & Data Protection
+# ------------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  # Anti-Clickjacking: Prevent framing in phishing/malicious sites
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # Prevent MIME-type sniffing vulnerabilities
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Cross-Site Scripting (XSS) filter protection
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # Referrer Policy: Protect user privacy & prevent referrer leakage
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Restrict camera, microphone & geolocation access
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+  # Strict Transport Security (HSTS): Enforce HTTPS & prevent SSL stripping
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# 2. BLOCK SENSITIVE SERVER FILES & ENVIRONMENT CONFIGS
+# ------------------------------------------------------------------------------
+<FilesMatch "^(\.env|env\.|\.git|\.htaccess|\.htpasswd|composer\.|package(-lock)?\.json|tsconfig\.json|vite\.config|\.sql|\.log|\.bak|\.ini)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -16,6 +41,24 @@
 
   RewriteEngine On
   RewriteBase /
+
+  # ----------------------------------------------------------------------------
+  # 3. ANTI-SPAM & MALICIOUS BOT BLOCKER
+  # Blocks automated vulnerability scanners, exploit scrapers & bad bots
+  # ----------------------------------------------------------------------------
+  RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|wpscan|libwww-perl|HTTrack|masscan|zgrab|nmap|acunetix|havij) [NC,OR]
+  RewriteCond %{HTTP_USER_AGENT} (BLEXBot|DotBot|MJ12bot|SemrushBot|AhrefsBot) [NC]
+  RewriteRule .* - [F,L]
+
+  # ----------------------------------------------------------------------------
+  # 4. ANTI-PHISHING, SQL INJECTION & XSS ATTACK MITIGATION
+  # Blocks malicious script injection, directory traversal and query exploits
+  # ----------------------------------------------------------------------------
+  RewriteCond %{QUERY_STRING} (<|%3C).*script.*(>|%3E) [NC,OR]
+  RewriteCond %{QUERY_STRING} (UNION|SELECT|INSERT|UPDATE|DELETE|DROP|CAST|DECLARE)\s [NC,OR]
+  RewriteCond %{QUERY_STRING} (base64_encode|globals|request) [NC,OR]
+  RewriteCond %{QUERY_STRING} (\.\./|%2e%2e%2f) [NC]
+  RewriteRule .* - [F,L]
 
   # Email dispatcher API route for cPanel
   RewriteRule ^api/send-email/?$ send-email.php [L,QSA]

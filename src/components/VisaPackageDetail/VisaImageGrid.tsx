@@ -307,7 +307,12 @@ const VisaImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         <ShareModal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
-          data={{ title: pkg.title, url: window.location.href }}
+          data={{
+            title: pkg.title || "Visa Counseling & Processing",
+            text: pkg.description || pkg.shortDescription || "Authorized Visa Counseling & Embassy Submission Support with Trip Himalaya.",
+            image: pkg.image || pkg.visa_image || (galleryImages && galleryImages.length > 0 ? galleryImages[0] : undefined),
+            url: window.location.href,
+          }}
         />
       )}
     </div>

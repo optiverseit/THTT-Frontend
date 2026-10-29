@@ -50,11 +50,11 @@ if (empty($rawFullName) || empty($rawEmail) || empty($rawPhone)) {
 
 // Dynamically load .env.production or .env file if available
 $envSearchPaths = [
-    __DIR__ . '/.env.production',
+    '/home8/triphima/.env.production',
     '/home8/triphima/repositories/THTT-Frontend/.env.production',
-    dirname(__DIR__) . '/repositories/THTT-Frontend/.env.production',
+    '/home8/triphima/repositories/THTT-Frontend/env.production',
     dirname(__DIR__) . '/.env.production',
-    __DIR__ . '/.env',
+    dirname(__DIR__) . '/env.production',
     dirname(__DIR__) . '/.env',
 ];
 

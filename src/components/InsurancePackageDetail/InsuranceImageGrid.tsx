@@ -312,7 +312,12 @@ const InsuranceImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         <ShareModal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
-          data={{ title: pkg.title, url: window.location.href }}
+          data={{
+            title: pkg.title || "Travel Insurance Plan",
+            text: pkg.description || pkg.subtitle || "Comprehensive Himalayan Travel Insurance & Emergency Evacuation with Trip Himalaya.",
+            image: pkg.image || (galleryImages && galleryImages.length > 0 ? galleryImages[0] : undefined),
+            url: window.location.href,
+          }}
         />
       )}
     </div>

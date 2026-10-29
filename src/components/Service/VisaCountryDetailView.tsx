@@ -268,6 +268,44 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     if (isShareOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isShareOpen]);
+
+  // Hero background image (dynamic from API with fallbacks)
+  const heroBg = resolveImageUrl(
+    plan.image || plan.visa_image || (plan as any)?.visaImage
+  );
+
+  // Dynamically update document title and Open Graph meta tags for current page
+  useEffect(() => {
+    if (!plan?.country) return;
+    const originalTitle = document.title;
+    const pageTitle = `${plan.country} Visa – ${plan.visaType} | Trip Himalaya Tours & Travel`;
+    document.title = pageTitle;
+
+    const setMeta = (prop: string, val: string) => {
+      let el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("property", prop);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", val);
+    };
+
+    setMeta("og:title", `${plan.country} Visa – ${plan.visaType}`);
+    setMeta("twitter:title", `${plan.country} Visa – ${plan.visaType}`);
+    if (plan.shortDescription) {
+      setMeta("og:description", plan.shortDescription);
+      setMeta("twitter:description", plan.shortDescription);
+    }
+    if (heroBg) {
+      setMeta("og:image", heroBg);
+      setMeta("twitter:image", heroBg);
+    }
+
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [plan, heroBg]);
   // const costOptionsList: CostOption[] = plan.costOptions && plan.costOptions.length > 0
   //   ? plan.costOptions
   //   : [
@@ -369,10 +407,6 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     );
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
-  // Hero background image (dynamic from API with fallbacks)
-  const heroBg = resolveImageUrl(
-    plan.image || plan.visa_image || (plan as any)?.visaImage
-  );
   // Share helpers
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareTitle = `${plan.country} ${plan.visaType} | Trip Himalaya Tours & Travel`;
@@ -382,7 +416,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     text: shareText,
     url: currentUrl,
 
-    image: resolveImageUrl(plan.image) || undefined,
+    image: heroBg || undefined,
 
   };
   const shareButtons = [

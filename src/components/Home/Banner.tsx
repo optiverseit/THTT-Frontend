@@ -6,108 +6,19 @@ import {
   ArrowRight,
   TrendingUp,
   X,
-  Package,
-  Plane,
-  Map,
-  Mountain,
-  Activity,
-  Bed,
-  Shield,
-  Heart,
-  Car,
-  Wind,
-  FileText,
   Compass,
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  getPackages,
-  getHotels,
-  getAllVehicles,
-  getVisaCategories,
-  getInsurancePlans,
-} from "../../api/BackendApi";
-import { services } from "../../assets/data/mockData";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SearchResult {
-  id: string | number;
-  label: string;
-  sublabel?: string;
-  type:
-    | "package"
-    | "service"
-    | "hotel"
-    | "vehicle"
-    | "visa"
-    | "insurance"
-    | "heli"
-    | "trekking"
-    | "activity"
-    | "tour";
-  route: string;
-  icon: React.ElementType;
-}
-
-// ─── Icon mapping for service slugs ──────────────────────────────────────────
-
-const SERVICE_ICON_MAP: Record<string, React.ElementType> = {
-  "air-ticket": Plane,
-  tours: Map,
-  activities: Activity,
-  trekking: Mountain,
-  "hotel-booking": Bed,
-  "visa-services": Shield,
-  "travel-insurance": Heart,
-  "vehicle-rental": Car,
-  "heli-services": Wind,
-  "work-permit": FileText,
-};
-
-const TYPE_COLOR_MAP: Record<string, string> = {
-  package: "bg-pink-100 text-pink-600",
-  service: "bg-purple-100 text-purple-600",
-  hotel: "bg-amber-100 text-amber-600",
-  vehicle: "bg-green-100 text-green-600",
-  visa: "bg-indigo-100 text-indigo-600",
-  insurance: "bg-rose-100 text-rose-600",
-  heli: "bg-cyan-100 text-cyan-600",
-  trekking: "bg-emerald-100 text-emerald-600",
-  activity: "bg-orange-100 text-orange-600",
-  tour: "bg-violet-100 text-violet-600",
-};
-
-const TYPE_LABEL_MAP: Record<string, string> = {
-  package: "Package",
-  service: "Service",
-  hotel: "Hotel",
-  vehicle: "Vehicle",
-  visa: "Visa",
-  insurance: "Insurance",
-  heli: "Heli Tour",
-  trekking: "Trekking",
-  activity: "Activity",
-  tour: "Tour",
-};
-
-// ─── Quick search chips ───────────────────────────────────────────────────────
-
-const QUICK_SEARCHES = ["Everest", "Annapurna", "Bali", "Pokhara", "Paragliding", "Visa"];
-
-// ─── Static items built from mock data ───────────────────────────────────────
-
-const STATIC_SEARCH_ITEMS: SearchResult[] = [
-  ...services.map((s) => ({
-    id: s.id,
-    label: s.name,
-    sublabel: s.shortDesc,
-    type: "service" as const,
-    route: s.slug === "work-permit" ? "/work-permit" : `/service/${s.slug}`,
-    icon: SERVICE_ICON_MAP[s.slug] ?? FileText,
-  })),
-];
+  SearchResult,
+  TYPE_COLOR_MAP,
+  TYPE_LABEL_MAP,
+  QUICK_SEARCHES,
+  getCachedSearchItems,
+  syncLiveDatabase,
+  executeSearch,
+} from "../homesearchcache";
 
 // ─── Banner Component ─────────────────────────────────────────────────────────
 
@@ -116,7 +27,7 @@ const Banner: React.FC = () => {
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [allItems, setAllItems] = useState<SearchResult[]>(STATIC_SEARCH_ITEMS);
+  const [allItems, setAllItems] = useState<SearchResult[]>(getCachedSearchItems);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -124,171 +35,27 @@ const Banner: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ── Fetch dynamic data from backend ─────────────────────────────────────
+  // ── Sync with Live Database in Background without Blocking ──────────────
+  // Connects to live backend APIs via homesearchcache.
+  // Real database items are cached locally for 0ms sub-millisecond retrieval.
   useEffect(() => {
-    const loadDynamicData = async () => {
-      try {
-        const [pkgRes, hotelRes, vehicleRes, visaRes, insuranceRes] =
-          await Promise.allSettled([
-            getPackages(),
-            getHotels(),
-            getAllVehicles(),
-            getVisaCategories(),
-            getInsurancePlans(),
-          ]);
+    let isMounted = true;
 
-        const dynamicItems: SearchResult[] = [];
-
-        // Packages
-        if (pkgRes.status === "fulfilled") {
-          const raw = pkgRes.value.data;
-          const pkgs: any[] = Array.isArray(raw)
-            ? raw
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : Array.isArray(raw?.data?.data)
-            ? raw.data.data
-            : [];
-
-          pkgs.forEach((p: any) => {
-            const typeRaw = (
-              p.category?.name || p.category?.title || p.type || ""
-            ).toLowerCase();
-
-            let resultType: SearchResult["type"] = "package";
-            let icon: React.ElementType = Package;
-
-            if (typeRaw.includes("trek") || typeRaw.includes("hik")) {
-              resultType = "trekking";
-              icon = Mountain;
-            } else if (typeRaw.includes("activity") || typeRaw.includes("adventure")) {
-              resultType = "activity";
-              icon = Activity;
-            } else if (typeRaw.includes("tour") || typeRaw.includes("holiday")) {
-              resultType = "tour";
-              icon = Map;
-            } else if (typeRaw.includes("heli")) {
-              resultType = "heli";
-              icon = Wind;
-            }
-
-            dynamicItems.push({
-              id: `pkg-${p.id}`,
-              label: p.title || p.name || "Package",
-              sublabel: p.location || p.duration || "",
-              type: resultType,
-              route: `/details/${p.id}`,
-              icon,
-            });
-          });
-        }
-
-        // Hotels
-        if (hotelRes.status === "fulfilled") {
-          const raw = hotelRes.value.data;
-          const hotels: any[] = Array.isArray(raw)
-            ? raw
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
-          hotels.forEach((h: any) => {
-            dynamicItems.push({
-              id: `hotel-${h.id}`,
-              label: h.name || "Hotel",
-              sublabel: h.city || h.location || "",
-              type: "hotel",
-              route: `/hotel-details/${h.id}`,
-              icon: Bed,
-            });
-          });
-        }
-
-        // Vehicles
-        if (vehicleRes.status === "fulfilled") {
-          const raw = vehicleRes.value.data;
-          const vehicles: any[] = Array.isArray(raw)
-            ? raw
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
-          vehicles.forEach((v: any) => {
-            dynamicItems.push({
-              id: `veh-${v.id}`,
-              label: v.name || "Vehicle",
-              sublabel: v.categoryLabel || v.category || "",
-              type: "vehicle",
-              route: `/vehicle-details/${v.id}`,
-              icon: Car,
-            });
-          });
-        }
-
-        // Visa categories
-        if (visaRes.status === "fulfilled") {
-          const raw = visaRes.value.data;
-          const visas: any[] = Array.isArray(raw)
-            ? raw
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
-          visas.forEach((v: any) => {
-            dynamicItems.push({
-              id: `visa-${v.id}`,
-              label: v.name || v.title || "Visa Category",
-              sublabel: v.country || v.description || "Visa Services",
-              type: "visa",
-              route: `/visa-details/${v.id}`,
-              icon: Shield,
-            });
-          });
-        }
-
-        // Insurance plans
-        if (insuranceRes.status === "fulfilled") {
-          const raw = insuranceRes.value.data;
-          const plans: any[] = Array.isArray(raw)
-            ? raw
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
-          plans.forEach((p: any) => {
-            dynamicItems.push({
-              id: `ins-${p.id}`,
-              label: p.name || p.title || "Insurance Plan",
-              sublabel: p.description || "Travel Insurance",
-              type: "insurance",
-              route: `/insurance-details/${p.id}`,
-              icon: Heart,
-            });
-          });
-        }
-
-        setAllItems([...STATIC_SEARCH_ITEMS, ...dynamicItems]);
-      } catch (_err) {
-        // keep static items
+    syncLiveDatabase((updatedItems) => {
+      if (isMounted) {
+        setAllItems(updatedItems);
       }
-    };
+    });
 
-    loadDynamicData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // ── Keyword → type aliases for boosted matching ──────────────────────────
-  const TYPE_ALIASES: Record<string, string[]> = {
-    vehicle: ["vehicle", "rental", "car", "suv", "van", "bus", "transport"],
-    hotel: ["hotel", "lodge", "resort", "accommodation", "stay", "room"],
-    visa: ["visa", "schengen", "permit", "passport"],
-    insurance: ["insurance", "coverage", "cover", "policy"],
-    trekking: ["trek", "trekking", "hike", "hiking", "expedition"],
-    activity: ["activity", "activities", "adventure", "paraglid", "bungee", "rafting", "zipline", "swing"],
-    tour: ["tour", "holiday", "safari", "sightseeing", "cultural"],
-    heli: ["heli", "helicopter", "chopper"],
-    service: ["air", "ticket", "flight", "airline"],
-  };
-
-  // ── Search logic ──────────────────────────────────────────────────────────
+  // ── High-Speed Search Algorithm (0ms in-memory execution) ───────────────────
   const runSearch = useCallback(
     (q: string) => {
-      const trimmed = q.trim().toLowerCase();
+      const trimmed = q.trim();
       if (!trimmed) {
         setResults([]);
         setIsOpen(false);
@@ -296,47 +63,7 @@ const Banner: React.FC = () => {
       }
 
       setLoading(true);
-      const words = trimmed.split(/[\s,]+/).filter(Boolean);
-
-      const scored = allItems
-        .map((item) => {
-          const lbl = item.label.toLowerCase();
-          const sub = (item.sublabel ?? "").toLowerCase();
-          const typ = item.type.toLowerCase();
-          const route = item.route.toLowerCase();
-
-          let score = 0;
-          words.forEach((word) => {
-            // Label match
-            if (lbl === word) score += 20;
-            else if (lbl.startsWith(word)) score += 12;
-            else if (lbl.includes(word)) score += 7;
-
-            // Sublabel match
-            if (sub.includes(word)) score += 4;
-
-            // Route match
-            if (route.includes(word)) score += 3;
-
-            // Exact type keyword match (strongest boost)
-            if (typ === word) score += 25;
-            else if (typ.includes(word)) score += 10;
-
-            // Alias boost: if the word maps to a known type, boost that type
-            Object.entries(TYPE_ALIASES).forEach(([aliasType, aliases]) => {
-              if (aliases.some((a) => word.includes(a) || a.includes(word))) {
-                if (typ === aliasType || typ.includes(aliasType)) score += 18;
-                // Also boost service label that contains the alias
-                if (lbl.includes(aliasType)) score += 8;
-              }
-            });
-          });
-          return { item, score };
-        })
-        .filter(({ score }) => score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 8)
-        .map(({ item }) => item);
+      const scored = executeSearch(trimmed, allItems, 8);
 
       setResults(scored);
       setIsOpen(true);
@@ -346,8 +73,14 @@ const Banner: React.FC = () => {
     [allItems]
   );
 
+  // ── Ultra-fast typing response (40ms debounce) ─────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => runSearch(query), 180);
+    if (!query.trim()) {
+      setResults([]);
+      setIsOpen(false);
+      return;
+    }
+    const t = setTimeout(() => runSearch(query), 40);
     return () => clearTimeout(t);
   }, [query, runSearch]);
 
@@ -363,24 +96,26 @@ const Banner: React.FC = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Navigate to a result ──────────────────────────────────────────────────
+  // ── Navigate to selected result details page ──────────────────────────────
   const goToResult = (result: SearchResult) => {
     setQuery("");
     setIsOpen(false);
     navigate(result.route);
   };
 
-  // ── Submit search ─────────────────────────────────────────────────────────
-  // Always go to the unified search results page (/search?q=...)
-  // Exception: if a dropdown item is keyboard-highlighted, navigate there directly.
+  // ── Submit search: directly navigates to chosen/top card (No Quick Search redirect)
   const handleSearchSubmit = () => {
     if (highlightedIndex >= 0 && results[highlightedIndex]) {
       goToResult(results[highlightedIndex]);
       return;
     }
+    if (results.length > 0) {
+      goToResult(results[0]);
+      return;
+    }
     if (query.trim()) {
-      setIsOpen(false);
-      navigate(`/search?q=${encodeURIComponent(query.trim())}&exclude=blogs`);
+      runSearch(query);
+      setIsOpen(true);
     }
   };
 
@@ -405,8 +140,11 @@ const Banner: React.FC = () => {
     }
   };
 
+  // ── Instant Quick Search Chip Click (0ms execution) ───────────────────────
   const handleQuickSearch = (q: string) => {
     setQuery(q);
+    runSearch(q);
+    setIsOpen(true);
     inputRef.current?.focus();
   };
 
@@ -483,7 +221,11 @@ const Banner: React.FC = () => {
                   className="bg-transparent outline-none w-full placeholder-gray-300 text-white text-xs sm:text-sm font-medium"
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  onFocus={() => { if (results.length > 0) setIsOpen(true); }}
+                  onFocus={() => {
+                    if (query.trim()) {
+                      runSearch(query);
+                    }
+                  }}
                   autoComplete="off"
                 />
                 {query && (
@@ -502,7 +244,7 @@ const Banner: React.FC = () => {
                 )}
               </div>
 
-              {/* Dropdown */}
+              {/* Dropdown: Instant Results (No link to Quick Search page) */}
               {isOpen && (
                 <div
                   className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl bg-[#1e0a35]/95"
@@ -512,7 +254,7 @@ const Banner: React.FC = () => {
                     <div className="px-4 py-6 text-center">
                       <Compass size={28} className="mx-auto text-gray-400 mb-2" />
                       <p className="text-xs text-gray-400 font-semibold">No results for &ldquo;{query}&rdquo;</p>
-                      <p className="text-[10px] text-gray-500 mt-1">Try &ldquo;Everest&rdquo;, &ldquo;Visa&rdquo; or &ldquo;Hotel&rdquo;</p>
+                      <p className="text-[10px] text-gray-500 mt-1">Try &ldquo;Thailand&rdquo;, &ldquo;UAE&rdquo;, &ldquo;Visa&rdquo; or &ldquo;Tours&rdquo;</p>
                     </div>
                   ) : (
                     <ul role="listbox">
@@ -548,27 +290,13 @@ const Banner: React.FC = () => {
                           </li>
                         );
                       })}
-
-                      {/* See all results → unified search page */}
-                      <li
-                        onClick={() => {
-                          setIsOpen(false);
-                          navigate(`/search?q=${encodeURIComponent(query.trim())}&exclude=blogs`);
-                        }}
-                        className="flex items-center justify-between px-4 py-3 cursor-pointer bg-pink-600/20 hover:bg-pink-600/35 transition-colors"
-                      >
-                        <span className="text-pink-300 text-[10px] font-bold uppercase tracking-wider">
-                          See all results for &ldquo;{query}&rdquo;
-                        </span>
-                        <ArrowRight size={12} className="text-pink-400" />
-                      </li>
                     </ul>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Search button — goes to unified /search?q= page */}
+            {/* Search button — directly selects top result */}
             <button
               type="button"
               id="home-search-btn"

@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="en">
-  <head>
+    <head>
+    <!-- Google Tag Manager -->
+    <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-TW3DNSRM"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    </script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/Logo.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
@@ -247,7 +255,14 @@
     <!-- Runtime Environment Config from cPanel Server -->
     <script src="/env-config.php"></script>
   </head>
-  <body>
+    <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe
+    src="https://www.googletagmanager.com/ns.html?id=GTM-TW3DNSRM"
+    height="0" width="0"
+    style="display:none;visibility:hidden">
+    </iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import VisaCountryDetailView, { VisaDetailPlan, CostOption } from "../Service/VisaCountryDetailView";
+import { splitInclusions } from "../Service/VisaServicesDetailContent";
 import type { VisaDocumentRequirement } from "../Service/VisaApplicationModal";
 import { Compass } from "lucide-react";
 import { getVisaCategories, getVisaPublicDocumentRequirements, getVisaPublicInformation, getVisaPublicPricingTiers } from "../../api/BackendApi";
@@ -77,7 +78,7 @@ const mapBasicPlan = (category: VisaCategory): VisaDetailPlan => {
     processingTime: category.processing_time || "",
     baseNPRPrice: 0,
     entryType: "",
-    inclusions: category.short_description ? [category.short_description] : [],
+    inclusions: category.short_description ? splitInclusions(category.short_description) : [],
     aboutText: category.description || category.short_description || "",
     requirementDocuments: [],
     documentRequirements: [],
@@ -160,7 +161,7 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
     processingTime: category.processing_time || "",
     baseNPRPrice: firstOption?.nprPrice || 0,
     entryType: firstOption?.entryType || "",
-    inclusions: inclusions.length > 0 ? inclusions : category.short_description ? [category.short_description] : [],
+    inclusions: inclusions.length > 0 ? inclusions : category.short_description ? splitInclusions(category.short_description) : [],
     aboutText: category.description || category.short_description || "",
     requirementDocuments,
     documentRequirements,

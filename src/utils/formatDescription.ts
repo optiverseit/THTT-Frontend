@@ -209,3 +209,22 @@ function escapeHtml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+
+export const hasCustomBullet = (text: string | null | undefined): boolean => {
+  if (!text) return false;
+  const clean = text.replace(/<[^>]+>/g, "").trim();
+  return /^(\p{Extended_Pictographic}|\p{Emoji}|[•\-\*\u2700-\u27BF\uE000-\uF8FF])/u.test(clean);
+};
+
+export const splitInclusions = (text?: string | null): string[] => {
+  if (!text) return [];
+  const normalized = text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+  return normalized
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+};

@@ -7,10 +7,11 @@ import {
   FileText,
   ShieldCheck,
   ArrowRight,
+  CircleCheck,
 } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useNavigate } from "react-router-dom";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, hasCustomBullet, splitInclusions } from "../../utils/formatDescription";
 
 interface Country {
   id: number;
@@ -240,12 +241,36 @@ const PermitServices = ({
                       </h3>
 
                       {/* DESCRIPTION */}
-                      <div
-                        className="text-[11px] text-gray-500 font-medium line-clamp-2 min-h-[2rem] mb-2 overflow-hidden"
-                        dangerouslySetInnerHTML={{
-                          __html: formatDescription(country.short_description),
-                        }}
-                      />
+                      {(() => {
+                        const lines = splitInclusions(country.short_description);
+                        if (lines.length > 1 || (lines.length === 1 && hasCustomBullet(lines[0]))) {
+                          return (
+                            <div className="space-y-1 my-2 text-left w-full">
+                              {lines.map((line, idx) => {
+                                const customBullet = hasCustomBullet(line);
+                                return (
+                                  <div key={idx} className="flex items-start gap-2 text-xs text-gray-600 font-medium leading-snug">
+                                    {!customBullet && (
+                                      <div className="w-3.5 h-3.5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <CircleCheck size={10} className="stroke-[2.5]" />
+                                      </div>
+                                    )}
+                                    <span className="flex-1">{line}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div
+                            className="text-[11px] text-gray-500 font-medium line-clamp-2 min-h-[2rem] mb-2 overflow-hidden"
+                            dangerouslySetInnerHTML={{
+                              __html: formatDescription(country.short_description),
+                            }}
+                          />
+                        );
+                      })()}
                     </div>
 
                     {/* Bottom Area */}

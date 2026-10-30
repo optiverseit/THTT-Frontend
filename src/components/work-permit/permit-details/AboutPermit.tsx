@@ -6,7 +6,7 @@ import {
   FileText,
   Zap,
 } from "lucide-react";
-import { formatDescription } from "../../../utils/formatDescription";
+import { formatDescription, hasCustomBullet } from "../../../utils/formatDescription";
 
 interface CountryProps {
   id: number;
@@ -108,21 +108,28 @@ const AboutPermit = ({
         </header>
 
         {documentRequirements.length > 0 ? (
-          <ul className="list-disc marker:text-pink-500 list-outside pl-5 space-y-2 mt-2">
-            {documentRequirements.map((document) => (
-              <li
-                key={document.id}
-                className="text-gray-600 font-semibold text-sm sm:text-base leading-snug"
-              >
-                {document.title}
-                {!document.is_required && (
-                  <span className="text-gray-400 font-normal text-xs ml-1">
-                    (Optional)
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2 mt-2">
+            {documentRequirements.map((document) => {
+              const customBullet = hasCustomBullet(document.title);
+              return (
+                <div key={document.id} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-700 font-medium leading-snug">
+                  {!customBullet && (
+                    <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CircleCheck size={11} className="stroke-[2.5]" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <span>{document.title}</span>
+                    {document.is_required !== false ? (
+                      <span className="text-red-500 font-bold text-xs ml-1 select-none" title="Required Document">*</span>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 italic ml-1">(Optional)</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <p className="text-gray-400 font-semibold text-sm">
             No document requirements available.
@@ -141,16 +148,21 @@ const AboutPermit = ({
           </h2>
         </header>
 
-        <ul className="list-disc marker:text-green-500 list-outside pl-5 space-y-2 mt-2">
-          {included.map((item, index) => (
-            <li
-              key={index}
-              className="text-gray-600 font-semibold text-sm sm:text-base leading-snug"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-2 mt-2">
+          {included.map((item, index) => {
+            const customBullet = hasCustomBullet(item);
+            return (
+              <div key={index} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-700 font-medium leading-snug">
+                {!customBullet && (
+                  <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CircleCheck size={11} className="stroke-[2.5]" />
+                  </div>
+                )}
+                <span className="flex-1">{item}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* POLICY */}
@@ -164,16 +176,21 @@ const AboutPermit = ({
             Policy
           </h1>
 
-          <ul className="list-disc marker:text-gray-400 list-outside pl-5 mt-3 space-y-2">
-            {policies.map((item, index) => (
-              <li
-                key={index}
-                className="text-gray-300 font-medium text-xs sm:text-sm leading-relaxed"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2 mt-3">
+            {policies.map((item, index) => {
+              const customBullet = hasCustomBullet(item);
+              return (
+                <div key={index} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-300 font-medium leading-relaxed">
+                  {!customBullet && (
+                    <div className="w-4 h-4 rounded bg-pink-900/60 text-pink-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <AlertCircle size={11} />
+                    </div>
+                  )}
+                  <span className="flex-1">{item}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="shadow-xl shadow-gray-200 w-full sm:w-[48%] rounded-2xl sm:rounded-3xl bg-white p-6 sm:p-8">
@@ -185,16 +202,21 @@ const AboutPermit = ({
             Terms &amp; Conditions
           </h1>
 
-          <ul className="list-disc marker:text-pink-400 list-outside pl-5 mt-3 space-y-2">
-            {terms.map((item, index) => (
-              <li
-                key={index}
-                className="text-gray-600 font-medium text-xs sm:text-sm leading-relaxed"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2 mt-3">
+            {terms.map((item, index) => {
+              const customBullet = hasCustomBullet(item);
+              return (
+                <div key={index} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-600 font-medium leading-relaxed">
+                  {!customBullet && (
+                    <div className="w-4 h-4 rounded bg-purple-100 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 mt-0.5 font-bold text-[10px] leading-none">
+                      •
+                    </div>
+                  )}
+                  <span className="flex-1">{item}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

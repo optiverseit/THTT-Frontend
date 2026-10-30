@@ -23,10 +23,46 @@ export function getEnv(key: string, defaultValue = ""): string {
 }
 
 export function getApiBaseUrl(): string {
-  return (
-    getEnv("VITE_BASE_URL") ||
-    "https://thtt-backend.triphimalaya.com.np/api"
-  );
+  // 1. Localhost detection: automatically route to Render backend API
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.startsWith("192.168.")
+    ) {
+      return "https://thtt-backend.onrender.com/api";
+    }
+  }
+
+  // 2. Server runtime config (e.g. from /env-config.php on cPanel hosting)
+  if (
+    typeof window !== "undefined" &&
+    window.__ENV__ &&
+    window.__ENV__["VITE_BASE_URL"]
+  ) {
+    return window.__ENV__["VITE_BASE_URL"];
+  }
+
+  // 3. Live production domain check for triphimalaya.com.np
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host.includes("triphimalaya.com.np")) {
+      return "https://thtt-backend.triphimalaya.com.np/api";
+    }
+  }
+
+  // 4. Build-time environment variable
+  const metaVal = (import.meta.env as unknown as Record<string, string | undefined>)?.[
+    "VITE_BASE_URL"
+  ];
+  if (metaVal) {
+    return metaVal;
+  }
+
+  // 5. Default production backend for cPanel deployment
+  return "https://thtt-backend.triphimalaya.com.np/api";
 }
 
 export function getBackendRootUrl(): string {

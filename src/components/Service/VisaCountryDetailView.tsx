@@ -50,7 +50,7 @@ import {
 import PermitService from "../work-permit/permit-details/PermitService";
 import SharePopover from "../reusable/SharePopover";
 import { services } from "../../assets/data/mockData";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, hasCustomBullet } from "../../utils/formatDescription";
 import { getBackendRootUrl } from "../../config/env";
 export interface CostOption {
   name: string;
@@ -205,9 +205,10 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         const found = plan.costOptions?.find(
           (opt) =>
             (current?.visaPricingTierId && opt.visaPricingTierId === current.visaPricingTierId) ||
-            opt.name === current?.name
+            (current?.name && current.name.trim() !== "" && opt.name === current.name)
         );
-        return found || current || plan.costOptions![0];
+        // Default to the first option if current is not in the new options list
+        return found || plan.costOptions![0];
       });
     }
   }, [plan]);
@@ -325,6 +326,17 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   //     },
   //   ];
   const costOptionsList: CostOption[] = plan.costOptions || [];
+
+  // Guarantee the first cost option is selected by default
+  const activeCostOption: CostOption =
+    costOptionsList.length > 0
+      ? (costOptionsList.find(
+          (opt) =>
+            (selectedCostOption?.visaPricingTierId && opt.visaPricingTierId === selectedCostOption.visaPricingTierId) ||
+            (selectedCostOption?.name && selectedCostOption.name.trim() !== "" && opt.name === selectedCostOption.name)
+        ) || costOptionsList[0])
+      : selectedCostOption;
+
   const handleIncreaseGuestCount = (): void => {
     setNumberOfGuests((prev) => prev + 1);
   };
@@ -340,7 +352,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
     }
     return formatUSD(nprPrice / nprPerOneDollar);
   };
-  const unitPrice = selectedCostOption.nprPrice;
+  const unitPrice = activeCostOption?.nprPrice || 0;
   const estimatedTotalPrice = unitPrice * numberOfGuests;
   const getFormattedEstimatedTotal = (): string => {
     if (selectedCurrency === "nepali") {
@@ -375,9 +387,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       const returnState = {
         from: location.pathname + location.search,
         openApplyModal: true,
-        selectedCostOption,
-        selectedOptionName: selectedCostOption?.name,
-        visaPricingTierId: selectedCostOption?.visaPricingTierId,
+        selectedCostOption: activeCostOption,
+        selectedOptionName: activeCostOption?.name,
+        visaPricingTierId: activeCostOption?.visaPricingTierId,
         numberOfGuests: numberOfGuests,
       };
 
@@ -403,7 +415,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       selectedCurrency === "nepali" ? "NPR" : selectedCurrency === "inr" ? "INR" : "USD";
     const totalFormatted = getFormattedEstimatedTotal();
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya (Visa & Documentation Team)! I am inquiring about visa counseling for "${plan.country}" (${plan.visaType}). Option: ${selectedCostOption.name} (${selectedCostOption.days}) for ${numberOfGuests} applicant(s). Estimated Total: ${totalFormatted} (${currencyText}). Please guide me through document submission and next steps.`
+      `Hello Trip Himalaya (Visa & Documentation Team)! I am inquiring about visa counseling for "${plan.country}" (${plan.visaType}). Option: ${activeCostOption?.name || ""} (${activeCostOption?.days || ""}) for ${numberOfGuests} applicant(s). Estimated Total: ${totalFormatted} (${currencyText}). Please guide me through document submission and next steps.`
     );
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
@@ -609,7 +621,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                 ) : costOptionsList.length > 0 ? (
                   costOptionsList.map((pricingRow, rowIndex) => {
                     const isSelected =
-                      selectedCostOption.name === pricingRow.name;
+                      activeCostOption?.visaPricingTierId && pricingRow?.visaPricingTierId
+                        ? activeCostOption.visaPricingTierId === pricingRow.visaPricingTierId
+                        : activeCostOption?.name === pricingRow?.name;
 
                     return (
                       <tr
@@ -1168,20 +1182,20 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           </div>
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 text-xs sm:text-sm font-bold">
-            {(selectedCostOption?.days || plan.duration) ? (
+            {(activeCostOption?.days || plan.duration) ? (
               <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
                 <Calendar size={14} className="text-pink-300" />
                 <span>
-                  {(selectedCostOption?.days || plan.duration).toLowerCase().includes("valid")
-                    ? (selectedCostOption?.days || plan.duration)
-                    : `${selectedCostOption?.days || plan.duration} Valid`}
+                  {(activeCostOption?.days || plan.duration).toLowerCase().includes("valid")
+                    ? (activeCostOption?.days || plan.duration)
+                    : `${activeCostOption?.days || plan.duration} Valid`}
                 </span>
               </div>
             ) : null}
-            {(selectedCostOption?.entryType || plan.entryType) ? (
+            {(activeCostOption?.entryType || plan.entryType) ? (
               <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3.5 py-1.5 rounded-xl border border-white/20 text-white">
                 <ShieldCheck size={14} className="text-emerald-300" />
-                <span>{selectedCostOption?.entryType || plan.entryType}</span>
+                <span>{activeCostOption?.entryType || plan.entryType}</span>
               </div>
             ) : null}
             {plan.processingTime ? (
@@ -1272,25 +1286,31 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               Our comprehensive visa counseling and documentation assistance covers the following key services:
             </p>
 
-            <div className="space-y-2.5 pt-1">
+            {/* Inclusions shown in Two Columns within a Single Unified Card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
               {informationLoading ? (
-                <div className="py-6 text-sm font-semibold text-gray-400">Loading covered services...</div>
+                <div className="col-span-full py-6 text-xs sm:text-sm font-semibold text-gray-400">Loading covered services...</div>
               ) : plan.inclusions.length > 0 ? (
-                plan.inclusions.map((inc: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50/30 hover:bg-emerald-50/60 border border-emerald-100/70 transition-all group"
-                  >
-                    <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-emerald-200 transition-colors">
-                      <CheckCircle2 size={13} className="text-emerald-700 stroke-[2.5]" />
+                plan.inclusions.map((inc: string, idx: number) => {
+                  const customBullet = /^(\p{Extended_Pictographic}|\p{Emoji}|[•\-\*\u2700-\u27BF\uE000-\uF8FF])/u.test(inc.trim());
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50/40 hover:bg-emerald-50/70 border border-emerald-100/60 transition-all group"
+                    >
+                      {!customBullet && (
+                        <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-emerald-200 transition-colors">
+                          <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
+                        </div>
+                      )}
+                      <span className="text-xs sm:text-[13px] text-gray-800 font-medium leading-relaxed flex-1">
+                        {inc}
+                      </span>
                     </div>
-                    <span className="text-xs sm:text-sm text-gray-800 font-semibold leading-relaxed flex-1">
-                      {inc}
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               ) : (
-                <div className="py-4 text-xs sm:text-sm text-gray-500 bg-emerald-50/20 rounded-2xl p-4 border border-emerald-100">
+                <div className="col-span-full py-3 text-xs text-gray-500 bg-emerald-50/20 rounded-xl p-3 border border-emerald-100">
                   No service information available.
                 </div>
               )}
@@ -1315,53 +1335,49 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <p className="text-xs sm:text-sm text-gray-500">
               Please ensure all documents are clear, valid, and prepared prior to embassy submission:
             </p>
-            <div className="space-y-3.5">
-              {documentsLoading ? (
-                <div className="py-6 text-sm font-semibold text-gray-400">Loading required documents...</div>
 
+            {/* Single unified topic-wise card with compact rows & red asterisk for required */}
+            <div className="rounded-2xl border border-gray-100 bg-gray-50/40 divide-y divide-gray-100 overflow-hidden">
+              {documentsLoading ? (
+                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading required documents...</div>
               ) : (plan.documentRequirements && plan.documentRequirements.length > 0) ? (
                 plan.documentRequirements.map((doc, idx) => {
                   const title = doc.title || doc.name || doc.document_type || `Document ${idx + 1}`;
-                  const docType = doc.document_type && doc.document_type !== title ? doc.document_type : null;
                   const hasDescription = Boolean(doc.description && doc.description.trim());
 
                   return (
                     <div
                       key={doc.id || idx}
-                      className="p-4 sm:p-5 rounded-2xl bg-gray-50/80 hover:bg-purple-50/40 border border-gray-100 transition-all space-y-2.5"
+                      className="p-2.5 sm:p-3 hover:bg-white transition-colors space-y-0.5"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <CheckCircle2 size={15} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="text-xs sm:text-sm font-bold text-gray-900 leading-snug">
-                                {title}
-                              </h4>
-                              {docType && (
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2D1347]/10 text-[#2D1347] px-2 py-0.5 rounded-md">
-                                  {docType}
-                                </span>
-                              )}
-                              <span
-                                className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
-                                  doc.is_required !== false
-                                    ? "bg-rose-50 text-rose-600 border-rose-200"
-                                    : "bg-gray-100 text-gray-500 border-gray-200"
-                                }`}
-                              >
-                                {doc.is_required !== false ? "Required" : "Optional"}
-                              </span>
+                      {(() => {
+                        const customBullet = hasCustomBullet(title);
+                        return (
+                          <div className="flex items-start gap-2">
+                            {!customBullet && (
+                              <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h4 className="text-xs sm:text-[13px] font-semibold text-gray-900 leading-snug">
+                                  {title}
+                                </h4>
+                                {doc.is_required !== false ? (
+                                  <span className="text-red-500 font-bold text-xs leading-none select-none" title="Required Document">*</span>
+                                ) : (
+                                  <span className="text-[9px] font-semibold text-gray-400 italic">(optional)</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       {hasDescription && (
                         <div
-                          className="text-xs sm:text-sm text-gray-600 pl-9 leading-relaxed border-t border-gray-100 pt-2"
+                          className="text-[11px] sm:text-xs text-gray-500 pl-6 leading-relaxed"
                           dangerouslySetInnerHTML={{ __html: formatDescription(doc.description) }}
                         />
                       )}
@@ -1369,22 +1385,27 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                   );
                 })
               ) : (plan.requirementDocuments && plan.requirementDocuments.length > 0) ? (
-
-                plan.requirementDocuments.map((req: string, idx: number) => (
-                  <div key={idx} className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 hover:bg-purple-50/40 border border-gray-100 transition-colors">
-                    <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CheckCircle2 size={14} />
+                plan.requirementDocuments.map((req: string, idx: number) => {
+                  const customBullet = hasCustomBullet(req);
+                  return (
+                    <div key={idx} className="flex items-start gap-2 p-2.5 sm:p-3 hover:bg-white transition-colors">
+                      {!customBullet && (
+                        <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
+                        </div>
+                      )}
+                      <div
+                        className="text-xs sm:text-[13px] font-medium text-gray-800 leading-snug flex-1"
+                        dangerouslySetInnerHTML={{ __html: formatDescription(req) }}
+                      />
                     </div>
-                    <div
-                      className="text-xs sm:text-sm font-semibold text-gray-800 leading-snug flex-1"
-                      dangerouslySetInnerHTML={{ __html: formatDescription(req) }}
-                    />
-                  </div>
-                ))
+                  );
+                })
               ) : (
-                <div className="py-6 text-sm font-semibold text-gray-400">No document requirements available.</div>
+                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">No document requirements available.</div>
               )}
             </div>
+
             <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
               <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="leading-relaxed">
@@ -1412,27 +1433,33 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               </span>
             </div>
 
-            <div className="space-y-3 pt-1">
+            {/* Single unified topic card container */}
+            <div className="rounded-2xl border border-purple-100/80 bg-purple-50/20 divide-y divide-purple-100/60 overflow-hidden">
               {informationLoading ? (
-                <div className="py-6 text-sm font-semibold text-gray-400">Loading visa policies...</div>
+                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading visa policies...</div>
               ) : displayPolicies && displayPolicies.length > 0 ? (
-                displayPolicies.map((policy: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/70 border border-purple-100/70 transition-colors"
-                  >
-                    <div className="w-5 h-5 rounded-lg bg-purple-100 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <ShieldCheck size={13} />
-                    </div>
+                displayPolicies.map((policy: string, idx: number) => {
+                  const customBullet = hasCustomBullet(policy);
+                  return (
                     <div
-                      className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
-                      dangerouslySetInnerHTML={{ __html: formatDescription(policy) }}
-                    />
-                  </div>
-                ))
+                      key={idx}
+                      className="flex items-start gap-2.5 p-2.5 sm:p-3 hover:bg-purple-50/40 transition-colors"
+                    >
+                      {!customBullet && (
+                        <div className="w-4 h-4 rounded bg-purple-100 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <ShieldCheck size={11} />
+                        </div>
+                      )}
+                      <div
+                        className="text-xs sm:text-[13px] text-gray-700 leading-relaxed font-normal flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                        dangerouslySetInnerHTML={{ __html: formatDescription(policy) }}
+                      />
+                    </div>
+                  );
+                })
               ) : (
-                <div className="py-4 text-xs sm:text-sm text-gray-600 bg-purple-50/30 rounded-2xl p-4 border border-purple-100 flex items-start gap-2.5">
-                  <ShieldCheck size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                <div className="py-3 text-xs text-gray-600 p-3 flex items-start gap-2">
+                  <ShieldCheck size={14} className="text-purple-600 mt-0.5 flex-shrink-0" />
                   <span>
                     Visa grant, validity, and entry permissions are under the sole authority of the respective Embassy/Consulate. Consular application fees and processing charges are non-refundable once submitted.
                   </span>
@@ -1460,27 +1487,32 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               </span>
             </div>
 
-            <div className="space-y-3 pt-1">
+            {/* Single unified topic card container */}
+            <div className="rounded-2xl border border-amber-100/80 bg-amber-50/20 divide-y divide-amber-100/60 overflow-hidden">
               {informationLoading ? (
-                <div className="py-6 text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
+                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
               ) : displayTerms && displayTerms.length > 0 ? (
-                displayTerms.map((term: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-amber-50/30 hover:bg-amber-50/60 border border-amber-100/70 transition-colors"
-                  >
-                    <div className="w-5 h-5 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-xs leading-none">
-                      •
-                    </div>
+                displayTerms.map((term: string, idx: number) => {
+                  const customBullet = hasCustomBullet(term);
+                  return (
                     <div
-                      className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
-                      dangerouslySetInnerHTML={{ __html: formatDescription(term) }}
-                    />
-                  </div>
-                ))
-
+                      key={idx}
+                      className="flex items-start gap-2.5 p-2.5 sm:p-3 hover:bg-amber-50/40 transition-colors"
+                    >
+                      {!customBullet && (
+                        <div className="w-4 h-4 rounded bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-[10px] leading-none">
+                          •
+                        </div>
+                      )}
+                      <div
+                        className="text-xs sm:text-[13px] text-gray-700 leading-relaxed font-normal flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                        dangerouslySetInnerHTML={{ __html: formatDescription(term) }}
+                      />
+                    </div>
+                  );
+                })
               ) : (
-                <div className="py-4 text-xs sm:text-sm text-gray-500 bg-gray-50/70 rounded-2xl p-4 border border-gray-100">
+                <div className="py-3 text-xs text-gray-500 p-3">
                   All submitted paperwork must be genuine and verifiable. Client information is handled under strict data privacy protocols.
                 </div>
               )}
@@ -1505,7 +1537,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         visaType={plan.visaType}
         countryId={plan.countryId!}
         visaCategoryId={plan.visaCategoryId!}
-        selectedOption={selectedCostOption}
+        selectedOption={activeCostOption}
         numberOfGuests={numberOfGuests}
         documentRequirements={plan.documentRequirements || []}
         documentsLoading={documentsLoading}

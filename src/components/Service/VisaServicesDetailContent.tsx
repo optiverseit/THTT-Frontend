@@ -61,6 +61,22 @@ export interface VisaServicesDetailContentProps {
   filter?: VisaFilterCriteria | null;
   onClearFilter?: () => void;
 }
+export const splitInclusions = (text?: string | null): string[] => {
+  if (!text) return [];
+  const normalized = text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+  return normalized
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+export const hasCustomBullet = (text: string): boolean => {
+  return /^(\p{Extended_Pictographic}|\p{Emoji}|[•\-\*\u2700-\u27BF\uE000-\uF8FF])/u.test(text.trim());
+};
+
 const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
   if (!countryFilter || countryFilter.trim() === "" || countryFilter.toLowerCase() === "all") return true;
   const c = countryFilter.trim().toLowerCase();
@@ -341,9 +357,7 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
               processingTime: category.processing_time || "",
               baseNPRPrice,
               entryType,
-              inclusions: category.short_description
-                ? [category.short_description]
-                : [],
+              inclusions: category.short_description ? splitInclusions(category.short_description) : [],
               aboutText:
                 category.description || category.short_description || "",
               requirementDocuments: [],
@@ -566,13 +580,18 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
                         <span>{displayEntryType}</span>
                       </span>
                     </div>
-                    <div className="space-y-2 my-4 pt-3 border-t border-gray-100">
-                      {plan.inclusions.map((item: string, idx: number) => (
-                        <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-gray-600 font-medium leading-tight">
-                          <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                          <span className="line-clamp-1">{item}</span>
-                        </div>
-                      ))}
+                    <div className="space-y-1.5 my-4 pt-3 border-t border-gray-100">
+                      {plan.inclusions.map((item: string, idx: number) => {
+                        const customBullet = hasCustomBullet(item);
+                        return (
+                          <div key={idx} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-600 font-medium leading-snug">
+                            {!customBullet && (
+                              <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                            )}
+                            <span className="flex-1">{item}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="pt-4 border-t border-gray-100 flex flex-col gap-2.5 mt-2">

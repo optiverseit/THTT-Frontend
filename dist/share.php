@@ -51,18 +51,66 @@ function isSocialCrawler(): bool {
     return false;
 }
 
+function getPermitTypeLabel(string $type): string {
+    $norm = strtoupper(trim($type));
+    switch ($norm) {
+        case 'NEW_LABOUR_PERMIT':
+        case 'NEW':
+            return 'New Work Permit';
+        case 'RENEWAL_PERMIT':
+        case 'RENEW':
+            return 'Renewal Permit';
+        case 'INDIVIDUAL_PERMIT':
+        case 'INDIVIDUAL':
+            return 'Individual Permit';
+        case 'LEGALIZATION_ATTESTATION':
+        case 'LEGALIZATION':
+            return 'Legalization / Attestation';
+        default:
+            return !empty($norm) ? ucwords(strtolower(str_replace('_', ' ', $norm))) : 'Work Permit';
+    }
+}
+
 // 1. Gather incoming parameters
-$title     = isset($_GET['title']) ? trim((string)$_GET['title']) : '';
-$desc      = isset($_GET['desc']) ? trim((string)$_GET['desc']) : (isset($_GET['text']) ? trim((string)$_GET['text']) : '');
-$img       = isset($_GET['img']) ? trim((string)$_GET['img']) : (isset($_GET['image']) ? trim((string)$_GET['image']) : '');
-$targetUrl = isset($_GET['url']) ? trim((string)$_GET['url']) : (isset($_GET['redirect']) ? trim((string)$_GET['redirect']) : '');
-$type      = isset($_GET['type']) ? trim((string)$_GET['type']) : '';
-$id        = isset($_GET['id']) ? trim((string)$_GET['id']) : '';
+$title      = isset($_GET['title']) ? trim((string)$_GET['title']) : '';
+$desc       = isset($_GET['desc']) ? trim((string)$_GET['desc']) : (isset($_GET['text']) ? trim((string)$_GET['text']) : '');
+$img        = isset($_GET['img']) ? trim((string)$_GET['img']) : (isset($_GET['image']) ? trim((string)$_GET['image']) : '');
+$targetUrl  = isset($_GET['url']) ? trim((string)$_GET['url']) : (isset($_GET['redirect']) ? trim((string)$_GET['redirect']) : '');
+$type       = isset($_GET['type']) ? trim((string)$_GET['type']) : '';
+$id         = isset($_GET['id']) ? trim((string)$_GET['id']) : '';
+$permitType = isset($_GET['permitType']) ? trim((string)$_GET['permitType']) : '';
+
+// Also inspect targetUrl query string if permitType not in GET
+if (empty($permitType) && !empty($targetUrl)) {
+    $parsedTargetQuery = @parse_url($targetUrl, PHP_URL_QUERY);
+    if ($parsedTargetQuery) {
+        parse_str($parsedTargetQuery, $targetQp);
+        if (!empty($targetQp['permitType'])) {
+            $permitType = trim((string)$targetQp['permitType']);
+        }
+    }
+}
 
 // 2. Normalize target URL (ensure absolute URL pointing to production)
 if (empty($targetUrl)) {
     if (!empty($type) && !empty($id)) {
-        $targetUrl = $productionDomain . '/' . ltrim($type, '/') . '/' . urlencode($id);
+        // Map legacy/server route aliases to canonical React client routes
+        $canonicalType = $type;
+        if ($type === 'hotel-detail') $canonicalType = 'hotel-details';
+        if ($type === 'vehicle-detail') $canonicalType = 'vehicle-details';
+        if ($type === 'work-permit-details') $canonicalType = 'permit-details';
+        if ($type === 'packages') $canonicalType = 'details';
+        if ($type === 'video' || $type === 'vlog' || $type === 'vlogs') $canonicalType = 'watch';
+        if ($type === 'documents') $canonicalType = 'documentation';
+        if ($type === 'blog-details') $canonicalType = 'blog';
+        if ($type === 'insurance-detail') $canonicalType = 'insurance-details';
+
+        $querySuffix = !empty($permitType) ? ('?permitType=' . urlencode($permitType)) : '';
+        if ($type === 'heli-services' || $type === 'heli') {
+            $targetUrl = $productionDomain . '/service/heli-services/' . urlencode($id);
+        } else {
+            $targetUrl = $productionDomain . '/' . ltrim($canonicalType, '/') . '/' . urlencode($id) . $querySuffix;
+        }
     } else {
         $targetUrl = $productionDomain;
     }
@@ -112,13 +160,13 @@ if ((empty($title) || empty($img)) && !empty($type) && !empty($id)) {
                     }
                 }
             }
-        } elseif ($type === 'details') {
+        } elseif ($type === 'details' || $type === 'packages') {
             $raw = @file_get_contents($backendApiBase . '/packages/' . urlencode($id), false, $ctx);
             if ($raw) {
                 $json = json_decode($raw, true);
                 $pkg = $json['data'] ?? $json;
                 if (!empty($pkg['title']) && empty($title)) {
-                    $title = $pkg['title'];
+                    $title = $pkg['title'] . ' | Trip Himalaya Tours & Travel';
                 }
                 if (!empty($pkg['description']) && empty($desc)) {
                     $desc = strip_tags((string)$pkg['description']);
@@ -128,20 +176,195 @@ if ((empty($title) || empty($img)) && !empty($type) && !empty($id)) {
                     $img = $pkg['main_image'] ?? ($pkg['image'] ?? '');
                 }
             }
-        } elseif ($type === 'hotel-detail') {
+            if (empty($title)) {
+                $title = 'Himalayan Trekking & Holiday Tour Packages | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Explore world-class trekking routes, Everest & Annapurna adventures, and curated international holidays with Trip Himalaya Tours & Travels.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'hotel-detail' || $type === 'hotel-details') {
             $raw = @file_get_contents($backendApiBase . '/hotels/show/' . urlencode($id), false, $ctx);
             if ($raw) {
                 $json = json_decode($raw, true);
                 $h = $json['data'] ?? $json;
                 if (!empty($h['name']) && empty($title)) {
-                    $title = $h['name'] . ' | Hotel Booking';
+                    $title = $h['name'] . ' | Luxury Hotel Booking';
                 }
                 if (!empty($h['description']) && empty($desc)) {
                     $desc = strip_tags((string)$h['description']);
+                    if (mb_strlen($desc) > 160) $desc = mb_substr($desc, 0, 157) . '...';
                 }
                 if (empty($img)) {
                     $img = $h['image'] ?? '';
                 }
+            }
+            if (empty($title)) {
+                $title = 'Luxury Hotel & Resort Booking in Nepal | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Book top-rated hotels, boutique resorts, and heritage stays in Kathmandu, Pokhara, Chitwan, and beyond with Trip Himalaya.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'vehicle-detail' || $type === 'vehicle-details') {
+            $raw = @file_get_contents($backendApiBase . '/vehicles/' . urlencode($id), false, $ctx);
+            if ($raw) {
+                $json = json_decode($raw, true);
+                $veh = $json['data'] ?? $json;
+                if (!empty($veh['name']) && empty($title)) {
+                    $title = $veh['name'] . ' Rental | Trip Himalaya';
+                }
+                if (!empty($veh['description']) && empty($desc)) {
+                    $desc = strip_tags((string)$veh['description']);
+                    if (mb_strlen($desc) > 160) $desc = mb_substr($desc, 0, 157) . '...';
+                }
+                if (empty($img)) {
+                    $img = $veh['image'] ?? ($veh['vehicle_image'] ?? '');
+                }
+            }
+            if (empty($title)) {
+                $title = 'Vehicle Rental & Private Fleet Hire in Nepal | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Rent comfortable cars, 4WD Scorpio jeeps, HiAce tourist vans, and coaster buses with experienced chauffeurs with Trip Himalaya.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'permit-details' || $type === 'work-permit-details') {
+            $permitLabel = getPermitTypeLabel($permitType);
+            $raw = @file_get_contents($backendApiBase . '/countries/' . urlencode($id), false, $ctx);
+            if ($raw) {
+                $json = json_decode($raw, true);
+                $country = $json['data'] ?? $json;
+                $cName = $country['country_name'] ?? ('Country #' . $id);
+                if (empty($title)) {
+                    $title = $cName . ' – ' . $permitLabel;
+                }
+                if (empty($desc)) {
+                    $desc = !empty($country['short_description'])
+                        ? strip_tags((string)$country['short_description'])
+                        : ("Official labor clearance (shram), " . strtolower($permitLabel) . ", and employment visa assistance for " . $cName . " with Trip Himalaya Tours & Travels.");
+                    if (mb_strlen($desc) > 160) $desc = mb_substr($desc, 0, 157) . '...';
+                }
+                if (empty($img)) {
+                    $img = $country['image'] ?? '';
+                }
+            } else {
+                $knownCountries = [
+                    '1' => 'United Arab Emirates',
+                    '2' => 'Thailand',
+                    '3' => 'Malaysia',
+                    '4' => 'Qatar',
+                    '5' => 'Saudi Arabia',
+                    '6' => 'Kuwait',
+                    '7' => 'Bahrain',
+                    '8' => 'Oman',
+                    '9' => 'Japan',
+                    '10' => 'South Korea',
+                    '11' => 'Croatia',
+                    '12' => 'Poland',
+                    '13' => 'Romania',
+                    '14' => 'Malta',
+                    '15' => 'Cyprus',
+                    '16' => 'Portugal',
+                ];
+                $cName = $knownCountries[(string)$id] ?? ('Country #' . $id);
+                if (empty($title)) {
+                    $title = $cName . ' – ' . $permitLabel;
+                }
+                if (empty($desc)) {
+                    $desc = "Official labor clearance (shram), " . strtolower($permitLabel) . ", and employment visa assistance for " . $cName . " with Trip Himalaya Tours & Travels.";
+                }
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'heli-services' || $type === 'heli') {
+            $raw = @file_get_contents($backendApiBase . '/packages/' . urlencode($id), false, $ctx);
+            if ($raw) {
+                $json = json_decode($raw, true);
+                $pkg = $json['data'] ?? $json;
+                if (!empty($pkg['title']) && empty($title)) {
+                    $title = $pkg['title'] . ' | Helicopter Services Nepal';
+                }
+                if (!empty($pkg['description']) && empty($desc)) {
+                    $desc = strip_tags((string)$pkg['description']);
+                    if (mb_strlen($desc) > 160) $desc = mb_substr($desc, 0, 157) . '...';
+                }
+                if (empty($img)) {
+                    $img = $pkg['main_image'] ?? ($pkg['image'] ?? '');
+                }
+            }
+            if (empty($title)) {
+                $readableHeli = ucwords(str_replace(['-', '_'], ' ', $id));
+                $title = (stripos($readableHeli, 'heli') !== false ? $readableHeli : ($readableHeli . ' Helicopter Tour')) . ' | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Experience scenic mountain flights, high-altitude private charter, and emergency rescue with Trip Himalaya Tours & Travels.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'insurance-details' || $type === 'insurance-detail') {
+            $raw = @file_get_contents($backendApiBase . '/insurance-plans/show/' . urlencode($id), false, $ctx);
+            if ($raw) {
+                $json = json_decode($raw, true);
+                $plan = $json['data'] ?? $json;
+                if (!empty($plan['name']) && empty($title)) {
+                    $title = $plan['name'] . ' – Travel Insurance | Trip Himalaya';
+                }
+                if (!empty($plan['subtitle']) && empty($desc)) {
+                    $desc = $plan['subtitle'];
+                } elseif (!empty($plan['aboutText']) && empty($desc)) {
+                    $desc = strip_tags((string)$plan['aboutText']);
+                    if (mb_strlen($desc) > 160) $desc = mb_substr($desc, 0, 157) . '...';
+                }
+                if (empty($img)) {
+                    $img = $plan['heroImage'] ?? ($plan['image'] ?? '');
+                }
+            } else {
+                $knownPlans = [
+                    'plan-trek-standard' => [
+                        'title' => 'Standard Cultural & Foothill Plan – Travel Insurance | Trip Himalaya',
+                        'desc'  => 'Medical and emergency protection for cultural tours and foothill trekking up to 3,000 meters in Nepal.',
+                        'img'   => 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1400',
+                    ],
+                    'plan-high-altitude' => [
+                        'title' => 'High-Altitude Alpine & Heli Rescue Plan – Travel Insurance | Trip Himalaya',
+                        'desc'  => 'Comprehensive high-altitude medical coverage, acute mountain sickness cover, and immediate helicopter evacuation up to 6,000 meters.',
+                        'img'   => 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1400',
+                    ],
+                    'plan-extreme-expedition' => [
+                        'title' => 'Extreme Mountaineering & Peak Climbing Plan – Travel Insurance | Trip Himalaya',
+                        'desc'  => 'Technical climbing, 8,000m peak expedition, search and rescue, and extreme high-altitude hospitalization coverage in Nepal.',
+                        'img'   => 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1400',
+                    ],
+                    'plan-international' => [
+                        'title' => 'Global Outbound & Schengen Compliant Plan – Travel Insurance | Trip Himalaya',
+                        'desc'  => 'Worldwide coverage meeting Schengen visa mandatory €30,000 medical requirements for international travelers departing Nepal.',
+                        'img'   => 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1400',
+                    ],
+                ];
+                if (isset($knownPlans[(string)$id])) {
+                    if (empty($title)) $title = $knownPlans[(string)$id]['title'];
+                    if (empty($desc))  $desc  = $knownPlans[(string)$id]['desc'];
+                    if (empty($img))   $img   = $knownPlans[(string)$id]['img'];
+                }
+            }
+            if (empty($title)) {
+                $readablePlan = ucwords(str_replace(['-', '_'], ' ', $id));
+                $title = $readablePlan . ' – Himalayan Travel Insurance | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Comprehensive Himalayan travel insurance, high-altitude emergency medical coverage, and helicopter evacuation support in Nepal with Trip Himalaya.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=1200';
             }
         } elseif ($type === 'documents' || $type === 'documentation') {
             $raw = @file_get_contents($backendApiBase . '/documents/' . urlencode($id), false, $ctx);
@@ -153,7 +376,42 @@ if ((empty($title) || empty($img)) && !empty($type) && !empty($id)) {
                 }
                 if (!empty($doc['description']) && empty($desc)) {
                     $desc = strip_tags((string)$doc['description']);
+                    if (mb_strlen($desc) > 160) $desc = mb_substr($desc, 0, 157) . '...';
                 }
+                if (empty($img)) {
+                    $img = $doc['image'] ?? '';
+                }
+            }
+        } elseif ($type === 'watch' || $type === 'video') {
+            if (empty($title)) {
+                $title = 'Himalayan Adventure Travel Video Vlogs | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Watch breathtaking journey visual vlogs, trekking expeditions, and cultural documentaries across Nepal with Trip Himalaya Tours & Travels.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'blog' || $type === 'blog-details') {
+            if (empty($title)) {
+                $title = 'Travel Stories, Trekking Guides & Himalayan Tips | Trip Himalaya';
+            }
+            if (empty($desc)) {
+                $desc = 'Discover in-depth travel guides, trekking routes, equipment checklists, and cultural insights from Nepal travel specialists at Trip Himalaya.';
+            }
+            if (empty($img)) {
+                $img = 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&q=80&w=1200';
+            }
+        } elseif ($type === 'service') {
+            $readableService = ucwords(str_replace(['-', '_'], ' ', $id));
+            if (empty($title)) {
+                $title = $readableService . ' Services | Trip Himalaya Tours & Travels';
+            }
+            if (empty($desc)) {
+                $desc = "Explore premier " . $readableService . " services, itineraries, and packages with authorized travel agency Trip Himalaya Tours & Travels.";
+            }
+            if (empty($img)) {
+                $img = 'https://triphimalaya.com.np/Logo.png';
             }
         }
     } catch (\Throwable $e) {
@@ -163,7 +421,11 @@ if ((empty($title) || empty($img)) && !empty($type) && !empty($id)) {
 
 // 4. Default fallbacks if still empty
 if (empty($title)) {
-    $title = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
+    if (!empty($permitType)) {
+        $title = 'Work Permit – ' . getPermitTypeLabel($permitType) . ' | Trip Himalaya Tours & Travel';
+    } else {
+        $title = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
+    }
 }
 if (empty($desc)) {
     $desc = 'Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance.';
@@ -190,8 +452,10 @@ if (!empty($img)) {
     $img = $fallbackImage;
 }
 
+$isCrawler = isSocialCrawler();
+
 // 6. If request is from a human visitor (NOT a social crawler), immediately redirect to target page!
-if (!isSocialCrawler()) {
+if (!$isCrawler) {
     header('Location: ' . $targetUrl, true, 302);
     // Fall through to output HTML redirect below as backup for rare environments that ignore Location
 }
@@ -232,13 +496,16 @@ $cleanShare = htmlspecialchars($currentShareUrl, ENT_QUOTES, 'UTF-8');
   <meta name="twitter:description" content="<?= $cleanDesc ?>">
   <meta name="twitter:image" content="<?= $cleanImg ?>">
 
-  <link rel="canonical" href="<?= $cleanTarget ?>">
+  <!-- Canonical link: For crawlers, point to this exact share URL with its enriched metadata so crawlers do not follow canonical to index.html -->
+  <link rel="canonical" href="<?= $cleanShare ?>">
 
-  <!-- Instant Client Redirect for human visitors -->
+<?php if (!$isCrawler): ?>
+  <!-- Instant Client Redirect for human visitors only -->
   <meta http-equiv="refresh" content="0;url=<?= $cleanTarget ?>">
   <script>
     window.location.replace(<?= json_encode($targetUrl, JSON_UNESCAPED_SLASHES) ?>);
   </script>
+<?php endif; ?>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

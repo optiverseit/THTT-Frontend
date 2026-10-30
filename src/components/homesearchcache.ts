@@ -16,7 +16,7 @@ import {
   getHotels,
   getAllVehicles,
   getVisaCategories,
-  getCountries,
+  getGroupedWorkPermitCountries,
   getInsurancePlans,
   getAllDocuments,
 } from "../api/BackendApi";
@@ -97,8 +97,8 @@ export const QUICK_SEARCHES = [
 
 // ─── Cache Keys & Configuration ───────────────────────────────────────────────
 
-export const SEARCH_STORAGE_KEY = "thtt_live_search_index_v2";
-export const SEARCH_STORAGE_TIMESTAMP_KEY = "thtt_live_search_timestamp_v2";
+export const SEARCH_STORAGE_KEY = "thtt_live_search_index_v3";
+export const SEARCH_STORAGE_TIMESTAMP_KEY = "thtt_live_search_timestamp_v3";
 export const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 
 // ─── Precompiled Core & Verified Database Items ───────────────────────────────
@@ -223,7 +223,7 @@ export const syncLiveDatabase = async (
   try {
     const [
       visaRes,
-      countriesRes,
+      permitsRes,
       pkgRes,
       hotelRes,
       vehRes,
@@ -231,7 +231,7 @@ export const syncLiveDatabase = async (
       docRes,
     ] = await Promise.allSettled([
       getVisaCategories(),
-      getCountries(),
+      getGroupedWorkPermitCountries(),
       getPackages(),
       getHotels(),
       getAllVehicles(),
@@ -272,13 +272,15 @@ export const syncLiveDatabase = async (
     }
 
     // 2. Live Work Permit & Shram Countries from Database
+    // Strictly restricted to official permit destinations (e.g. UAE from getGroupedWorkPermitCountries).
+    // NEVER generates work permits for general visa/tour destinations (such as Thailand).
     const livePermits: SearchResult[] = [];
-    if (countriesRes.status === "fulfilled") {
-      const raw = countriesRes.value?.data;
-      const list: any[] = Array.isArray(raw?.data?.data)
-        ? raw.data.data
-        : Array.isArray(raw?.data)
+    if (permitsRes.status === "fulfilled") {
+      const raw = permitsRes.value?.data;
+      const list: any[] = Array.isArray(raw?.data)
         ? raw.data
+        : Array.isArray(raw?.data?.data)
+        ? raw.data.data
         : Array.isArray(raw)
         ? raw
         : [];
@@ -290,28 +292,34 @@ export const syncLiveDatabase = async (
         { type: "LEGALIZATION_ATTESTATION", label: "Legalization / Attestation" },
       ];
 
-      list
-        .filter((c) => c?.status === "ACTIVE" || !c?.status)
-        .forEach((c) => {
-          const code = (c.country_code || c.iso_2 || "").toUpperCase();
-          const aliases =
-            code === "UAE"
-              ? "UAE (Dubai / Abu Dhabi)"
-              : code
-              ? `(${code})`
-              : "";
+      // Extract unique permit-enabled countries
+      const permitCountriesMap: Record<string | number, any> = {};
+      list.forEach((item: any) => {
+        if (item?.country && (item.country.status === "ACTIVE" || !item.country.status)) {
+          permitCountriesMap[item.country.id] = item.country;
+        }
+      });
 
-          permitTypes.forEach((pt) => {
-            livePermits.push({
-              id: `permit-${c.id}-${pt.type}`,
-              label: `${c.country_name} – ${pt.label}`,
-              sublabel: `Labour Approval & Shram Documentation for ${c.country_name} ${aliases}`.trim(),
-              type: "service",
-              route: `/permit-details/${c.id}?permitType=${pt.type}`,
-              icon: FileText,
-            });
+      Object.values(permitCountriesMap).forEach((c: any) => {
+        const code = (c.country_code || c.iso_2 || "").toUpperCase();
+        const aliases =
+          code === "UAE"
+            ? "UAE (Dubai / Abu Dhabi)"
+            : code
+            ? `(${code})`
+            : "";
+
+        permitTypes.forEach((pt) => {
+          livePermits.push({
+            id: `permit-${c.id}-${pt.type}`,
+            label: `${c.country_name} – ${pt.label}`,
+            sublabel: `Labour Approval & Shram Documentation for ${c.country_name} ${aliases}`.trim(),
+            type: "service",
+            route: `/permit-details/${c.id}?permitType=${pt.type}`,
+            icon: FileText,
           });
         });
+      });
     }
 
     // 3. Live Packages from Database (Only if present in DB)

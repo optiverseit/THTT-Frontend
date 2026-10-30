@@ -63,7 +63,7 @@ const Banner: React.FC = () => {
       }
 
       setLoading(true);
-      const scored = executeSearch(trimmed, allItems, 8);
+      const scored = executeSearch(trimmed, allItems, 20);
 
       setResults(scored);
       setIsOpen(true);
@@ -244,11 +244,10 @@ const Banner: React.FC = () => {
                 )}
               </div>
 
-              {/* Dropdown: Instant Results (No link to Quick Search page) */}
+              {/* Dropdown: Instant Results (Max 5 items visible, smoothly scrollable for more) */}
               {isOpen && (
                 <div
-                  className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl bg-[#1e0a35]/95"
-                  style={{ maxHeight: "350px", overflowY: "auto" }}
+                  className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl shadow-2xl border border-white/20 backdrop-blur-xl bg-[#1e0a35]/95 overflow-hidden"
                 >
                   {results.length === 0 ? (
                     <div className="px-4 py-6 text-center">
@@ -257,7 +256,16 @@ const Banner: React.FC = () => {
                       <p className="text-[10px] text-gray-500 mt-1">Try &ldquo;Thailand&rdquo;, &ldquo;UAE&rdquo;, &ldquo;Visa&rdquo; or &ldquo;Tours&rdquo;</p>
                     </div>
                   ) : (
-                    <ul role="listbox">
+                    <ul
+                      role="listbox"
+                      className="search-dropdown-list overflow-y-auto divide-y divide-white/5"
+                      style={{
+                        maxHeight: "290px",
+                        overflowY: "auto",
+                        scrollbarWidth: "thin",
+                        scrollbarColor: "rgba(244, 114, 182, 0.6) rgba(255, 255, 255, 0.05)",
+                      }}
+                    >
                       {results.map((result, idx) => {
                         const Icon = result.icon;
                         const colorClass = TYPE_COLOR_MAP[result.type] ?? "bg-gray-100 text-gray-600";
@@ -271,7 +279,7 @@ const Banner: React.FC = () => {
                             onMouseEnter={() => setHighlightedIndex(idx)}
                             onMouseLeave={() => setHighlightedIndex(-1)}
                             onClick={() => goToResult(result)}
-                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-100 border-b border-white/5 last:border-0 ${
+                            className={`flex items-center gap-3 px-4 py-2.5 h-[58px] min-h-[58px] box-border cursor-pointer transition-colors duration-100 ${
                               isHighlighted ? "bg-white/15" : "hover:bg-white/10"
                             }`}
                           >

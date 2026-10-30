@@ -4,7 +4,7 @@
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 
-  <!-- Core Landing Pages -->
+  <!-- Core Landing Pages & High-Intent Services -->
   <url>
     <loc>https://triphimalaya.com.np/</loc>
     <lastmod>2026-10-30</lastmod>
@@ -17,8 +17,6 @@
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
   </url>
-
-  <!-- High-Intent Primary Travel & Trekking Services -->
   <url>
     <loc>https://triphimalaya.com.np/service/trekking</loc>
     <lastmod>2026-10-30</lastmod>
@@ -97,8 +95,6 @@
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
-
-  <!-- Travel Guides & Content Hub -->
   <url>
     <loc>https://triphimalaya.com.np/travel-guide</loc>
     <lastmod>2026-10-30</lastmod>
@@ -123,78 +119,246 @@
     <changefreq>weekly</changefreq>
     <priority>0.70</priority>
   </url>
-
-  <!-- Company Authority & Trust Signals -->
   <url>
     <loc>https://triphimalaya.com.np/about</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
+    <priority>0.80</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/contact</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.80</priority>
+    <priority>0.85</priority>
   </url>
 
-  <!-- Featured Tour & Trek Packages -->
+  <!-- Verified Tour, Trekking & Adventure Packages -->
   <url>
-    <loc>https://triphimalaya.com.np/details/1</loc>
+    <loc>https://triphimalaya.com.np/details/p1</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/2</loc>
+    <loc>https://triphimalaya.com.np/details/p2</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/3</loc>
+    <loc>https://triphimalaya.com.np/details/p3</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/4</loc>
+    <loc>https://triphimalaya.com.np/details/p4</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/5</loc>
+    <loc>https://triphimalaya.com.np/details/p5</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
+    <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/6</loc>
+    <loc>https://triphimalaya.com.np/details/p6</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
+    <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/7</loc>
+    <loc>https://triphimalaya.com.np/details/p7</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
+    <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/details/8</loc>
+    <loc>https://triphimalaya.com.np/details/p8</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p9</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p10</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p11</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p12</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p13</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p14</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p15</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p16</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p17</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/p18</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/details/a1</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/details/a2</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/a3</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/a4</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/a5</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/a6</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/a7</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/a8</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/c1</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/c2</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/c3</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/details/c4</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Travel Blogs & Country Clearance Documentation -->
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b1</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b2</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b3</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b4</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b5</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b6</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b7</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog/b8</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>

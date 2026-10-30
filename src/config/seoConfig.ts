@@ -1,37 +1,40 @@
 import { SEOProps } from "../components/reusable/SEO";
 
 export const defaultSEO: SEOProps = {
-  title: "Trip Himalaya Tours & Travel | Nepal Tours, Treks & Visas",
+  title: "Trip Himalaya Tours and Travels | Nepal Tours, Treks & Visas - Kathmandu",
   description:
-    "Trip Himalaya Tours & Travel is a premier Kathmandu travel agency offering domestic and international tour packages, Himalayan treks, visas, and work permits.",
+    "Trip Himalaya Tours and Travels Pvt. Ltd. (est. 2025, Airport, Kathmandu) is an authorized premier travel agency offering domestic and international tour packages, Himalayan treks, visas, and flight tickets.",
   keywords:
-    "Trip Himalaya, Trip Himalaya Tours and Travel, Travel Agency Kathmandu, Nepal Tour Packages, Trekking in Nepal, International Tours Nepal, Visa Services Nepal, Work Permit Nepal",
+    "Trip Himalaya, Trip Himalaya Tours and Travels, Trip Himalaya Tours and Travels Pvt. Ltd., Travel Agency Airport Kathmandu, Travel Agency Kathmandu, Nepal Tour Packages, Trekking in Nepal, International Tours Nepal, Visa Services Nepal, Work Permit Nepal, THTT Nepal",
   canonicalPath: "/",
   type: "website",
 };
 
 export const pagesSEO: Record<string, SEOProps> = {
   home: {
-    title: "Trip Himalaya Tours & Travel | Nepal Tours, Treks & Visas",
+    title: "Trip Himalaya Tours and Travels | Nepal Tours, Treks & Visas - Kathmandu",
     description:
-      "Trip Himalaya Tours & Travel is a premier Kathmandu travel agency offering domestic and international tour packages, Himalayan treks, visas, and work permits.",
+      "Trip Himalaya Tours and Travels Pvt. Ltd. (est. 2025, Airport, Kathmandu) is an authorized premier travel agency offering domestic and international tour packages, Himalayan treks, visas, and flight tickets.",
     keywords:
-      "Trip Himalaya, Trip Himalaya Tours and Travel, Travel Agency Kathmandu, Nepal Tour Packages, Trekking in Nepal, International Tours Nepal, Visa Services Nepal, Work Permit Nepal",
+      "Trip Himalaya, Trip Himalaya Tours and Travels, Trip Himalaya Tours and Travels Pvt. Ltd., Travel Agency Airport Kathmandu, Travel Agency Kathmandu, Nepal Tour Packages, Trekking in Nepal, International Tours Nepal, Visa Services Nepal, Work Permit Nepal, THTT Nepal",
     canonicalPath: "/",
     type: "website",
     schema: {
       "@context": "https://schema.org",
       "@type": ["TravelAgency", "TouristInformationCenter"],
-      "name": "Trip Himalaya Tours & Travel",
+      "name": "Trip Himalaya Tours and Travels",
+      "legalName": "Trip Himalaya Tours and Travels Pvt. Ltd.",
+      "foundingDate": "2025",
+      "disambiguatingDescription": "Trip Himalaya Tours and Travels Pvt. Ltd. is an authorized Nepalese travel agency established in 2025 near Airport, Kathmandu, Nepal, operating exclusively on https://triphimalaya.com.np. Not affiliated with triphimalaya.com.",
       "url": "https://triphimalaya.com.np/",
       "logo": "https://triphimalaya.com.np/Logo.png",
       "description":
-        "Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, Himalayan trekking, travel insurance, and hotel reservations.",
+        "Trip Himalaya Tours and Travels Pvt. Ltd.: Premier travel agency established in 2025 near Airport, Kathmandu, Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, Himalayan trekking, travel insurance, and hotel reservations.",
       "telephone": "+977-9851420882",
       "email": "triphimalayatt@gmail.com",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Kathmandu",
+        "streetAddress": "Airport, Sinamangal",
         "addressLocality": "Kathmandu",
         "addressRegion": "Bagmati",
         "postalCode": "44600",

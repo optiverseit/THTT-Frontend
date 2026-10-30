@@ -19,7 +19,7 @@ import {
 import { ADToBS } from "bikram-sambat-js";
 import { useEffect, useRef, useState } from "react";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
-import THTTLogo from "../../assets/images/THTTLogo.png";
+import THTTLogo from "../../assets/images/Logo.png";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { createWorkPermitApplication, getPermitFeeTiers, initiatePayment } from "../../api/BackendApi";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import ReactCountryFlag from "react-country-flag";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
-import THTTLogo from "../../assets/images/THTTLogo.png";
+import THTTLogo from "../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { initiatePayment, storeVisaApplication } from "../../api/BackendApi";

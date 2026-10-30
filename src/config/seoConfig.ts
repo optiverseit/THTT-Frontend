@@ -24,7 +24,7 @@ export const pagesSEO: Record<string, SEOProps> = {
       "@type": ["TravelAgency", "TouristInformationCenter"],
       "name": "Trip Himalaya Tours & Travel",
       "url": "https://triphimalaya.com.np/",
-      "logo": "https://triphimalaya.com.np/THTTLogo.png",
+      "logo": "https://triphimalaya.com.np/Logo.png",
       "description":
         "Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, Himalayan trekking, travel insurance, and hotel reservations.",
       "telephone": "+977-9851420882",

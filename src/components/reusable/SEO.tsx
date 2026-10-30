@@ -11,7 +11,7 @@ export interface SEOProps {
 }
 
 const SITE_URL = "https://triphimalaya.com.np";
-const DEFAULT_IMAGE = "https://triphimalaya.com.np/THTTLogo.png";
+const DEFAULT_IMAGE = "https://triphimalaya.com.np/Logo.png";
 
 /**
  * Reusable SEO Component for Mid-Level & High-Intent Search Ranking.

@@ -32,7 +32,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useGlobalCurrency, displayPrice, formatNPR, formatUSD, formatINR } from "../../../context/CurrencyContext";
-import THTTLogo from "../../../assets/images/THTTLogo.png";
+import THTTLogo from "../../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../../utils/countrycodes";
 import { createBooking, initiatePayment } from "../../../api/BackendApi";
 import PaymentMethod from "../PaymentMethod";

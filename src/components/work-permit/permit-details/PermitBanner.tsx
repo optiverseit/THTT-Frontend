@@ -25,15 +25,43 @@ export interface WorkPermitHighlight {
   status_tracking: string | null;
   image: string | null;
 }
-interface PermitBannerProps {
+export interface PermitBannerProps {
   id: string;
   country: CountryProps;
   highlights?: WorkPermitHighlight | null;
+  permitType?: string;
 }
-const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
+
+export const getPermitTypeLabel = (type?: string): string => {
+  if (!type) return "Work Permit";
+  const normalized = type.toUpperCase().trim();
+  switch (normalized) {
+    case "NEW_LABOUR_PERMIT":
+    case "NEW":
+      return "New Work Permit";
+    case "RENEWAL_PERMIT":
+    case "RENEW":
+      return "Renewal Permit";
+    case "INDIVIDUAL_PERMIT":
+    case "INDIVIDUAL":
+      return "Individual Permit";
+    case "LEGALIZATION_ATTESTATION":
+    case "LEGALIZATION":
+      return "Legalization / Attestation";
+    default:
+      return normalized
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+};
+
+const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights, permitType }) => {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+
+  const permitLabel = getPermitTypeLabel(permitType);
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (shareRef.current && !shareRef.current.contains(e.target as Node)) setIsShareOpen(false);
@@ -42,8 +70,8 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isShareOpen]);
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
-  const shareTitle = `${country.country_name} Work Permit | Trip Himalaya Tours & Travel`;
-  const shareText = `Check out work permit process, requirements and fees for ${country.country_name} on Trip Himalaya Tours & Travel!`;
+  const shareTitle = `${country.country_name} – ${permitLabel} | Trip Himalaya Tours & Travel`;
+  const shareText = `Check out ${permitLabel.toLowerCase()} process, requirements and fees for ${country.country_name} on Trip Himalaya Tours & Travel!`;
   const shareData = { title: shareTitle, text: shareText, url: currentUrl };
   const handleCopyLink = async () => {
     const success = await copyToClipboard(currentUrl);
@@ -54,13 +82,13 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
   };
   const handlePrint = () => {
     const originalTitle = document.title;
-    document.title = `${country.country_name} - Work Permit - Trip Himalaya`;
+    document.title = `${country.country_name} - ${permitLabel} - Trip Himalaya`;
     window.print();
     window.addEventListener("afterprint", () => { document.title = originalTitle; }, { once: true });
     setTimeout(() => { document.title = originalTitle; }, 2000);
   };
   const handleWhatsApp = () => {
-    const msg = encodeURIComponent(`Hello Trip Himalaya (Work Permit Team)! I am interested in the work permit process for ${country.country_name}. Please guide me through the requirements and next steps.`);
+    const msg = encodeURIComponent(`Hello Trip Himalaya (Work Permit Team)! I am interested in the ${permitLabel.toLowerCase()} process for ${country.country_name}. Please guide me through the requirements and next steps.`);
     window.open(`https://api.whatsapp.com/send?phone=9779851420882&text=${msg}`, "_blank", "noopener,noreferrer");
   };
   const shareButtons = [
@@ -138,7 +166,7 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight drop-shadow-sm">
-                  {country.country_name} – WORK PERMIT
+                  {country.country_name} – {permitLabel.toUpperCase()}
                 </h2>
                 <span className="bg-[#E91E63] text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex-shrink-0">
                   POPULAR
@@ -197,7 +225,7 @@ const PermitBanner: React.FC<PermitBannerProps> = ({ country, highlights }) => {
           {isShareOpen && (
             <SharePopover
               onClose={() => setIsShareOpen(false)}
-              title={`${country.country_name} – Work Permit`}
+              title={`${country.country_name} – ${permitLabel}`}
               subtitle={highlights?.subtitle || "Authorized Labor Counseling & Government Shram Approval Support"}
               image={highlights?.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600"}
               url={window.location.href}

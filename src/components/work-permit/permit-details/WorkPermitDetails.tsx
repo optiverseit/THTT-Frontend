@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams, useLocation, Link } from "react-router-dom";
-import PermitBanner from "./PermitBanner";
+import PermitBanner, { getPermitTypeLabel } from "./PermitBanner";
 import type { WorkPermitHighlight } from "./PermitBanner";
 import AboutPermit from "./AboutPermit";
 import CostDetails from "./CostDetails";
@@ -63,6 +63,13 @@ const WorkPermitDetails = () => {
   const [highlights, setHighlights] = useState<WorkPermitHighlight | null>(null);
   const [loading, setLoading] = useState(true);
   const hasRestoredPostLoginRef = useRef(false);
+
+  useEffect(() => {
+    if (selectedCountry) {
+      const permitLabel = getPermitTypeLabel(apiPermitType);
+      document.title = `${selectedCountry.country_name} – ${permitLabel} | Trip Himalaya Tours & Travel`;
+    }
+  }, [selectedCountry, apiPermitType]);
   useEffect(() => {
     if (loading || !selectedCountry || hasRestoredPostLoginRef.current) return;
     let shouldOpen = false;
@@ -170,7 +177,7 @@ const WorkPermitDetails = () => {
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-10 sm:pt-11 md:pt-12 pb-12 sm:pb-16 print:min-h-0 print:bg-white print:p-0 print:m-0">
       <WorkPermitPrintDossier id={id} country={selectedCountry} permitType={apiPermitType} documentRequirements={documentRequirements} feeTiers={feeTiers} />
       <div className="print:hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <PermitBanner id={id} country={selectedCountry} highlights={highlights} />
+        <PermitBanner id={id} country={selectedCountry} highlights={highlights} permitType={apiPermitType} />
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-8 sm:mt-12 mb-8 sm:mb-10">
             <AboutPermit

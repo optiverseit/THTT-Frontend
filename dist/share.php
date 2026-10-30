@@ -433,7 +433,7 @@ if (empty($title)) {
     }
 }
 if (empty($desc)) {
-    $desc = 'Trip Himalaya Tours and Travels Pvt. Ltd. is an authorized premier travel agency established in 2025 near Airport, Kathmandu, Nepal, offering domestic and international tour packages, Himalayan treks, and visa services.';
+    $desc = 'Trip Himalaya Tours and Travels Pvt. Ltd. is an authorized premier travel agency established in 2024 near Airport, Kathmandu, Nepal, offering domestic and international tour packages, Himalayan treks, and visa services.';
 }
 
 // 5. Normalize image URL (ensure absolute https URL and not data URI)
@@ -522,7 +522,7 @@ $cleanShare = htmlspecialchars($currentShareUrl, ENT_QUOTES, 'UTF-8');
       "@type": "TravelAgency",
       "name": "Trip Himalaya Tours and Travels Pvt. Ltd.",
       "legalName": "Trip Himalaya Tours and Travels Pvt. Ltd.",
-      "foundingDate": "2025",
+      "foundingDate": "2024",
       "url": "https://triphimalaya.com.np",
       "telephone": "+977-9851420882",
       "email": "triphimalayatt@gmail.com",

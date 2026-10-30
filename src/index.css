@@ -322,3 +322,19 @@
   border-radius: 0.75rem;
   margin: 1rem 0;
 }
+
+
+/* ── SEARCH DROPDOWN SLEEK SCROLLBAR ── */
+.search-dropdown-list::-webkit-scrollbar {
+  width: 5px;
+}
+.search-dropdown-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+.search-dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(244, 114, 182, 0.6);
+  border-radius: 9999px;
+}
+.search-dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 114, 182, 0.9);
+}

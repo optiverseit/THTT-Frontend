@@ -46,6 +46,7 @@
   # CANONICAL REDIRECT: Enforce HTTPS & Non-WWW Domain
   # Consolidates all search ranking equity to https://triphimalaya.com.np
   # ----------------------------------------------------------------------------
+  RewriteCond %{HTTPS} off [OR]
   RewriteCond %{HTTP_HOST} ^www\.triphimalaya\.com\.np$ [NC]
   RewriteRule ^(.*)$ https://triphimalaya.com.np/$1 [R=301,L]
 

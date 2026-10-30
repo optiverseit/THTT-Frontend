@@ -165,6 +165,9 @@ const Banner: React.FC = () => {
 
           {/* Left text — desktop only */}
           <div className="hidden md:flex flex-col justify-center max-w-2xl text-white -mt-20 md:-mt-32 lg:-mt-36">
+            <span className="text-xs sm:text-sm font-black tracking-widest uppercase text-pink-400 mb-2">
+              Trip Himalaya Tours &amp; Travels • Airport, Kathmandu
+            </span>
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-black leading-[1.15] tracking-tight">
               Your Complete Travel Solution In Nepal
             </h1>
@@ -186,12 +189,15 @@ const Banner: React.FC = () => {
           {/* ─── Search Card ─────────────────────────────────────────────── */}
           <div className="w-full md:w-[420px] lg:w-[440px] xl:w-[455px] p-5 sm:p-6 rounded-3xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl">
 
-            {/* Mobile heading */}
+            {/* Mobile heading with proper H1 for Google Smartphone crawlers */}
             <div className="md:hidden text-white mb-4">
-              <p className="text-2xl font-extrabold leading-tight">
+              <span className="text-[11px] font-black tracking-wider uppercase text-pink-400 block mb-1">
+                Trip Himalaya Tours &amp; Travels
+              </span>
+              <h1 className="text-2xl font-extrabold leading-tight">
                 Your Complete Travel Solution In Nepal
-              </p>
-              <p className="mt-1 text-sm text-gray-200">Your Journey, Our Expertise.</p>
+              </h1>
+              <p className="mt-1 text-xs text-gray-200">Your Journey, Our Expertise • Airport, Kathmandu</p>
             </div>
 
             <h2 className="text-base sm:text-lg font-extrabold flex items-center gap-2 text-white">

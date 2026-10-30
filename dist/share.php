@@ -16,7 +16,7 @@ $productionDomain = 'https://triphimalaya.com.np';
 $backendApiBase   = 'https://thtt-backend.triphimalaya.com.np/api';
 $backendMediaBase = 'https://thtt-backend.triphimalaya.com.np';
 $fallbackImage    = 'https://triphimalaya.com.np/Logo.png';
-$siteName         = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
+$siteName         = 'Trip Himalaya Tours and Travels Pvt. Ltd. | Nepal Tours, Treks & Visas - Airport, Kathmandu';
 
 /**
  * Detect whether the incoming request is from a social media crawler/scraper
@@ -42,6 +42,11 @@ function isSocialCrawler(): bool {
         'Applebot',
         'bingbot',
         'Googlebot',
+        'DuckDuckBot',
+        'YandexBot',
+        'Baiduspider',
+        'Sogou',
+        'ia_archiver',
     ];
     foreach ($crawlers as $pattern) {
         if (stripos($userAgent, $pattern) !== false) {
@@ -422,13 +427,13 @@ if ((empty($title) || empty($img)) && !empty($type) && !empty($id)) {
 // 4. Default fallbacks if still empty
 if (empty($title)) {
     if (!empty($permitType)) {
-        $title = 'Work Permit – ' . getPermitTypeLabel($permitType) . ' | Trip Himalaya Tours & Travel';
+        $title = 'Work Permit – ' . getPermitTypeLabel($permitType) . ' | Trip Himalaya Tours & Travels';
     } else {
-        $title = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
+        $title = 'Trip Himalaya Tours and Travels Pvt. Ltd. | Nepal Tours, Treks & Visas - Kathmandu';
     }
 }
 if (empty($desc)) {
-    $desc = 'Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance.';
+    $desc = 'Trip Himalaya Tours and Travels Pvt. Ltd. is an authorized premier travel agency established in 2025 near Airport, Kathmandu, Nepal, offering domestic and international tour packages, Himalayan treks, and visa services.';
 }
 
 // 5. Normalize image URL (ensure absolute https URL and not data URI)
@@ -496,8 +501,42 @@ $cleanShare = htmlspecialchars($currentShareUrl, ENT_QUOTES, 'UTF-8');
   <meta name="twitter:description" content="<?= $cleanDesc ?>">
   <meta name="twitter:image" content="<?= $cleanImg ?>">
 
-  <!-- Canonical link: For crawlers, point to this exact share URL with its enriched metadata so crawlers do not follow canonical to index.html -->
-  <link rel="canonical" href="<?= $cleanShare ?>">
+  <!-- Canonical link pointing directly to real clean content URL -->
+  <link rel="canonical" href="<?= !empty($cleanTarget) ? $cleanTarget : $cleanShare ?>">
+
+  <!-- Geo & Local SEO Tags -->
+  <meta name="geo.region" content="NP-BA">
+  <meta name="geo.placename" content="Airport, Kathmandu, Nepal">
+  <meta name="geo.position" content="27.6970;85.3590">
+  <meta name="ICBM" content="27.6970, 85.3590">
+
+  <!-- Search Engine Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TouristTrip",
+    "name": <?= json_encode($cleanTitle, JSON_UNESCAPED_SLASHES) ?>,
+    "description": <?= json_encode($cleanDesc, JSON_UNESCAPED_SLASHES) ?>,
+    "image": <?= json_encode($cleanImg, JSON_UNESCAPED_SLASHES) ?>,
+    "provider": {
+      "@type": "TravelAgency",
+      "name": "Trip Himalaya Tours and Travels Pvt. Ltd.",
+      "legalName": "Trip Himalaya Tours and Travels Pvt. Ltd.",
+      "foundingDate": "2025",
+      "url": "https://triphimalaya.com.np",
+      "telephone": "+977-9851420882",
+      "email": "triphimalayatt@gmail.com",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Airport, Sinamangal",
+        "addressLocality": "Kathmandu",
+        "addressRegion": "Bagmati",
+        "postalCode": "44600",
+        "addressCountry": "NP"
+      }
+    }
+  }
+  </script>
 
 <?php if (!$isCrawler): ?>
   <!-- Instant Client Redirect for human visitors only -->

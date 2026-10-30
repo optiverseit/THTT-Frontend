@@ -96,12 +96,12 @@ export const QUICK_SEARCHES = [
 
 // ─── Cache Keys & Configuration ───────────────────────────────────────────────
 
-export const SEARCH_STORAGE_KEY = "thtt_live_search_index_v4";
-export const SEARCH_STORAGE_TIMESTAMP_KEY = "thtt_live_search_timestamp_v4";
+export const SEARCH_STORAGE_KEY = "thtt_live_search_index_v5";
+export const SEARCH_STORAGE_TIMESTAMP_KEY = "thtt_live_search_timestamp_v5";
 export const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 
 // ─── Verified Live Database Items ─────────────────────────────────────────────
-// Only real verified live database items. Zero mock data. Zero mock services.
+// Only real verified live database items. Zero mock data. Exact 1-to-1 match.
 
 export const INITIAL_DATABASE_ITEMS: SearchResult[] = [
   // Verified live Visa Categories in Database
@@ -122,37 +122,13 @@ export const INITIAL_DATABASE_ITEMS: SearchResult[] = [
     icon: Shield,
   },
 
-  // Verified live Work Permit Categories in Database
+  // Verified live Work Permit in Database (Exact 1-to-1 match with live DB)
   {
     id: "permit-1-RENEWAL_PERMIT",
-    label: "United Arab Emirates – RENEWAL PERMIT",
+    label: "United Arab Emirates – Renewal Permit",
     sublabel: "Labour Approval & Work Permit Renewal for UAE (Dubai / Abu Dhabi)",
     type: "service" as const,
     route: "/permit-details/1?permitType=RENEWAL_PERMIT",
-    icon: FileText,
-  },
-  {
-    id: "permit-1-NEW_LABOUR_PERMIT",
-    label: "United Arab Emirates – NEW LABOUR PERMIT",
-    sublabel: "New Government Labor Approval & Work Permit for UAE",
-    type: "service" as const,
-    route: "/permit-details/1?permitType=NEW_LABOUR_PERMIT",
-    icon: FileText,
-  },
-  {
-    id: "permit-1-INDIVIDUAL_PERMIT",
-    label: "United Arab Emirates – INDIVIDUAL PERMIT",
-    sublabel: "Individual Work Permit & Labor Verification for UAE",
-    type: "service" as const,
-    route: "/permit-details/1?permitType=INDIVIDUAL_PERMIT",
-    icon: FileText,
-  },
-  {
-    id: "permit-1-LEGALIZATION_ATTESTATION",
-    label: "United Arab Emirates – Legalization / Attestation",
-    sublabel: "Government Embassy Document Attestation & Legalization for UAE",
-    type: "service" as const,
-    route: "/permit-details/1?permitType=LEGALIZATION_ATTESTATION",
     icon: FileText,
   },
 ];
@@ -262,8 +238,8 @@ export const syncLiveDatabase = async (
     }
 
     // 2. Live Work Permit & Shram Countries from Database
-    // Strictly restricted to official permit destinations (e.g. UAE from getGroupedWorkPermitCountries).
-    // NEVER generates work permits for general visa/tour destinations (such as Thailand).
+    // Strictly 1-to-1 with live DB permit records.
+    // Each record in /permit-document-requirements/grouped corresponds to exactly 1 permit service.
     const livePermits: SearchResult[] = [];
     if (permitsRes.status === "fulfilled") {
       const raw = permitsRes.value?.data;
@@ -275,22 +251,20 @@ export const syncLiveDatabase = async (
         ? raw
         : [];
 
-      const permitTypes = [
-        { type: "RENEWAL_PERMIT", label: "RENEWAL PERMIT" },
-        { type: "NEW_LABOUR_PERMIT", label: "NEW LABOUR PERMIT" },
-        { type: "INDIVIDUAL_PERMIT", label: "INDIVIDUAL PERMIT" },
-        { type: "LEGALIZATION_ATTESTATION", label: "Legalization / Attestation" },
-      ];
+      const PERMIT_TYPE_LABELS: Record<string, string> = {
+        RENEWAL_PERMIT: "Renewal Permit",
+        NEW_LABOUR_PERMIT: "New Labour Permit",
+        INDIVIDUAL_PERMIT: "Individual Permit",
+        LEGALIZATION_ATTESTATION: "Legalization / Attestation",
+      };
 
-      // Extract unique permit-enabled countries
-      const permitCountriesMap: Record<string | number, any> = {};
       list.forEach((item: any) => {
-        if (item?.country && (item.country.status === "ACTIVE" || !item.country.status)) {
-          permitCountriesMap[item.country.id] = item.country;
-        }
-      });
+        const c = item?.country;
+        const pt = item?.permit_type;
+        if (!c || !pt) return;
+        if (c.status && c.status !== "ACTIVE") return;
 
-      Object.values(permitCountriesMap).forEach((c: any) => {
+        const ptLabel = PERMIT_TYPE_LABELS[pt] || pt.replace(/_/g, " ");
         const code = (c.country_code || c.iso_2 || "").toUpperCase();
         const aliases =
           code === "UAE"
@@ -299,15 +273,13 @@ export const syncLiveDatabase = async (
             ? `(${code})`
             : "";
 
-        permitTypes.forEach((pt) => {
-          livePermits.push({
-            id: `permit-${c.id}-${pt.type}`,
-            label: `${c.country_name} – ${pt.label}`,
-            sublabel: `Labour Approval & Shram Documentation for ${c.country_name} ${aliases}`.trim(),
-            type: "service",
-            route: `/permit-details/${c.id}?permitType=${pt.type}`,
-            icon: FileText,
-          });
+        livePermits.push({
+          id: `permit-${c.id}-${pt}`,
+          label: `${c.country_name} – ${ptLabel}`,
+          sublabel: `Labour Approval & Shram Documentation for ${c.country_name} ${aliases}`.trim(),
+          type: "service",
+          route: `/permit-details/${c.id}?permitType=${pt}`,
+          icon: FileText,
         });
       });
     }

@@ -20,7 +20,6 @@ import {
   getInsurancePlans,
   getAllDocuments,
 } from "../api/BackendApi";
-import { services } from "../assets/data/mockData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,21 +96,12 @@ export const QUICK_SEARCHES = [
 
 // ─── Cache Keys & Configuration ───────────────────────────────────────────────
 
-export const SEARCH_STORAGE_KEY = "thtt_live_search_index_v3";
-export const SEARCH_STORAGE_TIMESTAMP_KEY = "thtt_live_search_timestamp_v3";
+export const SEARCH_STORAGE_KEY = "thtt_live_search_index_v4";
+export const SEARCH_STORAGE_TIMESTAMP_KEY = "thtt_live_search_timestamp_v4";
 export const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 
-// ─── Precompiled Core & Verified Database Items ───────────────────────────────
-// Available at 0.0ms initial render. Zero mock tours, zero mock hotels, zero blogs.
-
-export const CORE_SERVICES: SearchResult[] = (Array.isArray(services) ? services : []).map((s) => ({
-  id: `svc-${s.id}`,
-  label: s.name,
-  sublabel: s.shortDesc,
-  type: "service" as const,
-  route: s.slug === "work-permit" ? "/work-permit" : `/service/${s.slug}`,
-  icon: SERVICE_ICON_MAP[s.slug] ?? FileText,
-}));
+// ─── Verified Live Database Items ─────────────────────────────────────────────
+// Only real verified live database items. Zero mock data. Zero mock services.
 
 export const INITIAL_DATABASE_ITEMS: SearchResult[] = [
   // Verified live Visa Categories in Database
@@ -195,7 +185,7 @@ export const resolveIcon = (type: SearchResult["type"]): React.ElementType => {
 // Reads localStorage synchronously on initial render. Zero wait time.
 export const getCachedSearchItems = (): SearchResult[] => {
   if (typeof window === "undefined") {
-    return [...CORE_SERVICES, ...INITIAL_DATABASE_ITEMS];
+    return [...INITIAL_DATABASE_ITEMS];
   }
   try {
     const raw = localStorage.getItem(SEARCH_STORAGE_KEY);
@@ -211,7 +201,7 @@ export const getCachedSearchItems = (): SearchResult[] => {
   } catch (_e) {
     // Ignore storage parse error
   }
-  return [...CORE_SERVICES, ...INITIAL_DATABASE_ITEMS];
+  return [...INITIAL_DATABASE_ITEMS];
 };
 
 // ─── Live Database Background Synchronization ─────────────────────────────────
@@ -481,7 +471,6 @@ export const syncLiveDatabase = async (
         : INITIAL_DATABASE_ITEMS.filter((i) => String(i.id).startsWith("permit-"));
 
     const updatedLiveIndex: SearchResult[] = [
-      ...CORE_SERVICES,
       ...finalVisas,
       ...finalPermits,
       ...livePackages,
@@ -514,7 +503,7 @@ export const syncLiveDatabase = async (
 export const executeSearch = (
   query: string,
   allItems: SearchResult[],
-  limit = 8
+  limit = 20
 ): SearchResult[] => {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return [];
@@ -526,25 +515,41 @@ export const executeSearch = (
       const lbl = item.label.toLowerCase();
       const sub = (item.sublabel ?? "").toLowerCase();
       const typ = item.type.toLowerCase();
-      const lblWords = lbl.split(/[\s\-–—/()]+/);
+      const lblWords = lbl.split(/[\s\-–—/()]+/).filter(Boolean);
+      const subWords = sub.split(/[\s\-–—/(),.]+/).filter(Boolean);
 
       let score = 0;
       words.forEach((word) => {
-        // Exact label match
-        if (lbl === word) score += 60;
-        // Label starts with query (e.g. 'th' -> 'thailand...')
-        else if (lbl.startsWith(word)) score += 45;
-        // Any word in label starts with query
-        else if (lblWords.some((w) => w.startsWith(word))) score += 35;
-        // Label includes query
-        else if (lbl.includes(word)) score += 20;
+        // 1. Exact label match (e.g. 'thailand')
+        if (lbl === word) {
+          score += 100;
+        }
+        // 2. Label starts with search query (e.g. 'th' -> 'Thailand – Tourist Visa')
+        else if (lbl.startsWith(word)) {
+          score += 70;
+        }
+        // 3. Any individual word in the label starts with search query
+        else if (lblWords.some((w) => w.startsWith(word))) {
+          score += 50;
+        }
+        // 4. Label contains the word (only for longer queries >= 3 chars, to prevent 2-letter noise)
+        else if (word.length >= 3 && lbl.includes(word)) {
+          score += 25;
+        }
 
-        // Sublabel includes query
-        if (sub.includes(word)) score += 10;
+        // 5. Any individual word in the sublabel starts with search query
+        if (subWords.some((w) => w.startsWith(word))) {
+          score += 15;
+        } else if (word.length >= 4 && sub.includes(word)) {
+          score += 5;
+        }
 
-        // Type matches word
-        if (typ === word) score += 25;
-        else if (typ.includes(word)) score += 10;
+        // 6. Type matches or starts with search query
+        if (typ === word) {
+          score += 30;
+        } else if (typ.startsWith(word)) {
+          score += 20;
+        }
       });
 
       return { item, score };

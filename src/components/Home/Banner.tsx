@@ -415,7 +415,7 @@ const Banner: React.FC = () => {
       {/* Background */}
       <img
         src="https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=2000"
-        alt="Himalayas"
+        alt="Himalayas - Trip Himalaya Tours & Travel"
         className="absolute inset-0 w-full h-full object-cover opacity-75"
         style={{ objectPosition: "center 40%" }}
       />
@@ -450,9 +450,9 @@ const Banner: React.FC = () => {
 
             {/* Mobile heading */}
             <div className="md:hidden text-white mb-4">
-              <h1 className="text-2xl font-extrabold leading-tight">
+              <p className="text-2xl font-extrabold leading-tight">
                 Your Complete Travel Solution In Nepal
-              </h1>
+              </p>
               <p className="mt-1 text-sm text-gray-200">Your Journey, Our Expertise.</p>
             </div>
 

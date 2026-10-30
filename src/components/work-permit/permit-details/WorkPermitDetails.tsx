@@ -173,8 +173,23 @@ const WorkPermitDetails = () => {
         <PermitBanner id={id} country={selectedCountry} highlights={highlights} />
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-8 sm:mt-12 mb-8 sm:mb-10">
-            <AboutPermit id={id} country={selectedCountry} documentRequirements={documentRequirements} />
-            <CostDetails country={selectedCountry} permitType={apiPermitType} />
+            <AboutPermit
+              id={id}
+              country={selectedCountry}
+              documentRequirements={documentRequirements}
+              costDetailsSlot={
+                <CostDetails
+                  country={selectedCountry}
+                  permitType={apiPermitType}
+                />
+              }
+            />
+            <div className="hidden md:block">
+              <CostDetails
+                country={selectedCountry}
+                permitType={apiPermitType}
+              />
+            </div>
           </div>
           <OtherServicesComponent service={services} />
           <WorkPermitModal country={[selectedCountry]} defaultCountry={selectedCountry.country_name} defaultPermitType={defaultPermitType} documentRequirements={documentRequirements} />

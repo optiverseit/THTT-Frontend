@@ -43,11 +43,19 @@
   RewriteBase /
 
   # ----------------------------------------------------------------------------
+  # CANONICAL REDIRECT: Enforce HTTPS & Non-WWW Domain
+  # Consolidates all search ranking equity to https://triphimalaya.com.np
+  # ----------------------------------------------------------------------------
+  RewriteCond %{HTTP_HOST} ^www\.triphimalaya\.com\.np$ [NC]
+  RewriteRule ^(.*)$ https://triphimalaya.com.np/$1 [R=301,L]
+
+  # ----------------------------------------------------------------------------
   # 3. ANTI-SPAM & MALICIOUS BOT BLOCKER
   # Blocks automated vulnerability scanners, exploit scrapers & bad bots
+  # (Legitimate SEO audit crawlers like Semrush and Ahrefs are permitted)
   # ----------------------------------------------------------------------------
   RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|wpscan|libwww-perl|HTTrack|masscan|zgrab|nmap|acunetix|havij) [NC,OR]
-  RewriteCond %{HTTP_USER_AGENT} (BLEXBot|DotBot|MJ12bot|SemrushBot|AhrefsBot) [NC]
+  RewriteCond %{HTTP_USER_AGENT} (BLEXBot|DotBot|MJ12bot) [NC]
   RewriteRule .* - [F,L]
 
   # ----------------------------------------------------------------------------

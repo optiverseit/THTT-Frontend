@@ -1,22 +1,22 @@
 import { SEOProps } from "../components/reusable/SEO";
 
 export const defaultSEO: SEOProps = {
-  title: "Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency",
+  title: "Trip Himalaya Tours & Travel | Nepal Tours, Treks & Visas",
   description:
-    "Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance.",
+    "Trip Himalaya Tours & Travel is a premier Kathmandu travel agency offering domestic and international tour packages, Himalayan treks, visas, and work permits.",
   keywords:
-    "Trip Himalaya, Trip Himalaya Tours and Travel, Trip Himalaya Tours & Travel, Travel Agency in Nepal, Work Permit Nepal, Overseas Work Permit Kathmandu, International Travel Agency Kathmandu, Nepal & International Tour Packages, Dubai tour packages, Thailand tour packages, Bali tour packages, Domestic & International Air Ticketing, Worldwide visa services Nepal",
+    "Trip Himalaya, Trip Himalaya Tours and Travel, Travel Agency Kathmandu, Nepal Tour Packages, Trekking in Nepal, International Tours Nepal, Visa Services Nepal, Work Permit Nepal",
   canonicalPath: "/",
   type: "website",
 };
 
 export const pagesSEO: Record<string, SEOProps> = {
   home: {
-    title: "Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency",
+    title: "Trip Himalaya Tours & Travel | Nepal Tours, Treks & Visas",
     description:
-      "Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance.",
+      "Trip Himalaya Tours & Travel is a premier Kathmandu travel agency offering domestic and international tour packages, Himalayan treks, visas, and work permits.",
     keywords:
-      "Trip Himalaya, Trip Himalaya Tours and Travel, Trip Himalaya Tours & Travel, Travel Agency in Nepal, Work Permit Nepal, Overseas Work Permit Kathmandu, Foreign Employment Visa, Shram Swikriti Nepal, International Travel Agency Kathmandu, Tour Operator in Nepal, International tour packages from Nepal, Nepal & International Tour Packages, Dubai tour packages, Thailand tour packages, Bali tour packages, Domestic & International Air Ticketing, Worldwide visa services Nepal, Schengen visa consultant Kathmandu, Overseas holiday packages, Outbound tour operator Nepal, Best Tour Operator in Nepal, Best trekking agency in Nepal, Nepal tour packages, Nepal holiday packages",
+      "Trip Himalaya, Trip Himalaya Tours and Travel, Travel Agency Kathmandu, Nepal Tour Packages, Trekking in Nepal, International Tours Nepal, Visa Services Nepal, Work Permit Nepal",
     canonicalPath: "/",
     type: "website",
     schema: {
@@ -24,7 +24,7 @@ export const pagesSEO: Record<string, SEOProps> = {
       "@type": ["TravelAgency", "TouristInformationCenter"],
       "name": "Trip Himalaya Tours & Travel",
       "url": "https://triphimalaya.com.np/",
-      "logo": "https://triphimalaya.com.np/THTTLogo.png",
+      "logo": "https://triphimalaya.com.np/Logo.png",
       "description":
         "Trip Himalaya Tours & Travel: Premier travel agency in Nepal for domestic & international holiday packages, flight ticketing, worldwide visa processing, Himalayan trekking, travel insurance, and hotel reservations.",
       "telephone": "+977-9851420882",

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X, Calendar, Users, User, Mail, MessageSquare, MapPin, Send, MessageCircle, Printer, Copy, Check, BadgeCheck, Globe, AlertCircle, Building2, BedDouble, Paperclip, FileText } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
-import THTTLogo from "../../assets/images/THTTLogo.png";
+import THTTLogo from "../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { createHotelBooking, initiatePayment } from "../../api/BackendApi";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";

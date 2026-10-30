@@ -22,7 +22,7 @@ import {
   Clock,
   Send,
 } from "lucide-react";
-import THTTLogo from "../../assets/images/THTTLogo.png";
+import THTTLogo from "../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";

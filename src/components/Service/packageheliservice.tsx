@@ -66,7 +66,7 @@ import {
 } from "../../context/CurrencyContext";
 import HeliServicePriceModel, { HeliTourData } from "./heliservicepricemodel";
 import SharePopover from "../reusable/SharePopover";
-import THTTLogo from "../../assets/images/THTTLogo.png";
+import THTTLogo from "../../assets/images/Logo.png";
 import Logo from "../../assets/images/Logo.png";
 import { COUNTRY_CODES, isoToFlag } from "../../utils/countrycodes";
 import {

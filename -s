@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/THTTLogo.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/THTTLogo.png" />
+    <link rel="canonical" href="https://triphimalaya.com.np/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trip Himalaya Tours &amp; Travel | Nepal &amp; International Tours, Visa, Work Permit &amp; Travel Agency</title>
+    <meta name="description" content="Trip Himalaya Tours &amp; Travel: Premier travel agency in Nepal for domestic &amp; international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance." />
+    <meta name="keywords" content="Trip Himalaya, Trip Himalaya Tours and Travel, Trip Himalaya Tours &amp; Travel, Travel Agency in Nepal, Work Permit Nepal, Overseas Work Permit Kathmandu, Foreign Employment Visa, Shram Swikriti Nepal, International Travel Agency Kathmandu, Tour Operator in Nepal, International tour packages from Nepal, Nepal &amp; International Tour Packages, Dubai tour packages, Thailand tour packages, Bali tour packages, Domestic &amp; International Air Ticketing, Worldwide visa services Nepal, Schengen visa consultant Kathmandu, Document attestation Kathmandu, Overseas holiday packages, Outbound tour operator Nepal, Best Tour Operator in Nepal, Best trekking agency in Nepal, Nepal tour packages, Nepal holiday packages, Nepal sightseeing tour, Kathmandu tour package, Pokhara tour package, Chitwan tour package, Nepal cultural tour, Nepal family tour packages, Nepal honeymoon packages, Nepal luxury tour packages, Nepal private tours, Customized Nepal tour packages, Nepal multi-day tour packages, Best places to visit in Nepal, Nepal tour package cost, Trekking in Nepal, Nepal trekking packages, Everest Base Camp Trek, Annapurna Base Camp Trek, Annapurna Circuit Trek, Langtang Valley Trek, Mardi Himal Trek, Manaslu Circuit Trek, Upper Mustang Trek, Poon Hill Trek, Nepal trekking cost, Adventure tours in Nepal, Mountain biking in Nepal, Nepal mountain biking tours, Nepal peak climbing, Nepal expedition packages, Himalayan adventure tours, Nepal helicopter tours, Nepal adventure holiday packages, Nepal tour packages from USA, Nepal tour packages from UK, Nepal tour packages from Australia, Nepal tour packages from India, Nepal holiday packages from Europe, Private Nepal tours for foreigners, Nepal guided tour packages, Nepal cultural and heritage tours, Best time to visit Nepal, Nepal tour itinerary 7 days, Nepal tour itinerary 10 days, Nepal tour package price, Travel agency in Kathmandu, Tour operator in Kathmandu, Nepal travel company, Kathmandu tour operator, Tour packages from Kathmandu, Nepal sightseeing packages, Kathmandu sightseeing tour, Private tour operator Nepal, Nepal travel agency for international tourists, Trekking and tour operator Nepal" />
+    
+    <!-- Geo Meta Tags for Local & International SEO -->
+    <meta name="geo.region" content="NP-BA" />
+    <meta name="geo.placename" content="Kathmandu, Nepal" />
+    <meta name="geo.position" content="27.7172;85.3240" />
+    <meta name="ICBM" content="27.7172, 85.3240" />
+    <meta name="author" content="Trip Himalaya Tours &amp; Travel Pvt. Ltd." />
+
+    <!-- Google Search Structured Data (Schema.org Deep Rich Graph) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": ["TravelAgency", "TouristInformationCenter"],
+          "@id": "https://triphimalaya.com.np/#organization",
+          "name": "Trip Himalaya Tours and Travel",
+          "legalName": "Trip Himalaya Tours & Travel Pvt. Ltd.",
+          "alternateName": [
+            "Trip Himalaya",
+            "Trip Himalaya Tours & Travel",
+            "Trip Himalaya Tours And Travels Pvt. Ltd",
+            "THTT",
+            "Trip Himalaya Nepal",
+            "Trips Himalaya",
+            "Trip Himalaya Treks"
+          ],
+          "url": "https://triphimalaya.com.np/",
+          "logo": "https://triphimalaya.com.np/THTTLogo.png",
+          "image": "https://triphimalaya.com.np/THTTLogo.png",
+          "description": "Explore Nepal with Trip Himalaya Tours & Travel. Discover Nepal tour packages, cultural experiences, sightseeing tours, Himalayan trekking, and adventure activities.",
+          "telephone": "+977-9851420882",
+          "email": "triphimalayatt@gmail.com",
+          "priceRange": "$$",
+          "currenciesAccepted": "USD, NPR, INR, EUR, GBP, AUD, CAD",
+          "paymentAccepted": "Cash, Credit Card, Bank Transfer, eSewa",
+          "sameAs": [
+            "https://www.facebook.com/triphimalaya/",
+            "https://www.instagram.com/triphimalaya/",
+            "https://twitter.com/TripHimalaya"
+          ],
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Kathmandu",
+            "addressLocality": "Kathmandu",
+            "addressRegion": "Bagmati",
+            "postalCode": "44600",
+            "addressCountry": "NP"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 27.7172,
+            "longitude": 85.3240
+          },
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ],
+            "opens": "07:00",
+            "closes": "21:00"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "reviewCount": "285",
+            "bestRating": "5",
+            "worstRating": "1"
+          },
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Nepal Tour, Trekking & Adventure Packages",
+            "itemListElement": [
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "TouristTrip",
+                  "name": "Nepal Tour Packages & Holiday Packages",
+                  "description": "Customized, luxury, private and family holiday tour packages across Nepal including Kathmandu, Pokhara, and Chitwan."
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "TouristTrip",
+                  "name": "Nepal Trekking Packages (Everest, Annapurna, Langtang)",
+                  "description": "Everest Base Camp Trek, Annapurna Base Camp, Annapurna Circuit, Langtang Valley, Mardi Himal, Manaslu, Upper Mustang, and Poon Hill treks."
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "TouristTrip",
+                  "name": "Adventure Tours in Nepal & Peak Climbing",
+                  "description": "Himalayan adventure tours, peak climbing, mountain biking, white water rafting, and helicopter tours in Nepal."
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "TouristTrip",
+                  "name": "Kathmandu, Pokhara & Chitwan Sightseeing Tours",
+                  "description": "UNESCO World Heritage cultural and heritage tours, wildlife safaris, and multi-day sightseeing experiences."
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "TouristTrip",
+                  "name": "Private & Customized Nepal Tours for International Tourists",
+                  "description": "Tailor-made guided Nepal tour packages for travelers from USA, UK, Australia, Europe, India, and worldwide."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://triphimalaya.com.np/#website",
+          "url": "https://triphimalaya.com.np/",
+          "name": "Trip Himalaya Tours & Travel",
+          "alternateName": ["Trip Himalaya", "THTT", "Trip Himalaya Tours and Travel"],
+          "description": "Nepal Tour Packages & Travel Agency in Kathmandu",
+          "publisher": {
+            "@id": "https://triphimalaya.com.np/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://triphimalaya.com.np/packages?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://triphimalaya.com.np/#breadcrumb",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://triphimalaya.com.np/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Tour Packages",
+              "item": "https://triphimalaya.com.np/packages"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "Travel Services",
+              "item": "https://triphimalaya.com.np/service"
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "name": "Nepal Travel Guide",
+              "item": "https://triphimalaya.com.np/travel-guide"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://triphimalaya.com.np/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What tour packages does Trip Himalaya offer in Nepal?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Trip Himalaya Tours & Travel offers customized Nepal tour packages, cultural sightseeing in Kathmandu, Pokhara valley tours, Chitwan jungle safaris, luxury family holidays, and multi-day packages."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does Trip Himalaya organize trekking in Nepal like Everest and Annapurna?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, Trip Himalaya organizes top Himalayan treks including Everest Base Camp Trek, Annapurna Base Camp, Annapurna Circuit, Langtang Valley, Mardi Himal, Manaslu Circuit, Upper Mustang, and Poon Hill with licensed guides and full support."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Where is Trip Himalaya Tours and Travel located in Kathmandu?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Trip Himalaya Tours & Travel Pvt. Ltd. is headquartered in Kathmandu, Bagmati, Nepal. We provide 24/7 travel consultation and booking support via phone at +977-9851420882."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can Trip Himalaya arrange helicopter tours, vehicle rentals, and visas?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, we provide end-to-end travel services including Everest helicopter flights, private 4WD car and jeep rental, hotel reservations, high-altitude travel insurance, and international visa processing."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Trip Himalaya Tours &amp; Travel" />
+    <meta property="og:title" content="Trip Himalaya Tours &amp; Travel | Nepal &amp; International Tours, Visa, Work Permit &amp; Travel Agency" />
+    <meta property="og:description" content="Trip Himalaya Tours &amp; Travel: Premier travel agency in Nepal for domestic &amp; international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance." />
+    <meta property="og:image" content="https://triphimalaya.com.np/THTTLogo.png" />
+    <meta property="og:url" content="https://triphimalaya.com.np/" />
+    
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@TripHimalaya">
+    <meta name="twitter:title" content="Trip Himalaya Tours &amp; Travel | Nepal &amp; International Tours, Visa, Work Permit &amp; Travel Agency" />
+    <meta name="twitter:description" content="Trip Himalaya Tours &amp; Travel: Premier travel agency in Nepal for domestic &amp; international holiday packages, flight ticketing, worldwide visa processing, overseas work permits, Himalayan trekking, and travel insurance." />
+    <meta name="twitter:image" content="https://triphimalaya.com.np/THTTLogo.png" />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Runtime Environment Config from cPanel Server -->
+    <script src="/env-config.php"></script>
+    <script type="module" crossorigin src="/assets/index-BQStV4cS.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CPmkDSpG.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

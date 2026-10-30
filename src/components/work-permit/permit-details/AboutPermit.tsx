@@ -1,3 +1,4 @@
+import React from "react";
 import {
   AlertCircle,
   CircleCheck,
@@ -35,11 +36,13 @@ interface AboutPermitProps {
   id?: string;
   country: CountryProps;
   documentRequirements: DocumentRequirement[];
+  costDetailsSlot?: React.ReactNode;
 }
 
 const AboutPermit = ({
   country,
   documentRequirements,
+  costDetailsSlot,
 }: AboutPermitProps) => {
   const included = [
     "Govt. Application Filling",
@@ -85,6 +88,13 @@ const AboutPermit = ({
           }}
         />
       </div>
+
+      {/* ── MOBILE ONLY: PERMIT COST (Above Requirement Documents) ── */}
+      {costDetailsSlot && (
+        <div className="block md:hidden">
+          {costDetailsSlot}
+        </div>
+      )}
 
       {/* ── CARD 2: REQUIREMENT DOCUMENTS ── */}
       <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-200 border border-gray-100 p-6 sm:p-8">

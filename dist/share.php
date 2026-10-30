@@ -15,7 +15,7 @@ header('Expires: 0');
 $productionDomain = 'https://triphimalaya.com.np';
 $backendApiBase   = 'https://thtt-backend.triphimalaya.com.np/api';
 $backendMediaBase = 'https://thtt-backend.triphimalaya.com.np';
-$fallbackImage    = 'https://triphimalaya.com.np/THTTLogo.png';
+$fallbackImage    = 'https://triphimalaya.com.np/Logo.png';
 $siteName         = 'Trip Himalaya Tours & Travel | Nepal & International Tours, Visa, Work Permit & Travel Agency';
 
 /**

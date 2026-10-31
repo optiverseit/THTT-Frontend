@@ -87,7 +87,7 @@ export default function DocumentationPage() {
 
   const handleFloatingWhatsApp = () => {
     const msg = encodeURIComponent("Hello Trip Himalaya! I would like to inquire about your documentation services.");
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   const handleCardClick = (item: DocumentationItem) => {

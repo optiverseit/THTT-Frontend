@@ -75,7 +75,7 @@ const WorkPermitOverview = () => {
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:w-auto">
             <a
-              href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20need%20help%20with%20a%20Work%20Permit."
+              href="https://wa.me/9779851420882?text=Hello%20Trip%20Himalaya!%20I%20need%20help%20with%20a%20Work%20Permit."
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full px-6 py-3 text-xs text-white tracking-wide gap-2 flex items-center justify-center bg-green-500 hover:bg-green-600 transition-colors cursor-pointer"
@@ -84,7 +84,7 @@ const WorkPermitOverview = () => {
               WHATSAPP INQUIRY
             </a>
             <a
-              href="tel:+9779800000000"
+              href="tel:+9779851420882"
               className="rounded-full px-6 py-3 text-xs text-white tracking-wide gap-2 flex items-center justify-center bg-purple-950 hover:bg-purple-900 transition-colors cursor-pointer"
             >
               <Phone size={14} />

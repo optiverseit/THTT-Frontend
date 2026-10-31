@@ -102,7 +102,7 @@ const CTASection = () => (
 export default function ServicesPage() {
   const handleFloatingWhatsApp = () => {
     const msg = encodeURIComponent("Hello Trip Himalaya! I would like to inquire about your travel services.");
-    window.open(`https://wa.me/9779800000003?text=${msg}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
   };
 
   return (

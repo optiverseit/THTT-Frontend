@@ -214,13 +214,13 @@ const About: React.FC = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <a
-              href="tel:+9779800000000"
+              href="tel:+9779851420882"
               className="bg-[#2D1347] text-white px-8 sm:px-10 py-4 rounded-full font-black tracking-wider hover:brightness-125 transition-all shadow-2xl text-center text-sm sm:text-base"
             >
               CALL US NOW
             </a>
             <a
-              href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20would%20like%20to%20get%20a%20free%20quote."
+              href="https://wa.me/9779851420882?text=Hello%20Trip%20Himalaya!%20I%20would%20like%20to%20get%20a%20free%20quote."
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-[#D92671] px-8 sm:px-10 py-4 rounded-full font-black tracking-wider hover:bg-slate-50 transition-all shadow-2xl text-sm sm:text-base text-center"

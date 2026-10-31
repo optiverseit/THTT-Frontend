@@ -85,7 +85,7 @@ export default function DocumentationDetailPage() {
     );
 
     window.open(
-      `https://wa.me/9779800000003?text=${msg}`,
+      `https://wa.me/9779851420882?text=${msg}`,
       "_blank",
       "noopener,noreferrer"
     );

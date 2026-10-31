@@ -63,7 +63,7 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="print:hidden w-full bg-[#080C16] text-white pt-16 pb-8 px-4 sm:px-6 lg:px-12 relative z-20 border-t border-white/5" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
+    <footer data-nosnippet className="print:hidden w-full bg-[#080C16] text-white pt-16 pb-8 px-4 sm:px-6 lg:px-12 relative z-20 border-t border-white/5" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
       <div className="max-w-7xl mx-auto">
         
         {/* ── TOP SECTION: 4 COLUMNS ── */}
@@ -207,28 +207,6 @@ const Footer: React.FC = () => {
                   triphimalayatt@gmail.com
                 </a>
               </li>
-              <li className="flex items-center gap-3">
-                <MessageCircle size={16} className="text-[#E11D48] flex-shrink-0" />
-                <a
-                  href="https://wa.me/9779800000003?text=Hello%20Trip%20Himalaya!%20I%20would%20like%20to%20inquire%20about%20your%20services."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors text-emerald-400"
-                >
-                  WhatsApp: +977 9800000003
-                </a>
-              </li>
-              <li className="flex items-center gap-3">
-                <Globe size={16} className="text-[#E11D48] flex-shrink-0" />
-                <a
-                  href="https://triphimalaya.com.np"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
-                  triphimalaya.com.np
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -362,7 +340,7 @@ const Footer: React.FC = () => {
 
       {/* Floating Chat Button (Bottom-Right) */}
       <a
-        href="https://wa.me/9779800000000"
+        href="https://wa.me/9779851420882"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"

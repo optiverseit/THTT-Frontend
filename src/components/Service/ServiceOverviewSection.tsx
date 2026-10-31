@@ -20,9 +20,9 @@ export const ServiceOverviewSection: React.FC<ServiceOverviewSectionProps> = ({
   description,
   features,
   whatsappMessage = `Hello Trip Himalaya! I am interested in your "${serviceName}" service. Please share details and pricing.`,
-  phone = "+9779800000000",
+  phone = "+9779851420882",
 }) => {
-  const whatsappUrl = `https://wa.me/9779800000003?text=${encodeURIComponent(whatsappMessage)}`;
+  const whatsappUrl = `https://wa.me/9779851420882?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
     <div className="w-full">

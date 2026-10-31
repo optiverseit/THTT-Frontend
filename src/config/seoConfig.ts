@@ -24,8 +24,30 @@ export const pagesSEO: Record<string, SEOProps> = {
       "@type": ["TravelAgency", "TouristInformationCenter"],
       "name": "Trip Himalaya Tours and Travels",
       "legalName": "Trip Himalaya Tours and Travels Pvt. Ltd.",
-      "foundingDate": "2024",
-      "disambiguatingDescription": "Trip Himalaya Tours and Travels Pvt. Ltd. is an authorized Nepalese travel agency established in 2024 near Airport, Kathmandu, Nepal, operating exclusively on https://triphimalaya.com.np. Not affiliated with triphimalaya.com.",
+      "foundingDate": "2024-10-22",
+      "taxID": "621233773",
+      "vatID": "621233773",
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "CompanyRegistrationNumber",
+          "name": "Government Company Registration No. (Office of the Company Registrar, Nepal)",
+          "value": "354065/81/82"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "PAN",
+          "name": "Permanent Account Number / VAT (Inland Revenue Department Battisputali, Nepal)",
+          "value": "621233773"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "TourismLicense",
+          "name": "Travel Agency License No. (Tourism Office Kathmandu, Bagmati Province)",
+          "value": "4584/082/83"
+        }
+      ],
+      "disambiguatingDescription": "Trip Himalaya Tours and Travels Pvt. Ltd. (Company Registration No. 354065/81/82, PAN/VAT No. 621233773, Tourism License No. 4584/082/83) is an authorized Nepalese travel agency incorporated on October 22, 2024 (2081/07/06 BS), located at Ward No. 9, Shambhu Marg, Airport, Kathmandu, operating exclusively on https://triphimalaya.com.np. We are an independent entity and NOT affiliated with or related to triphimalaya.com (Trip Himalaya Treks & Expedition, established in 2004 in Kapurdhara).",
       "url": "https://triphimalaya.com.np/",
       "logo": "https://triphimalaya.com.np/Logo.png",
       "description":
@@ -34,7 +56,7 @@ export const pagesSEO: Record<string, SEOProps> = {
       "email": "triphimalayatt@gmail.com",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Airport, Sinamangal",
+        "streetAddress": "Ward No. 9, Shambhu Marg, Airport, Sinamangal",
         "addressLocality": "Kathmandu",
         "addressRegion": "Bagmati",
         "postalCode": "44600",

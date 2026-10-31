@@ -2,8 +2,10 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home8/triphima/public_html
-    - /bin/cp -R dist/* $DEPLOYPATH/
-    - /bin/cp dist/.htaccess $DEPLOYPATH/
+    - /bin/cp -f dist/.htaccess $DEPLOYPATH/.htaccess
+    - /bin/cp -Rf dist/* $DEPLOYPATH/
+    - /bin/cp -f dist/.htaccess $DEPLOYPATH/.htaccess
+    - /bin/rm -rf $DEPLOYPATH/cgi-bin
     - if [ -f .env.production ]; then /bin/cp -f .env.production /home8/triphima/.env.production; fi
     - if [ -f env.production ]; then /bin/cp -f env.production /home8/triphima/.env.production; fi
     - /bin/rm -f $DEPLOYPATH/.env.production $DEPLOYPATH/env.production

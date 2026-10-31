@@ -47,7 +47,7 @@ const About: React.FC = () => {
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { count: "10+", label: "Years of Experience", color: "#D92671" },
+                  { count: "10+", label: "Years Team Expertise in this Related Field", color: "#D92671" },
                   { count: "5000+", label: "Happy Travelers", color: "#5D2A8E" },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-white p-5 sm:p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all">
@@ -105,11 +105,11 @@ const About: React.FC = () => {
                 <span className="text-[#D92671] font-black uppercase tracking-[0.2em] text-[10px]">Growth & Success</span>
               </div>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#2D1347] tracking-tight mb-6 leading-tight">
-                A Decade of{" "}
-                <span className="text-[#5D2A8E]">Legacy in Numbers.</span>
+                Our Journey &amp;{" "}
+                <span className="text-[#5D2A8E]">Impact in Numbers.</span>
               </h2>
               <p className="text-slate-500 text-base font-medium leading-relaxed mb-8">
-                Since our inception in 2014, we've remained steadfast in our commitment to excellence, serving travelers with passion and precision across the Himalayas.
+                Since our incorporation in 2024, we've remained steadfast in our commitment to excellence, serving travelers with passion and precision across the Himalayas.
               </p>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                 <div className="flex items-center space-x-4">
@@ -117,8 +117,8 @@ const About: React.FC = () => {
                     <History size={22} className="text-[#D92671]" />
                   </div>
                   <div>
-                    <h4 className="font-black text-[#2D1347] text-sm uppercase tracking-wide">Founded in 2014</h4>
-                    <p className="text-xs font-bold text-slate-400">Trust built over 10+ professional years</p>
+                    <h4 className="font-black text-[#2D1347] text-sm uppercase tracking-wide">Established in 2024</h4>
+                    <p className="text-xs font-bold text-slate-400">Govt. Authorized • Reg No: 354065/81/82</p>
                   </div>
                 </div>
               </div>
@@ -209,7 +209,7 @@ const About: React.FC = () => {
               Fully Licensed & Trusted
             </h2>
             <p className="text-white/80 font-semibold text-base">
-              Registered under the Government of Nepal and affiliated with recognized tourism authorities.
+              Authorized by the Government of Nepal (Company Reg No: 354065/81/82, PAN: 621233773, Tourism License: 4584/082/83) and headquartered at Ward No. 9, Shambhu Marg, Airport, Kathmandu.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">

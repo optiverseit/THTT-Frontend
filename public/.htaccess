@@ -1,4 +1,14 @@
 # ------------------------------------------------------------------------------
+# 0. STRICT DIRECTORY INDEXING PREVENTION (Fixes LiteSpeed "Name Last Modified Size Directory")
+# Must be at the very top outside any <IfModule> for LiteSpeed/Apache to enforce globally
+# ------------------------------------------------------------------------------
+Options -Indexes -MultiViews
+DirectoryIndex index.html index.php
+
+# Redirect any cgi-bin directory or legacy script attempts permanently to homepage
+RedirectMatch 301 ^/cgi-bin(/.*)?$ /
+
+# ------------------------------------------------------------------------------
 # 1. SECURITY HEADERS: Anti-Phishing, Anti-Clickjacking & Data Protection
 # ------------------------------------------------------------------------------
 <IfModule mod_headers.c>
@@ -35,12 +45,13 @@
 </FilesMatch>
 
 <IfModule mod_rewrite.c>
-  # Prevent directory indexing (fixes LiteSpeed "Name Last Modified Size Directory" listing)
-  Options -Indexes
-  DirectoryIndex index.html index.php
-
   RewriteEngine On
   RewriteBase /
+
+  # ----------------------------------------------------------------------------
+  # DIRECTORY LISTING HARD-BLOCK (Never expose directory contents or cgi-bin)
+  # ----------------------------------------------------------------------------
+  RewriteRule ^cgi-bin(/.*)?$ / [R=301,L]
 
   # ----------------------------------------------------------------------------
   # CANONICAL REDIRECT: Enforce HTTPS & Non-WWW Domain
@@ -94,6 +105,15 @@
   RewriteRule ^service/([0-9a-zA-Z_-]+)/?$ share.php?type=service&id=$1 [L,QSA]
 
   RewriteRule ^index\.html$ - [L]
+
+  # If a requested directory has no index file, route directly to /index.html (never display directory listing)
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteCond %{REQUEST_URI} !^/?$
+  RewriteCond %{REQUEST_FILENAME}/index.html !-f
+  RewriteCond %{REQUEST_FILENAME}/index.php !-f
+  RewriteRule . /index.html [L]
+
+  # SPA catch-all fallback
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]

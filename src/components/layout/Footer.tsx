@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   MapPin,
@@ -315,6 +315,31 @@ const Footer: React.FC = () => {
               </a>
             ))}
           </div>
+        </div>
+
+        {/* ── GOVERNMENT CREDENTIALS & ENTITY VERIFICATION ── */}
+        <div className="border-t border-white/10 pt-6 pb-2 text-xs text-gray-400">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center">
+            <span className="font-semibold text-gray-300">
+              Govt. Reg No: <span className="text-white font-bold">354065/81/82</span>
+            </span>
+            <span className="hidden sm:inline text-gray-600">•</span>
+            <span className="font-semibold text-gray-300">
+              PAN / VAT: <span className="text-white font-bold">621233773</span>
+            </span>
+            <span className="hidden sm:inline text-gray-600">•</span>
+            <span className="font-semibold text-gray-300">
+              Tourism License No: <span className="text-white font-bold">4584/082/83</span>
+            </span>
+            <span className="hidden sm:inline text-gray-600">•</span>
+            <span className="font-semibold text-gray-300">
+              Head Office: <span className="text-white font-medium">Ward No. 9, Shambhu Marg, Airport, Kathmandu</span>
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-400 text-center mt-2.5">
+            Trip Himalaya Tours and Travels Pvt. Ltd. (est. 2024) operates exclusively on{" "}
+            <span className="text-rose-400 font-bold">triphimalaya.com.np</span>
+          </p>
         </div>
 
         {/* ── BOTTOM BAR: COPYRIGHT & DEVELOPED BY ── */}

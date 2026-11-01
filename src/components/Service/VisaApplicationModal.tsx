@@ -1253,7 +1253,11 @@ export const VisaApplicationModal: React.FC<VisaApplicationModalProps> = ({
               <span className="text-xs">{selectedOption.name}</span>
               <span className="text-gray-300">•</span>
               <span className="text-gray-600 font-semibold text-xs">
-                {selectedOption.days} Validity
+                {selectedOption.days?.includes("|")
+                  ? selectedOption.days.split("|").map((p) => p.trim()).join(" • ")
+                  : selectedOption.days?.toLowerCase().includes("valid")
+                  ? selectedOption.days
+                  : `${selectedOption.days} Validity`}
               </span>
               {guests > 1 && (
                 <>

@@ -8,6 +8,7 @@ export const registerUser = (userData: any) => {
 export const verifyEmailOtp = (data: {
   email: string;
   otp: string;
+
 }) => {
   return axiosInstance.post("/auth/verify-email-otp", data);
 };
@@ -354,6 +355,14 @@ export const getPermitFeeTiers = (
 export const getWorkPermitDocumentRequirements = (countryId: number) => {
   return axiosInstance.get(
     `/work-permit-document-requirements/${countryId}`
+  );
+};
+
+export const getWorkPermitCountryInformation = (
+  countryId: number | string
+) => {
+  return axiosInstance.get(
+    `/work-permit-country-information/${countryId}`
   );
 };
 

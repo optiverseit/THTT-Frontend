@@ -19,7 +19,7 @@ const ROMAN_RE = /^(i{1,3}|iv|vi{0,3}|ix|xi{0,3}|xiv|xv|xvi{0,3}|xix|xx)[\.\)]\s
 const ALPHA_SECTION_RE = /^[A-Z][\.\)]\s+/;
 const NUMBERED_RE = /^\d+[\.\)]\s+/;
 const LOWER_ALPHA_RE = /^[a-z][\.\)]\s+/;
-const BULLET_RE = /^[\u2022\u25cf\u25cb\-\*]\s+/;
+const BULLET_RE = /^[\u2022\u25cf\u25cb\-\*\+]\s+/;
 
 // If content contains advanced HTML elements (tables, iframes, styles), leave intact
 const COMPLEX_HTML_RE = /<(table|thead|tbody|tr|td|th|iframe|svg|video|audio)[\s>]/i;
@@ -70,7 +70,7 @@ export function formatDescription(raw: string | null | undefined): string {
       const isFirst = parts.length === 0;
       closeList();
       parts.push(
-        `<p style="font-weight:800;color:#200B3B;margin:${isFirst ? "0" : "16px"} 0 5px 0;font-size:0.95em;letter-spacing:0.01em;">${escapeHtml(
+        `<p style="font-weight:800;color:#200B3B;margin:${isFirst ? "0" : "16px"} 0 5px 0;font-size:0.95em;letter-spacing:0.01em;">${parseInlineFormatting(
           trimmed
         )}</p>`
       );
@@ -82,7 +82,7 @@ export function formatDescription(raw: string | null | undefined): string {
       const isFirst = parts.length === 0;
       closeList();
       parts.push(
-        `<p style="font-weight:700;color:#4B1E7A;margin:${isFirst ? "0" : "10px"} 0 4px 14px;font-size:0.89em;">${escapeHtml(
+        `<p style="font-weight:700;color:#4B1E7A;margin:${isFirst ? "0" : "10px"} 0 4px 14px;font-size:0.89em;">${parseInlineFormatting(
           trimmed
         )}</p>`
       );
@@ -197,8 +197,10 @@ function formatItemContent(content: string): string {
 /** Parses inline styling such as **bold** and escapes HTML safely */
 function parseInlineFormatting(str: string): string {
   const escaped = escapeHtml(str);
-  // Support **bold** syntax anywhere in text
-  return escaped.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700;color:#1F2937;">$1</strong>');
+  // Support **bold** and __bold__ syntax anywhere in text
+  return escaped
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700;color:#1F2937;">$1</strong>')
+    .replace(/__(.+?)__/g, '<strong style="font-weight:700;color:#1F2937;">$1</strong>');
 }
 
 /** Minimal HTML escaping for plain-text paths */

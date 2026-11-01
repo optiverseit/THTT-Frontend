@@ -9,7 +9,7 @@ import { services } from "../../../assets/data/mockData";
 import WorkPermitModal from "../WorkPermitModal";
 import WorkPermitPrintDossier from "./WorkPermitPrintDossier";
 import { Globe } from "lucide-react";
-import { getWorkPermitDocumentRequirementsByType, getPermitFeeTiers, getPublicWorkPermitHighlights } from "../../../api/BackendApi";
+import { getWorkPermitDocumentRequirementsByType, getPermitFeeTiers, getPublicWorkPermitHighlights, getWorkPermitCountryInformation } from "../../../api/BackendApi";
 import { isSessionValid } from "../../../utils/sessionManager";
 interface Country {
   id: number;
@@ -21,6 +21,14 @@ interface Country {
   processing_days: number;
   status: string;
   display_order: number;
+}
+export interface WorkPermitCountryInfo {
+  id: number;
+  country_id: number;
+  type: string;
+  content: string;
+  display_order: number;
+  status: string;
 }
 export interface DocumentRequirement {
   id: number;
@@ -61,6 +69,7 @@ const WorkPermitDetails = () => {
   const [documentRequirements, setDocumentRequirements] = useState<DocumentRequirement[]>([]);
   const [feeTiers, setFeeTiers] = useState<PermitFeeTier[]>([]);
   const [highlights, setHighlights] = useState<WorkPermitHighlight | null>(null);
+  const [countryInformation, setCountryInformation] = useState<WorkPermitCountryInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const hasRestoredPostLoginRef = useRef(false);
 
@@ -118,6 +127,7 @@ const WorkPermitDetails = () => {
             setSelectedCountry(null);
             setDocumentRequirements([]);
             setFeeTiers([]);
+            setCountryInformation([]);
           }
           return;
         }
@@ -129,6 +139,19 @@ const WorkPermitDetails = () => {
           getPublicWorkPermitHighlights(countryData.id)
             .then((res) => { if (!cancelled) setHighlights(res.data?.data ?? null); })
             .catch((err) => { if (!cancelled) { console.error("Failed to fetch work permit highlights:", err); setHighlights(null); } });
+          getWorkPermitCountryInformation(countryData.id)
+            .then((res) => {
+              if (!cancelled) {
+                const info = res.data?.data ?? [];
+                setCountryInformation(Array.isArray(info) ? info : []);
+              }
+            })
+            .catch((err) => {
+              if (!cancelled) {
+                console.error("Failed to fetch work permit country information:", err);
+                setCountryInformation([]);
+              }
+            });
           try {
             const feeResponse = await getPermitFeeTiers(countryData.id, apiPermitType);
             const tiers = feeResponse.data?.data?.data ?? [];
@@ -139,6 +162,7 @@ const WorkPermitDetails = () => {
           }
         } else {
           setFeeTiers([]);
+          setCountryInformation([]);
         }
       } catch (error) {
         console.error("Failed to fetch work permit details:", error);
@@ -147,6 +171,7 @@ const WorkPermitDetails = () => {
           setDocumentRequirements([]);
           setFeeTiers([]);
           setHighlights(null);
+          setCountryInformation([]);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -175,7 +200,7 @@ const WorkPermitDetails = () => {
   }
   return (
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-10 sm:pt-11 md:pt-12 pb-12 sm:pb-16 print:min-h-0 print:bg-white print:p-0 print:m-0">
-      <WorkPermitPrintDossier id={id} country={selectedCountry} permitType={apiPermitType} documentRequirements={documentRequirements} feeTiers={feeTiers} />
+      <WorkPermitPrintDossier id={id} country={selectedCountry} permitType={apiPermitType} documentRequirements={documentRequirements} feeTiers={feeTiers} countryInformation={countryInformation} />
       <div className="print:hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <PermitBanner id={id} country={selectedCountry} highlights={highlights} permitType={apiPermitType} />
         <div className="w-full">
@@ -184,6 +209,7 @@ const WorkPermitDetails = () => {
               id={id}
               country={selectedCountry}
               documentRequirements={documentRequirements}
+              countryInformation={countryInformation}
               costDetailsSlot={
                 <CostDetails
                   country={selectedCountry}

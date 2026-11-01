@@ -325,10 +325,10 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
                     Number(a?.display_order || 0) - Number(b?.display_order || 0)
                 )
                 .map((item: any, index: number) => ({
-                  name: String(item?.title || `Option ${index + 1}`),
+                  name: String(item?.title ?? item?.name ?? `Option ${index + 1}`),
                   days: String(item?.validity || ""),
                   nprPrice: Number(item?.price_npr || 0),
-                  entryType: String(item?.title || ""),
+                  entryType: String(item?.title ?? item?.entry_type ?? item?.name ?? ""),
                   description: item?.description || undefined,
                   visaPricingTierId: item?.id,
                   countryId: category.country_id,

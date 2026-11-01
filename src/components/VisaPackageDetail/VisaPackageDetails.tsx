@@ -105,14 +105,15 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
   const isPolicyItem = (item: any) => {
     const type = String(item?.type || "").toUpperCase();
     if (["POLICY", "POLICIES"].includes(type)) return true;
-    if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return false;
+    if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "TERMS_CONDITION", "TERMS_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return false;
+    if (type === "INCLUDED") return false;
     const text = String(item?.title || item?.content || "").toLowerCase();
-    return text.includes("policy") || text.includes("cancellation") || text.includes("refund");
+    return text.includes("policy") || text.includes("cancellation");
   };
 
   const isTermsItem = (item: any) => {
     const type = String(item?.type || "").toUpperCase();
-    if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return true;
+    if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "TERMS_CONDITION", "TERMS_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return true;
     if (["POLICY", "POLICIES"].includes(type)) return false;
     if (type === "INCLUDED") return false;
     const text = String(item?.title || item?.content || "").toLowerCase();
@@ -140,10 +141,10 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
   const costOptions: CostOption[] = [...pricing]
     .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
     .map((item, index) => ({
-      name: String(item?.name ?? item?.tier_name ?? item?.service ?? item?.entry_type ?? `Option ${index + 1}`),
+      name: String(item?.title ?? item?.name ?? item?.tier_name ?? item?.service ?? item?.entry_type ?? `Option ${index + 1}`),
       days: String(item?.validity ?? item?.validity_period ?? item?.duration ?? item?.stay_duration ?? item?.days ?? ""),
       nprPrice: Number(item?.price_npr ?? item?.amount_npr ?? item?.price ?? 0),
-      entryType: String(item?.entry_type ?? item?.type ?? item?.service ?? item?.name ?? "Visa"),
+      entryType: String(item?.entry_type ?? item?.title ?? item?.type ?? item?.service ?? item?.name ?? "Visa"),
       description: item?.description ?? undefined,
       visaPricingTierId: item?.id,
       countryId: category.country_id,
@@ -204,10 +205,10 @@ const VisaPackageDetails: React.FC = () => {
               .filter((item) => item?.status !== "INACTIVE")
               .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
               .map((item, index) => ({
-                name: String(item?.title || `Option ${index + 1}`),
+                name: String(item?.title ?? item?.name ?? `Option ${index + 1}`),
                 days: String(item?.validity || ""),
                 nprPrice: Number(item?.price_npr || 0),
-                entryType: String(item?.title || ""),
+                entryType: String(item?.title ?? item?.entry_type ?? item?.name ?? ""),
                 description: item?.description || undefined,
                 visaPricingTierId: item?.id,
                 countryId: category.country_id,
@@ -305,14 +306,15 @@ const VisaPackageDetails: React.FC = () => {
           const isPolicyItem = (item: any) => {
             const type = String(item?.type || "").toUpperCase();
             if (["POLICY", "POLICIES"].includes(type)) return true;
-            if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return false;
+            if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "TERMS_CONDITION", "TERMS_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return false;
+            if (type === "INCLUDED") return false;
             const text = String(item?.title || item?.content || "").toLowerCase();
-            return text.includes("policy") || text.includes("cancellation") || text.includes("refund");
+            return text.includes("policy") || text.includes("cancellation");
           };
 
           const isTermsItem = (item: any) => {
             const type = String(item?.type || "").toUpperCase();
-            if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return true;
+            if (["TERMS", "TERM", "TERMS_AND_CONDITIONS", "TERMS_CONDITION", "TERMS_CONDITIONS", "CONDITION", "CONDITIONS"].includes(type)) return true;
             if (["POLICY", "POLICIES"].includes(type)) return false;
             if (type === "INCLUDED") return false;
             const text = String(item?.title || item?.content || "").toLowerCase();

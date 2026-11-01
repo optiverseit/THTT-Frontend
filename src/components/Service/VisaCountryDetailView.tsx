@@ -62,6 +62,51 @@ export interface CostOption {
   countryId?: number | string;
   visaCategoryId?: number | string;
 }
+
+/**
+ * Safely compares two CostOptions to determine if they represent the same tier/option.
+ * Ensures that different tiers with the same name (e.g. two "Single Entry" tiers with different validity/pricing)
+ * are distinct and can be individually selected.
+ */
+export const isSameCostOption = (
+  a?: CostOption | null,
+  b?: CostOption | null
+): boolean => {
+  if (!a || !b) return false;
+  if (a === b) return true;
+
+  // 1. Primary check: unique tier ID (coerced to string for number vs string compatibility)
+  if (a.visaPricingTierId != null && b.visaPricingTierId != null) {
+    return String(a.visaPricingTierId) === String(b.visaPricingTierId);
+  }
+
+  // 2. Strict match: name, validity/days, and price
+  if (
+    a.name === b.name &&
+    a.days === b.days &&
+    Number(a.nprPrice) === Number(b.nprPrice)
+  ) {
+    return true;
+  }
+
+  // 3. Match on name and days if days are present
+  if (a.name === b.name && a.days && b.days && a.days === b.days) {
+    return true;
+  }
+
+  // 4. Fallback only if neither has tier ID and neither has conflicting days/price
+  if (
+    a.visaPricingTierId == null &&
+    b.visaPricingTierId == null &&
+    a.name === b.name &&
+    (!a.days || !b.days || a.days === b.days) &&
+    (!a.nprPrice || !b.nprPrice || Number(a.nprPrice) === Number(b.nprPrice))
+  ) {
+    return true;
+  }
+
+  return false;
+};
 export interface VisaDetailPlan {
   id: string;
   country: string;
@@ -156,33 +201,9 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   const hasRestoredPostLoginRef = useRef(false);
   const previousPlanIdRef = useRef(plan.id);
 
-  // Split policies and terms & conditions cleanly into separate datasets
-  const isPolicyText = (text: string) =>
-    /^(policy|policies|cancellation|refund|embassy authority|rescheduling|disclaimer)/i.test(text.trim()) ||
-    /\b(policy|refund policy|cancellation policy|embassy advisory|authority notice)\b/i.test(text);
-
-  const rawPolicies = plan.policies || [];
-  const rawTerms = plan.termsAndConditions || [];
-
-  let displayPolicies: string[] = [...rawPolicies];
-  let displayTerms: string[] = [...rawTerms];
-
-  if (displayPolicies.length === 0 && displayTerms.length > 0) {
-    const extractedPolicies = displayTerms.filter(isPolicyText);
-    if (extractedPolicies.length > 0) {
-      displayPolicies = extractedPolicies;
-      displayTerms = displayTerms.filter((t) => !isPolicyText(t));
-    }
-  }
-
-  if (displayTerms.length === 0) {
-    displayTerms = [
-      "Consular Authority: Visa grant, rejection, validity duration, and entry permissions are under the exclusive authority of the respective embassy/consulate.",
-      "Non-Refundable Processing: Consular application charges and counseling documentation fees are non-refundable once processed.",
-      "Document Authenticity: All applicant records, financial statements, and relationship certificates must be authentic, valid, and verifiable.",
-      "Translation & Notarization: Documents issued in Nepali (Civil, Land, Tax) must carry certified English translation and legal notarization."
-    ];
-  }
+  // Policies and terms & conditions directly from API database
+  const displayPolicies: string[] = plan.policies || [];
+  const displayTerms: string[] = plan.termsAndConditions || [];
   // Update selected option when plan changes or extra options arrive
   useEffect(() => {
     if (previousPlanIdRef.current !== plan.id) {
@@ -202,11 +223,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
       }
     } else if (plan.costOptions && plan.costOptions.length > 0) {
       setSelectedCostOption((current) => {
-        const found = plan.costOptions?.find(
-          (opt) =>
-            (current?.visaPricingTierId && opt.visaPricingTierId === current.visaPricingTierId) ||
-            (current?.name && current.name.trim() !== "" && opt.name === current.name)
-        );
+        const found = plan.costOptions?.find((opt) => isSameCostOption(opt, current));
         // Default to the first option if current is not in the new options list
         return found || plan.costOptions![0];
       });
@@ -239,7 +256,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         setSelectedCostOption(savedState.selectedCostOption);
       } else if (savedState.visaPricingTierId && plan.costOptions) {
         const matched = plan.costOptions.find(
-          (opt) => opt.visaPricingTierId === savedState.visaPricingTierId
+          (opt) => String(opt.visaPricingTierId) === String(savedState.visaPricingTierId)
         );
         if (matched) setSelectedCostOption(matched);
       } else if (savedState.selectedOptionName && plan.costOptions) {
@@ -330,11 +347,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
   // Guarantee the first cost option is selected by default
   const activeCostOption: CostOption =
     costOptionsList.length > 0
-      ? (costOptionsList.find(
-          (opt) =>
-            (selectedCostOption?.visaPricingTierId && opt.visaPricingTierId === selectedCostOption.visaPricingTierId) ||
-            (selectedCostOption?.name && selectedCostOption.name.trim() !== "" && opt.name === selectedCostOption.name)
-        ) || costOptionsList[0])
+      ? (costOptionsList.find((opt) => isSameCostOption(opt, selectedCostOption)) || costOptionsList[0])
       : selectedCostOption;
 
   const handleIncreaseGuestCount = (): void => {
@@ -603,8 +616,8 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             <table className="w-full text-xs text-left">
               <thead className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                 <tr>
-                  <th className="pb-2">Option / Tier</th>
-                  <th className="pb-2">Validity</th>
+                  <th className="pb-2 pr-2">Option / Tier</th>
+                  <th className="pb-2 pr-2">Validity</th>
                   <th className="pb-2 text-right">Price</th>
                 </tr>
               </thead>
@@ -620,37 +633,76 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                   </tr>
                 ) : costOptionsList.length > 0 ? (
                   costOptionsList.map((pricingRow, rowIndex) => {
-                    const isSelected =
-                      activeCostOption?.visaPricingTierId && pricingRow?.visaPricingTierId
-                        ? activeCostOption.visaPricingTierId === pricingRow.visaPricingTierId
-                        : activeCostOption?.name === pricingRow?.name;
+                    const isSelected = isSameCostOption(activeCostOption, pricingRow);
 
                     return (
                       <tr
-                        key={rowIndex}
+                        key={pricingRow.visaPricingTierId ? `tier-${pricingRow.visaPricingTierId}` : `${pricingRow.name}-${pricingRow.days}-${rowIndex}`}
                         onClick={() => setSelectedCostOption(pricingRow)}
                         className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected
                             ? "bg-purple-50/70 font-bold"
                             : ""
                           }`}
                       >
-                        <td className="py-2.5 font-bold text-[#200B3B] text-xs">
+                        <td className="py-2.5 pr-2 font-bold text-[#200B3B] text-xs">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`w-2 h-2 rounded-full border ${isSelected
+                              className={`w-2 h-2 rounded-full border transition-all shrink-0 ${isSelected
                                   ? "bg-[#E91E63] border-[#E91E63]"
                                   : "border-gray-300"
                                 }`}
                             />
-                            <span>{pricingRow.name}</span>
+                            {pricingRow.name?.includes("|") ? (
+                              <div className="flex flex-col leading-snug">
+                                {pricingRow.name
+                                  .split("|")
+                                  .map((p) => p.trim())
+                                  .filter(Boolean)
+                                  .map((part, pIdx) => (
+                                    <span
+                                      key={pIdx}
+                                      className={
+                                        pIdx === 0
+                                          ? "font-bold text-[#200B3B]"
+                                          : "text-[10px] font-normal text-gray-500"
+                                      }
+                                    >
+                                      {part}
+                                    </span>
+                                  ))}
+                              </div>
+                            ) : (
+                              <span>{pricingRow.name}</span>
+                            )}
                           </div>
                         </td>
 
-                        <td className="py-2.5 text-gray-500 text-[11px]">
-                          {pricingRow.days}
+                        <td className="py-2.5 pr-2 text-gray-500 text-[11px] leading-snug">
+                          {pricingRow.days?.includes("|") ? (
+                            <div className="flex flex-col">
+                              {pricingRow.days
+                                .split("|")
+                                .map((part) => part.trim())
+                                .filter(Boolean)
+                                .map((part, pIdx) => (
+                                  <span
+                                    key={pIdx}
+                                    className={
+                                      pIdx === 0
+                                        ? "text-gray-700 font-semibold whitespace-nowrap"
+                                        : "text-[10px] text-gray-400 font-normal whitespace-nowrap"
+                                    }
+                                  >
+                                    {part}
+                                  </span>
+                                ))}
+                            </div>
+                          ) : (
+                            <span className="whitespace-nowrap">{pricingRow.days}</span>
+                          )}
                         </td>
 
-                        <td className="py-2.5 text-right font-black text-[#E91E63] text-sm">
+                        <td className="py-2.5 text-right font-black text-[#E91E63] text-sm whitespace-nowrap">
                           {getRowDisplayPrice(pricingRow.nprPrice)}
                         </td>
                       </tr>
@@ -938,10 +990,10 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             </thead>
             <tbody>
               {costOptionsList.map((opt, idx) => {
-                const isSel = selectedCostOption.name === opt.name;
+                const isSel = isSameCostOption(activeCostOption, opt);
                 return (
                   <tr
-                    key={idx}
+                    key={opt.visaPricingTierId ? `print-tier-${opt.visaPricingTierId}` : idx}
                     style={{
                       background: isSel ? "#fdf2f8" : idx % 2 === 0 ? "#ffffff" : "#faf5ff",
                       borderBottom: "1px solid #f3e8ff",
@@ -959,7 +1011,17 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
                       </div>
                     </td>
                     <td style={{ padding: "6px 8px", textAlign: "center", color: "#6b21a8" }}>
-                      {opt.days}
+                      {opt.days?.includes("|") ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
+                          {opt.days.split("|").map((p, i) => (
+                            <span key={i} style={{ fontSize: i > 0 ? "7.5px" : "8.5px", color: i > 0 ? "#7e22ce" : "#6b21a8" }}>
+                              {p.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        opt.days
+                      )}
                     </td>
                     <td style={{ padding: "6px 8px", textAlign: "center", color: "#7c3aed" }}>
                       {plan.processingTime}
@@ -979,7 +1041,7 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           <div style={{ background: "linear-gradient(90deg, #2D1347 0%, #3B145C 50%, #4a1c7a 100%)", color: "#ffffff", borderRadius: "0 0 8px 8px", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "3px solid #E91E63" }}>
             <div>
               <span style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.05em", color: "#f5d0fe", display: "block" }}>
-                Total Estimated Payable ({numberOfGuests} {numberOfGuests === 1 ? "Applicant" : "Applicants"} • {selectedCostOption.name})
+                Total Estimated Payable ({numberOfGuests} {numberOfGuests === 1 ? "Applicant" : "Applicants"} • {activeCostOption.name}{activeCostOption.days ? ` (${activeCostOption.days})` : ""})
               </span>
               <span style={{ fontSize: "8.5px", color: "#e9d5ff" }}>
                 Includes embassy fee, appointment booking, day-to-day itinerary, flight &amp; hotel vouchers, and dossier audit.
@@ -1011,21 +1073,16 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
               Our expert visa officers prepare your application strictly compliant with {plan.country} consular standards:
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              {[
-                { title: "Embassy / VFS Appointment Booking", desc: "Confirmed appointment scheduling & biometric slot reservation." },
-                { title: "Cover Letter & Day-by-Day Itinerary", desc: "Customized statement of purpose & embassy-compliant trip plan." },
-                { title: "Flight Reservations & Hotel Vouchers", desc: "Confirmed booking vouchers matching your travel schedule." },
-                { title: "Financial Dossier & Sponsor Audit", desc: "Verification of bank statements, source of funds & property ties." },
-                { title: "Translation & Notarization Guidance", desc: "Official Nepali-to-English translation & verification assistance." },
-              ].map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
-                  <span style={{ color: "#E91E63", fontWeight: 900, fontSize: "11px", lineHeight: 1 }}>✓</span>
-                  <div>
-                    <span style={{ fontSize: "9.5px", fontWeight: 800, color: "#2D1347" }}>{item.title}: </span>
-                    <span style={{ fontSize: "9px", color: "#581c87" }}>{item.desc}</span>
+              {plan.inclusions && plan.inclusions.length > 0 ? (
+                plan.inclusions.map((inc, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                    <span style={{ color: "#E91E63", fontWeight: 900, fontSize: "11px", lineHeight: 1 }}>✓</span>
+                    <span style={{ fontSize: "9px", color: "#581c87" }}>{inc}</span>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div style={{ fontSize: "8.5px", color: "#9ca3af", padding: "4px 0" }}>No service inclusions specified.</div>
+              )}
             </div>
           </div>
           {/* Right: Documents Checklist */}
@@ -1085,10 +1142,13 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
             </span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: "8.5px", color: "#4a154b", lineHeight: 1.35 }}>
-            <div>• <strong style={{ color: "#2D1347" }}>Consular Discretion:</strong> Visa grant, validity, and entry permissions are under the exclusive authority of the embassy/consulate.</div>
-            <div>• <strong style={{ color: "#2D1347" }}>Non-Refundable Terms:</strong> Consular application charges and counseling documentation fees are non-refundable once processed.</div>
-            <div>• <strong style={{ color: "#2D1347" }}>Document Authenticity:</strong> All applicant records must be authentic, valid, and verifiable upon embassy background checks.</div>
-            <div>• <strong style={{ color: "#2D1347" }}>Translation Requirement:</strong> Documents issued in Nepali (Civil, Land, Tax) must carry certified translation and legal notarization.</div>
+            {(displayPolicies.length > 0 || displayTerms.length > 0) ? (
+              [...displayPolicies, ...displayTerms].slice(0, 6).map((item, i) => (
+                <div key={i}>• {item}</div>
+              ))
+            ) : (
+              <div style={{ color: "#9ca3af" }}>No policies or terms specified.</div>
+            )}
           </div>
         </div>
         {/* ── 6. CORPORATE FOOTER ── */}
@@ -1245,77 +1305,72 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
         {/* LEFT COLUMN: About Visa, Requirement Document, Terms & Conditions */}
         <div className="lg:col-span-2 space-y-8">
           {/* # About Visa */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
-            <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-              About {plan.country} Visa
-            </h3>
-            <div className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium space-y-3">
-              <div
-                dangerouslySetInnerHTML={{
-                  __html:
-                    formatDescription(plan.aboutText) ||
-                    `<p>Nepali passport holders require a pre-approved tourist visa to enter ${plan.country}. All applicants must fulfill embassy regulations, submit biometric details where applicable, and demonstrate genuine travel intent with verified funds and return reservations.</p>`,
-                }}
-              />
-              <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
-                Trip Himalaya Tours &amp; Travel assists you through the complete process: document auditing, certified translations, embassy application filing, confirmed flight and hotel booking vouchers, and 24/7 dedicated visa assistance.
-              </p>
+          {Boolean(plan.aboutText && plan.aboutText.trim()) && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-4">
+              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                About {plan.country} Visa
+              </h3>
+              <div className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: formatDescription(plan.aboutText),
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* # What Is Covered */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm space-y-5 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 border border-emerald-200 shadow-xs">
-                  <CheckCircle2 size={20} className="stroke-[2.5]" />
+          {(informationLoading || (plan.inclusions && plan.inclusions.length > 0)) && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm space-y-5 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 border border-emerald-200 shadow-xs">
+                    <CheckCircle2 size={20} className="stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                      What is Covered
+                    </h3>
+                    <p className="text-xs text-gray-500 font-medium">Included services, counseling scope &amp; visa guidance</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                    What is Covered
-                  </h3>
-                  <p className="text-xs text-gray-500 font-medium">Included services, counseling scope &amp; visa guidance</p>
-                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+                  Service Inclusions
+                </span>
               </div>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
-                Service Inclusions
-              </span>
-            </div>
 
-            <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed">
-              Our comprehensive visa counseling and documentation assistance covers the following key services:
-            </p>
+              <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed">
+                Our comprehensive visa counseling and documentation assistance covers the following key services:
+              </p>
 
-            {/* Inclusions shown in Two Columns within a Single Unified Card */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
-              {informationLoading ? (
-                <div className="col-span-full py-6 text-xs sm:text-sm font-semibold text-gray-400">Loading covered services...</div>
-              ) : plan.inclusions.length > 0 ? (
-                plan.inclusions.map((inc: string, idx: number) => {
-                  const customBullet = /^(\p{Extended_Pictographic}|\p{Emoji}|[•\-\*\u2700-\u27BF\uE000-\uF8FF])/u.test(inc.trim());
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50/40 hover:bg-emerald-50/70 border border-emerald-100/60 transition-all group"
-                    >
-                      {!customBullet && (
-                        <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-emerald-200 transition-colors">
-                          <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
-                        </div>
-                      )}
-                      <span className="text-xs sm:text-[13px] text-gray-800 font-medium leading-relaxed flex-1">
-                        {inc}
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="col-span-full py-3 text-xs text-gray-500 bg-emerald-50/20 rounded-xl p-3 border border-emerald-100">
-                  No service information available.
-                </div>
-              )}
+              {/* Inclusions shown in Two Columns within a Single Unified Card */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                {informationLoading ? (
+                  <div className="col-span-full py-6 text-xs sm:text-sm font-semibold text-gray-400">Loading covered services...</div>
+                ) : (
+                  plan.inclusions.map((inc: string, idx: number) => {
+                    const customBullet = /^(\p{Extended_Pictographic}|\p{Emoji}|[•\-\*\u2700-\u27BF\uE000-\uF8FF])/u.test(inc.trim());
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50/40 hover:bg-emerald-50/70 border border-emerald-100/60 transition-all group"
+                      >
+                        {!customBullet && (
+                          <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-emerald-200 transition-colors">
+                            <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
+                          </div>
+                        )}
+                        <span className="text-xs sm:text-[13px] text-gray-800 font-medium leading-relaxed flex-1">
+                          {inc}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── PRICING & TRUST CARDS ON MOBILE (just below About Visa) ── */}
           <div id="pricing-section-mobile" className="lg:hidden">
@@ -1323,201 +1378,198 @@ export const VisaCountryDetailView: React.FC<VisaCountryDetailViewProps> = ({
           </div>
 
           {/* # Requirement Document */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                Requirement Document
-              </h3>
-              <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
-                Official Checklist
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Please ensure all documents are clear, valid, and prepared prior to embassy submission:
-            </p>
+          {Boolean(
+            documentsLoading ||
+            (plan.documentRequirements && plan.documentRequirements.length > 0) ||
+            (plan.requirementDocuments && plan.requirementDocuments.length > 0)
+          ) && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                  Requirement Document
+                </h3>
+                <span className="text-xs font-bold text-[#E91E63] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
+                  Official Checklist
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Please ensure all documents are clear, valid, and prepared prior to embassy submission:
+              </p>
 
-            {/* Single unified topic-wise card with compact rows & red asterisk for required */}
-            <div className="rounded-2xl border border-gray-100 bg-gray-50/40 divide-y divide-gray-100 overflow-hidden">
-              {documentsLoading ? (
-                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading required documents...</div>
-              ) : (plan.documentRequirements && plan.documentRequirements.length > 0) ? (
-                plan.documentRequirements.map((doc, idx) => {
-                  const title = doc.title || doc.name || doc.document_type || `Document ${idx + 1}`;
-                  const hasDescription = Boolean(doc.description && doc.description.trim());
+              {/* Single unified topic-wise card with compact rows & red asterisk for required */}
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/40 divide-y divide-gray-100 overflow-hidden">
+                {documentsLoading ? (
+                  <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading required documents...</div>
+                ) : (plan.documentRequirements && plan.documentRequirements.length > 0) ? (
+                  plan.documentRequirements.map((doc, idx) => {
+                    const title = doc.title || doc.name || doc.document_type || `Document ${idx + 1}`;
+                    const hasDescription = Boolean(doc.description && doc.description.trim());
 
-                  return (
-                    <div
-                      key={doc.id || idx}
-                      className="p-2.5 sm:p-3 hover:bg-white transition-colors space-y-0.5"
-                    >
-                      {(() => {
-                        const customBullet = hasCustomBullet(title);
-                        return (
-                          <div className="flex items-start gap-2">
-                            {!customBullet && (
-                              <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <h4 className="text-xs sm:text-[13px] font-semibold text-gray-900 leading-snug">
-                                  {title}
-                                </h4>
-                                {doc.is_required !== false ? (
-                                  <span className="text-red-500 font-bold text-xs leading-none select-none" title="Required Document">*</span>
-                                ) : (
-                                  <span className="text-[9px] font-semibold text-gray-400 italic">(optional)</span>
-                                )}
+                    return (
+                      <div
+                        key={doc.id || idx}
+                        className="p-2.5 sm:p-3 hover:bg-white transition-colors space-y-0.5"
+                      >
+                        {(() => {
+                          const customBullet = hasCustomBullet(title);
+                          return (
+                            <div className="flex items-start gap-2">
+                              {!customBullet && (
+                                <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <h4 className="text-xs sm:text-[13px] font-semibold text-gray-900 leading-snug">
+                                    {title}
+                                  </h4>
+                                  {doc.is_required !== false ? (
+                                    <span className="text-red-500 font-bold text-xs leading-none select-none" title="Required Document">*</span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold text-gray-400 italic">(optional)</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
+                          );
+                        })()}
+
+                        {hasDescription && (
+                          <div
+                            className="text-[11px] sm:text-xs text-gray-500 pl-6 leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: formatDescription(doc.description) }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (plan.requirementDocuments && plan.requirementDocuments.length > 0) ? (
+                  plan.requirementDocuments.map((req: string, idx: number) => {
+                    const customBullet = hasCustomBullet(req);
+                    return (
+                      <div key={idx} className="flex items-start gap-2 p-2.5 sm:p-3 hover:bg-white transition-colors">
+                        {!customBullet && (
+                          <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
                           </div>
-                        );
-                      })()}
-
-                      {hasDescription && (
+                        )}
                         <div
-                          className="text-[11px] sm:text-xs text-gray-500 pl-6 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: formatDescription(doc.description) }}
+                          className="text-xs sm:text-[13px] font-medium text-gray-800 leading-snug flex-1"
+                          dangerouslySetInnerHTML={{ __html: formatDescription(req) }}
                         />
-                      )}
-                    </div>
-                  );
-                })
-              ) : (plan.requirementDocuments && plan.requirementDocuments.length > 0) ? (
-                plan.requirementDocuments.map((req: string, idx: number) => {
-                  const customBullet = hasCustomBullet(req);
-                  return (
-                    <div key={idx} className="flex items-start gap-2 p-2.5 sm:p-3 hover:bg-white transition-colors">
-                      {!customBullet && (
-                        <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <CheckCircle2 size={11} className="text-emerald-700 stroke-[2.5]" />
-                        </div>
-                      )}
-                      <div
-                        className="text-xs sm:text-[13px] font-medium text-gray-800 leading-snug flex-1"
-                        dangerouslySetInnerHTML={{ __html: formatDescription(req) }}
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">No document requirements available.</div>
-              )}
-            </div>
+                      </div>
+                    );
+                  })
+                ) : null}
+              </div>
 
-            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
-              <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                <strong>Important Note:</strong> Documents issued in Nepali (such as Citizenship, Relationship Certificates, or Land Ownership) must be officially translated into English and notarized. Trip Himalaya provides certified notarization and translation services.
-              </p>
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  <strong>Important Note:</strong> Documents issued in Nepali (such as Citizenship, Relationship Certificates, or Land Ownership) must be officially translated into English and notarized. Trip Himalaya provides certified notarization and translation services.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── CARD 1: Policies & Embassy Guidelines ── */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-purple-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 border border-purple-100">
-                  <ShieldCheck size={20} />
+          {(informationLoading || (displayPolicies && displayPolicies.length > 0)) && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-purple-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 border border-purple-100">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                      Visa &amp; Embassy Policies
+                    </h3>
+                    <p className="text-xs text-gray-500 font-medium">Consular rules, processing regulations &amp; service policies</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                    Visa &amp; Embassy Policies
-                  </h3>
-                  <p className="text-xs text-gray-500 font-medium">Consular rules, processing regulations &amp; service policies</p>
-                </div>
+                <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                  Official Policy
+                </span>
               </div>
-              <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
-                Official Policy
-              </span>
-            </div>
 
-            {/* Single unified topic card container */}
-            <div className="rounded-2xl border border-purple-100/80 bg-purple-50/20 divide-y divide-purple-100/60 overflow-hidden">
-              {informationLoading ? (
-                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading visa policies...</div>
-              ) : displayPolicies && displayPolicies.length > 0 ? (
-                displayPolicies.map((policy: string, idx: number) => {
-                  const customBullet = hasCustomBullet(policy);
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-2.5 p-2.5 sm:p-3 hover:bg-purple-50/40 transition-colors"
-                    >
-                      {!customBullet && (
-                        <div className="w-4 h-4 rounded bg-purple-100 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <ShieldCheck size={11} />
-                        </div>
-                      )}
+              {/* Single unified topic card container */}
+              <div className="rounded-2xl border border-purple-100/80 bg-purple-50/20 divide-y divide-purple-100/60 overflow-hidden">
+                {informationLoading ? (
+                  <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading visa policies...</div>
+                ) : (
+                  displayPolicies.map((policy: string, idx: number) => {
+                    const customBullet = hasCustomBullet(policy);
+                    return (
                       <div
-                        className="text-xs sm:text-[13px] text-gray-700 leading-relaxed font-normal flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
-                        dangerouslySetInnerHTML={{ __html: formatDescription(policy) }}
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="py-3 text-xs text-gray-600 p-3 flex items-start gap-2">
-                  <ShieldCheck size={14} className="text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span>
-                    Visa grant, validity, and entry permissions are under the sole authority of the respective Embassy/Consulate. Consular application fees and processing charges are non-refundable once submitted.
-                  </span>
-                </div>
-              )}
+                        key={idx}
+                        className="flex items-start gap-2.5 p-2.5 sm:p-3 hover:bg-purple-50/40 transition-colors"
+                      >
+                        {!customBullet && (
+                          <div className="w-4 h-4 rounded bg-purple-100 text-[#4B1E7A] flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <ShieldCheck size={11} />
+                          </div>
+                        )}
+                        <div
+                          className="text-xs sm:text-[13px] text-gray-700 leading-relaxed font-normal flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                          dangerouslySetInnerHTML={{ __html: formatDescription(policy) }}
+                        />
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── CARD 2: Terms and Conditions ── */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0 border border-amber-200">
-                  <FileText size={20} />
+          {(informationLoading || (displayTerms && displayTerms.length > 0)) && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0 border border-amber-200">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
+                      Terms &amp; Conditions
+                    </h3>
+                    <p className="text-xs text-gray-500 font-medium">Application commitments, documentation honesty &amp; client terms</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#2D1347] tracking-tight">
-                    Terms &amp; Conditions
-                  </h3>
-                  <p className="text-xs text-gray-500 font-medium">Application commitments, documentation honesty &amp; client terms</p>
-                </div>
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                  Legal Agreement
+                </span>
               </div>
-              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                Legal Agreement
-              </span>
-            </div>
 
-            {/* Single unified topic card container */}
-            <div className="rounded-2xl border border-amber-100/80 bg-amber-50/20 divide-y divide-amber-100/60 overflow-hidden">
-              {informationLoading ? (
-                <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
-              ) : displayTerms && displayTerms.length > 0 ? (
-                displayTerms.map((term: string, idx: number) => {
-                  const customBullet = hasCustomBullet(term);
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-2.5 p-2.5 sm:p-3 hover:bg-amber-50/40 transition-colors"
-                    >
-                      {!customBullet && (
-                        <div className="w-4 h-4 rounded bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-[10px] leading-none">
-                          •
-                        </div>
-                      )}
+              {/* Single unified topic card container */}
+              <div className="rounded-2xl border border-amber-100/80 bg-amber-50/20 divide-y divide-amber-100/60 overflow-hidden">
+                {informationLoading ? (
+                  <div className="py-6 px-4 text-xs sm:text-sm font-semibold text-gray-400">Loading terms and conditions...</div>
+                ) : (
+                  displayTerms.map((term: string, idx: number) => {
+                    const customBullet = hasCustomBullet(term);
+                    return (
                       <div
-                        className="text-xs sm:text-[13px] text-gray-700 leading-relaxed font-normal flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
-                        dangerouslySetInnerHTML={{ __html: formatDescription(term) }}
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="py-3 text-xs text-gray-500 p-3">
-                  All submitted paperwork must be genuine and verifiable. Client information is handled under strict data privacy protocols.
-                </div>
-              )}
+                        key={idx}
+                        className="flex items-start gap-2.5 p-2.5 sm:p-3 hover:bg-amber-50/40 transition-colors"
+                      >
+                        {!customBullet && (
+                          <div className="w-4 h-4 rounded bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-[10px] leading-none">
+                            •
+                          </div>
+                        )}
+                        <div
+                          className="text-xs sm:text-[13px] text-gray-700 leading-relaxed font-normal flex-1 [&>p:first-child]:!mt-0 [&>*:first-child]:!mt-0"
+                          dangerouslySetInnerHTML={{ __html: formatDescription(term) }}
+                        />
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {/* RIGHT COLUMN: Desktop Only */}
         <div id="pricing-section" className="hidden lg:block lg:col-span-1 lg:sticky lg:top-[150px] self-start space-y-4">

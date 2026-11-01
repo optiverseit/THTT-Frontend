@@ -32,25 +32,38 @@ interface DocumentRequirement {
   status: string;
 }
 
+export interface WorkPermitCountryInfoItem {
+  id: number;
+  country_id: number;
+  type: string;
+  content: string;
+  display_order: number;
+  status: string;
+}
+
 interface AboutPermitProps {
   id?: string;
   country: CountryProps;
   documentRequirements: DocumentRequirement[];
+  countryInformation?: WorkPermitCountryInfoItem[];
   costDetailsSlot?: React.ReactNode;
 }
 
 const AboutPermit = ({
   country,
   documentRequirements,
+  countryInformation = [],
   costDetailsSlot,
 }: AboutPermitProps) => {
-  const included = [
-    "Govt. Application Filling",
-    "FEO Coordination",
-    "Document Scanning",
-    "Insurance Help",
-    "Online Status Tracking",
-  ];
+  const apiIncluded = countryInformation
+    .filter(
+      (item) =>
+        item.type === "INCLUDED" &&
+        item.status === "ACTIVE" &&
+        item.content?.trim()
+    )
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((item) => item.content.trim());
 
   const policies = [
     "Non-Refundable Govt. & Welfare Fees (Once deposited into FEIMS portal)",
@@ -79,14 +92,18 @@ const AboutPermit = ({
           </h2>
         </header>
 
-        <div
-          className="text-gray-600 font-medium text-xs sm:text-sm leading-relaxed"
-          dangerouslySetInnerHTML={{
-            __html:
-              formatDescription(country.short_description) ||
-              "No description available.",
-          }}
-        />
+        {country.short_description ? (
+          <div
+            className="text-gray-600 font-medium text-base sm:text-[17px] leading-relaxed"
+            dangerouslySetInnerHTML={{
+              __html: formatDescription(country.short_description),
+            }}
+          />
+        ) : (
+          <p className="text-gray-400 font-semibold text-sm">
+            No description available.
+          </p>
+        )}
       </div>
 
       {/* ── MOBILE ONLY: PERMIT COST (Above Requirement Documents) ── */}
@@ -112,18 +129,18 @@ const AboutPermit = ({
             {documentRequirements.map((document) => {
               const customBullet = hasCustomBullet(document.title);
               return (
-                <div key={document.id} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-700 font-medium leading-snug">
+                <div key={document.id} className="flex items-start gap-2.5 text-sm sm:text-[15px] text-gray-700 font-medium leading-snug">
                   {!customBullet && (
-                    <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CircleCheck size={11} className="stroke-[2.5]" />
+                    <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CircleCheck size={13} className="stroke-[2.5]" />
                     </div>
                   )}
                   <div className="flex-1">
                     <span>{document.title}</span>
                     {document.is_required !== false ? (
-                      <span className="text-red-500 font-bold text-xs ml-1 select-none" title="Required Document">*</span>
+                      <span className="text-red-500 font-bold text-sm ml-1 select-none" title="Required Document">*</span>
                     ) : (
-                      <span className="text-[10px] text-gray-400 italic ml-1">(Optional)</span>
+                      <span className="text-xs text-gray-400 italic ml-1.5">(Optional)</span>
                     )}
                   </div>
                 </div>
@@ -138,32 +155,34 @@ const AboutPermit = ({
       </div>
 
       {/* ── CARD 3: WHAT'S INCLUDED ── */}
-      <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-200 border border-gray-100 p-6 sm:p-8">
-        <header className="flex items-center gap-2.5 mb-3.5">
-          <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0">
-            <Zap size={18} />
-          </div>
-          <h2 className="text-purple-950 font-bold text-base sm:text-xl tracking-tight">
-            WHAT&apos;S INCLUDED
-          </h2>
-        </header>
+      {apiIncluded.length > 0 && (
+        <div className="rounded-2xl sm:rounded-3xl bg-white shadow-xl shadow-gray-200 border border-gray-100 p-6 sm:p-8">
+          <header className="flex items-center gap-2.5 mb-3.5">
+            <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0">
+              <Zap size={18} />
+            </div>
+            <h2 className="text-purple-950 font-bold text-base sm:text-xl tracking-tight">
+              WHAT&apos;S INCLUDED
+            </h2>
+          </header>
 
-        <div className="space-y-2 mt-2">
-          {included.map((item, index) => {
-            const customBullet = hasCustomBullet(item);
-            return (
-              <div key={index} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-700 font-medium leading-snug">
-                {!customBullet && (
-                  <div className="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <CircleCheck size={11} className="stroke-[2.5]" />
-                  </div>
-                )}
-                <span className="flex-1">{item}</span>
-              </div>
-            );
-          })}
+          <div className="space-y-2.5 mt-2">
+            {apiIncluded.map((item, index) => {
+              const customBullet = hasCustomBullet(item);
+              return (
+                <div key={index} className="flex items-start gap-2.5 text-sm sm:text-[15px] text-gray-700 font-medium leading-snug">
+                  {!customBullet && (
+                    <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CircleCheck size={13} className="stroke-[2.5]" />
+                    </div>
+                  )}
+                  <span className="flex-1">{item}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* POLICY */}
       <div className="flex flex-col sm:flex-row items-stretch w-full justify-between gap-6 mt-6 sm:mt-8">

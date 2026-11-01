@@ -22,6 +22,14 @@ interface WorkPermitPrintDossierProps {
   permitType?: string;
   documentRequirements?: DocumentRequirement[];
   feeTiers?: PermitFeeTier[];
+  countryInformation?: Array<{
+    id: number;
+    country_id: number;
+    type: string;
+    content: string;
+    display_order: number;
+    status: string;
+  }>;
 }
 
 const getPermitTypeLabel = (type?: string): string => {
@@ -49,6 +57,7 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({
   permitType = "NEW_LABOUR_PERMIT",
   documentRequirements = [],
   feeTiers = [],
+  countryInformation = [],
 }) => {
   const refNumber = `THTT-WP-${country.country_code?.toUpperCase() || "INT"}-${new Date().getFullYear()}`;
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -65,14 +74,18 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({
     .filter((v) => Number.isFinite(v) && v > 0);
   const minStartingFee = validTotalFees.length > 0 ? Math.min(...validTotalFees) : null;
 
-  // Real sections from AboutPermit.tsx
-  const includedList = [
-    "Govt. Application Filling",
-    "FEO Coordination",
-    "Document Scanning",
-    "Insurance Help",
-    "Online Status Tracking",
-  ];
+  // Real inclusions from API
+  const apiIncluded = (countryInformation || [])
+    .filter(
+      (item) =>
+        item.type === "INCLUDED" &&
+        item.status === "ACTIVE" &&
+        item.content?.trim()
+    )
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((item) => item.content.trim());
+
+  const includedList = apiIncluded.length > 0 ? apiIncluded : [];
 
   const policiesList = [
     "Non-Refundable Govt. & Welfare Fees (Once deposited into FEIMS portal)",
@@ -585,50 +598,52 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({
           )}
 
           {/* What's Included (from AboutPermit.tsx) */}
-          <div
-            style={{
-              border: "1.5px solid #d8b4fe",
-              borderRadius: "6px",
-              padding: "7px 9px",
-              background: "#faf5ff",
-            }}
-          >
+          {includedList.length > 0 && (
             <div
               style={{
-                fontSize: "9px",
-                fontWeight: 900,
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-                color: "#2D1347",
-                borderBottom: "1.5px solid #e9d5ff",
-                paddingBottom: "3px",
-                marginBottom: "4px",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
+                border: "1.5px solid #d8b4fe",
+                borderRadius: "6px",
+                padding: "7px 9px",
+                background: "#faf5ff",
               }}
             >
-              <ShieldCheck size={10} color="#E91E63" />
-              <span>What&apos;s Included</span>
+              <div
+                style={{
+                  fontSize: "9px",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.03em",
+                  color: "#2D1347",
+                  borderBottom: "1.5px solid #e9d5ff",
+                  paddingBottom: "3px",
+                  marginBottom: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <ShieldCheck size={10} color="#E91E63" />
+                <span>What&apos;s Included</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                {includedList.map((inc, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "4px",
+                      fontSize: "8px",
+                      color: "#581c87",
+                    }}
+                  >
+                    <span style={{ fontWeight: 900, color: "#10b981", flexShrink: 0 }}>✓</span>
+                    <span style={{ lineHeight: "1.3" }}>{inc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
-              {includedList.map((inc, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "4px",
-                    fontSize: "8px",
-                    color: "#581c87",
-                  }}
-                >
-                  <span style={{ fontWeight: 900, color: "#10b981", flexShrink: 0 }}>✓</span>
-                  <span style={{ lineHeight: "1.3" }}>{inc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* COLUMN 2: Policy & Terms (from AboutPermit.tsx) */}

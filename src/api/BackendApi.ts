@@ -119,8 +119,8 @@ export const getCategories = () => {
 // PUBLIC PACKAGES
 // ==============================
 
-export const getPackages = () => {
-  return axiosInstance.get("/packages");
+export const getPackages = (params?: any) => {
+  return axiosInstance.get("/packages", { params });
 };
 
 export const getPackageById = (id: number | string) => {

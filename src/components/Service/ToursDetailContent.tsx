@@ -567,11 +567,9 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
                     )}
 
                     {tour.description && (
-                      <div
-                        className="mb-6 overflow-hidden"
-                        style={{ maxHeight: "5.5rem" }}
-                        dangerouslySetInnerHTML={{ __html: formatDescription(tour.description) }}
-                      />
+                      <p className="mb-6 text-xs sm:text-[13px] text-gray-500 font-normal leading-relaxed line-clamp-3">
+                        {stripDescription(tour.description, tour.title) || tour.description.replace(/<[^>]+>/g, " ").trim()}
+                      </p>
                     )}
                   </div>
                 </div>

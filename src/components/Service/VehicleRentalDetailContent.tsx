@@ -1599,14 +1599,10 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
                             </div>
 
                             {/* Vehicle Details / Information */}
-                            <div
-                              className="mb-2.5 overflow-hidden"
-                              style={{ maxHeight: "3.5rem" }}
-                              dangerouslySetInnerHTML={{
-                                __html: formatDescription(vehicle.description) ||
-                                  `<p style="color:#6B7280;font-size:0.8em;line-height:1.6;">${vehicle.vehicleType} with professional chauffeur service for reliable Nepal mountain highway and valley travel.</p>`
-                              }}
-                            />
+                            <p className="mb-2.5 text-xs text-gray-500 font-normal leading-relaxed line-clamp-2">
+                              {stripDescription(vehicle.description, vehicle.name) ||
+                                `${vehicle.vehicleType} with professional chauffeur service for reliable Nepal mountain highway and valley travel.`}
+                            </p>
 
                             {/* Structured Specifications Grid: 4 Balanced Items */}
                             <div className="my-2">

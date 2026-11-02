@@ -32,7 +32,7 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
 
   // Navigate to package details page
   const handleCardClick = () => {
-    navigate(getPackageUrl(pkg));
+    navigate(getPackageUrl(pkg), { state: { packageData: pkg } });
   };
 
   // Open WhatsApp for direct package inquiry

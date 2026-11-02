@@ -35,6 +35,7 @@ import {
   formatINR,
 } from "../../../context/CurrencyContext";
 import { useAuth } from "../../../context/AuthContext";
+import { getPackagePricingTiers } from "../../../api/BackendApi";
 import { isSessionValid, clearAuthSession } from "../../../utils/sessionManager";
 
 // =============================================================================
@@ -101,8 +102,40 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
   // Pricing Loading State From PackageDetails
   // ---------------------------------------------------------------------------
 
-  const { pricingLoading } =
-    useOutletContext<PackageOutletContext>();
+  const outletContext =
+    useOutletContext<PackageOutletContext>() || ({} as PackageOutletContext);
+  const pricingLoadingFromContext = outletContext?.pricingLoading ?? false;
+
+  const [directTiers, setDirectTiers] = useState<any[]>([]);
+  const [directLoading, setDirectLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    const rawTable = pkg?.pricingTable || (pkg as any)?.pricing_tiers;
+    if (
+      (!rawTable || rawTable.length === 0) &&
+      pkg?.id &&
+      /^\d+$/.test(String(pkg.id))
+    ) {
+      let active = true;
+      setDirectLoading(true);
+      getPackagePricingTiers(pkg.id)
+        .then((res) => {
+          if (!active) return;
+          const raw = res?.data?.data ?? res?.data;
+          const tiers = Array.isArray(raw) ? raw : [];
+          setDirectTiers(tiers);
+        })
+        .catch((err) =>
+          console.warn("Direct pricing fetch in PackagePricing failed:", err)
+        )
+        .finally(() => {
+          if (active) setDirectLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }
+  }, [pkg?.id, pkg?.pricingTable, (pkg as any)?.pricing_tiers]);
 
   // ---------------------------------------------------------------------------
   // Global Currency Context
@@ -176,14 +209,46 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
    * Builds the array of pricing rows to display in the table.
    * All prices are stored internally as raw NPR numbers.
    */
-  const pricingRows: PricingRow[] =
-    Array.isArray(pkg.pricingTable)
-      ? pkg.pricingTable.map((dataRow) => ({
-          serviceName: dataRow.service,
-          targetAgeGroup: dataRow.ageGroup,
-          priceInNPR: Number(dataRow.priceNepali),
-        }))
+  const sourceTable =
+    Array.isArray(pkg?.pricingTable) && pkg.pricingTable.length > 0
+      ? pkg.pricingTable
+      : Array.isArray((pkg as any)?.pricing_tiers) &&
+        (pkg as any).pricing_tiers.length > 0
+      ? (pkg as any).pricing_tiers
+      : directTiers.length > 0
+      ? directTiers
       : [];
+
+  const pricingRows: PricingRow[] =
+    sourceTable.length > 0
+      ? sourceTable.map((dataRow: any) => ({
+          serviceName:
+            dataRow.service || dataRow.serviceName || "Standard Package",
+          targetAgeGroup:
+            dataRow.ageGroup ||
+            dataRow.age_group ||
+            dataRow.targetAgeGroup ||
+            "All Ages",
+          priceInNPR: Number(
+            dataRow.priceNepali ??
+              dataRow.price_npr ??
+              dataRow.priceInNPR ??
+              0
+          ),
+        }))
+      : Number(pkg?.price || 0) > 0
+      ? [
+          {
+            serviceName: "Standard Package",
+            targetAgeGroup: "All Ages",
+            priceInNPR: Number(pkg?.price || 0),
+          },
+        ]
+      : [];
+
+  const isPricingLoading =
+    Boolean(pricingLoadingFromContext || directLoading) &&
+    pricingRows.length === 0;
 
   // ---------------------------------------------------------------------------
   // Estimated Total Calculation
@@ -452,7 +517,7 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
               ONLY PRICING BODY LOADING
               =============================================================== */}
 
-          {pricingLoading ? (
+          {isPricingLoading ? (
 
             <div className="min-h-[240px] flex items-center justify-center p-3 sm:p-3.5">
               <div className="flex flex-col items-center justify-center">
@@ -494,8 +559,16 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
 
                 <tbody className="divide-y divide-gray-100">
 
-                  {pricingRows.map(
-                    (pricingRow, rowIndex) => {
+                  {pricingRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-4 text-center text-xs text-gray-400">
+                        Contact us for custom pricing
+                      </td>
+                    </tr>
+                  ) : (
+                    pricingRows.map(
+                      (pricingRow, rowIndex) => {
+
 
                       const isSelected =
                         selectedTierIndex ===
@@ -569,7 +642,7 @@ const PackagePricing: React.FC<PackagePricingProps> = ({ pkg }) => {
                         </tr>
                       );
                     }
-                  )}
+                  ))}
 
                 </tbody>
               </table>

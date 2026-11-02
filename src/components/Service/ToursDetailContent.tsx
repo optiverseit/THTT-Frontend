@@ -502,7 +502,9 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
               <div
                 key={tour.id}
                 onClick={() =>
-                  navigate(getPackageUrl(tour))
+                  navigate(getPackageUrl(tour), {
+                    state: { packageData: tour },
+                  })
                 }
                 className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
               >
@@ -615,7 +617,8 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
                       e.stopPropagation();
 
                       navigate(
-                        getPackageUrl(tour)
+                        getPackageUrl(tour),
+                        { state: { packageData: tour } }
                       );
                     }}
                     className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"

@@ -53,7 +53,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
     if (onDetails) {
       onDetails(pkg);
     } else {
-      navigate(getPackageUrl(pkg));
+      navigate(getPackageUrl(pkg), { state: { packageData: pkg } });
     }
   };
 

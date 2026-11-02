@@ -259,10 +259,14 @@ import { getBackendRootUrl } from "../config/env";
 export const getPackagePublicTestimonials = (
   packageId: number | string
 ) => {
-  const rootUrl = getBackendRootUrl();
-  return axiosInstance.get(
-    `${rootUrl}/package-public-testimonials/${packageId}`
-  );
+  return axiosInstance
+    .get(`/package-public-testimonials/${packageId}`)
+    .catch(() => {
+      const rootUrl = getBackendRootUrl();
+      return axiosInstance.get(
+        `${rootUrl}/package-public-testimonials/${packageId}`
+      );
+    });
 };
 
 
@@ -274,10 +278,14 @@ export const getPackagePublicTestimonials = (
 export const getPackagePublicPolicies = (
   packageId: number | string
 ) => {
-  const rootUrl = getBackendRootUrl();
-  return axiosInstance.get(
-    `${rootUrl}/package-public-policies/${packageId}`
-  );
+  return axiosInstance
+    .get(`/package-public-policies/${packageId}`)
+    .catch(() => {
+      const rootUrl = getBackendRootUrl();
+      return axiosInstance.get(
+        `${rootUrl}/package-public-policies/${packageId}`
+      );
+    });
 };
 
 
@@ -289,10 +297,14 @@ export const getPackagePublicPolicies = (
 export const getPackagePublicGallery = (
   packageId: number | string
 ) => {
-  const rootUrl = getBackendRootUrl();
-  return axiosInstance.get(
-    `${rootUrl}/package-public-gallery/${packageId}`
-  );
+  return axiosInstance
+    .get(`/package-public-gallery/${packageId}`)
+    .catch(() => {
+      const rootUrl = getBackendRootUrl();
+      return axiosInstance.get(
+        `${rootUrl}/package-public-gallery/${packageId}`
+      );
+    });
 };
 
 

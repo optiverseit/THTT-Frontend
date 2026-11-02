@@ -13,6 +13,7 @@ import { Compass } from "lucide-react";
 import { SEO } from "../../reusable";
 import {
   getPackages,
+  getPackagesByCategory,
   getPackageById,
   getPackageInclusions,
   getPackageExclusions,
@@ -27,28 +28,81 @@ import {
   getPublicPackageGallery,
 } from "../../../api/BackendApi";
 import { packages as mockPackages } from "../../../assets/data/mockData";
+const normalizeSlug = (str?: string | null): string => {
+  if (!str) return "";
+  return str
+    .toString()
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "-and-")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/--+/g, "-");
+};
+
+const extractArray = (res: any): any[] => {
+  if (!res) return [];
+  const d = res.data ?? res;
+  if (Array.isArray(d)) return d;
+  if (Array.isArray(d?.data)) return d.data;
+  if (Array.isArray(d?.data?.data)) return d.data.data;
+  if (Array.isArray(d?.items)) return d.items;
+  if (Array.isArray(d?.data?.items)) return d.data.items;
+  return [];
+};
+
+const findMatchingPackage = (list: any[], target: string) => {
+  if (!Array.isArray(list) || list.length === 0 || !target) return null;
+  const cleanTarget = decodeURIComponent(target).trim().toLowerCase();
+  const targetWithoutAnd = cleanTarget.replace(/-and-/g, "-");
+
+  return (
+    list.find((p: any) => {
+      if (!p) return false;
+      const pId = String(p.id ?? "").trim().toLowerCase();
+      const pSlug = String(p.slug ?? "").trim().toLowerCase();
+      const pTitle = String(p.title ?? "").trim();
+      const pTitleSlug = normalizeSlug(pTitle);
+      const pTitleSlugNoAnd = pTitleSlug.replace(/-and-/g, "-");
+      const pSlugNoAnd = pSlug.replace(/-and-/g, "-");
+
+      return (
+        pId === cleanTarget ||
+        pSlug === cleanTarget ||
+        pSlugNoAnd === targetWithoutAnd ||
+        pTitleSlug === cleanTarget ||
+        pTitleSlugNoAnd === targetWithoutAnd ||
+        normalizeSlug(pTitle.replace(/&/g, " ")) === cleanTarget
+      );
+    }) || null
+  );
+};
+
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Instant state restore if passed via navigation
+  const passedPackage = (location.state as any)?.packageData || (location.state as any)?.package || (location.state as any)?.pkg;
+  const isPassedMatch = Boolean(
+    passedPackage &&
+    packageId &&
+    findMatchingPackage([passedPackage], packageId)
+  );
+
   // ============================================================
   // STATE
   // ============================================================
-  const [backendPackage, setBackendPackage] = useState<any>(null);
+  const [backendPackage, setBackendPackage] = useState<any>(
+    isPassedMatch ? passedPackage : null
+  );
   // Main package loading
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!isPassedMatch);
   const [packageLoadFinished, setPackageLoadFinished] = useState(false);
-  // ============================================================
-  // PRICING LOADING
-  // ============================================================
-  /**
-   * This loading state is ONLY for the pricing API.
-   *
-   * It is passed through Outlet context so the pricing page/card
-   * can show its own loading state without blocking the entire
-   * package details page.
-   */
   const [pricingLoading, setPricingLoading] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
 
   // Automatic SEO normalization: redirect /details/:id -> /packages/:slug
   useEffect(() => {
@@ -58,32 +112,32 @@ const PackageDetails: React.FC = () => {
       navigate(`/packages/${targetSlug}${subpath}`, { replace: true });
     }
   }, [backendPackage, location.pathname, navigate]);
-  // ============================================================
-  // NUMERIC BACKEND PACKAGE
-  // ============================================================
-  const isNumericPackageId =
-    !!packageId && /^\d+$/.test(packageId);
+
   // ============================================================
   // FETCH PACKAGE AND RELATED DATA
   // ============================================================
   useEffect(() => {
     if (!packageId) {
       setPackageLoadFinished(true);
+      setLoading(false);
       setPricingLoading(false);
       return;
     }
     let cancelled = false;
+
     const fetchPackageDetails = async () => {
       try {
-        setLoading(true);
-        setPackageLoadFinished(false);
-        setBackendPackage(null);
+        if (!isPassedMatch) {
+          setLoading(true);
+          setPackageLoadFinished(false);
+        }
+
         const target = String(packageId).trim().toLowerCase();
-        let packageData: any = null;
+        let packageData: any = isPassedMatch ? passedPackage : null;
         let isMock = false;
 
-        // 1. If packageId is numeric, try direct ID fetch first
-        if (/^\d+$/.test(packageId)) {
+        // 1. Direct numeric fetch if numeric ID
+        if (!packageData && /^\d+$/.test(packageId)) {
           try {
             const packageRes = await getPackageById(packageId);
             if (packageRes?.data?.data) {
@@ -92,46 +146,42 @@ const PackageDetails: React.FC = () => {
               packageData = packageRes.data;
             }
           } catch (idErr) {
-            console.warn("Direct package fetch by ID failed, falling back to slug lookup:", idErr);
+            console.warn("Direct package fetch by ID failed, trying slug lookups:", idErr);
           }
         }
 
-        // 2. If not found by direct ID (e.g. packageId is a slug), look up in backend packages
+        // 2. Look up in backend packages list (/packages)
         if (!packageData) {
           try {
             const listRes = await getPackages({ per_page: 100 });
-            const rawList =
-              listRes?.data?.data?.data ||
-              listRes?.data?.data ||
-              listRes?.data;
-            const packageList: any[] = Array.isArray(rawList) ? rawList : [];
-
-            const matchedBackend = packageList.find(
-              (p: any) =>
-                String(p.id).toLowerCase() === target ||
-                String(p.slug || "").toLowerCase() === target ||
-                slugify(p.title || "").toLowerCase() === target ||
-                slugify(p.slug || "").toLowerCase() === target
-            );
-
-            if (matchedBackend) {
-              packageData = matchedBackend;
-            }
+            const packageList = extractArray(listRes);
+            packageData = findMatchingPackage(packageList, target);
           } catch (listErr) {
-            console.warn("Backend packages list lookup failed:", listErr);
+            console.warn("Backend getPackages list lookup failed:", listErr);
           }
         }
 
-        // 3. Fallback matching against mock packages (e.g. p1, p2, ebc-trek from sitemap / demo)
+        // 3. Fallback: Look up across categories (Tours, Trekking, Adventure Activities, Holiday)
         if (!packageData) {
-          const matchedMock = mockPackages.find(
-            (p: any) =>
-              String(p.id).toLowerCase() === target ||
-              String(p.slug || "").toLowerCase() === target ||
-              slugify(p.title || "").toLowerCase() === target ||
-              slugify(p.slug || "").toLowerCase() === target
-          );
+          const commonCategories = ["Tours", "Trekking", "Adventure Activities", "Holiday"];
+          for (const cat of commonCategories) {
+            try {
+              const catRes = await getPackagesByCategory(cat);
+              const catList = extractArray(catRes);
+              const match = findMatchingPackage(catList, target);
+              if (match) {
+                packageData = match;
+                break;
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
 
+        // 4. Fallback matching against mock packages (e.g. p1, p2, ebc-trek from sitemap)
+        if (!packageData) {
+          const matchedMock = findMatchingPackage(mockPackages, target);
           if (matchedMock) {
             isMock = true;
             packageData = {
@@ -179,11 +229,39 @@ const PackageDetails: React.FC = () => {
           return;
         }
 
+        // Immediately set package data shell so the details view renders right away
+        setBackendPackage((prev: any) => ({
+          ...(prev || {}),
+          ...packageData,
+        }));
+        setLoading(false);
+
         const realPackageId = packageData.id;
         setPricingLoading(true);
 
-        // 2. Fetch all related sub-endpoints with the resolved ID
-        const pricingRequest = getPackagePricingTiers(realPackageId);
+        const pricingRequest = getPackagePricingTiers(realPackageId)
+          .then((res) => {
+            if (cancelled) return res;
+            const raw = res?.data?.data ?? res?.data;
+            const tiers = Array.isArray(raw) ? raw : [];
+            if (tiers.length > 0) {
+              setBackendPackage((prev: any) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  pricing_tiers: tiers,
+                };
+              });
+            }
+            return res;
+          })
+          .catch((err) => {
+            console.warn("Failed fetching package pricing tiers:", err);
+            return null;
+          })
+          .finally(() => {
+            if (!cancelled) setPricingLoading(false);
+          });
         const itinerariesRequest = getPackageItineraries(realPackageId);
         const inclusionsRequest = getPackageInclusions(realPackageId);
         const exclusionsRequest = getPackageExclusions(realPackageId);
@@ -221,6 +299,7 @@ const PackageDetails: React.FC = () => {
           galleryRequest,
         ]);
         if (cancelled) return;
+
         const getArray = (res: PromiseSettledResult<any>) => {
           if (res.status === "fulfilled") {
             const d = res.value?.data?.data;
@@ -237,6 +316,7 @@ const PackageDetails: React.FC = () => {
         const pricing_tiers = getArray(pricingRes);
         const itineraries = getArray(itinerariesRes);
         const highlights = getArray(highlightsRes);
+
         const getPublicArray = (res: PromiseSettledResult<any>) => {
           if (res.status !== "fulfilled") return [];
           const data = res.value?.data?.data;
@@ -247,8 +327,7 @@ const PackageDetails: React.FC = () => {
         const testimonials = getPublicArray(testimonialsRes);
         const policies = getPublicArray(policiesRes);
         const galleryImages = getPublicArray(galleryRes);
-        console.log("PACKAGE:", packageData);
-        console.log("FAQS:", faqs);
+
         setBackendPackage({
           ...packageData,
           inclusions: inclusions.length > 0 ? inclusions : (Array.isArray(packageData.inclusions) ? packageData.inclusions : []),
@@ -265,24 +344,23 @@ const PackageDetails: React.FC = () => {
           gallery: galleryImages.length > 0 ? galleryImages : (Array.isArray(packageData.gallery) ? packageData.gallery : []),
         });
         setLoading(false);
+        setPricingLoading(false);
         setPackageLoadFinished(true);
       } catch (error) {
         if (cancelled) return;
-        console.error(
-          "Error fetching package details:",
-          error
-        );
+        console.error("Error fetching package details:", error);
         setBackendPackage(null);
         setLoading(false);
         setPricingLoading(false);
         setPackageLoadFinished(true);
       }
     };
+
     fetchPackageDetails();
     return () => {
       cancelled = true;
     };
-  }, [packageId]);
+  }, [packageId, isPassedMatch]);
   // ============================================================
   // LOADING
   // ============================================================

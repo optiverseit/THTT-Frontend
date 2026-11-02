@@ -604,7 +604,9 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
               <div
                 key={trek.id}
                 onClick={() =>
-                  navigate(getPackageUrl(trek))
+                  navigate(getPackageUrl(trek), {
+                    state: { packageData: trek },
+                  })
                 }
                 className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
               >
@@ -755,7 +757,8 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
                       e.stopPropagation();
 
                       navigate(
-                        getPackageUrl(trek)
+                        getPackageUrl(trek),
+                        { state: { packageData: trek } }
                       );
                     }}
                     className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"

@@ -12,6 +12,7 @@ import PreFooter from "../../reusable/PreFooter";
 import { Compass } from "lucide-react";
 import { SEO } from "../../reusable";
 import {
+  getPackages,
   getPackageById,
   getPackageInclusions,
   getPackageExclusions,
@@ -25,6 +26,7 @@ import {
   getPublicPackagePolicies,
   getPublicPackageGallery,
 } from "../../../api/BackendApi";
+import { packages as mockPackages } from "../../../assets/data/mockData";
 const PackageDetails: React.FC = () => {
   const { packageId } = useParams();
   // ============================================================
@@ -76,14 +78,103 @@ const PackageDetails: React.FC = () => {
         setLoading(true);
         setPackageLoadFinished(false);
         setBackendPackage(null);
-        // 1. Fetch package by Slug or ID
-        const packageRes = await getPackageById(packageId);
+        const target = String(packageId).trim().toLowerCase();
+        let packageData: any = null;
+        let isMock = false;
+
+        // 1. If packageId is numeric, try direct ID fetch first
+        if (/^\d+$/.test(packageId)) {
+          try {
+            const packageRes = await getPackageById(packageId);
+            if (packageRes?.data?.data) {
+              packageData = packageRes.data.data;
+            } else if (packageRes?.data && typeof packageRes.data === "object" && packageRes.data.id) {
+              packageData = packageRes.data;
+            }
+          } catch (idErr) {
+            console.warn("Direct package fetch by ID failed, falling back to slug lookup:", idErr);
+          }
+        }
+
+        // 2. If not found by direct ID (e.g. packageId is a slug), look up in backend packages
+        if (!packageData) {
+          try {
+            const listRes = await getPackages({ per_page: 100 });
+            const rawList =
+              listRes?.data?.data?.data ||
+              listRes?.data?.data ||
+              listRes?.data;
+            const packageList: any[] = Array.isArray(rawList) ? rawList : [];
+
+            const matchedBackend = packageList.find(
+              (p: any) =>
+                String(p.id).toLowerCase() === target ||
+                String(p.slug || "").toLowerCase() === target ||
+                slugify(p.title || "").toLowerCase() === target ||
+                slugify(p.slug || "").toLowerCase() === target
+            );
+
+            if (matchedBackend) {
+              packageData = matchedBackend;
+            }
+          } catch (listErr) {
+            console.warn("Backend packages list lookup failed:", listErr);
+          }
+        }
+
+        // 3. Fallback matching against mock packages (e.g. p1, p2, ebc-trek from sitemap / demo)
+        if (!packageData) {
+          const matchedMock = mockPackages.find(
+            (p: any) =>
+              String(p.id).toLowerCase() === target ||
+              String(p.slug || "").toLowerCase() === target ||
+              slugify(p.title || "").toLowerCase() === target ||
+              slugify(p.slug || "").toLowerCase() === target
+          );
+
+          if (matchedMock) {
+            isMock = true;
+            packageData = {
+              ...matchedMock,
+              itineraries: (matchedMock.itinerary || []).map((it: any, idx: number) => ({
+                id: it.id || idx + 1,
+                day: it.day || `Day ${idx + 1}`,
+                title: it.title || "",
+                description: it.desc || it.description || "",
+                display_order: idx + 1,
+              })),
+              inclusions: (((matchedMock as any).inclusions || (matchedMock as any).includes) || []).map((inc: any, idx: number) =>
+                typeof inc === "string" ? { id: idx + 1, item: inc, display_order: idx + 1 } : inc
+              ),
+              exclusions: (((matchedMock as any).exclusions || (matchedMock as any).excludes) || []).map((exc: any, idx: number) =>
+                typeof exc === "string" ? { id: idx + 1, item: exc, display_order: idx + 1 } : exc
+              ),
+              pricing_tiers: (matchedMock as any).pricingTable || [],
+              highlights: (matchedMock.highlights || []).map((h: any, idx: number) =>
+                typeof h === "string" ? { id: idx + 1, highlight: h, display_order: idx + 1 } : h
+              ),
+              faqs: matchedMock.faqs || [],
+              testimonies: matchedMock.testimonies || [],
+              gallery: matchedMock.gallery || [],
+              policies: (matchedMock as any).policies || [],
+            };
+          }
+        }
+
         if (cancelled) return;
 
-        const packageData = packageRes?.data?.data;
         if (!packageData) {
           setBackendPackage(null);
           setLoading(false);
+          setPackageLoadFinished(true);
+          return;
+        }
+
+        // If mock package, skip querying backend sub-endpoints
+        if (isMock) {
+          setBackendPackage(packageData);
+          setLoading(false);
+          setPricingLoading(false);
           setPackageLoadFinished(true);
           return;
         }
@@ -191,11 +282,11 @@ const PackageDetails: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [packageId, isNumericPackageId]);
+  }, [packageId]);
   // ============================================================
   // LOADING
   // ============================================================
-  if (isNumericPackageId && loading) {
+  if (loading) {
     return (
       <div className="min-h-[65vh] flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -570,7 +661,7 @@ const PackageDetails: React.FC = () => {
         title={pkg.title ? `${pkg.title} | Trip Himalaya` : "Nepal Tour Package | Trip Himalaya"}
         description={pkg.description ? pkg.description.replace(/<[^>]+>/g, "").slice(0, 160) : `Book ${pkg.title || "Nepal tour"} with Trip Himalaya. Best price guarantee, licensed local guides, and 24/7 travel support.`}
         keywords={`${pkg.title || "Nepal Tour"}, Nepal tour packages, Nepal trekking packages, Trip Himalaya, Nepal holiday, ${pkg.location || "Nepal"}`}
-        canonicalPath={`/details/${packageId}`}
+        canonicalPath={`/packages/${backendPackage?.slug || slugify(backendPackage?.title) || packageId}`}
         image={packageImage}
         type="website"
         schema={{

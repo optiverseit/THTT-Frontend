@@ -6,6 +6,7 @@ import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import { VisaDetailPlan, CostOption } from "./VisaCountryDetailView";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { getVisaCategories, getVisaPublicPricingTiers } from "../../api/BackendApi";
+import { getVisaUrl } from "../../utils/slugUtils";
 export type { VisaDetailPlan, CostOption };
 const getRegionFromCountryCode = (countryCode: string): VisaDetailPlan["region"] => {
   const code = countryCode.toUpperCase();
@@ -428,7 +429,7 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   const handleClearAllFilters = () => {
     onClearFilter?.();
   };
-  const handleSelectPlan = (plan: VisaDetailPlan) => navigate(`/visa-details/${plan.id}`);
+  const handleSelectPlan = (plan: VisaDetailPlan) => navigate(getVisaUrl(plan));
   const handleWhatsAppInquiry = (plan: VisaDetailPlan, entryLabel?: string, priceNPR?: number) => {
     const finalPrice = priceNPR && priceNPR > 0 ? priceNPR : plan.baseNPRPrice;
     const formattedPrice = finalPrice > 0 ? displayPrice(finalPrice, selectedCurrency, nprPerOneDollar, nprPerOneINR) : "—";

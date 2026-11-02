@@ -26,6 +26,13 @@ import {
   getInsurancePlans,
 } from "../api/BackendApi";
 import { services } from "../assets/data/mockData";
+import {
+  getPackageUrl,
+  getHotelUrl,
+  getVehicleUrl,
+  getVisaUrl,
+  getInsuranceUrl,
+} from "../utils/slugUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -556,7 +563,7 @@ const SearchResultsInner: React.FC = () => {
           description: safeString(p.description),
           image: safeString(p.image || p.thumbnail),
           meta: safeString(p.duration),
-          route: `/details/${p.id}`,
+          route: getPackageUrl(p),
         })),
         hotels: matchedHotels.map((h) => ({
           id: `hotel-${h.id}`,
@@ -565,7 +572,7 @@ const SearchResultsInner: React.FC = () => {
           description: safeString(h.description),
           image: safeString(h.image),
           meta: safeString(h.category),
-          route: `/hotel-details/${h.id}`,
+          route: getHotelUrl(h),
         })),
         vehicles: matchedVehicles.map((v) => ({
           id: `veh-${v.id}`,
@@ -574,7 +581,7 @@ const SearchResultsInner: React.FC = () => {
           description: safeString(v.description),
           image: safeString(v.image),
           meta: v.seats ? `${v.seats} seats` : undefined,
-          route: `/vehicle-details/${v.id}`,
+          route: getVehicleUrl(v),
         })),
         visa: matchedVisas.map((v) => ({
           id: `visa-${v.id}`,
@@ -582,7 +589,7 @@ const SearchResultsInner: React.FC = () => {
           subtitle: safeString(typeof v.country === "object" ? v.country?.country_name || v.country?.name : v.country) || "Visa Service",
           description: safeString(v.description || (typeof v.country === "object" ? v.country?.short_description : "")),
           image: safeString(v.image || (typeof v.country === "object" ? v.country?.flag_code : "")),
-          route: `/visa-details/${v.id}`,
+          route: getVisaUrl(v),
         })),
         insurance: matchedInsurance.map((ins) => ({
           id: `ins-${ins.id}`,
@@ -590,7 +597,7 @@ const SearchResultsInner: React.FC = () => {
           subtitle: "Travel Insurance",
           description: safeString(ins.description),
           image: safeString(ins.image),
-          route: `/insurance-details/${ins.id}`,
+          route: getInsuranceUrl(ins),
         })),
       };
 

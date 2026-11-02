@@ -88,7 +88,7 @@ import {
 } from "../../api/BackendApi";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, stripDescription } from "../../utils/formatDescription";
 import { PaymentMethod } from "../reusable/PaymentMethod";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import TripRoadmap, { type RoadmapStep } from "../reusable/TripRoadmap";

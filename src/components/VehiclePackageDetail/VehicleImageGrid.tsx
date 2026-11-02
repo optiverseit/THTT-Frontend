@@ -6,6 +6,7 @@ import { useGlobalCurrency } from "../../context/CurrencyContext";
 import ShareModal from "../reusable/ShareModal";
 import SharePopover from "../reusable/SharePopover";
 import Logo from "../../assets/images/Logo.png";
+import { slugify } from "../../utils/slugUtils";
 
 interface PackageProp {
   pkg: any;
@@ -59,18 +60,22 @@ const VehicleImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&q=80&w=800",
       ];
 
+  const basePath = location.pathname.startsWith("/vehicle-details/")
+    ? `/vehicle-details/${pkg.id}`
+    : `/vehicles/${(pkg as any).slug || slugify(pkg.title || pkg.name || String(pkg.id))}`;
+
   const outletItems = [
-    { name: "OVERVIEW", path: `/vehicle-details/${pkg.id}` },
-    { name: "POLICIES", path: `/vehicle-details/${pkg.id}/policies` },
-    { name: "FAQS", path: `/vehicle-details/${pkg.id}/faqs` },
-    { name: "TESTIMONIES", path: `/vehicle-details/${pkg.id}/testimonies` },
+    { name: "OVERVIEW", path: basePath },
+    { name: "POLICIES", path: `${basePath}/policies` },
+    { name: "FAQS", path: `${basePath}/faqs` },
+    { name: "TESTIMONIES", path: `${basePath}/testimonies` },
   ];
 
   const isTabActive = (tabPath: string) => {
-    if (tabPath === `/vehicle-details/${pkg.id}`) {
+    if (tabPath === basePath) {
       return (
-        location.pathname === `/vehicle-details/${pkg.id}` ||
-        location.pathname === `/vehicle-details/${pkg.id}/`
+        location.pathname === basePath ||
+        location.pathname === `${basePath}/`
       );
     }
     return location.pathname.startsWith(tabPath);

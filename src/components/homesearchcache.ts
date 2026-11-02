@@ -20,6 +20,13 @@ import {
   getInsurancePlans,
   getAllDocuments,
 } from "../api/BackendApi";
+import {
+  getPackageUrl,
+  getHotelUrl,
+  getVehicleUrl,
+  getVisaUrl,
+  getInsuranceUrl,
+} from "../utils/slugUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,7 +117,7 @@ export const INITIAL_DATABASE_ITEMS: SearchResult[] = [
     label: "Thailand – Tourist Visa",
     sublabel: "Authorized Visa Counseling & e-Visa Application Support for Nepali Citizens",
     type: "visa" as const,
-    route: "/visa-details/1",
+    route: "/visa/thailand-tourist-visa",
     icon: Shield,
   },
   {
@@ -118,7 +125,7 @@ export const INITIAL_DATABASE_ITEMS: SearchResult[] = [
     label: "Thailand – Business Visa",
     sublabel: "Authorized Visa Counseling & E-Visa Application Support for Nepali Citizens",
     type: "visa" as const,
-    route: "/visa-details/2",
+    route: "/visa/thailand-business-visa",
     icon: Shield,
   },
 
@@ -231,7 +238,7 @@ export const syncLiveDatabase = async (
             label,
             sublabel: v.short_description || countryName || "Visa Services",
             type: "visa",
-            route: `/visa-details/${v.id}`,
+            route: getVisaUrl(v),
             icon: Shield,
           });
         });
@@ -322,7 +329,7 @@ export const syncLiveDatabase = async (
             label: p.title || p.name || "Package",
             sublabel: [(p.location || ""), (p.duration || "")].filter(Boolean).join(" • "),
             type: resultType,
-            route: `/details/${p.id}`,
+            route: getPackageUrl(p),
             icon,
           });
         });
@@ -348,7 +355,7 @@ export const syncLiveDatabase = async (
             label: h.name || "Hotel",
             sublabel: [(h.city || ""), (h.location || "")].filter(Boolean).join(" • "),
             type: "hotel",
-            route: `/hotel-details/${h.id}`,
+            route: getHotelUrl(h),
             icon: Bed,
           });
         });
@@ -374,7 +381,7 @@ export const syncLiveDatabase = async (
             label: v.name || "Vehicle",
             sublabel: [(v.categoryLabel || v.category || ""), (v.seats || "")].filter(Boolean).join(" • "),
             type: "vehicle",
-            route: `/vehicle-details/${v.id}`,
+            route: getVehicleUrl(v),
             icon: Car,
           });
         });
@@ -400,7 +407,7 @@ export const syncLiveDatabase = async (
             label: p.name || p.title || "Insurance Plan",
             sublabel: p.description || "Travel Insurance",
             type: "insurance",
-            route: `/insurance-details/${p.id}`,
+            route: getInsuranceUrl(p),
             icon: Heart,
           });
         });

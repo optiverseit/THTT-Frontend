@@ -230,3 +230,33 @@ export const splitInclusions = (text?: string | null): string[] => {
     .map((s) => s.trim())
     .filter(Boolean);
 };
+
+/**
+ * stripDescription
+ * Converts rich description text into clean, unformatted plain text
+ * suitable for preview cards with line-clamp, removing markdown artifacts,
+ * HTML tags, and optionally redundant leading titles.
+ */
+export function stripDescription(raw?: string | null, titleToRemove?: string): string {
+  if (!raw) return "";
+  let clean = raw
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/^[A-Z][\.\)]\s+/gm, "")
+    .replace(/^[iIvVxX]+[\.\)]\s+/gm, "")
+    .replace(/^#+\s+/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (titleToRemove) {
+    const t = titleToRemove.trim().toLowerCase();
+    if (clean.toLowerCase().startsWith(t)) {
+      clean = clean.slice(titleToRemove.trim().length).replace(/^[:\-\s]+/, "").trim();
+    }
+  }
+
+  return clean;
+}

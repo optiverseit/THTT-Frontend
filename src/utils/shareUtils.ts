@@ -131,14 +131,14 @@ export function getSocialShareBridgeUrl(data: ShareData): string {
     }
 
     // 4. Hotel Booking (/hotel-details/:hotelId or /hotel-detail/:hotelId)
-    const hotelMatch = pathname.match(/\/(hotel-details|hotel-detail)\/([0-9a-zA-Z_-]+)/);
+    const hotelMatch = pathname.match(/\/(hotels|hotel-details|hotel-detail)\/([0-9a-zA-Z_-]+)/);
     if (hotelMatch) {
       params.set("type", "hotel-details");
       params.set("id", hotelMatch[2]);
     }
 
     // 5. Travel Insurance (/insurance-details/:insuranceId or /service/travel-insurance/:id)
-    const insuranceMatch = pathname.match(/\/(insurance-details|insurance-detail)\/([0-9a-zA-Z_-]+)/) ||
+    const insuranceMatch = pathname.match(/\/(insurance|insurance-details|insurance-detail)\/([0-9a-zA-Z_-]+)/) ||
                            pathname.match(/\/service\/travel-insurance\/([0-9a-zA-Z_-]+)/);
     if (insuranceMatch) {
       params.set("type", "insurance-details");
@@ -146,14 +146,14 @@ export function getSocialShareBridgeUrl(data: ShareData): string {
     }
 
     // 6. Vehicle Rental (/vehicle-details/:vehicleId or /vehicle-detail/:vehicleId)
-    const vehicleMatch = pathname.match(/\/(vehicle-details|vehicle-detail)\/([0-9a-zA-Z_-]+)/);
+    const vehicleMatch = pathname.match(/\/(vehicles|vehicle-details|vehicle-detail)\/([0-9a-zA-Z_-]+)/);
     if (vehicleMatch) {
       params.set("type", "vehicle-details");
       params.set("id", vehicleMatch[2]);
     }
 
     // 7. Visa Processing (/visa-details/:visaId or /visa-detail/:visaId)
-    const visaMatch = pathname.match(/\/(visa-details|visa-detail)\/([0-9a-zA-Z_-]+)/);
+    const visaMatch = pathname.match(/\/(visa|visa-details|visa-detail)\/([0-9a-zA-Z_-]+)/);
     if (visaMatch) {
       params.set("type", "visa-details");
       params.set("id", visaMatch[2]);

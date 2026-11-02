@@ -120,18 +120,23 @@ const HotelImageGrid: React.FC<PackageProp> = ({ pkg }) => {
     return list;
   }, [headerImages]);
 
+  const currentSlug = pkg.slug || pkg.id;
+  const basePath = location.pathname.startsWith("/hotel-details/")
+    ? `/hotel-details/${pkg.id}`
+    : `/hotels/${currentSlug}`;
+
   const outletItems = [
-    { name: "OVERVIEW", path: `/hotel-details/${pkg.id}` },
-    { name: "POLICIES", path: `/hotel-details/${pkg.id}/policies` },
-    { name: "FAQS", path: `/hotel-details/${pkg.id}/faqs` },
-    { name: "TESTIMONIES", path: `/hotel-details/${pkg.id}/testimonies` },
+    { name: "OVERVIEW", path: basePath },
+    { name: "POLICIES", path: `${basePath}/policies` },
+    { name: "FAQS", path: `${basePath}/faqs` },
+    { name: "TESTIMONIES", path: `${basePath}/testimonies` },
   ];
 
   const isTabActive = (tabPath: string) => {
-    if (tabPath === `/hotel-details/${pkg.id}`) {
+    if (tabPath === basePath) {
       return (
-        location.pathname === `/hotel-details/${pkg.id}` ||
-        location.pathname === `/hotel-details/${pkg.id}/`
+        location.pathname === basePath ||
+        location.pathname === `${basePath}/`
       );
     }
     return location.pathname.startsWith(tabPath);

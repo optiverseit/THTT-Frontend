@@ -1,11 +1,12 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Package } from "../../assets/data/types";
 import { useGlobalCurrency, displayPrice } from "../../context/CurrencyContext";
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, stripDescription } from "../../utils/formatDescription";
+import { getPackageUrl } from "../../utils/slugUtils";
 
 // CHANGE THIS IMPORT PATH ONLY if your API file has a different location/name
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -501,7 +502,7 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
               <div
                 key={tour.id}
                 onClick={() =>
-                  navigate(`/details/${tour.id}`)
+                  navigate(getPackageUrl(tour))
                 }
                 className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
               >
@@ -616,7 +617,7 @@ export const ToursDetailContent: React.FC<ToursDetailContentProps> = ({
                       e.stopPropagation();
 
                       navigate(
-                        `/details/${tour.id}`
+                        getPackageUrl(tour)
                       );
                     }}
                     className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"

@@ -4,7 +4,8 @@ import { useGlobalCurrency } from "../../context/CurrencyContext";
 import { ChevronDown, MessageCircle, CheckCircle2, CalendarCheck, Clock, X, Search, Shield } from "lucide-react";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { getInsurancePlans, getInsurancePricingTiersByPlan } from "../../api/BackendApi";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, stripDescription } from "../../utils/formatDescription";
+import { slugify } from "../../utils/slugUtils";
 
 export interface InsuranceFilterCriteria {
   name?: string;
@@ -234,7 +235,7 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
   };
 
   const handleViewPlan = (planId: number) => {
-    navigate(`/insurance-details/${planId}`);
+    navigate(`/insurance/${planId}`);
   };
 
   const getPlanBadge = (tier?: string | null, index: number = 0) => {

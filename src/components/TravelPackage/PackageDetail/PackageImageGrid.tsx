@@ -136,17 +136,22 @@ const PackageImageGrid: React.FC<PackageProp> = ({ pkg }) => {
         '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500"><defs><linearGradient id="g" x2="0" y2="1"><stop stop-color="#2D1347"/><stop offset="1" stop-color="#4a154b"/></linearGradient></defs><rect width="800" height="500" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="20" font-family="sans-serif">Image Unavailable</text></svg>'
       );
   };
+  const currentSlug = pkg.slug || pkg.id;
+  const basePath = location.pathname.startsWith("/details/")
+    ? `/details/${pkg.id}`
+    : `/packages/${currentSlug}`;
+
   const outletItems = [
-    { name: "OVERVIEW", path: `/details/${pkg.id}` },
-    { name: "POLICIES", path: `/details/${pkg.id}/policies` },
-    { name: "FAQS", path: `/details/${pkg.id}/faqs` },
-    { name: "TESTIMONIES", path: `/details/${pkg.id}/testimonies` },
+    { name: "OVERVIEW", path: basePath },
+    { name: "POLICIES", path: `${basePath}/policies` },
+    { name: "FAQS", path: `${basePath}/faqs` },
+    { name: "TESTIMONIES", path: `${basePath}/testimonies` },
   ];
   const isTabActive = (tabPath: string) => {
-    if (tabPath === `/details/${pkg.id}`) {
+    if (tabPath === basePath) {
       return (
-        location.pathname === `/details/${pkg.id}` ||
-        location.pathname === `/details/${pkg.id}/`
+        location.pathname === basePath ||
+        location.pathname === `${basePath}/`
       );
     }
     return location.pathname.startsWith(tabPath);

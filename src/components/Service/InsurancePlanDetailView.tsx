@@ -12,6 +12,7 @@ import SharePopover from "../reusable/SharePopover";
 import OtherServicesComponent from "../reusable/OtherServicesComponent";
 import { services } from "../../assets/data/mockData";
 import { formatDescription } from "../../utils/formatDescription";
+import { getInsuranceUrl } from "../../utils/slugUtils";
 interface InsuranceCostOption {
   id?: number;
   name: string;
@@ -102,6 +103,16 @@ export const InsurancePlanDetailView: React.FC = () => {
   const [isCopied, setIsCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+
+  // Automatic SEO normalization: redirect /insurance-details/:id -> /insurance/:slug
+  useEffect(() => {
+    if (plan && (location.pathname.startsWith("/insurance-details/") || location.pathname.startsWith("/service/travel-insurance/"))) {
+      const slugUrl = getInsuranceUrl(plan);
+      if (location.pathname !== slugUrl) {
+        navigate(slugUrl, { replace: true });
+      }
+    }
+  }, [plan, location.pathname, navigate]);
   const shareRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const fetchPlan = async () => {
@@ -113,13 +124,14 @@ export const InsurancePlanDetailView: React.FC = () => {
       try {
         setLoading(true);
         setLoadError("");
-        const [response, dynamicFieldsResponse, pricingTiersResponse] = await Promise.all([
-          getInsurancePlanById(insuranceId),
-          getInsuranceDynamicFieldsByPlan(insuranceId),
-          getInsurancePricingTiersByPlan(insuranceId).catch(() => null),
-        ]);
+        const response = await getInsurancePlanById(insuranceId);
         const raw = response?.data?.data;
         if (!response?.data?.status || !raw) throw new Error(response?.data?.message || "Insurance plan not found");
+        const realPlanId = raw.id;
+        const [dynamicFieldsResponse, pricingTiersResponse] = await Promise.all([
+          getInsuranceDynamicFieldsByPlan(realPlanId),
+          getInsurancePricingTiersByPlan(realPlanId).catch(() => null),
+        ]);
         // Pricing tiers: prefer dedicated endpoint (not always nested in plan detail)
         const rawPricingTiers =
           Array.isArray(pricingTiersResponse?.data?.data)

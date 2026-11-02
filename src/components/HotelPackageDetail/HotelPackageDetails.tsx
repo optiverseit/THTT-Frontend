@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, Link, Outlet } from "react-router-dom";
+import { useParams, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getHotelById } from "../../api/BackendApi";
+import { hotels as mockHotels } from "../../assets/data/mockData";
+import { slugify } from "../../utils/slugUtils";
 import HotelImageGrid from "./HotelImageGrid";
 import PreFooter from "../reusable/PreFooter";
 import { Compass } from "lucide-react";
@@ -10,6 +12,17 @@ const HotelPackageDetails: React.FC = () => {
   const [hotel, setHotel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Automatic SEO normalization: redirect /hotel-details/:id -> /hotels/:slug
+  useEffect(() => {
+    if (hotel && location.pathname.startsWith("/hotel-details/")) {
+      const targetSlug = hotel.slug || slugify(hotel.hotel_name || hotel.name) || hotel.id;
+      const subpath = location.pathname.replace(/^\/hotel-details\/[^/]+/, "");
+      navigate(`/hotels/${targetSlug}${subpath}`, { replace: true });
+    }
+  }, [hotel, location.pathname, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,18 +37,66 @@ const HotelPackageDetails: React.FC = () => {
         setError("");
         const response = await getHotelById(hotelId);
         const data = response?.data?.data;
-        if (!cancelled) {
-          if (data) setHotel(data);
-          else setError("Hotel not found.");
+        if (!cancelled && data) {
+          setHotel(data);
+          setLoading(false);
+          return;
         }
       } catch (err) {
-        console.error("Failed to load hotel:", err);
-        if (!cancelled) {
-          setHotel(null);
+        console.warn("Hotel API returned no match, checking mock fallback:", err);
+      }
+
+      // Fallback matching against mock hotels
+      const target = (hotelId || "").toLowerCase();
+      const matchedMock = mockHotels.find(
+        (h) =>
+          h.slug.toLowerCase() === target ||
+          h.id.toLowerCase() === target ||
+          slugify(h.name).toLowerCase() === target ||
+          target.includes(slugify(h.name)) ||
+          slugify(h.name).includes(target)
+      );
+
+      if (!cancelled) {
+        if (matchedMock) {
+          setHotel({
+            id: matchedMock.id,
+            hotel_name: matchedMock.name,
+            slug: matchedMock.slug,
+            city: matchedMock.city,
+            location: matchedMock.location,
+            rating: matchedMock.rating,
+            reviewsCount: matchedMock.reviewsCount,
+            price: matchedMock.priceUSD,
+            image: matchedMock.image,
+            images: (matchedMock.gallery || []).map((img, idx) => ({ id: idx + 1, image: img, display_order: idx + 1 })),
+            description: matchedMock.description,
+            amenities: matchedMock.amenities,
+            features: matchedMock.features,
+            category: matchedMock.category,
+            tierLabel: matchedMock.tierLabel,
+            pricing_tiers: (matchedMock.roomTypes || ["Standard Suite", "Deluxe View", "Executive Luxury"]).map((rt, idx) => ({
+              id: idx + 1,
+              tier_name: rt,
+              room_type: rt,
+              occupancy: "2 Adults",
+              price: matchedMock.priceUSD * (1 + idx * 0.35),
+              status: "ACTIVE",
+            })),
+            policies: [
+              { id: 1, title: "Check-in & Check-out", content: "Check-in from 2:00 PM; Check-out until 12:00 PM." },
+              { id: 2, title: "Cancellation", content: "Free cancellation up to 48 hours before arrival." },
+            ],
+            faqs: [
+              { id: 1, question: "Is breakfast included?", answer: matchedMock.breakfastIncluded ? "Yes, complimentary breakfast is included." : "Breakfast is available at the hotel restaurant." },
+              { id: 2, question: "Is airport shuttle available?", answer: "Yes, airport pick-up and drop-off can be arranged upon request." },
+            ],
+          });
+        } else {
+          setHotel(null)
           setError("Hotel not found.");
         }
-      } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     };
     fetchHotel();

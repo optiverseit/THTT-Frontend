@@ -169,6 +169,13 @@ const MainLayout = () => {
 
         {/* ── PACKAGES (with nested subroutes) ── */}
         <Route path="/packages" element={<Packages />} />
+        <Route path="/packages/:packageId" element={<PackageDetail />}>
+          <Route index path="" element={<PackageOverview />} />
+          <Route path="policies" element={<PackagePolicy />} />
+          <Route path="faqs" element={<PackageFaq />} />
+          <Route path="testimonies" element={<PackageTestimonial />} />
+        </Route>
+        {/* Legacy alias for old /details/:packageId */}
         <Route path="/details/:packageId" element={<PackageDetail />}>
           <Route index path="" element={<PackageOverview />} />
           <Route path="policies" element={<PackagePolicy />} />
@@ -176,13 +183,21 @@ const MainLayout = () => {
           <Route path="testimonies" element={<PackageTestimonial />} />
         </Route>
 
-        {/* ── VISA DETAILS ── */}
+        {/* VISA DETAILS */}
+        <Route path="/visa/:visaId" element={<VisaPackageDetail />} />
         <Route path="/visa-details/:visaId" element={<VisaPackageDetail />} />
 
-        {/* ── INSURANCE DETAILS ── */}
+        {/* INSURANCE DETAILS */}
+        <Route path="/insurance/:insuranceId" element={<InsurancePackageDetail />} />
         <Route path="/insurance-details/:insuranceId" element={<InsurancePackageDetail />} />
 
-        {/* ── HOTEL DETAILS ── */}
+        {/* HOTEL DETAILS */}
+        <Route path="/hotels/:hotelId" element={<HotelPackageDetail />}>
+          <Route index path="" element={<HotelOverview />} />
+          <Route path="policies" element={<HotelPolicy />} />
+          <Route path="faqs" element={<HotelFaq />} />
+          <Route path="testimonies" element={<HotelTestimonial />} />
+        </Route>
         <Route path="/hotel-details/:hotelId" element={<HotelPackageDetail />}>
           <Route index path="" element={<HotelOverview />} />
           <Route path="policies" element={<HotelPolicy />} />
@@ -190,7 +205,13 @@ const MainLayout = () => {
           <Route path="testimonies" element={<HotelTestimonial />} />
         </Route>
 
-        {/* ── VEHICLE DETAILS ── */}
+        {/* VEHICLE DETAILS */}
+        <Route path="/vehicles/:vehicleId" element={<VehiclePackageDetail />}>
+          <Route index path="" element={<VehicleOverview />} />
+          <Route path="policies" element={<VehiclePolicy />} />
+          <Route path="faqs" element={<VehicleFaq />} />
+          <Route path="testimonies" element={<VehicleTestimonial />} />
+        </Route>
         <Route path="/vehicle-details/:vehicleId" element={<VehiclePackageDetail />}>
           <Route index path="" element={<VehicleOverview />} />
           <Route path="policies" element={<VehiclePolicy />} />
@@ -198,12 +219,13 @@ const MainLayout = () => {
           <Route path="testimonies" element={<VehicleTestimonial />} />
         </Route>
 
-        {/* ── VIDEO VLOGS ── */}
+        {/* VIDEO VLOGS */}
         <Route path="/vlogs" element={<VideoVlog />} />
         <Route path="/watch/:videoId" element={<VideoDetail />} />
 
-        {/* ── WORK PERMIT ── */}
+        {/* WORK PERMIT */}
         <Route path="/work-permit" element={<WorkPermit />} />
+        <Route path="/work-permit/:id" element={<WorkPermitDetail />} />
         <Route path="/permit-details/:id" element={<WorkPermitDetail />} />
 
         {/* ── DOCUMENTATION ── */}

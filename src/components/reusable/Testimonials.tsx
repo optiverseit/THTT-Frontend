@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Package, Testimonial, Testimony } from "../../assets/data/types";
 import { ArrowRight, ChevronUp } from "lucide-react";
+import { getPackageUrl } from "../../utils/slugUtils";
 
 interface testimonialsProps {
   testimonials?: Testimony[];
@@ -150,7 +151,7 @@ const Testimonials: React.FC<testimonialsProps> = ({
       setShowAll(true);
     } else if (pkg?.id) {
       // If exactly 3 or fewer but has a package, navigate to testimonies page
-      navigate(`/details/${pkg.id}/testimonies`);
+      navigate(`${getPackageUrl(pkg)}/testimonies`);
     }
   };
 

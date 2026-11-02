@@ -7,6 +7,7 @@ import { getHotels } from "../../api/BackendApi";
 import { Award, Coffee, Car, Clock, ShieldCheck, Headphones, X, Calendar, MapPin, Building2, Globe } from "lucide-react";
 import type { Hotel } from "../../assets/data/types";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
+import { getHotelUrl } from "../../utils/slugUtils";
 
 export interface HotelFilterCriteria {
   region: string;
@@ -630,7 +631,7 @@ const HotelBookingDetailContent: React.FC<HotelBookingDetailContentProps> = ({
   };
 
   const handleFullDetails = (hotel: Hotel) => {
-    navigate(`/hotel-details/${hotel.backendId || hotel.id}`);
+    navigate(getHotelUrl(hotel));
   };
 
   if (loading) {

@@ -8,7 +8,8 @@ import {
 import BookingModal from "../reusable/packages/BookingModal";
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, stripDescription } from "../../utils/formatDescription";
+import { getPackageUrl } from "../../utils/slugUtils";
 
 // Change only this path if your API file is located somewhere else
 import { getPackagesByCategory } from "../../api/BackendApi";
@@ -603,7 +604,7 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
               <div
                 key={trek.id}
                 onClick={() =>
-                  navigate(`/details/${trek.id}`)
+                  navigate(getPackageUrl(trek))
                 }
                 className="bg-[#FBFBFE] rounded-3xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-[#E11D48]/40 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
               >
@@ -756,7 +757,7 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
                       e.stopPropagation();
 
                       navigate(
-                        `/details/${trek.id}`
+                        getPackageUrl(trek)
                       );
                     }}
                     className="w-full bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#2D1347] text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"

@@ -16,7 +16,7 @@ import VehicleRentalBookingModal, {
 
 import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { isSessionValid, clearAuthSession } from "../../utils/sessionManager";
-import { formatDescription } from "../../utils/formatDescription";
+import { formatDescription, stripDescription } from "../../utils/formatDescription";
 
 // Change this path only if your API file is located somewhere else
 import { getAllVehicles } from "../../api/BackendApi";

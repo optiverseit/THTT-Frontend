@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { MapPin, Clock, Star } from "lucide-react";
 import type { Package } from "../../assets/data/types";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,7 @@ import {
   displayPrice,
 } from "../../context/CurrencyContext";
 import { formatDescription } from "../../utils/formatDescription";
+import { getPackageUrl } from "../../utils/slugUtils";
 
 interface PackageCardProps {
   pkg: Package;
@@ -52,7 +53,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
     if (onDetails) {
       onDetails(pkg);
     } else {
-      navigate(`/details/${pkg.id}`);
+      navigate(getPackageUrl(pkg));
     }
   };
 
@@ -347,7 +348,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
                 onDetails(pkg);
               } else {
                 navigate(
-                  `/details/${pkg.id}`
+                  getPackageUrl(pkg)
                 );
               }
             }}
@@ -382,7 +383,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
                 onBook(pkg);
               } else {
                 navigate(
-                  `/details/${pkg.id}`
+                  getPackageUrl(pkg)
                 );
               }
             }}

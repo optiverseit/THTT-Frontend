@@ -4,7 +4,10 @@ import {
   Outlet,
   useParams,
   Link,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
+import { slugify } from "../../../utils/slugUtils";
 import PreFooter from "../../reusable/PreFooter";
 import { Compass } from "lucide-react";
 import { SEO } from "../../reusable";
@@ -42,6 +45,17 @@ const PackageDetails: React.FC = () => {
    * package details page.
    */
   const [pricingLoading, setPricingLoading] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Automatic SEO normalization: redirect /details/:id -> /packages/:slug
+  useEffect(() => {
+    if (backendPackage && location.pathname.startsWith("/details/")) {
+      const targetSlug = backendPackage.slug || slugify(backendPackage.title) || backendPackage.id;
+      const subpath = location.pathname.replace(/^\/details\/[^/]+/, "");
+      navigate(`/packages/${targetSlug}${subpath}`, { replace: true });
+    }
+  }, [backendPackage, location.pathname, navigate]);
   // ============================================================
   // NUMERIC BACKEND PACKAGE
   // ============================================================
@@ -51,7 +65,7 @@ const PackageDetails: React.FC = () => {
   // FETCH PACKAGE AND RELATED DATA
   // ============================================================
   useEffect(() => {
-    if (!packageId || !isNumericPackageId) {
+    if (!packageId) {
       setPackageLoadFinished(true);
       setPricingLoading(false);
       return;
@@ -62,20 +76,35 @@ const PackageDetails: React.FC = () => {
         setLoading(true);
         setPackageLoadFinished(false);
         setBackendPackage(null);
-        const packageRequest = getPackageById(packageId);
-        const pricingRequest = getPackagePricingTiers(packageId);
-        const itinerariesRequest = getPackageItineraries(packageId);
-        const inclusionsRequest = getPackageInclusions(packageId);
-        const exclusionsRequest = getPackageExclusions(packageId);
-        const restrictionsRequest = getPackageRestrictions(packageId);
-        const whatToBringRequest = getPackageWhatToBring(packageId);
-        const faqsRequest = getPackageFaqs(packageId);
-        const highlightsRequest = getPackageHighlights(packageId);
-        const testimonialsRequest = getPublicPackageTestimonials(packageId);
-        const policiesRequest = getPublicPackagePolicies(packageId);
-        const galleryRequest = getPublicPackageGallery(packageId);
+        // 1. Fetch package by Slug or ID
+        const packageRes = await getPackageById(packageId);
+        if (cancelled) return;
+
+        const packageData = packageRes?.data?.data;
+        if (!packageData) {
+          setBackendPackage(null);
+          setLoading(false);
+          setPackageLoadFinished(true);
+          return;
+        }
+
+        const realPackageId = packageData.id;
+        setPricingLoading(true);
+
+        // 2. Fetch all related sub-endpoints with the resolved ID
+        const pricingRequest = getPackagePricingTiers(realPackageId);
+        const itinerariesRequest = getPackageItineraries(realPackageId);
+        const inclusionsRequest = getPackageInclusions(realPackageId);
+        const exclusionsRequest = getPackageExclusions(realPackageId);
+        const restrictionsRequest = getPackageRestrictions(realPackageId);
+        const whatToBringRequest = getPackageWhatToBring(realPackageId);
+        const faqsRequest = getPackageFaqs(realPackageId);
+        const highlightsRequest = getPackageHighlights(realPackageId);
+        const testimonialsRequest = getPublicPackageTestimonials(realPackageId);
+        const policiesRequest = getPublicPackagePolicies(realPackageId);
+        const galleryRequest = getPublicPackageGallery(realPackageId);
+
         const [
-          packageRes,
           pricingRes,
           itinerariesRes,
           inclusionsRes,
@@ -88,7 +117,6 @@ const PackageDetails: React.FC = () => {
           policiesRes,
           galleryRes,
         ] = await Promise.allSettled([
-          packageRequest,
           pricingRequest,
           itinerariesRequest,
           inclusionsRequest,
@@ -102,18 +130,6 @@ const PackageDetails: React.FC = () => {
           galleryRequest,
         ]);
         if (cancelled) return;
-        if (packageRes.status !== "fulfilled" || !packageRes.value?.data?.data) {
-        // Pricing starts loading independently.
-        setPricingLoading(true);
-        // ========================================================
-        // API REQUESTS
-        // ========================================================
-          setBackendPackage(null);
-          setLoading(false);
-          setPackageLoadFinished(true);
-          return;
-        }
-        const packageData = packageRes.value.data.data;
         const getArray = (res: PromiseSettledResult<any>) => {
           if (res.status === "fulfilled") {
             const d = res.value?.data?.data;
@@ -194,10 +210,10 @@ const PackageDetails: React.FC = () => {
   // ============================================================
   // PACKAGE
   // ============================================================
-  let pkg: any =
-    isNumericPackageId
-      ? backendPackage
-      : null;
+  let pkg: any = backendPackage;
+
+
+
   // ============================================================
   // NOT FOUND
   // ============================================================

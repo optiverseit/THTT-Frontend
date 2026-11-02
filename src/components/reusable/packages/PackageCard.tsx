@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useGlobalCurrency, displayPrice } from "../../../context/CurrencyContext";
 import BookingModal from "./BookingModal";
+import { getPackageUrl } from "../../../utils/slugUtils";
 
 interface Props {
   pkg: Package;
@@ -31,7 +32,7 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
 
   // Navigate to package details page
   const handleCardClick = () => {
-    navigate(`/details/${pkg.id}`);
+    navigate(getPackageUrl(pkg));
   };
 
   // Open WhatsApp for direct package inquiry

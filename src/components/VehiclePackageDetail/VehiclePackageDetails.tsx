@@ -1,9 +1,10 @@
-import React from "react";
-import { useParams, Link, Outlet } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useParams, Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { vehicles } from "../../assets/data/mockData";
 import VehicleImageGrid from "./VehicleImageGrid";
 import PreFooter from "../reusable/PreFooter";
 import { Compass } from "lucide-react";
+import { slugify } from "../../utils/slugUtils";
 
 const VehiclePackageDetails: React.FC = () => {
   const { vehicleId } = useParams();
@@ -11,8 +12,21 @@ const VehiclePackageDetails: React.FC = () => {
   const matchedVehicle = vehicles.find(
     (v) =>
       v.id.toLowerCase() === vehicleId?.toLowerCase() ||
-      v.slug.toLowerCase() === vehicleId?.toLowerCase()
+      v.slug.toLowerCase() === vehicleId?.toLowerCase() ||
+      slugify(v.name).toLowerCase() === vehicleId?.toLowerCase()
   );
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Automatic SEO normalization: redirect /vehicle-details/:id -> /vehicles/:slug
+  useEffect(() => {
+    if (matchedVehicle && location.pathname.startsWith("/vehicle-details/")) {
+      const subpath = location.pathname.replace(/^\/vehicle-details\/[^/]+/, "");
+      const targetSlug = matchedVehicle.slug || slugify(matchedVehicle.name);
+      navigate(`/vehicles/${targetSlug}${subpath}`, { replace: true });
+    }
+  }, [matchedVehicle, location.pathname, navigate]);
 
   if (!matchedVehicle) {
     return (

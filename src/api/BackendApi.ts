@@ -584,5 +584,63 @@ export const getTravelGuideById = (id: number | string) => {
   return axiosInstance.get(`/travel-guides/${id}`);
 };
 
+// ==========================================
+// GALLERIES
+// ==========================================
+export const getGalleries = (page: number = 1) => {
+  return axiosInstance.get("/galleries", {
+    params: { page },
+  });
+};
+
+export const getGalleryById = (id: number | string) => {
+  return axiosInstance.get(`/galleries/${id}`);
+};
+
+// ==========================================
+// BLOGS
+// ==========================================
+export interface BlogQueryParams {
+  page?: number;
+  category_id?: number | string;
+  search?: string;
+  is_latest_news?: boolean | string;
+}
+
+export const getBlogs = (params?: number | BlogQueryParams) => {
+  const queryParams = typeof params === "number" ? { page: params } : params;
+  return axiosInstance.get("/blogs", {
+    params: queryParams,
+  });
+};
+
+export const getBlogById = (id: number | string) => {
+  return axiosInstance.get(`/blogs/${id}`);
+};
+
+// ==========================================
+// PAGES & DASHBOARD IMAGE
+// Route: /pages/name/{name} -> getByName
+// (Used for fetching page background images e.g. dashboard)
+// ==========================================
+export const getPageByName = (name: string) => {
+  return axiosInstance.get(`/pages/name/${name}`);
+};
+
+export const getDashboardPageImage = () => {
+  return axiosInstance.get("/pages/name/dashboard");
+};
+
+export const getPages = (page: number = 1) => {
+  return axiosInstance.get("/pages", {
+    params: { page },
+  });
+};
+
+export const getPageById = (id: number | string) => {
+  return axiosInstance.get(`/pages/${id}`);
+};
+
+
 
 

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import VisaCountryDetailView, { VisaDetailPlan, CostOption } from "../Service/VisaCountryDetailView";
 import { splitInclusions } from "../Service/VisaServicesDetailContent";
 import type { VisaDocumentRequirement } from "../Service/VisaApplicationModal";
 import { Compass } from "lucide-react";
 import { getVisaCategories, getVisaPublicDocumentRequirements, getVisaPublicInformation, getVisaPublicPricingTiers } from "../../api/BackendApi";
+import { slugify, getVisaUrl } from "../../utils/slugUtils";
 interface VisaCategory {
   id: number | string;
   country_id: number | string;
@@ -182,7 +183,18 @@ const mapFullPlan = (category: VisaCategory, pricing: any[], documents: any[], i
 const VisaPackageDetails: React.FC = () => {
   const { visaId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [matchedVisa, setMatchedVisa] = useState<VisaDetailPlan | null>(null);
+
+  // Automatic SEO normalization: redirect /visa-details/:id -> /visa/:slug
+  useEffect(() => {
+    if (matchedVisa && location.pathname.startsWith("/visa-details/")) {
+      const slugUrl = getVisaUrl(matchedVisa);
+      if (location.pathname !== slugUrl) {
+        navigate(slugUrl, { replace: true });
+      }
+    }
+  }, [matchedVisa, location.pathname, navigate]);
   const [allPlans, setAllPlans] = useState<VisaDetailPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -366,7 +378,12 @@ const VisaPackageDetails: React.FC = () => {
           return idB - idA;
         });
         setAllPlans(basicPlans);
-        const category = categories.find((item) => String(item.id) === String(visaId));
+        const targetVisa = String(visaId || "").toLowerCase();
+        const category = categories.find((item) =>
+          String(item.id).toLowerCase() === targetVisa ||
+          (item as any).slug?.toLowerCase() === targetVisa ||
+          slugify(item.name).toLowerCase() === targetVisa
+        );
         if (!category) {
           setMatchedVisa(null);
           setError("Visa category not found.");
@@ -429,7 +446,7 @@ const VisaPackageDetails: React.FC = () => {
           pricingLoading={pricingLoading}
           documentsLoading={documentsLoading}
           informationLoading={informationLoading}
-          onSelectPlan={(newPlan) => navigate(`/visa-details/${newPlan.id}`)}
+          onSelectPlan={(newPlan) => navigate(getVisaUrl(newPlan))}
           onBack={() => navigate("/service/visa-services")}
         />
       </div>

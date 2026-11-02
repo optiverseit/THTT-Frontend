@@ -3798,11 +3798,9 @@ export const PackageHeliService: React.FC<{
                             {tour.title}
                           </h3>
                           {/* Description */}
-                          <div
-                            className="text-xs text-gray-500 font-medium overflow-hidden mt-1 leading-relaxed max-w-none"
-                            style={{ maxHeight: "3.5rem" }}
-                            dangerouslySetInnerHTML={{ __html: formatDescription(tour.description) }}
-                          />
+                          <p className="text-xs text-gray-500 font-medium line-clamp-2 mt-1 leading-relaxed">
+                            {stripDescription(tour.description, tour.title)}
+                          </p>
                         </div>
                         {/* Location & Duration */}
                         <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-gray-100 text-[11px] font-bold text-gray-500">

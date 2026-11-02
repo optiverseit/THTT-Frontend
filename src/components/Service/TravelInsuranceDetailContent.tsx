@@ -370,13 +370,9 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
                 {/* Little Plan Details */}
                 <div className="border-t border-gray-100/90 pt-2.5 mt-1">
-                  <div
-                    className="overflow-hidden"
-                    style={{ maxHeight: "3.5rem" }}
-                    dangerouslySetInnerHTML={{
-                      __html: formatDescription(plan.short_description || plan.description) || "Travel insurance protection for your journey.",
-                    }}
-                  />
+                  <p className="text-xs text-gray-500 leading-relaxed font-normal line-clamp-2">
+                    {stripDescription(plan.short_description || plan.description) || "Travel insurance protection for your journey."}
+                  </p>
                 </div>
 
                 {/* What Is Covered */}

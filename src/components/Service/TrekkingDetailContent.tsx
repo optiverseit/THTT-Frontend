@@ -694,11 +694,9 @@ export const TrekkingDetailContent: React.FC<TrekkingDetailContentProps> = ({
                     )}
 
                     {trek.description && (
-                      <div
-                        className="mb-6 overflow-hidden"
-                        style={{ maxHeight: "5.5rem" }}
-                        dangerouslySetInnerHTML={{ __html: formatDescription(trek.description) }}
-                      />
+                      <p className="mb-6 text-xs sm:text-[13px] text-gray-500 font-normal leading-relaxed line-clamp-3">
+                        {stripDescription(trek.description, trek.title) || trek.description.replace(/<[^>]+>/g, " ").trim()}
+                      </p>
                     )}
 
                   </div>

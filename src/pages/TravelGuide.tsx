@@ -6,6 +6,10 @@ import { getTravelGuides } from "../api/BackendApi";
 import { formatDescription } from "../utils/formatDescription";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+
+const DEFAULT_TRAVEL_GUIDE_BG =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000";
 
 interface TravelGuideItem {
   id: number;
@@ -19,6 +23,11 @@ const TravelGuide: React.FC = () => {
   const [travelGuides, setTravelGuides] = useState<TravelGuideItem[]>([]);
   const [activeSection, setActiveSection] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const heroImages = usePageBackgrounds(
+    ["travel-guide", "travel_guide", "travelguide"],
+    DEFAULT_TRAVEL_GUIDE_BG
+  );
 
   useEffect(() => {
     const fetchGuideContent = async () => {
@@ -65,7 +74,8 @@ const TravelGuide: React.FC = () => {
         type="article"
       />
       <BannerSection
-        background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
+        backgrounds={heroImages}
+        background={heroImages[0] || DEFAULT_TRAVEL_GUIDE_BG}
         alt="Himalayan Peaks"
         heading="ESSENTIAL INFORMATION"
         title="Travel Guide"

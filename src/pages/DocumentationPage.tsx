@@ -6,6 +6,10 @@ import PreFooter from "../components/reusable/PreFooter";
 import { getAllDocuments } from "../api/BackendApi";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+
+const DEFAULT_DOC_BG =
+  "https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop";
 
 interface DocumentationItem {
   id: number;
@@ -65,6 +69,8 @@ export default function DocumentationPage() {
   const [documents, setDocuments] = useState<DocumentationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const heroImages = usePageBackgrounds("documentation", DEFAULT_DOC_BG);
+
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
@@ -101,7 +107,8 @@ export default function DocumentationPage() {
         heading="COMPREHENSIVE SOLUTIONS"
         title="Our Documentation"
         description="Everything you need for seamless document processing, verification, and global travel compliance."
-        background="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
+        backgrounds={heroImages}
+        background={heroImages[0] || DEFAULT_DOC_BG}
         alt="Trip Himalaya Documentation Services"
       />
       <main className="relative z-20 mx-auto w-full flex-grow px-4 pb-16 pt-6 sm:pt-8 sm:px-8 lg:px-16 max-w-screen-2xl">
@@ -113,6 +120,7 @@ export default function DocumentationPage() {
             We provide end-to-end support for visa clearances, police reports, insurance policies, and legal document attestations.
           </p>
         </header>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-gray-200 border-t-[#2e1065] rounded-full animate-spin" />

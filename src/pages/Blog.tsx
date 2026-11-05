@@ -24,6 +24,8 @@ import { pagesSEO } from "../config/seoConfig";
 import { getBlogs, getPageByName, getCategories } from "../api/BackendApi";
 import { getBlogUrl, slugify } from "../utils/slugUtils";
 import YouTubePlayer from "../components/blog/YouTubePlayer";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { HeroBackgroundSlider } from "../components/reusable";
 
 // Re-export for backward compatibility
 export type { BlogPost };
@@ -422,7 +424,11 @@ const VideoSidebar: React.FC<VideoSidebarProps> = ({
 };
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+const DEFAULT_BLOG_BG =
+  "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=2000";
+
 const Blog: React.FC = () => {
+  const blogHeroImages = usePageBackgrounds("blog", DEFAULT_BLOG_BG);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialMode: BlogMode =
@@ -729,18 +735,15 @@ const Blog: React.FC = () => {
 
       {/* ── BLOG HERO ── */}
       <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <img
-            src={resolvedHeroImage}
-            alt={
-              mode === "read"
-                ? "Himalayan Sunset & Base Camp"
-                : "Himalayan Mountain Vista"
-            }
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-        </div>
+        <HeroBackgroundSlider
+          images={blogHeroImages}
+          alt={
+            mode === "read"
+              ? "Himalayan Sunset & Base Camp"
+              : "Himalayan Mountain Vista"
+          }
+          overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+        />
         <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
           <div className="flex flex-col items-center mt-2 sm:mt-1.5">
             <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">

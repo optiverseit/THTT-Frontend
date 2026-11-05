@@ -21,8 +21,7 @@ import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
 import { services as mockServices } from "../assets/data/mockData";
 import type { Service } from "../assets/data/types";
-import { getPageByName } from "../api/BackendApi";
-import { getBackendRootUrl } from "../config/env";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
 
 export type { Service };
 
@@ -116,71 +115,7 @@ const CTASection = () => (
 // --- 4. MAIN PAGE ---
 
 export default function ServicesPage() {
-  const [heroImages, setHeroImages] = useState<string[]>([DEFAULT_HERO_IMAGE]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchHeroImages = async () => {
-      try {
-        // Query /pages/name/services, fallback to /pages/name/service
-        let res: any;
-        try {
-          res = await getPageByName("services");
-        } catch {
-          res = await getPageByName("service");
-        }
-
-        const pageData = res?.data?.data || res?.data;
-        const rawImages = pageData?.background_images || pageData?.images;
-
-        if (Array.isArray(rawImages) && rawImages.length > 0) {
-          // Filter active images if a status is present
-          const activeImages = rawImages.filter(
-            (item: any) =>
-              !item?.status || String(item.status).toUpperCase() === "ACTIVE"
-          );
-
-          // Sort by sort_order ascending if present
-          activeImages.sort(
-            (a: any, b: any) => (a?.sort_order ?? 0) - (b?.sort_order ?? 0)
-          );
-
-          const backendRoot = getBackendRootUrl();
-          const parsedUrls = activeImages
-            .map((item: any) => {
-              const url =
-                typeof item === "string"
-                  ? item
-                  : item?.image || item?.url || item?.image_url;
-              if (!url) return null;
-              if (
-                url.startsWith("http://") ||
-                url.startsWith("https://") ||
-                url.startsWith("data:")
-              ) {
-                return url;
-              }
-              return `${backendRoot}${url.startsWith("/") ? "" : "/"}${url}`;
-            })
-            .filter(Boolean) as string[];
-
-          if (isMounted && parsedUrls.length > 0) {
-            setHeroImages(parsedUrls);
-          }
-        }
-      } catch (err) {
-        // Fallback to default hero image on failure
-        console.warn("Could not load dynamic service hero images:", err);
-      }
-    };
-
-    fetchHeroImages();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const heroImages = usePageBackgrounds(["services", "service"], DEFAULT_HERO_IMAGE);
 
   const handleFloatingWhatsApp = () => {
     const msg = encodeURIComponent(

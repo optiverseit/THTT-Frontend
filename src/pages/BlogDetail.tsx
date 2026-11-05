@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import {
   Share2,
-  Bookmark,
-  MessageSquare,
   Facebook,
   Twitter,
   ArrowRight,
@@ -122,6 +120,14 @@ const parseInsights = (rawInsights: any): BlogInsightItem[] => {
     }));
   }
   return DEFAULT_INSIGHTS;
+};
+
+const cleanHtmlContent = (html?: string): string => {
+  if (!html) return "";
+  return html
+    // Replace non-breaking spaces inserted by WYSIWYG editors with normal spaces so text wraps properly
+    .replace(/&nbsp;|\u00A0/g, " ")
+    .trim();
 };
 
 const BlogDetailMore: React.FC = () => {
@@ -309,10 +315,24 @@ const BlogDetailMore: React.FC = () => {
 
           setPost(fullBlogData);
 
-          // Populate Related Stories
+          // Populate Related Stories exclusively from Database records with category priority
+          let finalRelated: RelatedStoryItem[] = [];
+          const currentId = String(apiBlog.id);
+          const currentTitle = (apiBlog.title || fullBlogData.title || "").trim().toLowerCase();
+          const currentCatId = apiBlog.category_id || fullBlogData.categoryId;
+          const currentCatName = (apiBlog.category?.name || fullBlogData.category || "").toLowerCase();
+
+          // 1. Process related stories returned directly by the backend show() endpoint
           if (Array.isArray(apiRelated) && apiRelated.length > 0) {
-            setRelatedStories(
-              apiRelated.map((rel: any) => ({
+            finalRelated = apiRelated
+              .filter((rel: any) => {
+                const isSameId = String(rel.id) === currentId || String(rel.id) === rawIdentifier;
+                const isSameSlug = (rel.slug || "").toLowerCase() === rawIdentifier.toLowerCase();
+                const isSameTitle = (rel.title || "").trim().toLowerCase() === currentTitle;
+                const isSameTitleSlug = slugify(rel.title).toLowerCase() === rawIdentifier.toLowerCase();
+                return !isSameId && !isSameSlug && !isSameTitle && !isSameTitleSlug;
+              })
+              .map((rel: any) => ({
                 id: rel.id,
                 title: rel.title,
                 slug:
@@ -323,29 +343,71 @@ const BlogDetailMore: React.FC = () => {
                 image:
                   rel.image ||
                   "https://images.unsplash.com/photo-1544735745-b81216c7ad8f?auto=format&fit=crop&q=80&w=400",
-              }))
-            );
-          } else {
-            // Fallback related stories from mock data
-            setRelatedStories(
-              blogPosts
-                .filter(
-                  (p) =>
-                    p.slug.toLowerCase() !== rawIdentifier.toLowerCase() &&
-                    String(p.id) !== rawIdentifier
-                )
-                .slice(0, 3)
-                .map((p) => ({
-                  id: p.id,
-                  title: p.title,
-                  slug: p.slug,
-                  category: p.category,
-                  image: p.image,
-                }))
-            );
+              }));
           }
+
+          // 2. If fewer than 3, query additional database blogs via getBlogs()
+          if (finalRelated.length < 3) {
+            try {
+              const listRes = await getBlogs();
+              let dbBlogs: any[] = [];
+              if (Array.isArray(listRes.data?.data?.data)) {
+                dbBlogs = listRes.data.data.data;
+              } else if (Array.isArray(listRes.data?.data)) {
+                dbBlogs = listRes.data.data;
+              } else if (Array.isArray(listRes.data)) {
+                dbBlogs = listRes.data;
+              }
+
+              // Filter out current blog and any already in finalRelated
+              const dbCandidates = dbBlogs.filter((b: any) => {
+                const isSameId = String(b.id) === currentId || String(b.id) === rawIdentifier;
+                const isSameSlug = (b.slug || "").toLowerCase() === rawIdentifier.toLowerCase();
+                const isSameTitle = (b.title || "").trim().toLowerCase() === currentTitle;
+                const isSameTitleSlug = slugify(b.title).toLowerCase() === rawIdentifier.toLowerCase();
+                const isAlreadyIn = finalRelated.some((r) => String(r.id) === String(b.id));
+                return !isSameId && !isSameSlug && !isSameTitle && !isSameTitleSlug && !isAlreadyIn;
+              });
+
+              // Priority matching: same category first, then other database categories
+              dbCandidates.sort((a: any, b: any) => {
+                const aMatch =
+                  (currentCatId && a.category_id === currentCatId) ||
+                  (a.category?.name && a.category.name.toLowerCase() === currentCatName)
+                    ? 1
+                    : 0;
+                const bMatch =
+                  (currentCatId && b.category_id === currentCatId) ||
+                  (b.category?.name && b.category.name.toLowerCase() === currentCatName)
+                    ? 1
+                    : 0;
+                return bMatch - aMatch;
+              });
+
+              const needed = 3 - finalRelated.length;
+              const extra = dbCandidates.slice(0, needed).map((b: any) => ({
+                id: b.id,
+                title: b.title,
+                slug:
+                  b.slug && !/^\d+$/.test(String(b.slug).trim())
+                    ? b.slug
+                    : slugify(b.title) || String(b.id),
+                category: b.category?.name || "Tours and Travel",
+                image:
+                  b.image ||
+                  "https://images.unsplash.com/photo-1544735745-b81216c7ad8f?auto=format&fit=crop&q=80&w=400",
+              }));
+
+              finalRelated = [...finalRelated, ...extra];
+            } catch (err) {
+              console.warn("Could not query additional database blogs for related stories:", err);
+            }
+          }
+
+          // Strictly use database results only (NO mock data fallback)
+          setRelatedStories(finalRelated);
         } else if (mockPost) {
-          // Fallback to local mock data
+          // Fallback to local mock data for post body only
           setPost({
             id: mockPost.id,
             title: mockPost.title,
@@ -362,18 +424,8 @@ const BlogDetailMore: React.FC = () => {
             tags: DEFAULT_TAGS,
           });
 
-          setRelatedStories(
-            blogPosts
-              .filter((p) => p.slug !== rawIdentifier && p.id !== rawIdentifier)
-              .slice(0, 3)
-              .map((p) => ({
-                id: p.id,
-                title: p.title,
-                slug: p.slug,
-                category: p.category,
-                image: p.image,
-              }))
-          );
+          // No mock data in related stories
+          setRelatedStories([]);
         } else if (!passedBlog) {
           setPost(null);
         }
@@ -493,6 +545,8 @@ const BlogDetailMore: React.FC = () => {
   const hasHtmlContent = /<[a-z][\s\S]*>/i.test(post.content || "");
   const canonicalPath = getBlogUrl(post);
 
+
+
   return (
     <div className="min-h-screen bg-white font-sans text-[#4A5568]">
       <SEO
@@ -524,16 +578,24 @@ const BlogDetailMore: React.FC = () => {
         }}
       />
 
-      {/* ── HERO: Full-width image with overlay title ── */}
-      <section className="relative w-full h-[65vh] min-h-[480px] overflow-hidden">
-        <div className="absolute inset-0">
+      {/* ── HERO: Full-width image with overlay title (fitted with ambient backdrop) ── */}
+      <section className="relative w-full h-[60vh] sm:h-[70vh] min-h-[460px] max-h-[750px] overflow-hidden bg-[#120824]">
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* Ambient blurred backdrop so letterbox areas are softly filled with the image's colors */}
+          <img
+            src={post.image}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-35 scale-110 pointer-events-none"
+          />
+          {/* Fully fitted image - preserves complete aspect ratio without any cropping */}
           <img
             src={post.image}
             alt={post.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain relative z-0"
           />
-          {/* Gradient: transparent top → dark purple bottom */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0d35]/95 via-[#2D1B69]/40 to-transparent" />
+          {/* Gradient: transparent top → dark purple bottom for crisp text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0d35]/95 via-[#1a0d35]/30 to-black/20 pointer-events-none z-1" />
         </div>
 
         <div className="relative h-full max-w-7xl mx-auto px-5 sm:px-8 flex flex-col justify-end py-8">
@@ -585,17 +647,7 @@ const BlogDetailMore: React.FC = () => {
       </section>
 
       {/* ── META ACTION BAR ── */}
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-4 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex gap-6 text-[10px] font-bold tracking-widest text-gray-400">
-          <button className="flex items-center gap-2 hover:text-[#E91E63] transition-colors cursor-pointer">
-            <Bookmark size={14} />
-            Save for Later
-          </button>
-          <button className="flex items-center gap-2 hover:text-[#E91E63] transition-colors cursor-pointer">
-            <MessageSquare size={14} />
-            Comments
-          </button>
-        </div>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-3.5 sm:py-4 border-b border-gray-100 flex justify-end items-center">
         <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400">
           <span>Share Story:</span>
           <div className="flex gap-3">
@@ -650,25 +702,19 @@ const BlogDetailMore: React.FC = () => {
 
       {/* ── MAIN CONTENT + SIDEBAR ── */}
       <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-14">
-          {/* Article body */}
-          <div className="lg:col-span-8 space-y-6">
-            {post.excerpt && (
-              <h2 className="text-xl font-bold text-[#2D1B69] italic leading-snug">
-                {post.excerpt.replace(/<[^>]+>/g, "")}
-              </h2>
-            )}
-
-            <div className="text-[15px] leading-relaxed space-y-5 text-[#4A5568]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-14 items-start">
+          {/* Article body with min-w-0 and break-words to strictly prevent sidebar overflow */}
+          <div className="lg:col-span-8 min-w-0 space-y-6">
+            <div className="text-[15px] leading-relaxed space-y-5 text-[#4A5568] break-words [overflow-wrap:anywhere]">
               {post.content ? (
                 hasHtmlContent ? (
                   <div
-                    className="prose max-w-none text-[#4A5568] leading-relaxed space-y-4 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-[#2D1B69] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#2D1B69] [&_p]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1.5"
-                    dangerouslySetInnerHTML={{ __html: post.content }}
+                    className="prose max-w-none text-[#4A5568] leading-relaxed space-y-4 break-words [overflow-wrap:anywhere] [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-[#2D1B69] [&_h1]:leading-tight [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#2D1B69] [&_h2]:leading-snug [&_p]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1.5 [&_li]:pl-1"
+                    dangerouslySetInnerHTML={{ __html: cleanHtmlContent(post.content) }}
                   />
                 ) : (
-                  <div className="whitespace-pre-line leading-relaxed space-y-4">
-                    {post.content}
+                  <div className="whitespace-pre-line leading-relaxed space-y-4 break-words [overflow-wrap:anywhere]">
+                    {cleanHtmlContent(post.content)}
                   </div>
                 )
               ) : (
@@ -724,7 +770,7 @@ const BlogDetailMore: React.FC = () => {
           </div>
 
           {/* Sidebar */}
-          <aside className="lg:col-span-4 space-y-8 sm:space-y-10">
+          <aside className="lg:col-span-4 min-w-0 space-y-8 sm:space-y-10 lg:sticky lg:top-40 self-start">
             {/* Author card */}
             <div className="bg-[#2D1B69] rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-xl">
               <div className="absolute top-0 right-0 p-4 opacity-10">

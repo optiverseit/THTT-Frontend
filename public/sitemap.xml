@@ -1,366 +1,227 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd
+        http://www.google.com/schemas/sitemap-image/1.1
+        http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd">
 
-  <!-- Core Landing Pages & High-Intent Services -->
+  <!-- ============================================================= -->
+  <!-- 1. CORE LANDING & PRIMARY PUBLIC PAGES                        -->
+  <!-- ============================================================= -->
   <url>
     <loc>https://triphimalaya.com.np/</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>daily</changefreq>
-    <priority>1.0</priority>
+    <priority>1.00</priority>
+    <image:image>
+      <image:loc>https://triphimalaya.com.np/Logo.png</image:loc>
+      <image:title>Trip Himalaya Tours and Travels</image:title>
+      <image:caption>Trip Himalaya Tours &amp; Travels Pvt. Ltd. Official Logo - Kathmandu, Nepal</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/packages</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
+    <loc>https://triphimalaya.com.np/service</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/blog</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/work-permit</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/about</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/contact</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/travel-guide</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/documentation</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/gallery</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/vlogs</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- ============================================================= -->
+  <!-- 2. SERVICE VERTICALS & CATEGORY HUBS                          -->
+  <!-- ============================================================= -->
+  <url>
     <loc>https://triphimalaya.com.np/service/trekking</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/service/tours</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/service/activities</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/service/air-ticket</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/service/visa-services</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/work-permit</loc>
-    <lastmod>2026-10-30</lastmod>
+    <loc>https://triphimalaya.com.np/service/activities</loc>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/service/air-ticket</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/service/work-permit</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/documentation</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/service/travel-insurance</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/service/hotel-booking</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://triphimalaya.com.np/service/vehicle-rental</loc>
-    <lastmod>2026-10-30</lastmod>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://triphimalaya.com.np/service/heli-service</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/service</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/travel-guide</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/gallery</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.70</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/vlogs</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.70</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/about</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/contact</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <!-- Verified Tour, Trekking & Adventure Packages -->
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p1</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p2</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p3</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p4</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p5</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p6</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p7</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p8</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p9</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p10</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p11</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p12</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p13</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p14</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p15</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p16</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p17</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/p18</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a1</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a2</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a3</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a4</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a5</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a6</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a7</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/a8</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/c1</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/c2</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/c3</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/packages/c4</loc>
-    <lastmod>2026-10-30</lastmod>
+    <loc>https://triphimalaya.com.np/service/heli-services</loc>
+    <lastmod>2026-11-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- Travel Blogs & Country Clearance Documentation -->
+  <!-- ============================================================= -->
+  <!-- 3. LIVE VISA DESTINATION PAGES (PRODUCTION DATABASE VERIFIED) -->
+  <!-- ============================================================= -->
+  <url>
+    <loc>https://triphimalaya.com.np/visa/malaysia-tourist-visa-thtt0263</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://res.cloudinary.com/qpthggyz/image/upload/v1793879997/thtt/visa-categories/tf0gs2n20i5zzbiyum2n.jpg</image:loc>
+      <image:title>Malaysia Tourist Visa</image:title>
+      <image:caption>Malaysia Tourist Visa Application and Counseling Support for Nepali Citizens</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/visa/dubai-uae-tourist-visa-thtt0264</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://res.cloudinary.com/qpthggyz/image/upload/v1793880299/thtt/visa-categories/zscwdjcineg6fyvxwhbh.jpg</image:loc>
+      <image:title>Dubai (UAE) Tourist Visa</image:title>
+      <image:caption>Dubai UAE Tourist Visa Assistance and Application Support</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/visa/thailand-business-visa-thtt0262</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://res.cloudinary.com/qpthggyz/image/upload/v1793609041/thtt/visa-categories/hyvjg5e1aqbamnppd4xo.jpg</image:loc>
+      <image:title>Thailand Business Visa</image:title>
+      <image:caption>Thailand Business Visa Application and Counseling Support</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://triphimalaya.com.np/visa/thailand-tourist-visa-thtt0261</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://res.cloudinary.com/qpthggyz/image/upload/v1793124836/thtt/visa-categories/xcwug0ewqn1dqoeobfks.jpg</image:loc>
+      <image:title>Thailand Tourist Visa</image:title>
+      <image:caption>Thailand Tourist Visa Assistance and Application Support for Nepali Citizens</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================================= -->
+  <!-- 4. LIVE TOUR & TREK PACKAGES (PRODUCTION DATABASE VERIFIED)   -->
+  <!-- ============================================================= -->
+  <url>
+    <loc>https://triphimalaya.com.np/packages/kathmandu-everest-mountain-flight</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://res.cloudinary.com/qpthggyz/image/upload/v1793522753/thtt/packages/lkojet1zgrvpvg0dvdhz.png</image:loc>
+      <image:title>Kathmandu Everest Mountain Flight</image:title>
+      <image:caption>Scenic Everest Mountain Flight with aerial Himalayan mountain views departing Kathmandu</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================================= -->
+  <!-- 5. LIVE BLOG POSTS (PRODUCTION DATABASE VERIFIED)             -->
+  <!-- ============================================================= -->
   <url>
     <loc>https://triphimalaya.com.np/blog/top-10-essential-tips-for-your-first-everest-base-camp-trek</loc>
     <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
+    <changefreq>monthly</changefreq>
     <priority>0.80</priority>
+    <image:image>
+      <image:loc>https://res.cloudinary.com/qpthggyz/image/upload/v1793881330/thtt/blogs/vg8ponqdetlszri2x01b.jpg</image:loc>
+      <image:title>Top 10 Essential Tips for Your First Everest Base Camp Trek</image:title>
+      <image:caption>Complete guide and essential preparation tips for trekking to Everest Base Camp</image:caption>
+    </image:image>
   </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/bali-cultural-guide</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/travel-insurance-guide</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/nepal-visa-guide</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/nepal-luxury-resorts-guide</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/nepal-work-permit-guide</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/adventure-activities-nepal-guide</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://triphimalaya.com.np/blog/kathmandu-heritage-cultural-tour</loc>
-    <lastmod>2026-11-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
+
 </urlset>

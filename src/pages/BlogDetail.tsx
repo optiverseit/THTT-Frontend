@@ -579,7 +579,7 @@ const BlogDetailMore: React.FC = () => {
       />
 
       {/* ── HERO: Full-width image with overlay title ── */}
-      <section className="relative w-full h-[60vh] sm:h-[70vh] min-h-[460px] max-h-[750px] overflow-hidden bg-[#120824]">
+      <section className="relative w-full h-[45vh] sm:h-[50vh] md:h-[52vh] min-h-[350px] sm:min-h-[380px] max-h-[520px] overflow-hidden bg-[#120824]">
         <div className="absolute inset-0">
           <img
             src={post.image}
@@ -590,13 +590,13 @@ const BlogDetailMore: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a0d35]/95 via-[#2D1B69]/40 to-transparent" />
         </div>
 
-        <div className="relative h-full max-w-7xl mx-auto px-5 sm:px-8 flex flex-col justify-end py-8">
+        <div className="relative h-full max-w-7xl mx-auto px-5 sm:px-8 flex flex-col justify-end py-6 sm:py-8">
           {/* Title block */}
           <div className="max-w-3xl pb-4">
-            <span className="inline-block px-4 py-1 bg-[#E91E63] text-[10px] font-black tracking-widest rounded-md mb-4 uppercase text-white shadow-sm">
+            <span className="inline-block px-4 py-1 bg-[#E91E63] text-[10px] font-black tracking-widest rounded-md mb-2.5 sm:mb-3 uppercase text-white shadow-sm">
               {post.category}
             </span>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 sm:mb-6 leading-tight drop-shadow-md">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 sm:mb-4 leading-tight drop-shadow-md">
               {post.title}
             </h1>
 

@@ -13,6 +13,7 @@ import { galleryData } from "../assets/data/mockData";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
 import { getGalleries, getPageByName } from "../api/BackendApi";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
 
 export interface GalleryItem {
   id: string | number;
@@ -49,6 +50,7 @@ const Gallery: React.FC = () => {
   const [photos, setPhotos] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [bannerImage, setBannerImage] = useState<string>(DEFAULT_BANNER);
+  const heroImages = usePageBackgrounds("gallery", DEFAULT_BANNER);
 
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
@@ -275,7 +277,8 @@ const Gallery: React.FC = () => {
 
       {/* ── HERO BANNER ── */}
       <BannerSection
-        background={bannerImage}
+        backgrounds={heroImages}
+        background={heroImages[0] || bannerImage}
         alt="Himalayan Photo Gallery"
         heading="CAPTURING MEMORIES"
         title="Photo Gallery"

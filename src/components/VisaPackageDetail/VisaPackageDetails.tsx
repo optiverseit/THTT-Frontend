@@ -378,12 +378,48 @@ const VisaPackageDetails: React.FC = () => {
           return idB - idA;
         });
         setAllPlans(basicPlans);
-        const targetVisa = String(visaId || "").toLowerCase();
-        const category = categories.find((item) =>
-          String(item.id).toLowerCase() === targetVisa ||
-          (item as any).slug?.toLowerCase() === targetVisa ||
-          slugify(item.name).toLowerCase() === targetVisa
-        );
+        const rawTargetVisa = decodeURIComponent(String(visaId || "")).toLowerCase();
+        
+        // Extract id if format is title-thtt026<id>
+        const thttMatch = rawTargetVisa.match(/-thtt026(\d+)$/i) || rawTargetVisa.match(/-thtt(\d+)$/i);
+        const extractedId = thttMatch ? thttMatch[1] : null;
+
+        // Clean slug without suffix
+        const cleanSlug = rawTargetVisa
+          .replace(/-thtt026\d+$/i, "")
+          .replace(/-thtt026id$/i, "")
+          .replace(/-thtt026$/i, "")
+          .replace(/-thtt\d+$/i, "");
+
+        const category = categories.find((item) => {
+          const itemId = String(item.id).toLowerCase();
+          
+          // Match by extracted ID from -thtt026<id>
+          if (extractedId && itemId === extractedId) return true;
+          
+          // Match by direct ID
+          if (itemId === rawTargetVisa) return true;
+          
+          // Match by category slug if present
+          if ((item as any).slug?.toLowerCase() === rawTargetVisa) return true;
+          if ((item as any).slug?.toLowerCase() === cleanSlug) return true;
+
+          // Match by full title: Country - VisaType (e.g. "Malaysia - Tourist Visa")
+          const countryName = item.country?.country_name || "";
+          const fullTitle = countryName ? `${countryName} - ${item.name}` : item.name;
+          const fullSlug = slugify(fullTitle).toLowerCase();
+          const fullSlugWithId = `${fullSlug}-thtt026${item.id}`.toLowerCase();
+          const fullSlugWithLiteralId = `${fullSlug}-thtt026id`.toLowerCase();
+
+          if (rawTargetVisa === fullSlugWithId || rawTargetVisa === fullSlugWithLiteralId) return true;
+          if (cleanSlug === fullSlug) return true;
+
+          // Match by visa name only
+          if (slugify(item.name).toLowerCase() === cleanSlug) return true;
+          if (slugify(item.name).toLowerCase() === rawTargetVisa) return true;
+
+          return false;
+        });
         if (!category) {
           setMatchedVisa(null);
           setError("Visa category not found.");

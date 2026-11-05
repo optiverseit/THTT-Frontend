@@ -1,20 +1,41 @@
 import React from "react";
 import {
-  CheckCircle2, Shield, Users, Target, Eye, Plane, Hotel,
-  Car, Mountain, Briefcase, CreditCard, MapPin, Heart, Globe,
-  Zap, Activity, History,
+  CheckCircle2,
+  Shield,
+  Users,
+  Target,
+  Eye,
+  Plane,
+  Hotel,
+  Car,
+  Mountain,
+  Briefcase,
+  CreditCard,
+  MapPin,
+  Heart,
+  Globe,
+  Zap,
+  Activity,
+  History,
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+
+const DEFAULT_ABOUT_BG =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000";
 
 const About: React.FC = () => {
+  const heroImages = usePageBackgrounds("about", DEFAULT_ABOUT_BG);
+
   return (
     <div className="w-full bg-white">
       <SEO {...pagesSEO.about} />
-      {/* Hero Header matching Image 4 style */}
+      {/* Hero Header matching Image 4 style with 5s dynamic slider if >= 2 images */}
       <BannerSection
-        background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
+        backgrounds={heroImages}
+        background={heroImages[0] || DEFAULT_ABOUT_BG}
         alt="Himalayan Peaks"
         heading="DISCOVER OUR LEGACY"
         title="About Trip Himalaya"

@@ -26,6 +26,8 @@ import { useGlobalCurrency } from "../context/CurrencyContext";
 import { isSessionValid, clearAuthSession } from "../utils/sessionManager";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { HeroBackgroundSlider } from "../components/reusable";
 
 
 interface Category {
@@ -37,7 +39,11 @@ interface Category {
 }
 
 
+const DEFAULT_PACKAGES_BG =
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000";
+
 const Packages: React.FC = () => {
+  const heroImages = usePageBackgrounds("packages", DEFAULT_PACKAGES_BG);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -664,15 +670,11 @@ const Packages: React.FC = () => {
       <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
 
         {/* Background (clipped) */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <img
-            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000"
-            alt="Canyon & Mountain Adventures"
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-        </div>
+        <HeroBackgroundSlider
+          images={heroImages}
+          alt="Canyon & Mountain Adventures"
+          overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+        />
 
 
         <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">

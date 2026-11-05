@@ -10,6 +10,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { usePageBackgrounds } from "../../utils/usePageBackgrounds";
+import { HeroBackgroundSlider } from "../reusable";
 import {
   SearchResult,
   TYPE_COLOR_MAP,
@@ -22,7 +24,11 @@ import {
 
 // ─── Banner Component ─────────────────────────────────────────────────────────
 
+const DEFAULT_HOME_BANNER_BG =
+  "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=2000";
+
 const Banner: React.FC = () => {
+  const heroImages = usePageBackgrounds("home", DEFAULT_HOME_BANNER_BG);
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
@@ -151,13 +157,13 @@ const Banner: React.FC = () => {
   return (
     <section className="relative min-h-[540px] md:min-h-[640px] flex flex-col overflow-hidden bg-[#2D1347]">
       {/* Background */}
-      <img
-        src="https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&q=80&w=2000"
+      <HeroBackgroundSlider
+        images={heroImages}
         alt="Himalayas - Trip Himalaya Tours & Travel"
-        className="absolute inset-0 w-full h-full object-cover opacity-75"
-        style={{ objectPosition: "center 40%" }}
+        imgClassName="w-full h-full object-cover opacity-75"
+        objectPosition="center 40%"
+        overlayGradient="bg-gradient-to-b from-purple-950/20 via-purple-950/10 to-purple-950/65"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-950/20 via-purple-950/10 to-purple-950/65" />
 
       {/* Hero content */}
       <div className="relative z-10 flex flex-1 items-center justify-center pt-16 sm:pt-20 md:pt-24 pb-16 md:pb-20 px-4 sm:px-6 lg:px-10">

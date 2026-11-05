@@ -68,13 +68,29 @@ export const getVisaUrl = (visa: {
   slug?: string | null;
   name?: string | null;
   visaType?: string | null;
+  country?: string | null;
   id?: number | string | null;
+  visaCategoryId?: number | string | null;
 }): string => {
-  const segment =
-    visa.slug ||
-    slugify(visa.name || visa.visaType) ||
-    (visa.id ? String(visa.id) : "");
-  return segment ? `/visa/${segment}` : "/service/visa-service";
+  if (visa.slug) {
+    return `/visa/${visa.slug}`;
+  }
+
+  const country = visa.country ? String(visa.country).trim() : "";
+  const type = String(visa.visaType || visa.name || "").trim();
+  const rawId = visa.visaCategoryId ?? visa.id;
+  const idStr = rawId ? String(rawId).trim() : "";
+
+  // Title: "Malaysia – Tourist Visa" -> "malaysia-tourist-visa"
+  const title = country ? `${country} - ${type}` : type;
+  const titleSlug = slugify(title);
+
+  // Format: title-thtt026<id>
+  const segment = titleSlug
+    ? `${titleSlug}-thtt026${idStr}`
+    : (idStr ? `visa-thtt026${idStr}` : "tourist-visa");
+
+  return `/visa/${segment}`;
 };
 
 /**

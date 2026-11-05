@@ -17,6 +17,8 @@ import PreFooter from "../components/reusable/PreFooter";
 import { getGroupedWorkPermitCountries } from "../api/BackendApi";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { HeroBackgroundSlider } from "../components/reusable";
 
 interface Country {
   id: number;
@@ -37,7 +39,11 @@ interface PermitServiceItem {
   permit_type: string;
 }
 
+const DEFAULT_WORK_PERMIT_BG =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000";
+
 const WorkPermit = () => {
+  const heroImages = usePageBackgrounds(["online-shram", "work-permit", "online_shram"], DEFAULT_WORK_PERMIT_BG);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [appliedCountry, setAppliedCountry] = useState("");
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] =
@@ -173,14 +179,11 @@ const WorkPermit = () => {
           {/* ── WORK PERMIT HERO ── */}
 
           <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <img
-                src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
-                alt="Work Permit"
-                className="w-full h-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-            </div>
+            <HeroBackgroundSlider
+              images={heroImages}
+              alt="Work Permit"
+              overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+            />
 
             <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
 

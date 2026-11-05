@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
 import {
@@ -34,6 +34,8 @@ import {
   Calendar,
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
+import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { HeroBackgroundSlider } from "../components/reusable";
 import Testimonials from "../components/reusable/Testimonials";
 import PreFooter from "../components/reusable/PreFooter";
 import ToursDetailContent, { TourFilterCriteria } from "../components/Service/ToursDetailContent";
@@ -2020,6 +2022,36 @@ const ServiceDetail: React.FC = () => {
     return `Our ${service.name} Offerings`;
   };
 
+    // Map service slug to CMS page identifier(s)
+  const cmsIdentifiers = useMemo(() => {
+    switch (slug) {
+      case "tours":
+        return ["tours", "tour"];
+      case "activities":
+        return ["adventure-activities", "activities"];
+      case "trekking":
+        return ["trekking"];
+      case "hotel-booking":
+        return ["hotel-booking", "hotel_booking"];
+      case "visa-services":
+        return ["visa-services", "visa_services"];
+      case "travel-insurance":
+        return ["travel-insurance", "travel_insurance"];
+      case "vehicle-rental":
+        return ["vehicle-rental", "vehicle_rental"];
+      case "heli-services":
+        return ["heli-services", "heli_services"];
+      case "air-ticket":
+        return ["air-ticket", "air_ticket"];
+      case "work-permit":
+        return ["online-shram", "work-permit"];
+      default:
+        return slug ? [slug] : [];
+    }
+  }, [slug]);
+
+  const serviceHeroImages = usePageBackgrounds(cmsIdentifiers, service.heroImage);
+
   const activeSEO = (() => {
     if (isVisaServices) return pagesSEO.serviceVisa;
     if (isHeliServices) return pagesSEO.serviceHeli;
@@ -2064,10 +2096,11 @@ const ServiceDetail: React.FC = () => {
           {isTours ? (
             /* ── TOURS HERO BANNER (Exactly matching Adventure Activities) ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -2113,10 +2146,11 @@ const ServiceDetail: React.FC = () => {
           ) : isActivities ? (
             /* ── ACTIVITIES HERO BANNER (Original, unchanged) ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -2162,10 +2196,11 @@ const ServiceDetail: React.FC = () => {
           ) : isTrekking ? (
             /* ── TREKKING HERO BANNER (Exactly matching Adventure Activities) ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">
@@ -2211,10 +2246,11 @@ const ServiceDetail: React.FC = () => {
           ) : isHotelBooking ? (
             /* ── HOTEL BOOKING HERO ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
@@ -2242,10 +2278,11 @@ const ServiceDetail: React.FC = () => {
           ) : isTravelInsurance ? (
             /* ── TRAVEL INSURANCE HERO ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
@@ -2273,10 +2310,11 @@ const ServiceDetail: React.FC = () => {
           ) : isVehicleRental ? (
             /* ── VEHICLE RENTAL HERO ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
@@ -2304,10 +2342,11 @@ const ServiceDetail: React.FC = () => {
           ) : isHeliServices ? (
             /* ── HELI SERVICES HERO ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>
@@ -2335,10 +2374,11 @@ const ServiceDetail: React.FC = () => {
           ) : (
             /* ── VISA SERVICES HERO ── */
             <section className="relative min-h-[500px] sm:min-h-[480px] lg:min-h-[420px] flex items-center justify-center overflow-visible pt-14 sm:pt-16 pb-7 sm:pb-8">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={service.heroImage} alt={service.name} className="w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45" />
-              </div>
+              <HeroBackgroundSlider
+                images={serviceHeroImages}
+                alt={service.name}
+                overlayGradient="bg-gradient-to-b from-[#2D1347]/90 via-[#2D1347]/65 to-[#2D1347]/45"
+              />
               <div className="relative z-10 text-center px-4 max-w-5xl w-full mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mt-2 sm:mt-1.5">
                   <span className="inline-block bg-[#E91E63] text-white text-[10px] sm:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.25em] mb-2 sm:mb-3 shadow-lg">{getBannerHeading()}</span>

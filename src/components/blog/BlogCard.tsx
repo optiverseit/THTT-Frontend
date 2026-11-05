@@ -1,7 +1,8 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import type { BlogPost } from "../../assets/data/types";
+import { getBlogUrl } from "../../utils/slugUtils";
 
 interface BlogCardProps {
   post: BlogPost;
@@ -29,29 +30,42 @@ const Metadata: React.FC<{ date: string; readTime?: string }> = ({ date, readTim
 );
 
 const BlogCard: React.FC<BlogCardProps> = ({ post }) => {
+  const blogUrl = getBlogUrl(post);
+
   return (
     <article className="flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 group">
-      <div className="relative h-60 sm:h-64 overflow-hidden">
+      <Link
+        to={blogUrl}
+        state={{ blogData: post }}
+        className="relative h-60 sm:h-64 overflow-hidden block"
+      >
         <img
           src={post.image}
           alt={post.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute top-4 left-4">
+        <div className="absolute bottom-4 left-4 z-10">
           <CategoryBadge label={post.category} />
         </div>
-      </div>
+      </Link>
       <div className="p-6 flex flex-col flex-grow">
         <Metadata date={post.date} readTime={post.readTime} />
         <h3 className="text-xl font-extrabold text-[#2E1347] mb-3 leading-tight line-clamp-2">
-          {post.title}
+          <Link
+            to={blogUrl}
+            state={{ blogData: post }}
+            className="hover:text-[#E91E63] transition-colors"
+          >
+            {post.title}
+          </Link>
         </h3>
         <p className="text-sm text-gray-500 mb-4 line-clamp-3 font-semibold flex-grow">
           {post.excerpt}
         </p>
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <Link
-            to={`/blog/${post.slug}`}
+            to={blogUrl}
+            state={{ blogData: post }}
             className="flex items-center gap-2 text-xs font-bold text-gray-800 uppercase tracking-wide group/link"
           >
             <span>Read More</span>

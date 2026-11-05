@@ -11,13 +11,14 @@ import {
   Clock,
   Calendar,
 } from "lucide-react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import PreFooter from "../components/reusable/PreFooter";
 import { blogPosts } from "../assets/data/mockData";
 import ShareModal from "../components/reusable/ShareModal";
 import { shareToPlatform } from "../utils/shareUtils";
 import { SEO } from "../components/reusable";
-import { getBlogById } from "../api/BackendApi";
+import { getBlogById, getBlogs } from "../api/BackendApi";
+import { getBlogUrl, slugify } from "../utils/slugUtils";
 
 export interface BlogInsightItem {
   id?: number | string;
@@ -98,23 +99,81 @@ const formatDate = (dateStr?: string): string => {
   }
 };
 
+const parseTags = (rawTags: any): string[] => {
+  if (Array.isArray(rawTags) && rawTags.length > 0) {
+    return rawTags.map((t: string) => (t.startsWith("#") ? t : `#${t}`));
+  }
+  if (typeof rawTags === "string" && rawTags.trim()) {
+    return rawTags
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .map((t: string) => (t.startsWith("#") ? t : `#${t}`));
+  }
+  return DEFAULT_TAGS;
+};
+
+const parseInsights = (rawInsights: any): BlogInsightItem[] => {
+  if (Array.isArray(rawInsights) && rawInsights.length > 0) {
+    return rawInsights.map((ins: any) => ({
+      id: ins.id,
+      title: ins.title,
+      description: ins.description,
+      sort_order: ins.sort_order,
+    }));
+  }
+  return DEFAULT_INSIGHTS;
+};
+
 const BlogDetailMore: React.FC = () => {
   const navigate = useNavigate();
-  const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
+  const { slug, id } = useParams<{ slug?: string; id?: string }>();
+  const rawIdentifier = (slug || id || "").trim();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
+  // Check state passed via navigation for instant restore
+  const passedBlog = (location.state as any)?.blogData || (location.state as any)?.blog;
+
   // Check if article matches local mock post first
-  const mockPost = useMemo(
-    () =>
+  const mockPost = useMemo(() => {
+    if (!rawIdentifier) return null;
+    const target = rawIdentifier.toLowerCase();
+    return (
       blogPosts.find(
         (p) =>
-          p.slug.toLowerCase() === slug?.toLowerCase() ||
-          String(p.id).toLowerCase() === slug?.toLowerCase()
-      ),
-    [slug]
-  );
+          p.slug.toLowerCase() === target ||
+          slugify(p.title).toLowerCase() === target ||
+          String(p.id).toLowerCase() === target
+      ) || null
+    );
+  }, [rawIdentifier]);
 
   const [post, setPost] = useState<BlogDetailData | null>(() => {
+    if (passedBlog && passedBlog.title) {
+      const cleanSlug =
+        passedBlog.slug && !/^\d+$/.test(String(passedBlog.slug).trim())
+          ? passedBlog.slug
+          : slugify(passedBlog.title);
+      return {
+        id: passedBlog.id,
+        title: passedBlog.title,
+        slug: cleanSlug || String(passedBlog.id),
+        category: passedBlog.category?.name || passedBlog.category || "Trekking",
+        categoryId: passedBlog.category_id || passedBlog.categoryId,
+        image:
+          passedBlog.image ||
+          "https://images.unsplash.com/photo-1544735745-b81216c7ad8f?auto=format&fit=crop&q=80&w=1200",
+        date: formatDate(passedBlog.created_at || passedBlog.date),
+        readTime: passedBlog.read_time || passedBlog.readTime || "8 min read",
+        author: passedBlog.author_name || passedBlog.author || "Adventure Desk",
+        authorAvatar: passedBlog.author_avatar || passedBlog.authorAvatar,
+        excerpt: passedBlog.excerpt || "",
+        content: passedBlog.content || "",
+        quote: passedBlog.quote || "",
+        insights: parseInsights(passedBlog.insights),
+        tags: parseTags(passedBlog.tags),
+      };
+    }
     if (mockPost) {
       return {
         id: mockPost.id,
@@ -136,45 +195,102 @@ const BlogDetailMore: React.FC = () => {
   });
 
   const [relatedStories, setRelatedStories] = useState<RelatedStoryItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(!mockPost);
+  const [loading, setLoading] = useState<boolean>(!post);
 
   // ── Fetch single blog detail and related stories from backend API ──
   useEffect(() => {
-    if (!slug) return;
+    if (!rawIdentifier) return;
     let isMounted = true;
-    setLoading(!mockPost);
+    if (!post) {
+      setLoading(true);
+    }
 
-    getBlogById(slug)
-      .then((res) => {
+    const resolveBlogDetail = async () => {
+      try {
+        let apiBlog: any = null;
+        let apiRelated: any[] = [];
+        const isNumeric = /^\d+$/.test(rawIdentifier);
+
+        // Scenario 1: Numeric ID provided (e.g. /blogs/1)
+        if (isNumeric) {
+          try {
+            const res = await getBlogById(rawIdentifier);
+            const data = res.data?.data;
+            apiBlog = data?.blog || data;
+            apiRelated = data?.related_stories || [];
+          } catch (err) {
+            console.warn("Direct numeric blog fetch failed:", err);
+          }
+        } else {
+          // Scenario 2: SEO titled slug provided (e.g. /blog/top-10-essential-tips-...)
+          // First attempt: direct show endpoint
+          try {
+            const directRes = await getBlogById(rawIdentifier);
+            const data = directRes.data?.data;
+            if (data?.blog?.title || data?.title) {
+              apiBlog = data?.blog || data;
+              apiRelated = data?.related_stories || [];
+            }
+          } catch {
+            // Expected 404 if backend route has ->whereNumber('id').
+            // Fall back to resolving via active blogs list.
+          }
+
+          // Second attempt: find blog in active blogs list to retrieve numeric ID
+          if (!apiBlog || !apiBlog.title) {
+            try {
+              const listRes = await getBlogs();
+              let blogList: any[] = [];
+              if (Array.isArray(listRes.data?.data?.data)) {
+                blogList = listRes.data.data.data;
+              } else if (Array.isArray(listRes.data?.data)) {
+                blogList = listRes.data.data;
+              } else if (Array.isArray(listRes.data)) {
+                blogList = listRes.data;
+              }
+
+              const target = rawIdentifier.toLowerCase();
+              const matched = blogList.find((b: any) => {
+                const bSlug = (b.slug || "").toLowerCase();
+                const bTitleSlug = slugify(b.title).toLowerCase();
+                const bId = String(b.id).toLowerCase();
+                return (
+                  bSlug === target ||
+                  bTitleSlug === target ||
+                  bId === target
+                );
+              });
+
+              if (matched && matched.id) {
+                // Now query backend using its numeric ID (always allowed by whereNumber)
+                try {
+                  const detailRes = await getBlogById(matched.id);
+                  const dData = detailRes.data?.data;
+                  apiBlog = dData?.blog || dData || matched;
+                  apiRelated = dData?.related_stories || [];
+                } catch {
+                  apiBlog = matched;
+                }
+              }
+            } catch (listErr) {
+              console.warn("Blogs list query failed:", listErr);
+            }
+          }
+        }
+
         if (!isMounted) return;
-        const data = res.data?.data;
-        const apiBlog = data?.blog || data;
-        const apiRelated = data?.related_stories;
 
+        // If backend returned blog data
         if (apiBlog && apiBlog.title) {
-          // Parse insights from backend relationship
-          let insightsList: BlogInsightItem[] = DEFAULT_INSIGHTS;
-          if (Array.isArray(apiBlog.insights) && apiBlog.insights.length > 0) {
-            insightsList = apiBlog.insights.map((ins: any) => ({
-              id: ins.id,
-              title: ins.title,
-              description: ins.description,
-              sort_order: ins.sort_order,
-            }));
-          }
+          const cleanSlug =
+            apiBlog.slug && !/^\d+$/.test(String(apiBlog.slug).trim())
+              ? apiBlog.slug
+              : slugify(apiBlog.title);
 
-          // Parse tags from backend
-          let tagsList = DEFAULT_TAGS;
-          if (Array.isArray(apiBlog.tags) && apiBlog.tags.length > 0) {
-            tagsList = apiBlog.tags.map((t: string) =>
-              t.startsWith("#") ? t : `#${t}`
-            );
-          }
-
-          setPost({
+          const fullBlogData: BlogDetailData = {
             id: apiBlog.id,
             title: apiBlog.title,
-            slug: apiBlog.slug || String(apiBlog.id),
+            slug: cleanSlug || String(apiBlog.id),
             category: apiBlog.category?.name || "Trekking",
             categoryId: apiBlog.category_id,
             image:
@@ -187,17 +303,22 @@ const BlogDetailMore: React.FC = () => {
             excerpt: apiBlog.excerpt || "",
             content: apiBlog.content || "",
             quote: apiBlog.quote || "",
-            insights: insightsList,
-            tags: tagsList,
-          });
+            insights: parseInsights(apiBlog.insights),
+            tags: parseTags(apiBlog.tags),
+          };
 
-          // Parse Related Stories from backend response
+          setPost(fullBlogData);
+
+          // Populate Related Stories
           if (Array.isArray(apiRelated) && apiRelated.length > 0) {
             setRelatedStories(
               apiRelated.map((rel: any) => ({
                 id: rel.id,
                 title: rel.title,
-                slug: rel.slug || String(rel.id),
+                slug:
+                  rel.slug && !/^\d+$/.test(String(rel.slug).trim())
+                    ? rel.slug
+                    : slugify(rel.title) || String(rel.id),
                 category: rel.category?.name || "Tours and Travel",
                 image:
                   rel.image ||
@@ -205,13 +326,13 @@ const BlogDetailMore: React.FC = () => {
               }))
             );
           } else {
-            // Fallback related stories
+            // Fallback related stories from mock data
             setRelatedStories(
               blogPosts
                 .filter(
                   (p) =>
-                    p.slug.toLowerCase() !== slug?.toLowerCase() &&
-                    String(p.id) !== slug
+                    p.slug.toLowerCase() !== rawIdentifier.toLowerCase() &&
+                    String(p.id) !== rawIdentifier
                 )
                 .slice(0, 3)
                 .map((p) => ({
@@ -224,10 +345,26 @@ const BlogDetailMore: React.FC = () => {
             );
           }
         } else if (mockPost) {
-          // If API didn't return a record but we have mock post, retain mock
+          // Fallback to local mock data
+          setPost({
+            id: mockPost.id,
+            title: mockPost.title,
+            slug: mockPost.slug,
+            category: mockPost.category,
+            image: mockPost.image,
+            date: mockPost.date,
+            readTime: mockPost.readTime || "8 min read",
+            author: mockPost.author || "Adventure Desk",
+            excerpt: mockPost.excerpt,
+            content: mockPost.content || "",
+            quote: "",
+            insights: DEFAULT_INSIGHTS,
+            tags: DEFAULT_TAGS,
+          });
+
           setRelatedStories(
             blogPosts
-              .filter((p) => p.slug !== slug && p.id !== slug)
+              .filter((p) => p.slug !== rawIdentifier && p.id !== rawIdentifier)
               .slice(0, 3)
               .map((p) => ({
                 id: p.id,
@@ -237,40 +374,58 @@ const BlogDetailMore: React.FC = () => {
                 image: p.image,
               }))
           );
+        } else if (!passedBlog) {
+          setPost(null);
         }
-      })
-      .catch(() => {
+      } catch (err) {
         if (!isMounted) return;
         if (mockPost) {
-          setRelatedStories(
-            blogPosts
-              .filter((p) => p.slug !== slug && p.id !== slug)
-              .slice(0, 3)
-              .map((p) => ({
-                id: p.id,
-                title: p.title,
-                slug: p.slug,
-                category: p.category,
-                image: p.image,
-              }))
-          );
+          setPost({
+            id: mockPost.id,
+            title: mockPost.title,
+            slug: mockPost.slug,
+            category: mockPost.category,
+            image: mockPost.image,
+            date: mockPost.date,
+            readTime: mockPost.readTime || "8 min read",
+            author: mockPost.author || "Adventure Desk",
+            excerpt: mockPost.excerpt,
+            content: mockPost.content || "",
+            quote: "",
+            insights: DEFAULT_INSIGHTS,
+            tags: DEFAULT_TAGS,
+          });
+        } else if (!passedBlog) {
+          setPost(null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) {
           setLoading(false);
         }
-      });
+      }
+    };
+
+    resolveBlogDetail();
 
     return () => {
       isMounted = false;
     };
-  }, [slug, mockPost]);
+  }, [rawIdentifier, mockPost]);
 
-  // Scroll to top when slug changes
+  // ── SEO URL Normalization: If accessed via pure numeric ID, replace URL with SEO titled slug ──
+  useEffect(() => {
+    if (post && /^\d+$/.test(rawIdentifier) && post.title) {
+      const seoUrl = getBlogUrl(post);
+      if (location.pathname !== seoUrl) {
+        navigate(seoUrl, { replace: true, state: location.state });
+      }
+    }
+  }, [post, rawIdentifier, location.pathname, location.state, navigate]);
+
+  // Scroll to top when rawIdentifier changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [slug]);
+  }, [rawIdentifier]);
 
   if (loading) {
     return (
@@ -335,24 +490,27 @@ const BlogDetailMore: React.FC = () => {
   const tagsToRender =
     post.tags && post.tags.length > 0 ? post.tags : DEFAULT_TAGS;
 
+  const hasHtmlContent = /<[a-z][\s\S]*>/i.test(post.content || "");
+  const canonicalPath = getBlogUrl(post);
+
   return (
     <div className="min-h-screen bg-white font-sans text-[#4A5568]">
       <SEO
         title={`${post.title} | Trip Himalaya Travel Blog`}
         description={
           post.excerpt
-            ? post.excerpt.slice(0, 160)
+            ? post.excerpt.replace(/<[^>]+>/g, "").slice(0, 160)
             : `Read ${post.title} on Trip Himalaya. Tips, advice, and stories about Nepal travel and trekking.`
         }
         keywords={`${post.title}, Nepal travel blog, ${post.category}, Nepal trekking tips, Trip Himalaya stories`}
-        canonicalPath={`/blog/${post.slug}`}
+        canonicalPath={canonicalPath}
         image={post.image}
         type="article"
         schema={{
           "@context": "https://schema.org",
           "@type": "BlogPosting",
           headline: post.title,
-          description: post.excerpt,
+          description: post.excerpt?.replace(/<[^>]+>/g, ""),
           image: post.image,
           datePublished: post.date,
           author: {
@@ -497,15 +655,22 @@ const BlogDetailMore: React.FC = () => {
           <div className="lg:col-span-8 space-y-6">
             {post.excerpt && (
               <h2 className="text-xl font-bold text-[#2D1B69] italic leading-snug">
-                {post.excerpt}
+                {post.excerpt.replace(/<[^>]+>/g, "")}
               </h2>
             )}
 
             <div className="text-[15px] leading-relaxed space-y-5 text-[#4A5568]">
               {post.content ? (
-                <div className="whitespace-pre-line leading-relaxed space-y-4">
-                  {post.content}
-                </div>
+                hasHtmlContent ? (
+                  <div
+                    className="prose max-w-none text-[#4A5568] leading-relaxed space-y-4 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-[#2D1B69] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#2D1B69] [&_p]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1.5"
+                    dangerouslySetInnerHTML={{ __html: post.content }}
+                  />
+                ) : (
+                  <div className="whitespace-pre-line leading-relaxed space-y-4">
+                    {post.content}
+                  </div>
+                )
               ) : (
                 <p>
                   Traveling through the majestic landscapes of the Himalayas
@@ -518,11 +683,9 @@ const BlogDetailMore: React.FC = () => {
               )}
 
               {post.quote && (
-                <div className="p-6 bg-purple-50/60 rounded-2xl border-l-4 border-[#E91E63] my-6">
-                  <p className="italic text-[#2D1B69] font-medium text-base">
-                    "{post.quote}"
-                  </p>
-                </div>
+                <blockquote className="my-8 p-6 bg-pink-50/50 border-l-4 border-[#E91E63] rounded-r-2xl italic text-[#2D1B69] font-medium text-base">
+                  "{post.quote.replace(/^["']|["']$/g, "")}"
+                </blockquote>
               )}
 
               {/* Dynamic Key Insights & Recommendations */}
@@ -562,7 +725,7 @@ const BlogDetailMore: React.FC = () => {
 
           {/* Sidebar */}
           <aside className="lg:col-span-4 space-y-8 sm:space-y-10">
-            {/* Author card matching Image 3 */}
+            {/* Author card */}
             <div className="bg-[#2D1B69] rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-xl">
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <TrendingUp size={80} />
@@ -571,31 +734,34 @@ const BlogDetailMore: React.FC = () => {
                 ABOUT THE AUTHOR
               </p>
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-[#E91E63] flex items-center justify-center text-xl font-bold shadow-lg flex-shrink-0">
-                  {authorInitials}
-                </div>
+                {post.authorAvatar ? (
+                  <img
+                    src={post.authorAvatar}
+                    alt={post.author}
+                    className="w-14 h-14 rounded-2xl object-cover shadow-lg flex-shrink-0 border-2 border-white/20"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-[#E91E63] flex items-center justify-center text-xl font-bold shadow-lg flex-shrink-0">
+                    {authorInitials}
+                  </div>
+                )}
                 <div>
                   <h5 className="font-bold text-base leading-none mb-1 text-white uppercase tracking-wider">
                     {post.author}
                   </h5>
-                  <p className="text-[9px] opacity-60 uppercase tracking-widest font-bold">
-                    TRAVEL SPECIALIST
-                  </p>
+                  <span className="text-[10px] text-pink-300 font-bold uppercase tracking-wider">
+                    Travel Specialist
+                  </span>
                 </div>
               </div>
-              <p className="text-xs opacity-75 leading-relaxed mb-7">
-                Veteran Himalayan expedition planner and cultural writer with
-                over 15 years of field experience across Nepal, Tibet, and Bhutan.
+              <p className="text-xs text-white/70 leading-relaxed font-normal">
+                Passionate about Himalayan expeditions, cultural preservation,
+                and sharing authentic travel wisdom with fellow explorers
+                worldwide.
               </p>
-              <button
-                onClick={() => navigate("/blog")}
-                className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[9px] font-bold uppercase tracking-[0.15em] transition-all border border-white/10 cursor-pointer text-center"
-              >
-                VIEW ALL STORIES
-              </button>
             </div>
 
-            {/* ── RELATED STORIES (Live from backend API) ── */}
+            {/* Related stories */}
             {relatedStories.length > 0 && (
               <div>
                 <h4 className="flex items-center gap-2 text-[11px] font-black text-[#2D1B69] uppercase tracking-widest mb-6">
@@ -606,7 +772,7 @@ const BlogDetailMore: React.FC = () => {
                   {relatedStories.map((related) => (
                     <Link
                       key={related.id}
-                      to={`/blog/${related.slug}`}
+                      to={getBlogUrl(related)}
                       className="flex gap-4 group items-center"
                     >
                       <div className="w-20 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-sm bg-gray-100">

@@ -110,13 +110,18 @@ export const getDocumentationUrl = (doc: {
 
 /**
  * Returns the SEO-friendly URL for a Blog post.
+ * Always prefers a clean, titled slug over a numeric ID to optimize for SEO.
  */
 export const getBlogUrl = (post: {
   slug?: string | null;
   title?: string | null;
   id?: number | string | null;
 }): string => {
-  const segment = post.slug || slugify(post.title) || (post.id ? String(post.id) : "");
+  const hasCleanSlug = post.slug && !/^\d+$/.test(String(post.slug).trim());
+  const segment =
+    (hasCleanSlug ? post.slug : "") ||
+    slugify(post.title) ||
+    (post.slug ? String(post.slug) : "") ||
+    (post.id ? String(post.id) : "");
   return segment ? `/blog/${segment}` : "/blog";
 };
-

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+﻿import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Search,
@@ -22,6 +22,7 @@ import { copyToClipboard, triggerNativeShare } from "../utils/shareUtils";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
 import { getBlogs, getPageByName, getCategories } from "../api/BackendApi";
+import { getBlogUrl, slugify } from "../utils/slugUtils";
 import YouTubePlayer from "../components/blog/YouTubePlayer";
 
 // Re-export for backward compatibility
@@ -60,59 +61,69 @@ const formatDate = (dateStr?: string): string => {
 };
 
 // ─── BLOG CARD ───────────────────────────────────────────────────────────────
-const BlogCard: React.FC<{ post: UnifiedBlogPost }> = ({ post }) => (
-  <article className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg border border-gray-100 group transition-all duration-300 flex flex-col h-full">
-    <div className="relative h-52 overflow-hidden flex-shrink-0">
-      <img
-        src={post.image}
-        alt={post.title}
-        loading="lazy"
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).src =
-            "https://images.unsplash.com/photo-1544735745-b81216c7ad8f?auto=format&fit=crop&q=80&w=1200";
-        }}
-        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-      />
-      <span className="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full text-[9px] font-black text-[#E91E63] uppercase tracking-wider shadow-sm">
-        {post.category}
-      </span>
-    </div>
-    <div className="p-5 flex flex-col flex-grow">
-      <div className="flex items-center gap-3 text-[10px] text-gray-400 font-semibold mb-2">
-        <span className="flex items-center gap-1">
-          <Calendar size={10} />
-          {post.date}
+const BlogCard: React.FC<{ post: UnifiedBlogPost }> = ({ post }) => {
+  const blogUrl = getBlogUrl(post);
+  return (
+    <article className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg border border-gray-100 group transition-all duration-300 flex flex-col h-full">
+      <Link
+        to={blogUrl}
+        state={{ blogData: post }}
+        className="relative h-52 overflow-hidden flex-shrink-0 block"
+      >
+        <img
+          src={post.image}
+          alt={post.title}
+          loading="lazy"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1544735745-b81216c7ad8f?auto=format&fit=crop&q=80&w=1200";
+          }}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <span className="absolute bottom-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full text-[9px] font-black text-[#E91E63] uppercase tracking-wider shadow-sm z-10">
+          {post.category}
         </span>
-        {post.readTime && (
+      </Link>
+      <div className="p-5 flex flex-col flex-grow">
+        <div className="flex items-center gap-3 text-[10px] text-gray-400 font-semibold mb-2">
           <span className="flex items-center gap-1">
-            <Clock size={10} />
-            {post.readTime}
+            <Calendar size={10} />
+            {post.date}
           </span>
-        )}
-      </div>
-      <h3 className="font-extrabold text-[#2D1347] text-sm leading-snug line-clamp-2 mb-2 group-hover:text-[#E91E63] transition-colors">
-        {post.title}
-      </h3>
-      <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-grow">
-        {post.excerpt}
-      </p>
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-        <Link
-          to={`/blog/${post.slug}`}
-          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-800 hover:text-[#E91E63] transition-colors group/link"
-        >
-          Read More
-          <span className="w-5 h-5 rounded-full bg-[#E91E63] flex items-center justify-center group-hover/link:translate-x-0.5 transition-transform">
-            <ArrowRight size={8} className="text-white" />
+          {post.readTime && (
+            <span className="flex items-center gap-1">
+              <Clock size={10} />
+              {post.readTime}
+            </span>
+          )}
+        </div>
+        <h3 className="font-extrabold text-[#2D1347] text-sm leading-snug line-clamp-2 mb-2 group-hover:text-[#E91E63] transition-colors">
+          <Link to={blogUrl} state={{ blogData: post }}>
+            {post.title}
+          </Link>
+        </h3>
+        <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-grow">
+          {post.excerpt}
+        </p>
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
+          <Link
+            to={blogUrl}
+            state={{ blogData: post }}
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-800 hover:text-[#E91E63] transition-colors group/link"
+          >
+            Read More
+            <span className="w-5 h-5 rounded-full bg-[#E91E63] flex items-center justify-center group-hover/link:translate-x-0.5 transition-transform">
+              <ArrowRight size={8} className="text-white" />
+            </span>
+          </Link>
+          <span className="text-[9px] text-gray-400 font-bold uppercase truncate max-w-[130px]">
+            By {post.author}
           </span>
-        </Link>
-        <span className="text-[9px] text-gray-400 font-bold uppercase truncate max-w-[130px]">
-          By {post.author}
-        </span>
+        </div>
       </div>
-    </div>
-  </article>
-);
+    </article>
+  );
+};
 
 // ─── VIDEO CARD ──────────────────────────────────────────────────────────────
 interface VideoCardProps {
@@ -143,7 +154,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ vlog, onPlay }) => (
       </div>
 
       {/* Category badge */}
-      <span className="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full text-[9px] font-black text-[#E91E63] uppercase tracking-wider shadow-sm">
+      <span className="absolute bottom-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full text-[9px] font-black text-[#E91E63] uppercase tracking-wider shadow-sm z-10">
         {vlog.category}
       </span>
 
@@ -238,7 +249,8 @@ const ReadSidebar: React.FC<ReadSidebarProps> = ({
           {latestNews.slice(0, 4).map((post) => (
             <Link
               key={post.id}
-              to={`/blog/${post.slug}`}
+              to={getBlogUrl(post)}
+              state={{ blogData: post }}
               className="flex gap-3 group items-center"
             >
               <img
@@ -498,10 +510,13 @@ const Blog: React.FC = () => {
       }
 
       if (rawList.length > 0) {
-        const parsed: UnifiedBlogPost[] = rawList.map((b: any) => ({
-          id: b.id,
-          title: b.title,
-          slug: b.slug || String(b.id),
+        const parsed: UnifiedBlogPost[] = rawList.map((b: any) => {
+          const cleanSlug = b.slug && !/^\d+$/.test(String(b.slug).trim()) ? b.slug : "";
+          const finalSlug = cleanSlug || slugify(b.title) || String(b.id);
+          return {
+            id: b.id,
+            title: b.title,
+            slug: finalSlug,
           category: b.category?.name || "Trekking",
           categoryId: b.category_id,
           image:
@@ -519,8 +534,9 @@ const Blog: React.FC = () => {
               ? b.content.slice(0, 140) + "..."
               : "Discover unforgettable Himalayan travel guides and insights."),
           content: b.content,
-          isLatestNews: !!b.is_latest_news,
-        }));
+            isLatestNews: !!b.is_latest_news,
+          };
+        });
         setApiPosts(parsed);
       } else {
         // Fallback to verified local posts if backend has 0 posts seeded
@@ -540,10 +556,13 @@ const Blog: React.FC = () => {
         }
 
         if (newsList.length > 0) {
-          const parsedNews: UnifiedBlogPost[] = newsList.map((b: any) => ({
-            id: b.id,
-            title: b.title,
-            slug: b.slug || String(b.id),
+          const parsedNews: UnifiedBlogPost[] = newsList.map((b: any) => {
+            const cleanSlug = b.slug && !/^\d+$/.test(String(b.slug).trim()) ? b.slug : "";
+            const finalSlug = cleanSlug || slugify(b.title) || String(b.id);
+            return {
+              id: b.id,
+              title: b.title,
+              slug: finalSlug,
             category: b.category?.name || "Trekking",
             categoryId: b.category_id,
             image:
@@ -554,8 +573,9 @@ const Blog: React.FC = () => {
             author: b.author_name || "Travel Expert",
             excerpt: b.excerpt || "",
             content: b.content,
-            isLatestNews: true,
-          }));
+              isLatestNews: true,
+            };
+          });
           setLatestNewsPosts(parsedNews);
         } else {
           // If no specific is_latest_news flagged, use latest 4 posts

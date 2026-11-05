@@ -1,4 +1,4 @@
-import "./App.css";
+﻿import "./App.css";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
@@ -85,20 +85,20 @@ const MainLayout = () => {
       {/* Auto scroll to top on page change */}
       <ScrollToTop />
 
-      {/* ── 3-TIER HEADER (TopBar, NavBar, ServicesStrip) ──
+      {/* â”€â”€ 3-TIER HEADER (TopBar, NavBar, ServicesStrip) â”€â”€
           Rendered across all pages including the dashboard, exactly matching the home page. */}
       <div className="sticky top-0 z-50 print:hidden">
         <Header />
       </div>
 
       <Routes>
-        {/* ── HOME ── */}
+        {/* â”€â”€ HOME â”€â”€ */}
         <Route path="/" element={<Home />} />
 
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
 
-        {/* ── LOGIN (nested subroutes) ── */}
+        {/* â”€â”€ LOGIN (nested subroutes) â”€â”€ */}
         <Route path="/login" element={<Login />}>
           <Route index path="" element={<LoginForm />} />
           <Route path="otp" element={<LoginOtp />} />
@@ -107,7 +107,7 @@ const MainLayout = () => {
           <Route path="reset-password" element={<LoginResetPass />} />
         </Route>
 
-        {/* ── REGISTRATION ── */}
+        {/* â”€â”€ REGISTRATION â”€â”€ */}
         <Route path="/register" element={<Register />}>
           <Route index path="" element={<RegisterPage />} />
           <Route path="otp" element={<RegisterOtp />} />
@@ -125,7 +125,7 @@ const MainLayout = () => {
           <Route index element={<RegisterSuccess />} />
         </Route>
 
-        {/* ── USER DASHBOARD ── */}
+        {/* â”€â”€ USER DASHBOARD â”€â”€ */}
         <Route
           path="/dashboard"
           element={
@@ -134,40 +134,43 @@ const MainLayout = () => {
             </ProtectedRoute>
           }
         >
-          {/* /dashboard → main cards view */}
+          {/* /dashboard â†’ main cards view */}
           <Route index element={<Dashboard tab="dashboard" />} />
           {/* /dashboard/user-profile */}
           <Route path="user-profile" element={<Dashboard tab="user-details" />} />
-          {/* /dashboard/booking → all bookings table */}
+          {/* /dashboard/booking â†’ all bookings table */}
           <Route path="booking" element={<Dashboard tab="booking" />} />
-          {/* /dashboard/booking/:serviceId → filtered by service */}
+          {/* /dashboard/booking/:serviceId â†’ filtered by service */}
           <Route path="booking/:serviceId" element={<Dashboard tab="booking" />} />
-          {/* /dashboard/booking/:serviceId/:bookingId → detail view */}
+          {/* /dashboard/booking/:serviceId/:bookingId â†’ detail view */}
           <Route path="booking/:serviceId/:bookingId" element={<Dashboard tab="booking" />} />
         </Route>
 
-        {/* ── ABOUT ── */}
+        {/* â”€â”€ ABOUT â”€â”€ */}
         <Route path="/about" element={<About />} />
 
-        {/* ── CONTACT ── */}
+        {/* â”€â”€ CONTACT â”€â”€ */}
         <Route path="/contact" element={<Contact />} />
 
-        {/* ── SERVICES ── */}
+        {/* â”€â”€ SERVICES â”€â”€ */}
         <Route path="/service" element={<ServicesPage />} />
         <Route path="/service/:slug" element={<ServiceDetail />} />
         <Route path="/service/:slug/:tourId" element={<ServiceDetail />} />
 
-        {/* ── BLOG (Read Stories & Video Vlogs dual-mode) ── */}
+        {/* â”€â”€ BLOG (Read Stories & Video Vlogs dual-mode) â”€â”€ */}
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogDetail />} />
+        <Route path="/blogs" element={<Blog />} />
+        <Route path="/blogs/:slug" element={<BlogDetail />} />
+        <Route path="/blog-details/:slug" element={<BlogDetail />} />
 
-        {/* ── TRAVEL GUIDE ── */}
+        {/* â”€â”€ TRAVEL GUIDE â”€â”€ */}
         <Route path="/travel-guide" element={<TravelGuide />} />
 
-        {/* ── GALLERY ── */}
+        {/* â”€â”€ GALLERY â”€â”€ */}
         <Route path="/gallery" element={<Gallery />} />
 
-        {/* ── PACKAGES (with nested subroutes) ── */}
+        {/* â”€â”€ PACKAGES (with nested subroutes) â”€â”€ */}
         <Route path="/packages" element={<Packages />} />
         <Route path="/packages/:packageId" element={<PackageDetail />}>
           <Route index path="" element={<PackageOverview />} />
@@ -228,18 +231,18 @@ const MainLayout = () => {
         <Route path="/work-permit/:id" element={<WorkPermitDetail />} />
         <Route path="/permit-details/:id" element={<WorkPermitDetail />} />
 
-        {/* ── DOCUMENTATION ── */}
+        {/* â”€â”€ DOCUMENTATION â”€â”€ */}
         <Route path="/documentation" element={<DocumentationPage />} />
         <Route path="/documentation/:id" element={<DocumentationDetailPage />} />
 
-        {/* ── SEARCH RESULTS ── */}
+        {/* â”€â”€ SEARCH RESULTS â”€â”€ */}
         <Route path="/search" element={<SearchResults />} />
 
-        {/* ── 404 Catch-All Route ── */}
+        {/* â”€â”€ 404 Catch-All Route â”€â”€ */}
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      {/* Global Footer — hidden on /dashboard */}
+      {/* Global Footer â€” hidden on /dashboard */}
       {!hideFooter && (
         <div className="print:hidden">
           <Footer />

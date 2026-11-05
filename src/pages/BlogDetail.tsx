@@ -578,24 +578,16 @@ const BlogDetailMore: React.FC = () => {
         }}
       />
 
-      {/* ── HERO: Full-width image with overlay title (fitted with ambient backdrop) ── */}
+      {/* ── HERO: Full-width image with overlay title ── */}
       <section className="relative w-full h-[60vh] sm:h-[70vh] min-h-[460px] max-h-[750px] overflow-hidden bg-[#120824]">
-        <div className="absolute inset-0 flex items-center justify-center">
-          {/* Ambient blurred backdrop so letterbox areas are softly filled with the image's colors */}
-          <img
-            src={post.image}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-35 scale-110 pointer-events-none"
-          />
-          {/* Fully fitted image - preserves complete aspect ratio without any cropping */}
+        <div className="absolute inset-0">
           <img
             src={post.image}
             alt={post.title}
-            className="w-full h-full object-contain relative z-0"
+            className="w-full h-full object-cover object-center"
           />
-          {/* Gradient: transparent top → dark purple bottom for crisp text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0d35]/95 via-[#1a0d35]/30 to-black/20 pointer-events-none z-1" />
+          {/* Gradient: transparent top → dark purple bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0d35]/95 via-[#2D1B69]/40 to-transparent" />
         </div>
 
         <div className="relative h-full max-w-7xl mx-auto px-5 sm:px-8 flex flex-col justify-end py-8">

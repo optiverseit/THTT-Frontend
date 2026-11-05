@@ -632,7 +632,7 @@ export const getBlogById = (id: number | string) => {
 
 // ==========================================
 // PAGES & DASHBOARD IMAGE
-// Route: /pages/name/{name} -> getByName
+// Route::get('/pages/name/{name}', [PageController::class, 'getByName']);
 // (Used for fetching page background images e.g. dashboard)
 // ==========================================
 export const getPageByName = (name: string) => {

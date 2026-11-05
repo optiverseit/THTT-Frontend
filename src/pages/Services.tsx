@@ -1,8 +1,19 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Plane, Map, Activity, Mountain, Bed, Shield, ShieldCheck,
-  Heart, Car, Wind, FileText, ArrowRight, MessageCircle,
+  Plane,
+  Map,
+  Activity,
+  Mountain,
+  Bed,
+  Shield,
+  ShieldCheck,
+  Heart,
+  Car,
+  Wind,
+  FileText,
+  ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
@@ -10,6 +21,8 @@ import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
 import { services as mockServices } from "../assets/data/mockData";
 import type { Service } from "../assets/data/types";
+import { getPageByName } from "../api/BackendApi";
+import { getBackendRootUrl } from "../config/env";
 
 export type { Service };
 
@@ -29,6 +42,9 @@ const IconMap: Record<string, React.ElementType> = {
 };
 
 export const SERVICES_DATA: Service[] = mockServices;
+
+const DEFAULT_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop";
 
 // --- 3. SUB-COMPONENTS ---
 
@@ -51,7 +67,7 @@ const ServiceCard: React.FC<{ service: Service }> = ({ service }) => {
         alt={service.name}
         className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
       />
-      
+
       {/* Gradient Overlay matching Premium Travel Services logic */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10 group-hover:via-black/45 transition-colors" />
 
@@ -100,20 +116,95 @@ const CTASection = () => (
 // --- 4. MAIN PAGE ---
 
 export default function ServicesPage() {
+  const [heroImages, setHeroImages] = useState<string[]>([DEFAULT_HERO_IMAGE]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchHeroImages = async () => {
+      try {
+        // Query /pages/name/services, fallback to /pages/name/service
+        let res: any;
+        try {
+          res = await getPageByName("services");
+        } catch {
+          res = await getPageByName("service");
+        }
+
+        const pageData = res?.data?.data || res?.data;
+        const rawImages = pageData?.background_images || pageData?.images;
+
+        if (Array.isArray(rawImages) && rawImages.length > 0) {
+          // Filter active images if a status is present
+          const activeImages = rawImages.filter(
+            (item: any) =>
+              !item?.status || String(item.status).toUpperCase() === "ACTIVE"
+          );
+
+          // Sort by sort_order ascending if present
+          activeImages.sort(
+            (a: any, b: any) => (a?.sort_order ?? 0) - (b?.sort_order ?? 0)
+          );
+
+          const backendRoot = getBackendRootUrl();
+          const parsedUrls = activeImages
+            .map((item: any) => {
+              const url =
+                typeof item === "string"
+                  ? item
+                  : item?.image || item?.url || item?.image_url;
+              if (!url) return null;
+              if (
+                url.startsWith("http://") ||
+                url.startsWith("https://") ||
+                url.startsWith("data:")
+              ) {
+                return url;
+              }
+              return `${backendRoot}${url.startsWith("/") ? "" : "/"}${url}`;
+            })
+            .filter(Boolean) as string[];
+
+          if (isMounted && parsedUrls.length > 0) {
+            setHeroImages(parsedUrls);
+          }
+        }
+      } catch (err) {
+        // Fallback to default hero image on failure
+        console.warn("Could not load dynamic service hero images:", err);
+      }
+    };
+
+    fetchHeroImages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleFloatingWhatsApp = () => {
-    const msg = encodeURIComponent("Hello Trip Himalaya! I would like to inquire about your travel services.");
-    window.open(`https://wa.me/9779851420882?text=${msg}`, "_blank", "noopener,noreferrer");
+    const msg = encodeURIComponent(
+      "Hello Trip Himalaya! I would like to inquire about your travel services."
+    );
+    window.open(
+      `https://wa.me/9779851420882?text=${msg}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50 font-sans">
       <SEO {...pagesSEO.services} />
-      {/* BannerSection matching Image 4 structure */}
+
+      {/* Hero / Banner Section with dynamic CMS background images slider (5s interval if >= 2 images) */}
       <BannerSection
         heading="COMPREHENSIVE SOLUTIONS"
         title="Our Services"
         description="Everything you need for a seamless journey, from domestic ticketing to global expeditions."
-        background="https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop"
+        backgrounds={heroImages}
+        background={heroImages[0] || DEFAULT_HERO_IMAGE}
+        autoSlideInterval={5000}
         alt="Trip Himalaya Services"
       />
 

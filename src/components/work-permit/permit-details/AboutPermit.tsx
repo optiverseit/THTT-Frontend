@@ -55,6 +55,22 @@ const AboutPermit = ({
   countryInformation = [],
   costDetailsSlot,
 }: AboutPermitProps) => {
+  // Find DESCRIPTION record from work_permit_information (type: "DESCRIPTION")
+  const descriptionItem = countryInformation.find(
+    (item) =>
+      item.type?.toUpperCase() === "DESCRIPTION" &&
+      item.status?.toUpperCase() === "ACTIVE" &&
+      item.content?.trim()
+  );
+
+  const rawDescription =
+    descriptionItem?.content?.trim() || country.short_description?.trim() || "";
+
+  // If the description starts with a redundant "About <Country> Permit:", cleanly strip it so it flows under the <h2>
+  const displayDescription = descriptionItem
+    ? rawDescription.replace(/^About\s+[^:\n]+(?:\s+Permit)?\s*:\s*/i, "").trim() || rawDescription
+    : rawDescription;
+
   const apiIncluded = countryInformation
     .filter(
       (item) =>
@@ -65,19 +81,47 @@ const AboutPermit = ({
     .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
     .map((item) => item.content.trim());
 
-  const policies = [
+  const defaultPolicies = [
     "Non-Refundable Govt. & Welfare Fees (Once deposited into FEIMS portal)",
     "FEO & Embassy Document Verification Mandatory",
     "Self-Declaration of Overseas Contract & Job Terms Required",
     "Biometric Verification in DOFE National Database",
   ];
 
-  const terms = [
+  const defaultTerms = [
     "Applicant must be minimum 18 years of age with valid passport",
     "Passport must have at least 6 months validity from departure date",
     "GAMCA / DOFE approved medical fitness report required",
     "Pre-departure orientation certificate required for first-time workers",
   ];
+
+  const apiPolicies = countryInformation
+    .filter(
+      (item) =>
+        (item.type?.toUpperCase() === "POLICY" ||
+          item.type?.toUpperCase() === "POLICIES") &&
+        item.status?.toUpperCase() === "ACTIVE" &&
+        item.content?.trim()
+    )
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((item) => item.content.trim());
+
+  const apiTerms = countryInformation
+    .filter(
+      (item) =>
+        (item.type?.toUpperCase() === "TERMS_CONDITION" ||
+          item.type?.toUpperCase() === "TERMS_CONDITIONS" ||
+          item.type?.toUpperCase() === "TERMS" ||
+          item.type?.toUpperCase() === "CONDITION" ||
+          item.type?.toUpperCase() === "CONDITIONS") &&
+        item.status?.toUpperCase() === "ACTIVE" &&
+        item.content?.trim()
+    )
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((item) => item.content.trim());
+
+  const policies = apiPolicies.length > 0 ? apiPolicies : defaultPolicies;
+  const terms = apiTerms.length > 0 ? apiTerms : defaultTerms;
 
   return (
     <div className="col-span-1 lg:col-span-2 flex flex-col gap-6">
@@ -92,11 +136,11 @@ const AboutPermit = ({
           </h2>
         </header>
 
-        {country.short_description ? (
+        {displayDescription ? (
           <div
             className="text-gray-600 font-medium text-base sm:text-[17px] leading-relaxed"
             dangerouslySetInnerHTML={{
-              __html: formatDescription(country.short_description),
+              __html: formatDescription(displayDescription),
             }}
           />
         ) : (

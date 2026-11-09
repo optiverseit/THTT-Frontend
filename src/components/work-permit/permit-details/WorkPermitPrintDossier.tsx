@@ -101,8 +101,22 @@ const WorkPermitPrintDossier: React.FC<WorkPermitPrintDossierProps> = ({
     "Pre-departure orientation certificate required for first-time workers",
   ];
 
-  const formattedOverview = country.short_description
-    ? formatDescription(country.short_description)
+  const descriptionItem = (countryInformation || []).find(
+    (item) =>
+      item.type?.toUpperCase() === "DESCRIPTION" &&
+      item.status?.toUpperCase() === "ACTIVE" &&
+      item.content?.trim()
+  );
+
+  const rawDescription =
+    descriptionItem?.content?.trim() || country.short_description?.trim() || "";
+
+  const displayDescription = descriptionItem
+    ? rawDescription.replace(/^About\s+[^:\n]+(?:\s+Permit)?\s*:\s*/i, "").trim() || rawDescription
+    : rawDescription;
+
+  const formattedOverview = displayDescription
+    ? formatDescription(displayDescription)
     : "";
 
   const hasFeeTiers = feeTiers && feeTiers.length > 0;

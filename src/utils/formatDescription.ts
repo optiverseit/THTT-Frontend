@@ -21,11 +21,11 @@
  * Handles Markdown (# to ######), HTML tags (<h1> to <h6>, <p>, <br>), and plain text.
  */
 
-const ROMAN_RE = /^(i{1,3}|iv|vi{0,3}|ix|xi{0,3}|xiv|xv|xvi{0,3}|xix|xx)[\.\)]\s+/;
-const ALPHA_SECTION_RE = /^[A-Z][\.\)]\s+/;
-const NUMBERED_RE = /^\d+[\.\)]\s+/;
-const LOWER_ALPHA_RE = /^[a-z][\.\)]\s+/;
-const BULLET_RE = /^[\u2022\u25cf\u25cb\-\*\+]\s+/;
+const ROMAN_RE = /^(i{1,3}|iv|vi{0,3}|ix|xi{0,3}|xiv|xv|xvi{0,3}|xix|xx)[\.\)]\s+/i;
+const ALPHA_SECTION_RE = /^[A-Z][\.\)](\s+|(?=[A-Za-z]))/;
+const NUMBERED_RE = /^\d+[\.\)](\s+|(?=[A-Za-z]))/;
+const LOWER_ALPHA_RE = /^[a-z][\.\)](\s+|(?=[A-Za-z]))/;
+const BULLET_RE = /^([\u2022\u25cf\u25cb\+]|-|\*(?!\*))\s*/;
 
 // If content contains advanced HTML elements (tables, iframes, styles), leave intact
 const COMPLEX_HTML_RE = /<(table|thead|tbody|tr|td|th|iframe|svg|video|audio)[\s>]/i;
@@ -78,47 +78,51 @@ export function formatDescription(raw: string | null | undefined): string {
     }
 
     // ── Headings: # (h1), ## (h2), ### (h3), #### (h4), ##### (h5), ###### (h6) ──
-    const hMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    // Supports markdown with space ('### Title') and without space ('###Title' / '######About Qatar Permit:')
+    const hMatch = trimmed.match(/^(#{1,})\s*(.+)$/);
     if (hMatch) {
-      const level = hMatch[1].length;
-      const headingText = hMatch[2].trim();
-      const isFirst = parts.length === 0;
-      closeList();
+      const level = Math.min(6, hMatch[1].length);
+      // Avoid false positive on "#1 ..." when there is no space and it is a rank/number (e.g. "#1 Tour Operator")
+      if (!(level === 1 && !/^\s/.test(trimmed.slice(1)) && /^\d/.test(hMatch[2]))) {
+        const headingText = hMatch[2].trim();
+        const isFirst = parts.length === 0;
+        closeList();
 
-      const headingConfigs: Record<number, { tag: string; style: string }> = {
-        1: {
-          tag: "h1",
-          style: `font-weight:800;color:#200B3B;margin:${isFirst ? "0" : "18px"} 0 8px 0;font-size:1.35em;line-height:1.3;letter-spacing:-0.01em;`,
-        },
-        2: {
-          tag: "h2",
-          style: `font-weight:700;color:#2D1347;margin:${isFirst ? "0" : "16px"} 0 6px 0;font-size:1.2em;line-height:1.35;`,
-        },
-        3: {
-          tag: "h3",
-          style: `font-weight:700;color:#3B1A66;margin:${isFirst ? "0" : "14px"} 0 5px 0;font-size:1.08em;line-height:1.4;`,
-        },
-        4: {
-          tag: "h4",
-          style: `font-weight:700;color:#4B1E7A;margin:${isFirst ? "0" : "12px"} 0 4px 0;font-size:0.98em;line-height:1.45;`,
-        },
-        5: {
-          tag: "h5",
-          style: `font-weight:600;color:#5B21B6;margin:${isFirst ? "0" : "10px"} 0 3px 0;font-size:0.9em;line-height:1.45;`,
-        },
-        6: {
-          tag: "h6",
-          style: `font-weight:600;color:#6B7280;margin:${isFirst ? "0" : "8px"} 0 2px 0;font-size:0.82em;text-transform:uppercase;letter-spacing:0.05em;line-height:1.4;`,
-        },
-      };
+        const headingConfigs: Record<number, { tag: string; style: string }> = {
+          1: {
+            tag: "h1",
+            style: `font-weight:800;color:#200B3B;margin:${isFirst ? "0" : "18px"} 0 8px 0;font-size:1.35em;line-height:1.3;letter-spacing:-0.01em;`,
+          },
+          2: {
+            tag: "h2",
+            style: `font-weight:700;color:#2D1347;margin:${isFirst ? "0" : "16px"} 0 6px 0;font-size:1.2em;line-height:1.35;`,
+          },
+          3: {
+            tag: "h3",
+            style: `font-weight:700;color:#3B1A66;margin:${isFirst ? "0" : "14px"} 0 5px 0;font-size:1.08em;line-height:1.4;`,
+          },
+          4: {
+            tag: "h4",
+            style: `font-weight:700;color:#4B1E7A;margin:${isFirst ? "0" : "12px"} 0 4px 0;font-size:0.98em;line-height:1.45;`,
+          },
+          5: {
+            tag: "h5",
+            style: `font-weight:600;color:#5B21B6;margin:${isFirst ? "0" : "10px"} 0 3px 0;font-size:0.9em;line-height:1.45;`,
+          },
+          6: {
+            tag: "h6",
+            style: `font-weight:600;color:#6B7280;margin:${isFirst ? "0" : "8px"} 0 2px 0;font-size:0.82em;text-transform:uppercase;letter-spacing:0.05em;line-height:1.4;`,
+          },
+        };
 
-      const hConf = headingConfigs[level] || headingConfigs[2];
-      parts.push(
-        `<${hConf.tag} style="${hConf.style}">${parseInlineFormatting(
-          headingText
-        )}</${hConf.tag}>`
-      );
-      continue;
+        const hConf = headingConfigs[level] || headingConfigs[2];
+        parts.push(
+          `<${hConf.tag} style="${hConf.style}">${parseInlineFormatting(
+            headingText
+          )}</${hConf.tag}>`
+        );
+        continue;
+      }
     }
 
     // ── 1. A. / B. / C. -- Main Section Heading ──
@@ -299,9 +303,9 @@ export function stripDescription(raw?: string | null, titleToRemove?: string): s
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/\u00a0/g, " ")
-    .replace(/^[A-Z][\.\)]\s+/gm, "")
-    .replace(/^[iIvVxX]+[\.\)]\s+/gm, "")
-    .replace(/^#+\s+/gm, "")
+    .replace(/^[A-Z][\.\)]\s*/gm, "")
+    .replace(/^[iIvVxX]+[\.\)]\s*/gm, "")
+    .replace(/^#+\s*/gm, "")
     .replace(/\*\*/g, "")
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")

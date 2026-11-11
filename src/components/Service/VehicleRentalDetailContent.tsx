@@ -148,8 +148,19 @@ export interface VehicleRentalDetailContentProps {
 }
 
 
+// Hide mock/fallback data in production builds and live deployments
+const IS_LOCAL_HOST =
+  typeof window !== "undefined" &&
+  (["localhost", "127.0.0.1", "0.0.0.0"].includes(
+    window.location.hostname.toLowerCase()
+  ) ||
+    window.location.hostname.toLowerCase().startsWith("192.168."));
+
+const IS_LIVE_DEPLOYMENT =
+  import.meta.env.PROD || (typeof window !== "undefined" && !IS_LOCAL_HOST);
+
 // ============================================================
-// FALLBACK MOCK VEHICLES (Used when API is empty or as sample)
+// FALLBACK MOCK VEHICLES (Used in local dev when API is empty/offline)
 // ============================================================
 
 const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
@@ -307,6 +318,9 @@ const MOCK_VEHICLES_FALLBACK: BackendVehicle[] = [
 
 // ============================================================
 // POPULAR ROUTES
+// NOTE — DO NOT REMOVE OR DELETE THIS CODE:
+// Used by the Popular Routes Table section below, which is
+// temporarily commented/hidden and will be re-enabled later.
 // ============================================================
 
 const POPULAR_ROUTES = [
@@ -581,9 +595,11 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
 
   // 3. Date: from to To
   const availableFrom =
-    normalizeDateStr(v.available_from || (v as any).availableFrom) || "2026-10-01";
+    normalizeDateStr(v.available_from || (v as any).availableFrom) ||
+    (IS_LIVE_DEPLOYMENT ? "" : "2026-10-01");
   const availableTo =
-    normalizeDateStr(v.available_to || (v as any).availableTo) || "2026-10-20";
+    normalizeDateStr(v.available_to || (v as any).availableTo) ||
+    (IS_LIVE_DEPLOYMENT ? "" : "2026-10-20");
 
   // 4. One way or Round Trip, Private (any one at a time)
   const rawTripType = String(v.trip_type || (v as any).tripType || (v as any).trip_mode || "One Way").trim();
@@ -599,17 +615,30 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
 
   // 5. Total Number of Seats & Available Seats
   const capacityNum = Number(v.capacity) || (vehicleType === "HiAce" ? 14 : vehicleType === "Coaster" ? 22 : 7);
-  const totalSeats = v.total_seats ?? capacityNum;
+  const totalSeats = v.total_seats ?? (v as any).totalSeats ?? capacityNum;
+  const rawAvailableSeats = v.available_seats ?? (v as any).availableSeats;
   const availableSeats =
-    v.available_seats ??
-    Math.max(1, Math.min(Number(totalSeats), Math.floor(Number(totalSeats) * 0.7)));
+    rawAvailableSeats !== undefined && rawAvailableSeats !== null && rawAvailableSeats !== ""
+      ? rawAvailableSeats
+      : IS_LIVE_DEPLOYMENT
+      ? totalSeats
+      : Math.max(1, Math.min(Number(totalSeats), Math.floor(Number(totalSeats) * 0.7)));
 
   // 6. Bags per person & Luggage Weight (Max)
-  const bagsPerPerson = v.bags_per_person ?? "1 Bag / Person";
-  const luggageWeightMax = v.luggage_weight_max ?? "20 kg (Max)";
+  const bagsPerPerson =
+    v.bags_per_person ??
+    (v as any).bagsPerPerson ??
+    (IS_LIVE_DEPLOYMENT ? "Standard" : "1 Bag / Person");
+  const luggageWeightMax =
+    v.luggage_weight_max ??
+    (v as any).luggageWeightMax ??
+    (IS_LIVE_DEPLOYMENT ? "On Request" : "20 kg (Max)");
 
   // 7. No. of days:
-  const noOfDays = v.no_of_days ?? (index % 2 === 0 ? "1 Day" : "3 Days");
+  const noOfDays =
+    v.no_of_days ??
+    (v as any).noOfDays ??
+    (IS_LIVE_DEPLOYMENT ? "Flexible" : index % 2 === 0 ? "1 Day" : "3 Days");
 
   // 8. Rating
   const rating = v.rating ?? 5;
@@ -720,7 +749,7 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   });
 
   const allFromLocations = Array.from(fromSet);
-  if (allFromLocations.length === 0) {
+  if (allFromLocations.length === 0 && !IS_LIVE_DEPLOYMENT) {
     allFromLocations.push("Kathmandu");
   }
 
@@ -740,7 +769,7 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   });
 
   const allToLocations = Array.from(toSet);
-  if (allToLocations.length === 0) {
+  if (allToLocations.length === 0 && !IS_LIVE_DEPLOYMENT) {
     allToLocations.push(index % 2 === 0 ? "Pokhara" : "Chitwan");
   }
 
@@ -750,12 +779,14 @@ const enrichVehicleWithDefaults = (v: BackendVehicle, index = 0) => {
   const routes: VehicleRoute[] =
     normalizedRoutes.length > 0
       ? normalizedRoutes
-      : [
+      : allFromLocations.length > 0 && allToLocations.length > 0
+      ? [
           {
             from: allFromLocations[0],
             to: allToLocations[0],
           },
-        ];
+        ]
+      : [];
 
   return {
     ...v,
@@ -857,61 +888,72 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
   // FETCH VEHICLES FROM API
   // ==========================================================
 
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const fetchVehicles = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-        const response = await getAllVehicles();
-        console.log("Vehicles API response:", response.data);
+      const response = await getAllVehicles();
+      console.log("Vehicles API response:", response.data);
 
-        const vehicleData =
-          response.data?.data?.data ??
-          response.data?.data ??
-          response.data ??
-          [];
+      const rawPayload =
+        response.data?.data?.data ??
+        response.data?.data?.vehicles ??
+        response.data?.data ??
+        response.data?.vehicles ??
+        response.data;
+      const vehicleData = Array.isArray(rawPayload) ? rawPayload : [];
 
-        if (Array.isArray(vehicleData) && vehicleData.length > 0) {
-          const mappedVehicles = vehicleData.map((v: any, index: number) => {
-            if (v.rating !== undefined && v.rating !== null && v.rating !== "") {
-              return v;
-            }
-            const numId = Number(v.id) || index;
-            const computedRating = (!isNaN(numId) && (numId + (v.name?.length || 0)) % 2 === 0) ? 4 : 5;
-            return {
-              ...v,
-              rating: computedRating,
-            };
-          });
-          // Sort vehicles so the latest inserted card appears first (newest to oldest):
-          const sortedVehicles = [...mappedVehicles].sort((a: any, b: any) => {
-            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (vehicleData.length > 0) {
+        const mappedVehicles = vehicleData.map((v: any, index: number) => {
+          if (v.rating !== undefined && v.rating !== null && v.rating !== "") {
+            return v;
+          }
+          const numId = Number(v.id) || index;
+          const computedRating = (!isNaN(numId) && (numId + (v.name?.length || 0)) % 2 === 0) ? 4 : 5;
+          return {
+            ...v,
+            rating: computedRating,
+          };
+        });
+        // Sort vehicles so the latest inserted card appears first (newest to oldest):
+        const sortedVehicles = [...mappedVehicles].sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
 
-            if (timeA && timeB && timeA !== timeB) {
-              return timeB - timeA;
-            }
+          if (timeA && timeB && timeA !== timeB) {
+            return timeB - timeA;
+          }
 
-            const idA = Number(a.id) || 0;
-            const idB = Number(b.id) || 0;
-            return idB - idA;
-          });
+          const idA = Number(a.id) || 0;
+          const idB = Number(b.id) || 0;
+          return idB - idA;
+        });
 
-          setVehicles(sortedVehicles);
-        } else {
-          // Fallback to mock data if API returned empty array
-          setVehicles(MOCK_VEHICLES_FALLBACK);
-        }
-      } catch (err: any) {
-        console.error("Failed to fetch vehicles, using mock data:", err);
-        // Use mock data on error so page still renders completely
-        setVehicles(MOCK_VEHICLES_FALLBACK);
-      } finally {
-        setLoading(false);
+        setVehicles(sortedVehicles);
+      } else {
+        setVehicles(IS_LIVE_DEPLOYMENT ? [] : MOCK_VEHICLES_FALLBACK);
       }
-    };
+    } catch (err: any) {
+      console.error(
+        IS_LIVE_DEPLOYMENT
+          ? "Failed to fetch live vehicles:"
+          : "Failed to fetch vehicles, using mock data:",
+        err
+      );
+      if (IS_LIVE_DEPLOYMENT) {
+        setError("Unable to load vehicles at the moment. Please try again later.");
+        setVehicles([]);
+      } else {
+        // Use mock data on error in local development only
+        setVehicles(MOCK_VEHICLES_FALLBACK);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchVehicles();
   }, []);
 
@@ -922,6 +964,9 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
 
   // ==========================================================
   // FORMAT USD TO CURRENCY
+  // NOTE — DO NOT REMOVE OR DELETE THIS HELPER:
+  // Used by the Popular Routes Table section below, which is
+  // temporarily commented/hidden and will be re-enabled later.
   // ==========================================================
 
   const formatPrice = (usdAmount: number) => {
@@ -998,8 +1043,8 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
     }
     return (
       vehicle.routes?.[0] || {
-        from: vehicle.fromLocation || "Kathmandu",
-        to: vehicle.destination || "Pokhara",
+        from: vehicle.fromLocation || (IS_LIVE_DEPLOYMENT ? "" : "Kathmandu"),
+        to: vehicle.destination || (IS_LIVE_DEPLOYMENT ? "" : "Pokhara"),
       }
     );
   };
@@ -1060,13 +1105,15 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
       const searchTo = filter.toLocation?.trim().toLowerCase();
 
       if (searchFrom || searchTo) {
-        // Vehicle's routes array with fallback to global AVAILABLE_VEHICLE_ROUTES
+        // Vehicle's routes array (only fall back to AVAILABLE_VEHICLE_ROUTES off live deployment)
         const vehicleRoutes: VehicleRoute[] =
           Array.isArray(v.routes) && v.routes.length > 0
             ? v.routes
-            : (v.fromLocation && v.destination
-                ? [{ from: String(v.fromLocation), to: String(v.destination) }]
-                : AVAILABLE_VEHICLE_ROUTES);
+            : v.fromLocation && v.destination
+            ? [{ from: String(v.fromLocation), to: String(v.destination) }]
+            : IS_LIVE_DEPLOYMENT
+            ? []
+            : AVAILABLE_VEHICLE_ROUTES;
 
         const matchesRoute = vehicleRoutes.some((r) => {
           if (!r) return false;
@@ -1334,10 +1381,15 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
         String(vehicle.price ?? vehicle.price_per_day ?? vehicle.pricePerDay ?? 0).replace(/[^0-9.]/g, "")
       ) || 0;
 
+    const routeLabel =
+      activeRoute.from && activeRoute.to
+        ? `${activeRoute.from} to ${activeRoute.to}`
+        : activeRoute.from || activeRoute.to || "Custom Route";
+
     setSelectedBookingItem({
       id: String(vehicle.id),
       title: vehicle.name,
-      location: `Route: ${activeRoute.from} to ${activeRoute.to}`,
+      location: `Route: ${routeLabel}`,
       duration: `Rental (${vehicle.noOfDays})`,
       price: String(activePrice),
       image: vehicle.images[0] || vehicle.image,
@@ -1346,10 +1398,10 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
       vehicleRental: {
         tripType: vehicle.tripType,
         totalSeats: Number(vehicle.totalSeats) || 10,
-        availableSeats: Number(vehicle.availableSeats) || 7,
+        availableSeats: Number(vehicle.availableSeats) || Number(vehicle.totalSeats) || 10,
         fromLocation: activeRoute.from,
         destination: activeRoute.to,
-        selectedRoute: `${activeRoute.from} to ${activeRoute.to}`,
+        selectedRoute: activeRoute.from && activeRoute.to ? routeLabel : "",
         routes: vehicle.routes,
         vehicleType: vehicle.vehicleType,
         fuelType: vehicle.fuelType,
@@ -1376,8 +1428,12 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
       nprPerOneINR
     );
 
+    const routePart =
+      activeRoute.from && activeRoute.to
+        ? ` Selected Route: ${activeRoute.from} to ${activeRoute.to}.`
+        : "";
     const msg = encodeURIComponent(
-      `Hello Trip Himalaya! I am inquiring about vehicle rental for "${vehicle.name}" (${vehicle.vehicleType} - ${vehicle.fuelType}). Selected Route: ${activeRoute.from} to ${activeRoute.to}. Rate: ${priceFormatted}/day. Please share availability.`
+      `Hello Trip Himalaya! I am inquiring about vehicle rental for "${vehicle.name}" (${vehicle.vehicleType} - ${vehicle.fuelType}).${routePart} Rate: ${priceFormatted}/day. Please share availability.`
     );
 
     window.open(
@@ -1506,7 +1562,37 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
         <div className="lg:col-span-3">
 
 
-          {filteredVehicles.length === 0 ? (
+          {error && vehicles.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-red-100 p-12 text-center shadow-xs">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} />
+              </div>
+              <p className="font-bold text-gray-700 text-base">{error}</p>
+              <p className="text-gray-400 text-xs mt-1 mb-5">
+                Please check your connection and try loading live vehicles again.
+              </p>
+              <button
+                type="button"
+                onClick={fetchVehicles}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95"
+              >
+                <RotateCcw size={14} />
+                Retry
+              </button>
+            </div>
+          ) : vehicles.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-xs">
+              <div className="w-16 h-16 bg-pink-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Car size={32} />
+              </div>
+              <p className="font-bold text-gray-700 text-base">
+                No vehicles available at the moment.
+              </p>
+              <p className="text-gray-400 text-xs mt-1">
+                Our live vehicle fleet is currently being updated. Please check back soon.
+              </p>
+            </div>
+          ) : filteredVehicles.length === 0 ? (
             <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-xs">
               <div className="w-16 h-16 bg-pink-50 text-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Car size={32} />
@@ -1675,15 +1761,19 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
                             </div>
 
                             {/* Available Dates Badge */}
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50/90 border border-pink-100 text-[#2D1347]">
-                                <Calendar size={12} className="text-[#E91E63] flex-shrink-0" />
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight flex-shrink-0">Available Dates:</span>
-                                <span className="font-extrabold text-[#E91E63] text-[11px] whitespace-nowrap truncate">
-                                  {normalizeDateStr(vehicle.availableFrom)} to {normalizeDateStr(vehicle.availableTo)}
-                                </span>
+                            {(vehicle.availableFrom || vehicle.availableTo) && (
+                              <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50/90 border border-pink-100 text-[#2D1347]">
+                                  <Calendar size={12} className="text-[#E91E63] flex-shrink-0" />
+                                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight flex-shrink-0">Available Dates:</span>
+                                  <span className="font-extrabold text-[#E91E63] text-[11px] whitespace-nowrap truncate">
+                                    {vehicle.availableFrom && vehicle.availableTo
+                                      ? `${normalizeDateStr(vehicle.availableFrom)} to ${normalizeDateStr(vehicle.availableTo)}`
+                                      : normalizeDateStr(vehicle.availableFrom || vehicle.availableTo)}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         </div>
 
@@ -1859,7 +1949,13 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
         </div>
       </div>
 
-      {/* Popular Routes Table */}
+      {/* =====================================================================
+          POPULAR ROUTES TABLE — TEMPORARILY HIDDEN (DO NOT REMOVE OR DELETE)
+          User requested keeping this entire section commented out without
+          deleting any code so it can be re-shown later whenever required.
+          (Also keep `POPULAR_ROUTES` and `formatPrice` intact above.)
+         ===================================================================== */}
+      {/*
       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm">
         <span className="text-[#E11D48] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs block mb-1">
           FIXED HIGHWAY FARES
@@ -1906,6 +2002,7 @@ const VehicleRentalDetailContent: React.FC<VehicleRentalDetailContentProps> = ({
           </table>
         </div>
       </div>
+      */}
 
       {/* Safety Section */}
       <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 shadow-xl">

@@ -121,6 +121,57 @@ const getPlanDurations = (plan: InsurancePlan): number[] => {
   return Array.from(new Set([...tierDays, ...regexMatches]));
 };
 
+const CORE_INSURANCE_TABS: Array<{ id: string; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "domestic", label: "Domestic" },
+  { id: "international", label: "International" },
+];
+
+const formatTierLabel = (tier: string): string =>
+  tier
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+
+const matchesInsuranceSearch = (
+  plan: InsurancePlan,
+  query: string
+): boolean => {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const tierTexts = (plan.pricing_tiers || [])
+    .map(
+      (t) =>
+        `${t.title || ""} ${
+          t.duration_days ? `${t.duration_days} days ${t.duration_days} day` : ""
+        }`
+    )
+    .join(" ");
+
+  const searchableText = [
+    plan.name,
+    plan.tier || "",
+    stripDescription(plan.short_description || ""),
+    stripDescription(plan.description || ""),
+    plan.processing_time || "",
+    tierTexts,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (searchableText.includes(q)) return true;
+
+  const words = q.split(/[\s,&]+/).filter(Boolean);
+  if (words.length > 0 && words.every((w) => searchableText.includes(w))) {
+    return true;
+  }
+
+  return false;
+};
+
 export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContentProps> = ({
   filter,
   onClearFilter,
@@ -132,14 +183,23 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
   const INITIAL_COUNT = 9;
   const LOAD_MORE_STEP = 15;
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_COUNT);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
     fetchInsurancePlans();
   }, []);
 
   useEffect(() => {
-    setVisibleCount(INITIAL_COUNT);
+    if (filter) {
+      setSearchQuery(filter.name || "");
+      setSelectedCategory(filter.insuranceType || "all");
+    }
   }, [filter]);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_COUNT);
+  }, [filter, selectedCategory, searchQuery]);
 
   const fetchInsurancePlans = async () => {
     try {
@@ -174,9 +234,35 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
   const targetDays = filter?.days ? parseInt(filter.days.trim(), 10) : null;
   const isValidDaysSearch = targetDays !== null && !isNaN(targetDays) && targetDays > 0;
 
-  // Check if any plan matching the insurance type filter has an EXACT match for targetDays
+  // Build filter tabs: All, Domestic, International + distinct non-empty plan tiers from API
+  const seenTierKeys = new Set<string>(["all", "domestic", "international"]);
+  const dynamicTierTabs: Array<{ id: string; label: string }> = [];
+  insurancePlans.forEach((plan) => {
+    const rawTier = (plan.tier || "").trim();
+    if (!rawTier) return;
+    const key = rawTier.toLowerCase();
+    if (!seenTierKeys.has(key)) {
+      seenTierKeys.add(key);
+      dynamicTierTabs.push({
+        id: `tier:${key}`,
+        label: formatTierLabel(rawTier),
+      });
+    }
+  });
+  const categoryTabs = [...CORE_INSURANCE_TABS, ...dynamicTierTabs];
+
+  const matchesCategoryTab = (plan: InsurancePlan, tabId: string): boolean => {
+    if (!tabId || tabId === "all") return true;
+    if (tabId.startsWith("tier:")) {
+      const targetTier = tabId.slice(5).trim().toLowerCase();
+      return (plan.tier || "").trim().toLowerCase() === targetTier;
+    }
+    return matchesInsuranceType(plan, tabId);
+  };
+
+  // Check if any plan matching the category tab has an EXACT match for targetDays
   const plansMatchingType = insurancePlans.filter((p) =>
-    matchesInsuranceType(p, filter?.insuranceType)
+    matchesCategoryTab(p, selectedCategory)
   );
 
   const hasAnyExactDayMatch =
@@ -186,41 +272,42 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
     );
 
   const filteredPlans = insurancePlans.filter((plan) => {
-    if (filter) {
-      if (filter.name && filter.name.trim() !== "") {
-        const term = filter.name.trim().toLowerCase();
-        const planName = (plan.name || "").toLowerCase();
-        const words = term.split(/[\s,&]+/).filter(Boolean);
-        const matchesName = planName.includes(term) || (words.length > 0 && words.every((w) => planName.includes(w)));
-        if (!matchesName) return false;
-      }
+    if (!matchesCategoryTab(plan, selectedCategory)) return false;
 
-      if (!matchesInsuranceType(plan, filter.insuranceType)) return false;
+    if (searchQuery.trim() !== "" && !matchesInsuranceSearch(plan, searchQuery)) {
+      return false;
+    }
 
-      if (isValidDaysSearch) {
-        const durations = getPlanDurations(plan);
-        if (durations.length === 0) return false;
+    if (isValidDaysSearch) {
+      const durations = getPlanDurations(plan);
+      if (durations.length === 0) return false;
 
-        if (hasAnyExactDayMatch) {
-          // Exactly same days found on at least one plan -> show exact match
-          return durations.some((d) => d === targetDays);
-        } else {
-          // If exactly same days NOT found, show 5 up and 5 down days (e.g. 45 to 55 for 50)
-          const minDays = Math.max(1, targetDays - 5);
-          const maxDays = targetDays + 5;
-          return durations.some((d) => d >= minDays && d <= maxDays);
-        }
+      if (hasAnyExactDayMatch) {
+        // Exactly same days found on at least one plan -> show exact match
+        return durations.some((d) => d === targetDays);
+      } else {
+        // If exactly same days NOT found, show 5 up and 5 down days (e.g. 45 to 55 for 50)
+        const minDays = Math.max(1, targetDays - 5);
+        const maxDays = targetDays + 5;
+        return durations.some((d) => d >= minDays && d <= maxDays);
       }
     }
+
     return true;
   });
 
-  const isExternalFilterActive = Boolean(
-    filter &&
-      ((filter.name && filter.name.trim() !== "") ||
-        (filter.insuranceType && filter.insuranceType !== "all") ||
-        (filter.days && filter.days.trim() !== ""))
+  const hasActiveFilter = Boolean(
+    selectedCategory !== "all" ||
+      searchQuery.trim() !== "" ||
+      isValidDaysSearch
   );
+
+  const handleClearAllFilters = () => {
+    setSelectedCategory("all");
+    setSearchQuery("");
+    setVisibleCount(INITIAL_COUNT);
+    onClearFilter?.();
+  };
 
   const displayedPlans = filteredPlans.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPlans.length;
@@ -280,15 +367,94 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
   return (
     <div className="space-y-12">
-      {/* ── INSURANCE PLANS COMPARISON GRID ── */}
-      <div className="mb-4 text-center max-w-3xl mx-auto">
-        <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#2D1347] tracking-tight">
-          Tailored Plans for Trekking, Expeditions &amp; Holidays
-        </h3>
-        <p className="text-gray-500 text-xs sm:text-sm mt-1.5 font-medium">
-          Select the exact altitude and trip profile required for full medical peace of mind.
-        </p>
-      </div>
+      <div className="space-y-8">
+        {/* ── INSURANCE PLAN FILTER TABS & LIVE SEARCH BAR ── */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/80 shadow-sm p-4 sm:p-5 md:p-6 space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+            <span className="text-xs font-black uppercase tracking-wider text-[#2D1347] mr-1">
+              ALL PLANS :
+            </span>
+            {categoryTabs.map((tab) => {
+              const isActive = selectedCategory === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(tab.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? "bg-[#2D1347] text-white shadow-sm"
+                      : "text-[#2D1347]/80 hover:bg-purple-50 hover:text-[#2D1347]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {hasActiveFilter && !loading && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs font-semibold text-gray-500">
+                {filteredPlans.length}{" "}
+                {filteredPlans.length === 1 ? "plan" : "plans"}
+              </span>
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-[#E91E63] bg-pink-50 hover:bg-pink-100 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+                Reset
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="relative flex items-center w-full">
+          <Search
+            size={16}
+            className="text-gray-400 absolute left-4 pointer-events-none"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSearchQuery("");
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            placeholder="Search insurance plan, tier, coverage, or days..."
+            aria-label="Search travel insurance plan"
+            className="w-full pl-11 pr-10 py-2.5 sm:py-3 rounded-full border border-gray-200 bg-gray-50/40 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/15 text-sm font-medium text-gray-800 placeholder:text-gray-400 transition-all"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+              className="absolute right-3.5 p-1 rounded-full text-gray-400 hover:text-[#E91E63] hover:bg-pink-50 transition-colors cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+        </div>
+
+        {/* ── INSURANCE PLANS COMPARISON GRID ── */}
+        <div className="space-y-6">
+          <div className="text-center max-w-3xl mx-auto pt-1">
+            <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#2D1347] tracking-tight">
+              Tailored Plans for Trekking, Expeditions &amp; Holidays
+            </h3>
+            <p className="text-gray-500 text-xs sm:text-sm mt-1.5 font-medium">
+              Select the exact altitude and trip profile required for full medical peace of mind.
+            </p>
+          </div>
 
       {loading ? (
         <div className="py-20 text-center">
@@ -308,7 +474,7 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
           </p>
           <button
             type="button"
-            onClick={onClearFilter}
+            onClick={handleClearAllFilters}
             className="px-6 py-2.5 bg-[#2D1347] hover:bg-pink-600 text-white font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow-md active:scale-95"
           >
             Show All Insurance Plans
@@ -433,7 +599,7 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
 
       {/* ── SEE MORE PLANS BUTTON ── */}
       {!loading && hasMore ? (
-        <div className="flex justify-center -mt-6 mb-4">
+        <div className="flex justify-center pt-2">
           <button
             type="button"
             onClick={handleSeeMore}
@@ -443,13 +609,15 @@ export const TravelInsuranceDetailContent: React.FC<TravelInsuranceDetailContent
             <ChevronDown size={16} />
           </button>
         </div>
-      ) : !loading && insurancePlans.length > INITIAL_COUNT ? (
-        <div className="text-center -mt-6 mb-4">
+      ) : !loading && filteredPlans.length > INITIAL_COUNT ? (
+        <div className="text-center pt-2">
           <span className="inline-block px-4 py-1.5 rounded-full bg-purple-50 text-[#2D1347] text-xs font-bold border border-purple-100 shadow-2xs">
-            ✓ All {insurancePlans.length} insurance tiers displayed
+            ✓ All {filteredPlans.length} insurance tiers displayed
           </span>
         </div>
       ) : null}
+        </div>
+      </div>
 
       {/* ── 4. EMERGENCY HELICOPTER EVACUATION PROTOCOL ── */}
       <div className="bg-gradient-to-br from-[#2D1347] via-[#3B145C] to-[#2D1347] text-white rounded-3xl p-8 sm:p-10 shadow-xl">

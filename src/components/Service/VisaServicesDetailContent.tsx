@@ -8,12 +8,84 @@ import DynamicFaqSection from "../reusable/DynamicFaqSection";
 import { getVisaCategories, getVisaPublicPricingTiers } from "../../api/BackendApi";
 import { getVisaUrl } from "../../utils/slugUtils";
 export type { VisaDetailPlan, CostOption };
-const getRegionFromCountryCode = (countryCode: string): VisaDetailPlan["region"] => {
-  const code = countryCode.toUpperCase();
-  if (["TH", "SG", "MY", "JP", "KR", "CN", "VN", "KH", "PH", "LK", "MV", "HK", "ID"].includes(code)) return "asia";
-  if (["AE", "QA", "SA", "OM", "BH", "KW"].includes(code)) return "middle-east";
-  if (["FR", "DE", "IT", "ES", "CH", "AT", "NL", "BE", "PT", "GR", "TR"].includes(code)) return "europe";
-  if (["US", "GB", "CA", "AU", "NZ", "ZA", "BR"].includes(code)) return "west";
+const REGION_TABS: Array<{ id: VisaDetailPlan["region"]; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "asia", label: "Asia" },
+  { id: "middle-east", label: "Gulf & UAE" },
+  { id: "europe", label: "Schengen" },
+  { id: "west", label: "USA & UK" },
+];
+
+const REGION_LABELS: Record<VisaDetailPlan["region"], string> = {
+  all: "All Destinations",
+  asia: "Asia",
+  "middle-east": "Gulf & UAE Middle East",
+  europe: "Schengen Europe",
+  west: "USA UK Western",
+};
+
+const inferVisaRegion = (
+  countryCode: string,
+  countryName = "",
+  visaType = "",
+  aboutText = ""
+): VisaDetailPlan["region"] => {
+  const code = (countryCode || "").trim().toUpperCase();
+  if (
+    [
+      "TH", "SG", "MY", "JP", "KR", "CN", "VN", "KH", "PH", "LK", "MV",
+      "HK", "TW", "ID", "IN", "BD", "PK", "NP", "BT", "MM", "LA", "BN",
+      "MO", "UZ", "KZ", "MN",
+    ].includes(code)
+  ) {
+    return "asia";
+  }
+  if (["AE", "QA", "SA", "OM", "BH", "KW", "JO", "IL", "EG", "IQ", "IR", "LB"].includes(code)) {
+    return "middle-east";
+  }
+  if (
+    [
+      "EU", "FR", "DE", "IT", "ES", "CH", "AT", "NL", "BE", "PT", "GR",
+      "TR", "PL", "CZ", "SE", "NO", "DK", "FI", "HU", "IS", "LU", "MT",
+      "SK", "SI", "EE", "LV", "LT", "HR", "BG", "RO", "IE", "CY", "LI",
+    ].includes(code)
+  ) {
+    return "europe";
+  }
+  if (["US", "GB", "UK", "CA", "AU", "NZ", "ZA", "BR", "MX"].includes(code)) {
+    return "west";
+  }
+
+  const combined = `${countryName} ${visaType} ${aboutText}`.toLowerCase();
+  if (
+    /\b(schengen|europe|france|germany|italy|spain|switzerland|austria|netherlands|belgium|portugal|greece|poland|czech|sweden|norway|denmark|finland|hungary|croatia|turkey|ireland)\b/.test(
+      combined
+    )
+  ) {
+    return "europe";
+  }
+  if (
+    /\b(uae|dubai|abu dhabi|emirates|qatar|doha|saudi|oman|muscat|bahrain|kuwait|gulf|middle east)\b/.test(
+      combined
+    )
+  ) {
+    return "middle-east";
+  }
+  if (
+    /\b(usa|united states|america|uk|united kingdom|britain|england|london|canada|australia|new zealand)\b/.test(
+      combined
+    )
+  ) {
+    return "west";
+  }
+  if (
+    /\b(thailand|bangkok|singapore|malaysia|japan|tokyo|korea|china|vietnam|cambodia|philippines|sri lanka|maldives|hong kong|indonesia|bali|india|bangladesh|nepal|taiwan|asia)\b/.test(
+      combined
+    )
+  ) {
+    return "asia";
+  }
+
   return "all";
 };
 const VISA_FAQS = [
@@ -88,9 +160,8 @@ const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
   const inclusions = (plan.inclusions || []).join(" ").toLowerCase();
 
   if (
-    planCountry.includes(c) ||
-    c.includes(planCountry) ||
-    planCode === c ||
+    (planCountry && (planCountry.includes(c) || c.includes(planCountry))) ||
+    (planCode && planCode === c) ||
     planAbout.includes(c) ||
     planType.includes(c) ||
     inclusions.includes(c)
@@ -108,7 +179,7 @@ const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
     planAbout.includes("dubai") ||
     planAbout.includes("emirates");
   if (
-    (c === "uae" || c.includes("dubai") || c.includes("emirates") || c === "ae") &&
+    (c === "uae" || c.includes("dubai") || c.includes("abu dhabi") || c.includes("emirates") || c === "ae") &&
     isUae
   ) {
     return true;
@@ -135,10 +206,11 @@ const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
     planCountry.includes("britain") ||
     planCountry.includes("england") ||
     planCode === "gb" ||
+    planCode === "uk" ||
     planAbout.includes("uk") ||
     planAbout.includes("united kingdom");
   if (
-    (c === "uk" || c === "gb" || c.includes("united kingdom") || c.includes("britain")) &&
+    (c === "uk" || c === "gb" || c.includes("united kingdom") || c.includes("britain") || c.includes("england") || c.includes("london")) &&
     isUk
   ) {
     return true;
@@ -148,14 +220,65 @@ const matchesCountry = (plan: VisaDetailPlan, countryFilter?: string) => {
     planCountry.includes("schengen") ||
     planCountry.includes("europe") ||
     planCode === "eu" ||
+    plan.region === "europe" ||
     planAbout.includes("schengen") ||
     planAbout.includes("europe");
   if ((c === "schengen" || c.includes("europe")) && isSchengen) {
     return true;
   }
 
+  if ((c === "gulf" || c === "middle east") && plan.region === "middle-east") {
+    return true;
+  }
+
+  if ((c === "asia" || c === "asian") && plan.region === "asia") {
+    return true;
+  }
+
+  if (c.includes("bangkok") && (planCountry.includes("thailand") || planCode === "th" || planAbout.includes("bangkok"))) {
+    return true;
+  }
+
   if (c.includes("bali") && (planCountry.includes("indonesia") || planAbout.includes("bali") || planAbout.includes("indonesia"))) {
     return true;
+  }
+
+  return false;
+};
+
+const matchesSearchQuery = (plan: VisaDetailPlan, query: string): boolean => {
+  const q = query.trim().toLowerCase();
+  if (!q || q === "all") return true;
+
+  if (matchesCountry(plan, q)) return true;
+
+  const tierText = (plan.costOptions || [])
+    .map((c) => `${c.name} ${c.entryType || ""} ${c.days || ""}`)
+    .join(" ");
+
+  const searchableText = [
+    plan.country,
+    plan.countryCode,
+    REGION_LABELS[plan.region] || "",
+    plan.visaType,
+    plan.entryType,
+    plan.duration,
+    plan.processingTime,
+    plan.shortDescription || "",
+    plan.aboutText || "",
+    ...(plan.inclusions || []),
+    tierText,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (searchableText.includes(q)) return true;
+
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    return tokens.every(
+      (token) => searchableText.includes(token) || matchesCountry(plan, token)
+    );
   }
 
   return false;
@@ -288,12 +411,18 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_COUNT);
   const [visaPlans, setVisaPlans] = useState<VisaDetailPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRegion, setSelectedRegion] = useState<VisaDetailPlan["region"]>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
-  const isExternalFilterActive = Boolean(
+  const hasExternalSubFilter = Boolean(
     filter &&
-      ((filter.country && filter.country.trim() !== "" && filter.country.toLowerCase() !== "all") ||
-        (filter.visaType && filter.visaType !== "all") ||
+      ((filter.visaType && filter.visaType !== "all") ||
         (filter.entryType && filter.entryType !== "all"))
+  );
+  const hasActiveFilter = Boolean(
+    selectedRegion !== "all" ||
+      searchQuery.trim() !== "" ||
+      hasExternalSubFilter
   );
 
   useEffect(() => {
@@ -352,7 +481,12 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
               id: String(category.id),
               country: countryName,
               countryCode,
-              region: getRegionFromCountryCode(countryCode),
+              region: inferVisaRegion(
+                countryCode,
+                countryName,
+                category.name || "",
+                category.description || category.short_description || ""
+              ),
               visaType: category.name || "Visa",
               duration,
               processingTime: category.processing_time || "",
@@ -412,12 +546,24 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   }, []);
 
   useEffect(() => {
+    if (filter) {
+      setSearchQuery(filter.country || "");
+      setSelectedRegion("all");
+    }
+  }, [filter]);
+
+  useEffect(() => {
     setVisibleCount(INITIAL_COUNT);
-  }, [filter, isExternalFilterActive]);
+  }, [filter, selectedRegion, searchQuery]);
 
   const filteredPlans = visaPlans.filter((plan: VisaDetailPlan) => {
+    if (selectedRegion !== "all" && plan.region !== selectedRegion) {
+      return false;
+    }
+    if (searchQuery.trim() !== "" && !matchesSearchQuery(plan, searchQuery)) {
+      return false;
+    }
     if (filter) {
-      if (!matchesCountry(plan, filter.country)) return false;
       if (!matchesVisaType(plan, filter.visaType)) return false;
       if (!matchesEntryType(plan, filter.entryType)) return false;
     }
@@ -427,6 +573,9 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   const hasMore = visibleCount < filteredPlans.length;
   const handleSeeMore = () => setVisibleCount((prev: number) => prev + LOAD_MORE_STEP);
   const handleClearAllFilters = () => {
+    setSelectedRegion("all");
+    setSearchQuery("");
+    setVisibleCount(INITIAL_COUNT);
     onClearFilter?.();
   };
   const handleSelectPlan = (plan: VisaDetailPlan) => navigate(getVisaUrl(plan));
@@ -439,6 +588,83 @@ export const VisaServicesDetailContent: React.FC<VisaServicesDetailContentProps>
   };
   return (
     <div className="space-y-8">
+      {/* Destination Region Filter Pills & Search Bar */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/80 shadow-sm p-4 sm:p-5 md:p-6 space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+            <span className="text-xs font-black uppercase tracking-wider text-[#2D1347] mr-1">
+              ALL DESTINATION :
+            </span>
+            {REGION_TABS.map((tab) => {
+              const isActive = selectedRegion === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedRegion(tab.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? "bg-[#2D1347] text-white shadow-sm"
+                      : "text-[#2D1347]/80 hover:bg-purple-50 hover:text-[#2D1347]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {hasActiveFilter && !loading && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs font-semibold text-gray-500">
+                {filteredPlans.length}{" "}
+                {filteredPlans.length === 1 ? "destination" : "destinations"}
+              </span>
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-[#E91E63] bg-pink-50 hover:bg-pink-100 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+                Reset
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="relative flex items-center w-full">
+          <Search
+            size={16}
+            className="text-gray-400 absolute left-4 pointer-events-none"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSearchQuery("");
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            placeholder="Search destination..."
+            aria-label="Search visa destination"
+            className="w-full pl-11 pr-10 py-2.5 sm:py-3 rounded-full border border-gray-200 bg-gray-50/40 focus:bg-white focus:outline-none focus:border-[#E91E63] focus:ring-2 focus:ring-[#E91E63]/15 text-sm font-medium text-gray-800 placeholder:text-gray-400 transition-all"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+              className="absolute right-3.5 p-1 rounded-full text-gray-400 hover:text-[#E91E63] hover:bg-pink-50 transition-colors cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-6">
         <div className="text-center pt-2 pb-1">
           <div className="inline-flex flex-col items-center">

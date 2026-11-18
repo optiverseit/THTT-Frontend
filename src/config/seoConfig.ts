@@ -112,7 +112,7 @@ export const pagesSEO: Record<string, SEOProps> = {
       "Book luxury Everest Base Camp helicopter tours, Annapurna heli rides, Langtang scenic flights, and emergency mountain rescue charters in Nepal.",
     keywords:
       "Nepal helicopter tours, Everest Base Camp heli tour, Annapurna helicopter flight, Langtang heli tour, Private helicopter charter Nepal, Mountain rescue flights Nepal, Heli sightseeing Nepal",
-    canonicalPath: "/service/heli-service",
+    canonicalPath: "/service/heli-services",
     type: "website"
   },
 
@@ -220,6 +220,16 @@ export const pagesSEO: Record<string, SEOProps> = {
     keywords:
       "Nepal travel documents, TIMS card Nepal, Nepal trekking permits, National park entry fees Nepal, Nepal visa requirements, Travel clearance Nepal",
     canonicalPath: "/documentation",
+    type: "website"
+  },
+
+  vlogs: {
+    title: "Nepal Travel Vlogs & Himalayan Adventure Videos | Trip Himalaya",
+    description:
+      "Watch the Himalayas come alive — cinematic drone films, Everest & Annapurna trek vlogs, cultural documentaries, and mountain adventure videos by Trip Himalaya.",
+    keywords:
+      "Nepal travel vlogs, Himalaya videos, Everest trek vlog, Annapurna trek videos, Nepal drone films, mountain documentaries Nepal, Trip Himalaya videos",
+    canonicalPath: "/vlogs",
     type: "website"
   }
 };

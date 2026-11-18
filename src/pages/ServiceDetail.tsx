@@ -53,15 +53,16 @@ import HeliServicesDetailContent from "../components/Service/HeliServicesDetailC
 import VisaServicesDetailContent, { VisaFilterCriteria } from "../components/Service/VisaServicesDetailContent";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
+import WorkPermit from "./WorkPermit";
 
 const ServiceDetail: React.FC = () => {
   const { slug, tourId } = useParams<{ slug: string; tourId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // If slug is work-permit, redirect to dedicated /work-permit route
+  // If slug is work-permit, render dedicated WorkPermit component directly (prevents redirect indexing penalty)
   if (slug === "work-permit") {
-    return <Navigate to="/work-permit" replace />;
+    return <WorkPermit />;
   }
 
   // Find the service by slug or by id

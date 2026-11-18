@@ -29,7 +29,9 @@ const SEO: React.FC<SEOProps> = ({
 }) => {
   const fullCanonicalUrl = canonicalPath
     ? `${SITE_URL}${canonicalPath.startsWith("/") ? canonicalPath : `/${canonicalPath}`}`
-    : SITE_URL;
+    : typeof window !== "undefined"
+      ? `${SITE_URL}${window.location.pathname.replace(/\/+$/, "") || "/"}`
+      : SITE_URL;
 
   const fullImageUrl = image.startsWith("http")
     ? image

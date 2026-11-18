@@ -39,14 +39,6 @@ function isSocialCrawler(): bool {
         'Slackbot',
         'vkShare',
         'redditbot',
-        'Applebot',
-        'bingbot',
-        'Googlebot',
-        'DuckDuckBot',
-        'YandexBot',
-        'Baiduspider',
-        'Sogou',
-        'ia_archiver',
     ];
     foreach ($crawlers as $pattern) {
         if (stripos($userAgent, $pattern) !== false) {

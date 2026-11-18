@@ -91,17 +91,18 @@ RedirectMatch 301 ^/cgi-bin(/.*)?$ /
   RewriteRule ^share/?$ share.php [L,QSA]
 
   # Route social media crawlers (Facebook, WhatsApp, Twitter, LinkedIn, etc.)
-  # requesting detail pages directly to share.php to generate rich page-specific previews
-  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|Googlebot|bingbot|DuckDuckBot|Baiduspider|YandexBot|Applebot|Sogou) [NC]
+  # requesting detail pages directly to share.php to generate rich OpenGraph previews.
+  # (Search engine bots like Googlebot, Bingbot, etc. must crawl index.html to index full SPA content)
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|vkShare|redditbot) [NC]
   RewriteRule ^service/heli-services/([0-9a-zA-Z_-]+)/?$ share.php?type=heli-services&id=$1 [L,QSA]
 
-  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|Googlebot|bingbot|DuckDuckBot|Baiduspider|YandexBot|Applebot|Sogou) [NC]
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|vkShare|redditbot) [NC]
   RewriteRule ^service/travel-insurance/([0-9a-zA-Z_-]+)/?$ share.php?type=insurance-details&id=$1 [L,QSA]
 
-  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|Googlebot|bingbot|DuckDuckBot|Baiduspider|YandexBot|Applebot|Sogou) [NC]
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|vkShare|redditbot) [NC]
   RewriteRule ^(visa|visa-details|details|packages|hotels|hotel-details|hotel-detail|vehicles|vehicle-details|vehicle-detail|permit-details|work-permit-details|documentation|documents|blog|blog-details|watch|video|insurance|insurance-details|insurance-detail)/([0-9a-zA-Z_-]+)/?$ share.php?type=$1&id=$2 [L,QSA]
 
-  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|Googlebot|bingbot|DuckDuckBot|Baiduspider|YandexBot|Applebot|Sogou) [NC]
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Pinterest|SkypeUriPreview|Slackbot|vkShare|redditbot) [NC]
   RewriteRule ^service/([0-9a-zA-Z_-]+)/?$ share.php?type=service&id=$1 [L,QSA]
 
   RewriteRule ^index\.html$ - [L]

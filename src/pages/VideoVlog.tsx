@@ -7,10 +7,13 @@ import LatestVlogs from "../components/blog/LatestVlogs";
 import LatestVideos from "../components/blog/LatestVideos";
 import WeeklyVlogSub from "../components/blog/WeeklyVlogSub";
 import { videoPosts } from "../assets/data/mockData";
+import { SEO } from "../components/reusable";
+import { pagesSEO } from "../config/seoConfig";
 
 const VideoVlog: React.FC = () => {
   return (
     <div className="bg-slate-50/50 min-h-screen font-sans text-slate-700">
+      <SEO {...pagesSEO.vlogs} />
       <BannerSection
         background="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000"
         alt="Himalayan Mountain Peaks"

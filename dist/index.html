@@ -18,7 +18,20 @@
     <link rel="shortcut icon" href="/favicon.ico?v=5" />
 
 
-    <link rel="canonical" href="https://triphimalaya.com.np/" />
+    <!-- Dynamic self-referencing canonical tag for SPA multi-route indexing -->
+    <script>
+      (function() {
+        var cleanPath = window.location.pathname.replace(/\/+$/, '');
+        var canonicalHref = window.location.origin + (cleanPath || '/');
+        var link = document.querySelector('link[rel="canonical"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.setAttribute('rel', 'canonical');
+          document.head.appendChild(link);
+        }
+        link.setAttribute('href', canonicalHref);
+      })();
+    </script>
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
@@ -273,7 +286,7 @@
 
     <!-- Runtime Environment Config from cPanel Server -->
     <script src="/env-config.php"></script>
-    <script type="module" crossorigin src="/assets/index-CvDfgK5-.js"></script>
+    <script type="module" crossorigin src="/assets/index-Bc37hG_l.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-CKPhMSTz.css">
   </head>
   <body>

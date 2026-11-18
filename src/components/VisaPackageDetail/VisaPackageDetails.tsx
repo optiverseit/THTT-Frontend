@@ -6,6 +6,7 @@ import type { VisaDocumentRequirement } from "../Service/VisaApplicationModal";
 import { Compass } from "lucide-react";
 import { getVisaCategories, getVisaPublicDocumentRequirements, getVisaPublicInformation, getVisaPublicPricingTiers } from "../../api/BackendApi";
 import { slugify, getVisaUrl } from "../../utils/slugUtils";
+import { SEO } from "../reusable";
 interface VisaCategory {
   id: number | string;
   country_id: number | string;
@@ -473,8 +474,20 @@ const VisaPackageDetails: React.FC = () => {
       </div>
     );
   }
+
+  const visaTitle = `${matchedVisa.country} Visa – ${matchedVisa.visaType} | Trip Himalaya`;
+  const visaDesc = matchedVisa.shortDescription || `Apply for ${matchedVisa.country} ${matchedVisa.visaType} with Trip Himalaya Tours & Travels. Fast document processing, embassy consultations, and visa support.`;
+
   return (
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-16 sm:pt-12 md:pt-12 pb-12 sm:pb-16 print:min-h-0 print:bg-white print:p-0">
+      <SEO
+        title={visaTitle}
+        description={visaDesc}
+        keywords={`${matchedVisa.country} visa, ${matchedVisa.country} ${matchedVisa.visaType}, apply ${matchedVisa.country} visa Nepal, visa processing Kathmandu, Trip Himalaya visa`}
+        canonicalPath={location.pathname}
+        image={matchedVisa.image || matchedVisa.visa_image || undefined}
+        type="website"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <VisaCountryDetailView
           plan={matchedVisa}

@@ -1,7 +1,7 @@
 import React from "react";
 import { MapPin, Clock, Star } from "lucide-react";
 import type { Package } from "../../assets/data/types";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   useGlobalCurrency,
   displayPrice,
@@ -120,7 +120,10 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
           LEFT: IMAGE
       ====================================================== */}
 
-      <div
+      <Link
+        to={getPackageUrl(pkg)}
+        state={{ packageData: pkg }}
+        onClick={(e) => e.stopPropagation()}
         className="
           relative
           w-full
@@ -135,6 +138,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
           flex-shrink-0
           overflow-hidden
           bg-gray-100
+          block
         "
       >
         <img
@@ -182,7 +186,7 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
                   ? "INTERNATIONAL"
                   : "DOMESTIC")}
         </span>
-      </div>
+      </Link>
 
       {/* =====================================================
           MIDDLE: PACKAGE INFORMATION
@@ -231,10 +235,6 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
           {/* Title */}
 
           <h2
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCardClick();
-            }}
             className="
               text-lg
               sm:text-xl
@@ -242,12 +242,18 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
               text-[#200B3B]
               hover:text-[#E91E63]
               transition-colors
-              cursor-pointer
               leading-snug
               line-clamp-2
             "
           >
-            {pkg.title}
+            <Link
+              to={getPackageUrl(pkg)}
+              state={{ packageData: pkg }}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:text-[#E91E63] transition-colors"
+            >
+              {pkg.title}
+            </Link>
           </h2>
 
           {/* Description */}
@@ -339,17 +345,16 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
         {/* Buttons */}
 
         <div className="flex items-center gap-2 mt-2 w-full justify-center">
-          <button
-            type="button"
+          <Link
+            to={getPackageUrl(pkg)}
+            state={{ packageData: pkg }}
             onClick={(e) => {
-              e.stopPropagation();
-
               if (onDetails) {
+                e.preventDefault();
+                e.stopPropagation();
                 onDetails(pkg);
               } else {
-                navigate(
-                  getPackageUrl(pkg)
-                );
+                e.stopPropagation();
               }
             }}
             className="
@@ -366,13 +371,16 @@ const PackageDetailsCard: React.FC<PackageCardProps> = ({
               text-white
               shadow-xs
               transition-all
-              cursor-pointer
               whitespace-nowrap
               active:scale-95
+              flex
+              items-center
+              justify-center
+              text-center
             "
           >
             VIEW DETAILS
-          </button>
+          </Link>
 
           <button
             type="button"

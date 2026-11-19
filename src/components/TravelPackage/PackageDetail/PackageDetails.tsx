@@ -733,27 +733,81 @@ const PackageDetails: React.FC = () => {
   // ============================================================
   // PAGE
   // ============================================================
+  const canonicalSlug = backendPackage?.slug || slugify(backendPackage?.title) || packageId;
+  const canonicalUrl = `https://triphimalaya.com.np/packages/${canonicalSlug}`;
+
   return (
     <div className="w-full min-h-screen bg-[#FBFBFE] font-sans pt-14 sm:pt-16 md:pt-0 print:min-h-0 print:bg-white">
       <SEO
         title={pkg.title ? `${pkg.title} | Trip Himalaya` : "Nepal Tour Package | Trip Himalaya"}
         description={pkg.description ? pkg.description.replace(/<[^>]+>/g, "").slice(0, 160) : `Book ${pkg.title || "Nepal tour"} with Trip Himalaya. Best price guarantee, licensed local guides, and 24/7 travel support.`}
         keywords={`${pkg.title || "Nepal Tour"}, Nepal tour packages, Nepal trekking packages, Trip Himalaya, Nepal holiday, ${pkg.location || "Nepal"}`}
-        canonicalPath={`/packages/${backendPackage?.slug || slugify(backendPackage?.title) || packageId}`}
+        canonicalPath={`/packages/${canonicalSlug}`}
         image={packageImage}
         type="website"
         schema={{
           "@context": "https://schema.org",
-          "@type": "TouristTrip",
-          "name": pkg.title || "Nepal Tour Package",
-          "description": pkg.description ? pkg.description.replace(/<[^>]+>/g, "").slice(0, 160) : "Nepal tour with Trip Himalaya",
-          "touristType": "Sightseeing, Trekking & Holiday",
-          "provider": {
-            "@type": "TravelAgency",
-            "name": "Trip Himalaya Tours & Travel"
-          }
+          "@graph": [
+            {
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Home",
+                  "item": "https://triphimalaya.com.np/"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "Tour Packages",
+                  "item": "https://triphimalaya.com.np/packages"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": pkg.title || "Nepal Tour Package",
+                  "item": canonicalUrl
+                }
+              ]
+            },
+            {
+              "@type": "TouristTrip",
+              "name": pkg.title || "Nepal Tour Package",
+              "description": pkg.description ? pkg.description.replace(/<[^>]+>/g, "").slice(0, 160) : "Nepal tour with Trip Himalaya",
+              "touristType": "Sightseeing, Trekking & Holiday",
+              "provider": {
+                "@type": "TravelAgency",
+                "name": "Trip Himalaya Tours & Travels",
+                "url": "https://triphimalaya.com.np/"
+              }
+            }
+          ]
         }}
       />
+
+      {/* ======================================================
+          SEO BREADCRUMBS (Hierarchy Navigation)
+      ====================================================== */}
+      <nav aria-label="Breadcrumb" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-2 print:hidden">
+        <ol className="flex items-center gap-1.5 text-xs text-gray-500 font-medium overflow-x-auto whitespace-nowrap">
+          <li>
+            <Link to="/" className="text-gray-500 hover:text-[#E91E63] transition-colors">
+              Home
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-gray-300">/</li>
+          <li>
+            <Link to="/packages" className="text-gray-500 hover:text-[#E91E63] transition-colors">
+              Tour Packages
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-gray-300">/</li>
+          <li className="text-[#2D1347] font-bold truncate max-w-[200px] sm:max-w-md" aria-current="page">
+            {pkg.title}
+          </li>
+        </ol>
+      </nav>
       {/* ======================================================
           PACKAGE HERO / IMAGE GRID
       ====================================================== */}

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Share2,
   Facebook,
@@ -562,21 +562,70 @@ const BlogDetailMore: React.FC = () => {
         type="article"
         schema={{
           "@context": "https://schema.org",
-          "@type": "BlogPosting",
-          headline: post.title,
-          description: post.excerpt?.replace(/<[^>]+>/g, ""),
-          image: post.image,
-          datePublished: post.date,
-          author: {
-            "@type": "Person",
-            name: post.author || "Trip Himalaya Team",
-          },
-          publisher: {
-            "@type": "TravelAgency",
-            name: "Trip Himalaya Tours & Travel",
-          },
+          "@graph": [
+            {
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Home",
+                  "item": "https://triphimalaya.com.np/"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "Travel Blog",
+                  "item": "https://triphimalaya.com.np/blog"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": post.title,
+                  "item": `https://triphimalaya.com.np${canonicalPath}`
+                }
+              ]
+            },
+            {
+              "@type": "BlogPosting",
+              "headline": post.title,
+              "description": post.excerpt?.replace(/<[^>]+>/g, ""),
+              "image": post.image,
+              "datePublished": post.date,
+              "author": {
+                "@type": "Person",
+                "name": post.author || "Trip Himalaya Team",
+              },
+              "publisher": {
+                "@type": "TravelAgency",
+                "name": "Trip Himalaya Tours & Travels",
+                "url": "https://triphimalaya.com.np/",
+              },
+            }
+          ]
         }}
       />
+
+      {/* ── Breadcrumb Navigation ── */}
+      <nav aria-label="Breadcrumb" className="max-w-7xl mx-auto px-5 sm:px-8 pt-3 pb-2.5 print:hidden bg-slate-50/80 border-b border-slate-100">
+        <ol className="flex items-center gap-1.5 text-xs text-gray-500 font-medium overflow-x-auto whitespace-nowrap">
+          <li>
+            <Link to="/" className="text-gray-500 hover:text-[#E91E63] transition-colors">
+              Home
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-gray-300">/</li>
+          <li>
+            <Link to="/blog" className="text-gray-500 hover:text-[#E91E63] transition-colors">
+              Travel Blog
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-gray-300">/</li>
+          <li className="text-[#2D1347] font-bold truncate max-w-[200px] sm:max-w-md" aria-current="page">
+            {post.title}
+          </li>
+        </ol>
+      </nav>
 
       {/* ── HERO: Full-width image with overlay title ── */}
       <section className="relative w-full h-[45vh] sm:h-[50vh] md:h-[52vh] min-h-[350px] sm:min-h-[380px] max-h-[520px] overflow-hidden bg-[#120824]">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Plane,
   Map,
@@ -48,17 +48,12 @@ const DEFAULT_HERO_IMAGE =
 // --- 3. SUB-COMPONENTS ---
 
 const ServiceCard: React.FC<{ service: Service }> = ({ service }) => {
-  const navigate = useNavigate();
   const Icon = IconMap[service.icon] || FileText;
 
-  const handleClick = () => {
-    navigate(`/service/${service.slug}`);
-  };
-
   return (
-    <div
-      onClick={handleClick}
-      className="relative w-full h-[340px] rounded-3xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5"
+    <Link
+      to={`/service/${service.slug}`}
+      className="relative w-full h-[340px] rounded-3xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 block"
     >
       {/* Background Image */}
       <img
@@ -87,19 +82,12 @@ const ServiceCard: React.FC<{ service: Service }> = ({ service }) => {
           {service.shortDesc}
         </p>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClick();
-          }}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-pink-400 group-hover:text-white group-hover:gap-3 transition-all cursor-pointer"
-        >
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-pink-400 group-hover:text-white group-hover:gap-3 transition-all">
           <span>Explore Details</span>
           <ArrowRight size={15} />
-        </button>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

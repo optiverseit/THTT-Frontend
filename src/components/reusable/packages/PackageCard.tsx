@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
 import {
   Clock,
@@ -79,7 +79,12 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
       >
         <div>
           {/* ── IMAGE & BADGES ── */}
-          <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-gray-100">
+          <Link
+            to={getPackageUrl(pkg)}
+            state={{ packageData: pkg }}
+            onClick={(e) => e.stopPropagation()}
+            className="block relative h-48 sm:h-52 w-full overflow-hidden bg-gray-100"
+          >
             <img
               src={pkg.image}
               alt={pkg.title}
@@ -112,14 +117,21 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
                 <span>{pkg.duration}</span>
               </div>
             )}
-          </div>
+          </Link>
 
           {/* ── CARD CONTENT ── */}
           <div className="p-5 sm:p-6">
             {/* Title & Price Header */}
             <div className="flex items-start justify-between gap-2 mb-2">
               <h3 className="text-base sm:text-lg font-black text-[#2D1347] group-hover:text-[#E11D48] transition-colors leading-snug line-clamp-2">
-                {pkg.title}
+                <Link
+                  to={getPackageUrl(pkg)}
+                  state={{ packageData: pkg }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:text-[#E11D48] transition-colors"
+                >
+                  {pkg.title}
+                </Link>
               </h3>
               {pkg.price && (
                 <span className="font-extrabold text-xs sm:text-sm text-[#E11D48] whitespace-nowrap bg-pink-50 px-2.5 py-1 rounded-xl flex-shrink-0">
@@ -175,14 +187,15 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
           </div>
 
           {/* Full Details Button */}
-          <button
-            type="button"
-            onClick={handleCardClick}
-            className="w-full bg-gray-50 hover:bg-pink-50/70 border border-gray-200/80 hover:border-pink-300 text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2 rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
+          <Link
+            to={getPackageUrl(pkg)}
+            state={{ packageData: pkg }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-gray-50 hover:bg-pink-50/70 border border-gray-200/80 hover:border-pink-300 text-[#2D1347] hover:text-[#E11D48] font-bold text-xs py-2 rounded-xl flex items-center justify-center gap-1 transition-all"
           >
             <span>Full Details</span>
             <ArrowUpRight size={13} />
-          </button>
+          </Link>
         </div>
       </div>
 

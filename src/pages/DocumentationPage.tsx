@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import PreFooter from "../components/reusable/PreFooter";
@@ -11,6 +11,9 @@ import { usePageTestimonials } from "../utils/usePageTestimonials";
 import Testimonials from "../components/reusable/Testimonials";
 import { testimonials as mockTestimonials, mockDocuments } from "../assets/data/mockData";
 import { isLocalEnvironment } from "../config/env";
+import { isSessionValid, clearAuthSession } from "../utils/sessionManager";
+import DocumentationApplicationModal from "../components/Service/DocumentationApplicationModal";
+import ApplyDocumentationSection from "../components/Service/ApplyDocumentationSection";
 
 const DEFAULT_DOC_BG =
   "https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop";
@@ -29,9 +32,10 @@ interface DocumentationItem {
 interface DocumentationCardProps {
   item: DocumentationItem;
   onSelect: (item: DocumentationItem) => void;
+  onApply: (item: DocumentationItem) => void;
 }
 
-const DocumentationCard: React.FC<DocumentationCardProps> = ({ item, onSelect }) => {
+const DocumentationCard: React.FC<DocumentationCardProps> = ({ item, onSelect, onApply }) => {
   return (
     <div
       onClick={() => onSelect(item)}
@@ -52,17 +56,29 @@ const DocumentationCard: React.FC<DocumentationCardProps> = ({ item, onSelect })
         <p className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed line-clamp-2 mb-3">
           {item.subtitle}
         </p>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(item);
-          }}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-pink-400 group-hover:text-white group-hover:gap-3 transition-all cursor-pointer"
-        >
-          <span>Explore Details</span>
-          <ArrowRight size={15} />
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onApply(item);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#E91E63] to-pink-600 hover:from-pink-600 hover:to-[#E91E63] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+          >
+            <span>Apply Now</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(item);
+            }}
+            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-pink-300 hover:text-white transition-all cursor-pointer"
+          >
+            <span>Explore Details</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -70,8 +86,13 @@ const DocumentationCard: React.FC<DocumentationCardProps> = ({ item, onSelect })
 
 export default function DocumentationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [documents, setDocuments] = useState<DocumentationItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Apply Modal state
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [selectedDocForApply, setSelectedDocForApply] = useState<DocumentationItem | null>(null);
 
   const heroImages = usePageBackgrounds("documentation", DEFAULT_DOC_BG);
 
@@ -79,6 +100,32 @@ export default function DocumentationPage() {
     "DOCUMENTATION",
     mockTestimonials
   );
+
+  // Check if returning from successful login to open the apply modal
+  useEffect(() => {
+    const locState = location.state as any;
+    const storedStateStr = sessionStorage.getItem("post_login_state");
+    let returnState = locState;
+    if (!returnState && storedStateStr) {
+      try {
+        returnState = JSON.parse(storedStateStr);
+      } catch (e) {}
+    }
+
+    if (returnState?.openApplyModal && isSessionValid()) {
+      sessionStorage.removeItem("post_login_state");
+      sessionStorage.removeItem("post_login_redirect");
+      if (returnState.docId || returnState.docTitle) {
+        setSelectedDocForApply({
+          id: returnState.docId,
+          title: returnState.docTitle || "",
+          subtitle: null,
+          image: null,
+        });
+      }
+      setIsApplyModalOpen(true);
+    }
+  }, [location]);
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -108,6 +155,31 @@ export default function DocumentationPage() {
 
   const handleCardClick = (item: DocumentationItem) => {
     navigate(`/documentation/${item.id}`);
+  };
+
+  const handleApplyClick = (item?: DocumentationItem) => {
+    if (!isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        openApplyModal: true,
+        docId: item?.id,
+        docTitle: item?.title,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+
+    setSelectedDocForApply(item || null);
+    setIsApplyModalOpen(true);
   };
 
   return (
@@ -142,11 +214,26 @@ export default function DocumentationPage() {
                 key={item.id}
                 item={item}
                 onSelect={handleCardClick}
+                onApply={(doc) => handleApplyClick(doc)}
               />
             ))}
           </div>
         )}
+
+        {/* ── APPLY FOR DOCUMENTATION AREA / SECTION ── */}
+        <ApplyDocumentationSection onOpenApplyModal={() => handleApplyClick()} />
       </main>
+
+      {/* ── DOCUMENTATION APPLICATION MODAL (WITH DYNAMIC FIELDS & PAY LATER) ── */}
+      <DocumentationApplicationModal
+        isOpen={isApplyModalOpen}
+        onClose={() => {
+          setIsApplyModalOpen(false);
+          setSelectedDocForApply(null);
+        }}
+        preselectedDocumentId={selectedDocForApply?.id}
+        preselectedDocumentTitle={selectedDocForApply?.title}
+      />
       <Testimonials testimonials={docTestimonials} />
       <PreFooter
         title="Need a custom document solution?"

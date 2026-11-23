@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   Clock3,
   FileText,
@@ -21,6 +21,8 @@ const THTT_LOGO_PRINT_SRC = `data:image/png;base64,${logoBase64.trim()}`;
 import { getDocumentById } from "../api/BackendApi";
 import { mockDocuments } from "../assets/data/mockData";
 import { isLocalEnvironment } from "../config/env";
+import { isSessionValid, clearAuthSession } from "../utils/sessionManager";
+import DocumentationApplicationModal from "../components/Service/DocumentationApplicationModal";
 
 interface DocumentationItem {
   id: number;
@@ -36,12 +38,55 @@ interface DocumentationItem {
 export default function DocumentationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [document, setDocument] =
     useState<DocumentationItem | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+
+  // Check if returning from successful login to open the apply modal
+  useEffect(() => {
+    const locState = location.state as any;
+    const storedStateStr = sessionStorage.getItem("post_login_state");
+    let returnState = locState;
+    if (!returnState && storedStateStr) {
+      try {
+        returnState = JSON.parse(storedStateStr);
+      } catch (e) {}
+    }
+
+    if (returnState?.openApplyModal && isSessionValid()) {
+      sessionStorage.removeItem("post_login_state");
+      sessionStorage.removeItem("post_login_redirect");
+      setIsApplyModalOpen(true);
+    }
+  }, [location]);
+
+  const handleApplyClick = () => {
+    if (!isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        openApplyModal: true,
+        docId: document?.id,
+        docTitle: document?.title,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state", err);
+      }
+      navigate("/login", {
+        state: returnState,
+      });
+      return;
+    }
+    setIsApplyModalOpen(true);
+  };
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -570,23 +615,32 @@ export default function DocumentationDetailPage() {
               </div>
 
               {/* Action buttons on the right */}
-              <div className="print:hidden flex flex-row md:flex-col items-center gap-2 w-full md:w-44 flex-shrink-0 mt-2 md:mt-12">
+              <div className="print:hidden flex flex-row md:flex-col items-stretch gap-2 w-full md:w-44 flex-shrink-0 mt-3 md:mt-12">
+                <button
+                  type="button"
+                  onClick={handleApplyClick}
+                  className="flex-1 md:flex-none md:w-full min-h-[46px] inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-gradient-to-r from-[#E91E63] to-pink-600 hover:from-pink-600 hover:to-[#E91E63] text-white rounded-xl text-[11px] font-bold text-center leading-tight transition-all cursor-pointer shadow-md"
+                >
+                  <FileText size={13} className="flex-shrink-0" />
+                  <span>Apply Online</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleWhatsApp}
-                  className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-md"
+                  className="flex-1 md:flex-none md:w-full min-h-[46px] inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-[11px] font-bold text-center leading-tight transition-all cursor-pointer shadow-md"
                 >
-                  <MessageCircle size={13} />
+                  <MessageCircle size={13} className="flex-shrink-0" />
                   <span>Ask on WhatsApp</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handlePrint}
-                  className="flex-1 md:flex-none md:w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 text-white/80 hover:text-white rounded-md text-[10px] font-medium transition-all cursor-pointer"
+                  className="flex-1 md:flex-none md:w-full min-h-[46px] inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 text-white rounded-xl text-[11px] font-bold text-center leading-tight transition-all cursor-pointer shadow-sm"
                   title="Print or Save as PDF"
                 >
-                  <Printer size={11} />
+                  <Printer size={13} className="flex-shrink-0" />
                   <span>Print Checklist PDF</span>
                 </button>
               </div>
@@ -686,6 +740,18 @@ export default function DocumentationDetailPage() {
           )}
         </section>
       </main>
+
+      {/* =====================================================
+          DOCUMENTATION APPLICATION MODAL
+      ====================================================== */}
+      {document && (
+        <DocumentationApplicationModal
+          isOpen={isApplyModalOpen}
+          onClose={() => setIsApplyModalOpen(false)}
+          preselectedDocumentId={document.id}
+          preselectedDocumentTitle={document.title}
+        />
+      )}
 
       {/* =====================================================
           PRE FOOTER

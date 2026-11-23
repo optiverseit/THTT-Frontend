@@ -3281,4 +3281,75 @@ export function getHotelPricingTiers(hotel: Hotel): HotelPricingTier[] {
         { id: 3, service: "Luxury Villa",      ageGroup: "Per Night / Per Room", priceMultiplier: 1.85 },
       ];
   }
-}
+}
+
+// ==========================================
+// MOCK DOCUMENTATION SERVICES (for Localhost /documentation)
+// ==========================================
+export interface MockDocumentationItem {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  image: string | null;
+  description: string | null;
+  status?: string;
+  display_order?: number;
+}
+
+export const mockDocuments: MockDocumentationItem[] = [
+  {
+    id: 1,
+    title: "Police Clearance Certificate (PCC)",
+    subtitle: "Official police character certificate assistance for international visas and employment.",
+    image: "https://images.unsplash.com/photo-1450133064473-71024230f91b?q=80&w=800&auto=format&fit=crop",
+    description: "End-to-end guidance for obtaining a Police Clearance Certificate from Nepal Police Headquarters. Required for study, foreign employment, and permanent residency applications abroad. We assist with online biometric scheduling, document uploads, and expedited collection.",
+    status: "ACTIVE",
+    display_order: 1,
+  },
+  {
+    id: 2,
+    title: "Embassy Attestation & Legalization",
+    subtitle: "Consular legalization, Ministry of Foreign Affairs (MoFA) attestation, and notary translation.",
+    image: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800&auto=format&fit=crop",
+    description: "Verification and legalization of academic certificates, marriage certificates, and vital civil records through the Department of Consular Services (MoFA) and respective diplomatic foreign embassies in Kathmandu.",
+    status: "ACTIVE",
+    display_order: 2,
+  },
+  {
+    id: 3,
+    title: "Medical & Health Clearance",
+    subtitle: "Authorized clinic appointments, GAMCA health clearance, and mandatory immunization documentation.",
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=800&auto=format&fit=crop",
+    description: "Pre-departure medical report coordination for Gulf (GCC), Europe, and East Asia work visas through authorized and accredited diagnostic health screening centers in Nepal.",
+    status: "ACTIVE",
+    display_order: 3,
+  },
+  {
+    id: 4,
+    title: "Relationship & Marital Attestation",
+    subtitle: "Ward office verification, English translation, and official notarized endorsement.",
+    image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=800&auto=format&fit=crop",
+    description: "Preparation, translation, and diplomatic embassy submission of relationship certificates, birth certificates, and marriage registration certificates for dependent and family visa applications.",
+    status: "ACTIVE",
+    display_order: 4,
+  },
+  {
+    id: 5,
+    title: "Financial & Tax Audit Clearances",
+    subtitle: "Bank balance certificates, valuation reports, and PAN/VAT tax compliance summaries.",
+    image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=800&auto=format&fit=crop",
+    description: "Preparation of Chartered Accountant certified balance certificates, property valuation reports, source of funds documentation, and income tax clearance dossiers for tourist and business visas.",
+    status: "ACTIVE",
+    display_order: 5,
+  },
+  {
+    id: 6,
+    title: "Fast-Track e-Passport Assistance",
+    subtitle: "Online application scheduling, appointment booking, and emergency biometric coordination.",
+    image: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop",
+    description: "Hassle-free online form registration, emergency appointment token securing, and document checklist readiness for Department of Passports (DoP) Tripureshwor or district administration offices.",
+    status: "ACTIVE",
+    display_order: 6,
+  },
+];
+

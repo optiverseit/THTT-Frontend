@@ -18,6 +18,7 @@ import { getGroupedWorkPermitCountries } from "../api/BackendApi";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
 import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { usePageTestimonials } from "../utils/usePageTestimonials";
 import { HeroBackgroundSlider } from "../components/reusable";
 
 interface Country {
@@ -44,6 +45,10 @@ const DEFAULT_WORK_PERMIT_BG =
 
 const WorkPermit = () => {
   const heroImages = usePageBackgrounds(["online-shram", "work-permit", "online_shram"], DEFAULT_WORK_PERMIT_BG);
+  const { testimonials: permitTestimonials } = usePageTestimonials(
+    "ONLINE_SHRAM",
+    workPermitTestimonials
+  );
   const [selectedCountry, setSelectedCountry] = useState("");
   const [appliedCountry, setAppliedCountry] = useState("");
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] =
@@ -468,11 +473,7 @@ const WorkPermit = () => {
 
       {/* ── TESTIMONIES ── */}
 
-      <div id="section-testimonies">
-        <Testimonials
-          workTest={workPermitTestimonials}
-        />
-      </div>
+      <Testimonials testimonials={permitTestimonials} />
 
       {/* ── FAQS ── */}
 

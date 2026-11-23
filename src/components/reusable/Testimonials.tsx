@@ -5,9 +5,9 @@ import { ArrowRight, ChevronUp } from "lucide-react";
 import { getPackageUrl } from "../../utils/slugUtils";
 
 interface testimonialsProps {
-  testimonials?: Testimony[];
+  testimonials?: any[];
   pkg?: Package;
-  workTest?: Testimonial[];
+  workTest?: any[];
 }
 
 const StarRating: React.FC<{ rating: number }> = ({ rating }) => (
@@ -44,6 +44,7 @@ const TestimonialCard: React.FC<{
     rating: number;
     comment: string;
     location?: string;
+    isVerified?: boolean;
   };
 }> = ({ testimonial }) => {
   const [imgError, setImgError] = useState(false);
@@ -95,12 +96,14 @@ const TestimonialCard: React.FC<{
           </div>
         </div>
 
-        <span
-          className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
-          style={{ background: "#fce4ec", color: "#E91E63" }}
-        >
-          ✓ Verified
-        </span>
+        {testimonial.isVerified && (
+          <span
+            className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: "#fce4ec", color: "#E91E63" }}
+          >
+            ✓ Verified
+          </span>
+        )}
       </div>
     </div>
   );
@@ -114,27 +117,36 @@ const Testimonials: React.FC<testimonialsProps> = ({
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
 
-  const data = (testimonials ?? workTest ?? []).map((t) => {
-    if ("userName" in t) {
+  const rawList = testimonials ?? workTest ?? [];
+
+  const data = rawList
+    .map((t: any) => {
+      const userName = t.traveler_name || t.userName || t.name || "Traveler";
+      const userAvatar = t.profile_image || t.userAvatar || t.avatar || undefined;
+      const rating = Number(t.rating) || 5;
+      const comment = t.review || t.comment || t.message || "";
+      const location = t.country || t.location || "";
+      const isVerified =
+        t.is_verified === undefined
+          ? true
+          : Boolean(t.is_verified === 1 || t.is_verified === true || t.is_verified === "1");
+
       return {
         id: t.id,
-        userName: t.userName,
-        userAvatar: t.userAvatar,
-        rating: t.rating,
-        comment: t.comment,
-        location: t.location,
+        userName,
+        userAvatar,
+        rating,
+        comment,
+        location,
+        isVerified,
       };
-    } else {
-      return {
-        id: t.id,
-        userName: t.name,
-        userAvatar: t.avatar,
-        rating: t.rating,
-        comment: t.message,
-        location: t.country,
-      };
-    }
-  });
+    })
+    .filter((t) => t.comment && t.comment.trim().length > 0);
+
+  // If there is no testimonial data available, hide the entire testimonial section
+  if (data.length === 0) {
+    return null;
+  }
 
   const visible = showAll ? data : data.slice(0, 3);
   const hasMore = data.length > 3;
@@ -144,7 +156,7 @@ const Testimonials: React.FC<testimonialsProps> = ({
       // Collapse back to 3 and scroll to section top
       setShowAll(false);
       document
-        .getElementById("testimonials-section")
+        .getElementById("section-testimonies")
         ?.scrollIntoView({ behavior: "smooth" });
     } else if (hasMore) {
       // Expand to show all in-place
@@ -156,7 +168,7 @@ const Testimonials: React.FC<testimonialsProps> = ({
   };
 
   return (
-    <div id="testimonials-section" className="w-full bg-gray-50 py-16">
+    <div id="section-testimonies" className="w-full bg-gray-50 py-16">
       <div className="max-w-6xl mx-auto px-6">
 
         {/* Header */}
@@ -182,24 +194,26 @@ const Testimonials: React.FC<testimonialsProps> = ({
           ))}
         </div>
 
-        {/* Button — always shown */}
-        <div className="flex justify-center mt-10">
-          <button
-            onClick={handleButton}
-            className="flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-full transition-all duration-200 hover:opacity-90"
-            style={{ background: "#E91E63", color: "#ffffff" }}
-          >
-            {showAll ? (
-              <>
-                Show Less <ChevronUp size={16} />
-              </>
-            ) : (
-              <>
-                See More Reviews <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </div>
+        {/* Button — show only when there are more items to reveal or linked to a package */}
+        {(hasMore || Boolean(pkg?.id)) && (
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={handleButton}
+              className="flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-full transition-all duration-200 hover:opacity-90 cursor-pointer"
+              style={{ background: "#E91E63", color: "#ffffff" }}
+            >
+              {showAll ? (
+                <>
+                  Show Less <ChevronUp size={16} />
+                </>
+              ) : (
+                <>
+                  See More Reviews <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

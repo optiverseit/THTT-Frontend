@@ -23,45 +23,25 @@ export function getEnv(key: string, defaultValue = ""): string {
 }
 
 export function getApiBaseUrl(): string {
-  // 1. Localhost detection: automatically route to Render backend API
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "0.0.0.0" ||
-      host.startsWith("192.168.")
-    ) {
-      return "https://thtt-backend.onrender.com/api";
-    }
-  }
-
-  // 2. Server runtime config (e.g. from /env-config.php on cPanel hosting)
+  // 1. Server runtime config (e.g. from /env-config.php on cPanel hosting)
   if (
     typeof window !== "undefined" &&
     window.__ENV__ &&
-    window.__ENV__["VITE_BASE_URL"]
+    window.__ENV__["VITE_BASE_URL"] &&
+    !window.__ENV__["VITE_BASE_URL"].includes("onrender.com")
   ) {
     return window.__ENV__["VITE_BASE_URL"];
   }
 
-  // 3. Live production domain check for triphimalaya.com.np
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host.includes("triphimalaya.com.np")) {
-      return "https://thtt-backend.triphimalaya.com.np/api";
-    }
-  }
-
-  // 4. Build-time environment variable
+  // 2. Build-time environment variable (ignoring broken onrender.com backend)
   const metaVal = (import.meta.env as unknown as Record<string, string | undefined>)?.[
     "VITE_BASE_URL"
   ];
-  if (metaVal) {
+  if (metaVal && !metaVal.includes("onrender.com")) {
     return metaVal;
   }
 
-  // 5. Default production backend for cPanel deployment
+  // 3. Reliable live production backend for Localhost, Vercel, and Live deployments
   return "https://thtt-backend.triphimalaya.com.np/api";
 }
 
@@ -77,3 +57,28 @@ export function getGoogleClientId(): string {
     "178127958696-vk4jhq3sh9jk8ki3h92c7q832qtemlb5.apps.googleusercontent.com"
   );
 }
+
+/**
+ * Returns true if running in local development (localhost / private network),
+ * and false on live production domains (triphimalaya.com.np).
+ */
+export function isLocalEnvironment(): boolean {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host.includes("triphimalaya.com.np")) {
+      return false;
+    }
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      host.endsWith(".local")
+    ) {
+      return true;
+    }
+  }
+  return Boolean(import.meta.env.DEV);
+}
+

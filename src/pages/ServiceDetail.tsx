@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate, Navigate, useSearchParams } from "react-router-dom";
-import { services, workPermitTestimonials, packages } from "../assets/data/mockData";
+import { services, testimonials, packages } from "../assets/data/mockData";
 import {
   Compass,
   ArrowRight,
@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import BannerSection from "../components/reusable/BannerSection";
 import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { usePageTestimonials } from "../utils/usePageTestimonials";
 import { HeroBackgroundSlider } from "../components/reusable";
 import Testimonials from "../components/reusable/Testimonials";
 import PreFooter from "../components/reusable/PreFooter";
@@ -60,9 +61,14 @@ const ServiceDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // If slug is work-permit, render dedicated WorkPermit component directly (prevents redirect indexing penalty)
-  if (slug === "work-permit") {
+  // If slug is work-permit or online-shram, render dedicated WorkPermit component directly
+  if (slug === "work-permit" || slug === "online-shram") {
     return <WorkPermit />;
+  }
+
+  // If slug is documentation, redirect to dedicated documentation page
+  if (slug === "documentation") {
+    return <Navigate to="/documentation" replace />;
   }
 
   // Find the service by slug or by id
@@ -2053,6 +2059,11 @@ const ServiceDetail: React.FC = () => {
 
   const serviceHeroImages = usePageBackgrounds(cmsIdentifiers, service.heroImage);
 
+  const { testimonials: serviceTestimonials } = usePageTestimonials(
+    slug || service?.slug || "",
+    testimonials
+  );
+
   const activeSEO = (() => {
     if (isVisaServices) return pagesSEO.serviceVisa;
     if (isHeliServices) return pagesSEO.serviceHeli;
@@ -2533,9 +2544,7 @@ const ServiceDetail: React.FC = () => {
 
       {/* ── 7. TESTIMONIES SECTION (Omitted on Heli Tour Details Page as it has dedicated testimonies) ── */}
       {!isHeliTourDetailPage && (
-        <div id="section-testimonies">
-          <Testimonials workTest={workPermitTestimonials} />
-        </div>
+        <Testimonials testimonials={serviceTestimonials} />
       )}
 
       {/* ── 10. PREFOOTER CTA ── */}

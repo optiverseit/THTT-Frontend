@@ -19,6 +19,8 @@ import logoBase64 from "../assets/images/THTTLogo_b64.txt?raw";
 
 const THTT_LOGO_PRINT_SRC = `data:image/png;base64,${logoBase64.trim()}`;
 import { getDocumentById } from "../api/BackendApi";
+import { mockDocuments } from "../assets/data/mockData";
+import { isLocalEnvironment } from "../config/env";
 
 interface DocumentationItem {
   id: number;
@@ -58,11 +60,25 @@ export default function DocumentationDetailPage() {
         if (response?.data?.status && response?.data?.data) {
           setDocument(response.data.data);
         } else {
+          if (isLocalEnvironment()) {
+            const found = mockDocuments.find((d) => String(d.id) === String(id));
+            if (found) {
+              setDocument(found as any);
+              return;
+            }
+          }
           setError(
             response?.data?.message || "Document not found."
           );
         }
       } catch (error: any) {
+        if (isLocalEnvironment()) {
+          const found = mockDocuments.find((d) => String(d.id) === String(id));
+          if (found) {
+            setDocument(found as any);
+            return;
+          }
+        }
         console.error("Failed to fetch document:", error);
 
         setError(

@@ -7,6 +7,10 @@ import { getAllDocuments } from "../api/BackendApi";
 import { SEO } from "../components/reusable";
 import { pagesSEO } from "../config/seoConfig";
 import { usePageBackgrounds } from "../utils/usePageBackgrounds";
+import { usePageTestimonials } from "../utils/usePageTestimonials";
+import Testimonials from "../components/reusable/Testimonials";
+import { testimonials as mockTestimonials, mockDocuments } from "../assets/data/mockData";
+import { isLocalEnvironment } from "../config/env";
 
 const DEFAULT_DOC_BG =
   "https://images.unsplash.com/photo-1548567117-02328f050eaa?q=80&w=2070&auto=format&fit=crop";
@@ -71,19 +75,25 @@ export default function DocumentationPage() {
 
   const heroImages = usePageBackgrounds("documentation", DEFAULT_DOC_BG);
 
+  const { testimonials: docTestimonials } = usePageTestimonials(
+    "DOCUMENTATION",
+    mockTestimonials
+  );
+
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
         setLoading(true);
         const response = await getAllDocuments();
-        if (response?.data?.status) {
-          setDocuments(response.data.data || []);
+        if (response?.data?.status && Array.isArray(response.data.data) && response.data.data.length > 0) {
+          setDocuments(response.data.data);
         } else {
-          setDocuments([]);
+          // On localhost, keep mock cards visible for design and testing
+          setDocuments(isLocalEnvironment() ? mockDocuments : []);
         }
       } catch (error) {
         console.error("Failed to fetch documents:", error);
-        setDocuments([]);
+        setDocuments(isLocalEnvironment() ? mockDocuments : []);
       } finally {
         setLoading(false);
       }
@@ -137,6 +147,7 @@ export default function DocumentationPage() {
           </div>
         )}
       </main>
+      <Testimonials testimonials={docTestimonials} />
       <PreFooter
         title="Need a custom document solution?"
         description="Tell us what documents you need — we handle special embassy attestations, translations, and expedited clearances."

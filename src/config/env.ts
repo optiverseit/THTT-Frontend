@@ -77,3 +77,28 @@ export function getGoogleClientId(): string {
     "178127958696-vk4jhq3sh9jk8ki3h92c7q832qtemlb5.apps.googleusercontent.com"
   );
 }
+
+/**
+ * Returns true if running in local development (localhost / private network),
+ * and false on live production domains (triphimalaya.com.np).
+ */
+export function isLocalEnvironment(): boolean {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host.includes("triphimalaya.com.np")) {
+      return false;
+    }
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      host.endsWith(".local")
+    ) {
+      return true;
+    }
+  }
+  return Boolean(import.meta.env.DEV);
+}
+

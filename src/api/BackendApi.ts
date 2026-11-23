@@ -643,15 +643,37 @@ export const getDashboardPageImage = () => {
   return axiosInstance.get("/pages/name/dashboard");
 };
 
-export const getPages = (page: number = 1) => {
-  return axiosInstance.get("/pages", {
-    params: { page },
-  });
+export const getPages = (page: number = 1, perPage: number = 100) => {
+  return axiosInstance
+    .get("/pages", {
+      params: { page, per_page: perPage },
+    })
+    .catch(() => {
+      const rootUrl = getBackendRootUrl();
+      return axios.get(`${rootUrl}/api/pages`, {
+        params: { page, per_page: perPage },
+      });
+    });
 };
 
 export const getPageById = (id: number | string) => {
   return axiosInstance.get(`/pages/${id}`);
 };
+
+// ==========================================
+// PAGE TESTIMONIALS (CMS Managed)
+// Route: /page-testimonials/page/{page_name}
+// e.g. /page-testimonials/page/TOURS
+// ==========================================
+export const getPageTestimonials = (pageName: string) => {
+  return axiosInstance
+    .get(`/page-testimonials/page/${pageName}`)
+    .catch(() => {
+      const rootUrl = getBackendRootUrl();
+      return axios.get(`${rootUrl}/api/page-testimonials/page/${pageName}`);
+    });
+};
+
 
 
 

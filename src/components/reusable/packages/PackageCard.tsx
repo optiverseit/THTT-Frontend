@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import type { Package } from "../../../assets/data/types";
 import {
   Clock,
@@ -13,6 +13,7 @@ import {
 import { useGlobalCurrency, displayPrice } from "../../../context/CurrencyContext";
 import BookingModal from "./BookingModal";
 import { getPackageUrl } from "../../../utils/slugUtils";
+import { isSessionValid, clearAuthSession } from "../../../utils/sessionManager";
 
 interface Props {
   pkg: Package;
@@ -20,8 +21,31 @@ interface Props {
 
 const PackageCard: React.FC<Props> = ({ pkg }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { selectedCurrency, nprPerOneDollar, nprPerOneINR } = useGlobalCurrency();
+
+  // Restore booking modal state after login
+  useEffect(() => {
+    if (!isSessionValid()) return;
+
+    const savedState = (location.state as any) || (() => {
+      try {
+        const raw = sessionStorage.getItem("post_login_state");
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (savedState?.openBooking && String(savedState?.packageId) === String(pkg.id)) {
+      setIsBookingModalOpen(true);
+      try {
+        sessionStorage.removeItem("post_login_state");
+        sessionStorage.removeItem("post_login_redirect");
+      } catch {}
+    }
+  }, [pkg.id, location.state]);
 
   // Backend package price is in NPR
   const baseNPRPrice = Number(String(pkg.price || "0").replace(/[^0-9.]/g, ""));
@@ -48,9 +72,25 @@ const PackageCard: React.FC<Props> = ({ pkg }) => {
     window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
   };
 
-  // Open Booking Modal
+  // Open Booking Modal (requires logged-in session)
   const handleBookingClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isSessionValid()) {
+      clearAuthSession();
+      const returnState = {
+        from: location.pathname + location.search,
+        packageId: pkg.id,
+        openBooking: true,
+      };
+      try {
+        sessionStorage.setItem("post_login_redirect", location.pathname + location.search);
+        sessionStorage.setItem("post_login_state", JSON.stringify(returnState));
+      } catch (err) {
+        console.error("Failed to store post-login state in sessionStorage", err);
+      }
+      navigate("/login", { state: returnState });
+      return;
+    }
     setIsBookingModalOpen(true);
   };
 

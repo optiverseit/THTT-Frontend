@@ -23,7 +23,18 @@ export function getEnv(key: string, defaultValue = ""): string {
 }
 
 export function getApiBaseUrl(): string {
-  // 1. Server runtime config (e.g. from /env-config.php on cPanel hosting)
+  // 1. In local development (localhost / private network), use Render API
+  if (isLocalEnvironment()) {
+    const localMetaVal = (import.meta.env as unknown as Record<string, string | undefined>)?.[
+      "VITE_BASE_URL"
+    ];
+    if (localMetaVal) {
+      return localMetaVal;
+    }
+    return "https://thtt-backend.onrender.com/api";
+  }
+
+  // 2. Server runtime config (e.g. from /env-config.php on cPanel hosting)
   if (
     typeof window !== "undefined" &&
     window.__ENV__ &&
@@ -33,7 +44,7 @@ export function getApiBaseUrl(): string {
     return window.__ENV__["VITE_BASE_URL"];
   }
 
-  // 2. Build-time environment variable (ignoring broken onrender.com backend)
+  // 3. Build-time environment variable (ignoring onrender.com on live deployments)
   const metaVal = (import.meta.env as unknown as Record<string, string | undefined>)?.[
     "VITE_BASE_URL"
   ];
@@ -41,7 +52,7 @@ export function getApiBaseUrl(): string {
     return metaVal;
   }
 
-  // 3. Reliable live production backend for Localhost, Vercel, and Live deployments
+  // 4. Reliable live production backend for Vercel and Live deployments
   return "https://thtt-backend.triphimalaya.com.np/api";
 }
 
